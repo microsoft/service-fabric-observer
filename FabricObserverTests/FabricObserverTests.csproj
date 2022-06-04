@@ -1,110 +1,109 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <IsPackable>false</IsPackable>
-    <ProjectGuid>{48C88BEB-9960-4183-861B-DF25C193E4C9}</ProjectGuid>
-    <RootNamespace>FabricObserverTests</RootNamespace>
-	<TargetFramework>net6.0</TargetFramework>
-	<Nullable>disable</Nullable>
-	<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
-	<ServerGarbageCollection>False</ServerGarbageCollection>
-	<RuntimeIdentifiers>win7-x64</RuntimeIdentifiers>
-	<TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
-    <NoWarn>CS0414</NoWarn>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
-    <Copyright>Copyright ©  2022</Copyright>
-    <Product>FabricObserverTests</Product>
-    <AssemblyTitle>FabricObserverTests</AssemblyTitle>
-    <Platforms>AnyCPU;x64</Platforms>
-  </PropertyGroup>
-  <ItemGroup>
-    <None Include="MyExpiredCert.p12">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="MyValidCert.p12">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="PackageRoot\Config\Settings.xml">
-      <SubType>Designer</SubType>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="PackageRoot\Config\AppObserver.config.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="PackageRoot\Config\NetworkObserver.config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
-	<PacakgeReference Include="Microsoft.ServiceFabric.Services" Version="6.0.1017" />
-	<PacakgeReference Include="Microsoft.ServiceFabric.Diagnostics.Internal" Version="6.0.1017" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.2.0" />
-    <PackageReference Include="MSTest.TestAdapter" Version="2.2.10" />
-    <PackageReference Include="MSTest.TestFramework" Version="2.2.10" />
-    <PackageReference Include="coverlet.collector" Version="3.1.2">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-	<PackageReference Include="ServiceFabric.Mocks" Version="6.0.1" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\ClusterObserver\ClusterObserver.csproj" />
-    <ProjectReference Include="..\FabricObserver\FabricObserver.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Update="ApplicationManifest.xml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="clusterManifest.xml">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="HealthMetrics.zip">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="PackageRoot\Config\AppObserver.config.app.exclude.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="PackageRoot\Config\AppObserver.config.app.include.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="PackageRoot\Config\AppObserver.config.app.multi-exclude.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="PackageRoot\Config\AppObserver.config.app.multi-include.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="PackageRoot\Config\AppObserver.config.apptype.exclude.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="PackageRoot\Config\AppObserver.config.apptype.include.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="PackageRoot\Config\AppObserver.config.apptype.multi-exclude.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="PackageRoot\Config\AppObserver.config.apptype.multi-include.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="PackageRoot\Config\AppObserver.config.empty.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="PackageRoot\Config\AppObserver.config.invalid.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="PackageRoot\Config\AppObserver.config.oldstyle_nowarnings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="PackageRoot\Config\AppObserver.config.oldstyle_warnings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="PackageRoot\Config\AppObserver.config.targetAppMalformed.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="PackageRoot\Config\AppObserver_warnings.config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="PackageRoot\Config\ContainerObserver.config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+	<PropertyGroup>
+		<IsPackable>false</IsPackable>
+		<ProjectGuid>{48C88BEB-9960-4183-861B-DF25C193E4C9}</ProjectGuid>
+		<RootNamespace>FabricObserverTests</RootNamespace>
+		<TargetFramework>netcoreapp3.1</TargetFramework>
+		<PlatformTarget>x64</PlatformTarget>
+		<NoWarn>CS0414</NoWarn>
+		<AssemblyVersion>1.0.0.0</AssemblyVersion>
+		<FileVersion>1.0.0.0</FileVersion>
+		<Copyright>Copyright ©  2020</Copyright>
+		<Product>FabricObserverTests</Product>
+		<AssemblyTitle>FabricObserverTests</AssemblyTitle>
+		<Platforms>AnyCPU;x64</Platforms>
+	</PropertyGroup>
+	<ItemGroup>
+		<Compile Remove="IMockCodePackageActivationContext.cs" />
+		<Compile Remove="MockCodePackageActivationContext.cs" />
+	</ItemGroup>
+	<ItemGroup>
+		<None Include="MyExpiredCert.p12">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Include="MyValidCert.p12">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Include="PackageRoot\Config\Settings.xml">
+			<SubType>Designer</SubType>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Include="PackageRoot\Config\AppObserver.config.json">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Include="PackageRoot\Config\NetworkObserver.config.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
+		<PackageReference Include="MSTest.TestAdapter" Version="2.2.7" />
+		<PackageReference Include="MSTest.TestFramework" Version="2.2.7" />
+		<PackageReference Include="coverlet.collector" Version="3.1.0">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Polly" Version="7.2.3" />
+		<PackageReference Include="ServiceFabric.Mocks" Version="6.0.0" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\ClusterObserver\ClusterObserver.csproj" />
+		<ProjectReference Include="..\FabricObserver\FabricObserver.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<None Update="ApplicationManifest.xml">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="clusterManifest.xml">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="HealthMetrics.zip">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="PackageRoot\Config\AppObserver.config.app.exclude.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="PackageRoot\Config\AppObserver.config.app.include.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="PackageRoot\Config\AppObserver.config.app.multi-exclude.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="PackageRoot\Config\AppObserver.config.app.multi-include.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="PackageRoot\Config\AppObserver.config.apptype.exclude.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="PackageRoot\Config\AppObserver.config.apptype.include.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="PackageRoot\Config\AppObserver.config.apptype.multi-exclude.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="PackageRoot\Config\AppObserver.config.apptype.multi-include.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="PackageRoot\Config\AppObserver.config.empty.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="PackageRoot\Config\AppObserver.config.invalid.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="PackageRoot\Config\AppObserver.config.oldstyle_nowarnings.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="PackageRoot\Config\AppObserver.config.oldstyle_warnings.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="PackageRoot\Config\AppObserver.config.targetAppMalformed.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="PackageRoot\Config\AppObserver_warnings.config.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="PackageRoot\Config\ContainerObserver.config.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
 </Project>

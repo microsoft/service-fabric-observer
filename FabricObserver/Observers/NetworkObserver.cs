@@ -11,9 +11,10 @@ using System.Fabric.Health;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Net.NetworkInformation;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,7 +31,7 @@ namespace FabricObserver.Observers
     /// The output (a local file) is used by the API service and the HTML frontend (https://[domain:[port]]/api/ObserverManager).
     /// Health Report processor will also emit diagnostic telemetry if configured in Settings.xml.
     /// </summary>
-    public sealed class NetworkObserver : ObserverBase
+    public class NetworkObserver : ObserverBase
     {
         private const int MaxTcpConnTestRetries = 5;
         private readonly List<NetworkObserverConfig> defaultConfig = new List<NetworkObserverConfig>
@@ -99,7 +100,7 @@ namespace FabricObserver.Observers
 
             Token = token;
             stopwatch.Start();
-            
+
             // Run conn tests.
             Retry.Do(InternetConnectionStateIsConnected, TimeSpan.FromSeconds(10), token);
             await ReportAsync(token).ConfigureAwait(false);
@@ -347,7 +348,7 @@ namespace FabricObserver.Observers
 
             foreach (var netConfig in configs)
             {
-                var deployedApps = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(NodeName, new Uri(netConfig.TargetApp));
+                var deployedApps = await FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(NodeName, new Uri(netConfig.TargetApp)).ConfigureAwait(false);
 
                 if (deployedApps == null || deployedApps.Count < 1)
                 {
@@ -414,30 +415,53 @@ namespace FabricObserver.Observers
                                 prefix = string.Empty;
                             }
 
-                            var httpClient = new HttpClient();
-                            HttpResponseMessage response =
-                                httpClient.Send(
-                                    new HttpRequestMessage(
-                                    HttpMethod.Get, new Uri($"{prefix}{endpoint.HostName}:{endpoint.Port}")),
-                                    HttpCompletionOption.ResponseHeadersRead, Token);
+                            var request = (HttpWebRequest)WebRequest.Create(new Uri($"{prefix}{endpoint.HostName}:{endpoint.Port}"));
+                            request.AuthenticationLevel = AuthenticationLevel.MutualAuthRequired;
+                            request.ImpersonationLevel = TokenImpersonationLevel.Impersonation;
+                            request.Timeout = 60000;
+                            request.Method = "GET";
 
-                            HttpStatusCode status = response.StatusCode;
+                            using var response = (HttpWebResponse)request.GetResponse();
+                            var status = response.StatusCode;
 
-                            // The target server responded with something. It doesn't really matter what it "said".
-                            if (status == HttpStatusCode.OK || response.Headers.Any())
+                            // The target server responded with something.
+                            // It doesn't really matter what it "said".
+                            if (status == HttpStatusCode.OK || response.Headers?.Count > 0)
                             {
                                 passed = true;
                             }
                         }
-                        catch (Exception e) when (e is HttpRequestException || e is InvalidOperationException)
+                        catch (IOException ie)
                         {
-
+                            if (ie.InnerException is ProtocolViolationException)
+                            {
+                                passed = true;
+                            }
                         }
-                        catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
+                        catch (WebException we)
                         {
-                            return;
+                            if (we.Status == WebExceptionStatus.ProtocolError
+                                || we.Status == WebExceptionStatus.TrustFailure
+                                || we.Status == WebExceptionStatus.SecureChannelFailure
+                                || we.Response?.Headers?.Count > 0)
+                            {
+                                // Could not establish trust or server doesn't want to hear from you, or...
+                                // Either way, the Server *responded*. It's reachable.
+                                // You could always add code to grab your app or cluster certs from local store
+                                // and apply it to the request. See CertificateObserver for how to get
+                                // both your App cert(s) and Cluster cert. The goal of NetworkObserver is
+                                // to test availability. Nothing more.
+                                passed = true;
+                            }
+                            else if (we.Status == WebExceptionStatus.SendFailure
+                                        && we.InnerException != null
+                                        && (we.InnerException.Message.ToLower().Contains("authentication")
+                                        || we.InnerException.HResult == -2146232800))
+                            {
+                                passed = true;
+                            }
                         }
-                        catch (Exception e)
+                        catch (Exception e) when (!(e is OperationCanceledException))
                         {
                             ObserverLogger.LogWarning(e.ToString());
 
@@ -564,9 +588,9 @@ namespace FabricObserver.Observers
             else
             {
                 if (connectionStatus.Any(
-                        conn =>
-                            conn.HostName == endpoint.HostName && conn.TargetApp == targetApp &&
-                            conn.Health == HealthState.Warning))
+                    conn =>
+                        conn.HostName == endpoint.HostName && conn.TargetApp == targetApp &&
+                        conn.Health == HealthState.Warning))
                 {
                     return;
                 }
