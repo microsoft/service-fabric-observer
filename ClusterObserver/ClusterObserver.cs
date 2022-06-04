@@ -21,7 +21,7 @@ using FabricObserver.Observers.Utilities.Telemetry;
 
 namespace ClusterObserver
 {
-    public class ClusterObserver : ObserverBase
+    public sealed class ClusterObserver : ObserverBase
     {
         private readonly Uri repairManagerServiceUri = new Uri($"{ClusterObserverConstants.SystemAppName}/RepairManagerService");
         private readonly Uri fabricSystemAppUri = new Uri(ClusterObserverConstants.SystemAppName);
@@ -425,20 +425,7 @@ namespace ClusterObserver
             // ETW.
             if (EtwEnabled)
             {
-                ObserverLogger.LogEtw(
-                    ClusterObserverConstants.ClusterObserverETWEventName,
-                    new
-                    {
-                        appUpgradeInfo.ClusterId,
-                        Timestamp = DateTime.UtcNow.ToString("o"),
-                        appUpgradeInfo.OS,
-                        ApplicationName = appUpgradeInfo.ApplicationUpgradeProgress?.UpgradeDescription?.ApplicationName?.OriginalString,
-                        UpgradeTargetAppTypeVersion = appUpgradeInfo.ApplicationUpgradeProgress?.UpgradeDescription?.TargetApplicationTypeVersion,
-                        UpgradeState = Enum.GetName(typeof(FabricUpgradeState), appUpgradeInfo.ApplicationUpgradeProgress.UpgradeState),
-                        UpgradeDomain = appUpgradeInfo.ApplicationUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName,
-                        UpgradeDuration = appUpgradeInfo.ApplicationUpgradeProgress.CurrentUpgradeDomainDuration,
-                        FailureReason = appUpgradeInfo.ApplicationUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), appUpgradeInfo.ApplicationUpgradeProgress.FailureReason.Value) : null,
-                    });
+                ObserverLogger.LogEtw(ClusterObserverConstants.ClusterObserverETWEventName, appUpgradeInfo);
             }
         }
 
@@ -483,20 +470,7 @@ namespace ClusterObserver
             // ETW.
             if (EtwEnabled)
             {
-                ObserverLogger.LogEtw(
-                    ClusterObserverConstants.ClusterObserverETWEventName,
-                    new
-                    {
-                        eventData.ClusterId,
-                        Timestamp = DateTime.UtcNow.ToString("o"),
-                        eventData.OS,
-                        UpgradeTargetCodeVersion = eventData.FabricUpgradeProgress?.UpgradeDescription?.TargetCodeVersion,
-                        UpgradeTargetConfigVersion = eventData.FabricUpgradeProgress?.UpgradeDescription?.TargetConfigVersion,
-                        UpgradeState = Enum.GetName(typeof(FabricUpgradeState), eventData.FabricUpgradeProgress.UpgradeState),
-                        UpgradeDomain = eventData.FabricUpgradeProgress.CurrentUpgradeDomainProgress.UpgradeDomainName,
-                        UpgradeDuration = eventData.FabricUpgradeProgress.CurrentUpgradeDomainDuration.ToString(),
-                        FailureReason = eventData.FabricUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.FabricUpgradeProgress.FailureReason.Value) : null,
-                    });
+                ObserverLogger.LogEtw(ClusterObserverConstants.ClusterObserverETWEventName, eventData);
             }
         }
 
