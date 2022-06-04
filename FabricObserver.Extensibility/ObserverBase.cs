@@ -5,7 +5,6 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
@@ -32,7 +31,7 @@ namespace FabricObserver.Observers
     {
         private const int TtlAddMinutes = 5;
         private bool disposed;
-        private Dictionary<string, (int DumpCount, DateTime LastDumpDate)> ServiceDumpCountDictionary;
+        private ConcurrentDictionary<string, (int DumpCount, DateTime LastDumpDate)> ServiceDumpCountDictionary;
         private readonly object lockObj = new object();
 
         public static StatelessServiceContext FabricServiceContext
@@ -509,7 +508,7 @@ namespace FabricObserver.Observers
             {
                 try
                 {
-                    Directory.CreateDirectory(DumpsPath);
+                    _ = Directory.CreateDirectory(DumpsPath);
                 }
                 catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
                 {
@@ -521,7 +520,7 @@ namespace FabricObserver.Observers
 
             if (ServiceDumpCountDictionary == null)
             {
-                ServiceDumpCountDictionary = new Dictionary<string, (int DumpCount, DateTime LastDump)>(5);
+                ServiceDumpCountDictionary = new ConcurrentDictionary<string, (int DumpCount, DateTime LastDump)>();
             }
 
             StringBuilder sb = new StringBuilder(metric);
@@ -560,7 +559,7 @@ namespace FabricObserver.Observers
 
             if (!ServiceDumpCountDictionary.ContainsKey(dumpKey))
             {
-                ServiceDumpCountDictionary.Add(dumpKey, (0, DateTime.UtcNow));
+                ServiceDumpCountDictionary.TryAdd(dumpKey, (0, DateTime.UtcNow));
             }
             else if (DateTime.UtcNow.Subtract(ServiceDumpCountDictionary[dumpKey].LastDumpDate) >= MaxDumpsTimeWindow)
             {
@@ -578,25 +577,33 @@ namespace FabricObserver.Observers
             switch (DumpType)
             {
                 case DumpType.Full:
+
                     miniDumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemory |
-                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemoryInfo |
+                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs |
                                    NativeMethods.MINIDUMP_TYPE.MiniDumpWithHandleData |
+                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules |
+                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemoryInfo |
                                    NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo |
-                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules;
+                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithTokenInformation;
                     break;
 
                 case DumpType.MiniPlus:
+
                     miniDumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpWithPrivateReadWriteMemory |
                                    NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs |
                                    NativeMethods.MINIDUMP_TYPE.MiniDumpWithHandleData |
+                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules |
                                    NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemoryInfo |
                                    NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo |
-                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules;
+                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithTokenInformation;
                     break;
 
                 case DumpType.Mini:
-                    miniDumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpWithIndirectlyReferencedMemory |
-                                   NativeMethods.MINIDUMP_TYPE.MiniDumpScanMemory;
+
+                    miniDumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpNormal |
+                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs |
+                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithHandleData |
+                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo;
                     break;
 
                 default:
@@ -614,39 +621,41 @@ namespace FabricObserver.Observers
                         dumpFileName = process.ProcessName;
                     }
 
-                    SafeProcessHandle processHandle = process.SafeHandle;
-                    dumpFileName += $"_{DateTime.Now:ddMMyyyyHHmmssFFF}.dmp";
-
-                    // Check disk space availability before writing dump file.
-                    string driveName = DumpsPath.Substring(0, 2);
-
-                    if (DiskUsage.GetCurrentDiskSpaceUsedPercent(driveName) > 90)
+                    using (SafeProcessHandle processHandle = process.SafeHandle)
                     {
-                        ObserverLogger.LogWarning("Not enough disk space available for dump file creation.");
-                        return false;
-                    }
+                        dumpFileName += $"_{DateTime.Now:ddMMyyyyHHmmssFFF}.dmp";
 
-                    dumpFilePath = Path.Combine(DumpsPath, dumpFileName);
+                        // Check disk space availability before writing dump file.
+                        string driveName = DumpsPath.Substring(0, 2);
 
-                    using (FileStream file = File.Create(dumpFilePath))
-                    {
+                        if (DiskUsage.GetCurrentDiskSpaceUsedPercent(driveName) > 90)
+                        {
+                            ObserverLogger.LogWarning("Not enough disk space available for dump file creation.");
+                            return false;
+                        }
+
+                        dumpFilePath = Path.Combine(DumpsPath, dumpFileName);
+
                         lock (lockObj)
                         {
-                            if (!NativeMethods.MiniDumpWriteDump(
-                                                processHandle,
-                                                (uint)processId,
-                                                file.SafeFileHandle,
-                                                miniDumpType,
-                                                IntPtr.Zero,
-                                                IntPtr.Zero,
-                                                IntPtr.Zero))
+                            using (FileStream file = File.Create(dumpFilePath))
                             {
-                                throw new Win32Exception(Marshal.GetLastWin32Error());
-                            }
+                                if (!NativeMethods.MiniDumpWriteDump(
+                                                    processHandle,
+                                                    (uint)processId,
+                                                    file.SafeFileHandle,
+                                                    miniDumpType,
+                                                    IntPtr.Zero,
+                                                    IntPtr.Zero,
+                                                    IntPtr.Zero))
+                                {
+                                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                                }
 
-                            if (!string.IsNullOrWhiteSpace(metric))
-                            {
-                                ServiceDumpCountDictionary[dumpKey] = (ServiceDumpCountDictionary[dumpKey].DumpCount + 1, DateTime.UtcNow);
+                                if (!string.IsNullOrWhiteSpace(metric))
+                                {
+                                    ServiceDumpCountDictionary[dumpKey] = (ServiceDumpCountDictionary[dumpKey].DumpCount + 1, DateTime.UtcNow);
+                                }
                             }
                         }
                     }
@@ -665,17 +674,17 @@ namespace FabricObserver.Observers
                 ObserverLogger.LogWarning(
                     $"Failure generating Windows process dump file {dumpFileName} with error:{Environment.NewLine}{e}");
 
+                // This would mean a partial file may have been created (like the process went away during dump capture). Delete it.
                 if (File.Exists(dumpFilePath))
                 {
-                    // This means a partial file may have been created (like the process went away during dump capture). Delete it.
                     try
                     {
                         Retry.Do(() => File.Delete(Path.Combine(DumpsPath, dumpFileName)), TimeSpan.FromSeconds(1), Token);
                     }
-                    catch(AggregateException)
+                    catch (AggregateException)
                     {
                         // Couldn't delete file.
-                        // Retry.Do throws AggregateException containing list of exceptions caught. In this case, we don't really care..
+                        // Retry.Do throws AggregateException containing list of exceptions caught. In this case, we don't really care.
                     }
                 }
             }
@@ -693,7 +702,7 @@ namespace FabricObserver.Observers
         /// <param name="healthReportTtl">Health report Time to Live (TimeSpan)</param>
         /// <param name="entityType">Service Fabric Entity type. Note, only Application and Node types are supported by this function.</param>
         /// <param name="replicaOrInstance">Replica or Instance information contained in a type.</param>
-        /// <param name="dumpOnError">Whether or not to dump process if Error threshold has been reached.</param>
+        /// <param name="dumpOnErrorOrWarning">Whether or not to dump process if Error threshold has been reached.</param>
         public void ProcessResourceDataReportHealth<T>(
                         FabricResourceUsageData<T> data,
                         T thresholdError,
@@ -701,7 +710,7 @@ namespace FabricObserver.Observers
                         TimeSpan healthReportTtl,
                         EntityType entityType,
                         ReplicaOrInstanceMonitoringInfo replicaOrInstance = null,
-                        bool dumpOnError = false) where T : struct
+                        bool dumpOnErrorOrWarning = false) where T : struct
         {
             if (data == null)
             {
@@ -840,36 +849,25 @@ namespace FabricObserver.Observers
                 warningOrError = true;
                 healthState = HealthState.Error;
 
-                // FO emits a health report each time it detects an Error threshold breach for some metric for some supported entity (target).
-                // Don't increment this internal counter if the target is already in error for the same metric.
-                if (!data.ActiveErrorOrWarning)
-                {
-                    CurrentErrorCount++;
-                }
-
-                // **Windows-only**. This is used by AppObserver, but makes sense to be
-                // part of the base class for future use, like for plugins that manage service processes.
-                if (replicaOrInstance != null && dumpOnError && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                // User service process dump. This is Windows-only today.
+                if (replicaOrInstance != null && dumpOnErrorOrWarning && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     if (!string.IsNullOrWhiteSpace(DumpsPath))
                     {
                         if (ServiceDumpCountDictionary == null)
                         {
-                            ServiceDumpCountDictionary = new Dictionary<string, (int DumpCount, DateTime LastDump)>(5);
+                            ServiceDumpCountDictionary = new ConcurrentDictionary<string, (int DumpCount, DateTime LastDump)>();
                         }
 
                         try
                         {
                             int pid = (int)replicaOrInstance.HostProcessId;
+                            string procName = NativeMethods.GetProcessNameFromId(pid);
 
-                            using (var proc = Process.GetProcessById(pid))
+                            // Only dump the process if it is still what we think it is..
+                            if (!string.IsNullOrWhiteSpace(procName) && data.Id.Contains($":{procName}{pid}"))
                             {
-                                string procName = proc?.ProcessName;
-
-                                lock (lockObj)
-                                {
-                                    _ = DumpWindowsServiceProcess(pid, procName, data.Property);
-                                }
+                                _ = DumpWindowsServiceProcess(pid, procName, data.Property);
                             }
                         }
                         catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
@@ -877,6 +875,13 @@ namespace FabricObserver.Observers
                             ObserverLogger.LogWarning($"Unable to generate dmp file:{Environment.NewLine}{e}");
                         }
                     }
+                }
+ 
+                // FO emits a health report each time it detects an Error threshold breach for some metric for some supported entity (target).
+                // Don't increment this internal counter if the target is already in error for the same metric.
+                if (!data.ActiveErrorOrWarning)
+                {
+                    CurrentErrorCount++;
                 }
             }
 

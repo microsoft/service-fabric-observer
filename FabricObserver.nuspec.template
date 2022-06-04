@@ -6,7 +6,7 @@
 		<releaseNotes>
 - This is a relatively major release with significant changes. Many of these will be transparent to you except for the new service deployment model (removal of DefaultServices from ApplicationManifest.xml to support ARM deployment).
 - Support for ARM deployment.
-- Requires .net6 and Service Fabric 9.x. This version will not run on older versions of Service Fabric. Use version 3.2.0 for SF versions 8.x. 3.2.0 will be the last version to target .NET Core 3.1.
+- Requires .NET 6 and SF Runtime >= 9.This version will not run on older versions of Service Fabric. Use version 3.2.0 for SF versions 8.x. 
 - AppObserver now generates ServiceHealthReport health reports, which will put service entities into Error or Warning depending upon your configuration thresholds. There are breaking changes to FO's health reporter API. See Release Notes on repo.
 - Substantial performance improvements.
 - Several code improvements.
