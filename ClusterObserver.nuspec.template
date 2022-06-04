@@ -4,10 +4,10 @@
 		<id>%PACKAGE_ID%</id>
 		<version>2.1.16</version>
 		<releaseNotes>
-			- This is a relatively major release with significant changes. Many of these will be transparent to you except for the new service deployment model (removal of DefaultServices in ApplicationManifest.xml to support ARM deployment).
-			- Supports FabricObserver's Extensibility model: you can build and run ClusterObserver plugins.
-			- Employs FabricObserver.Extensibility for a significant portion of its functionality (duplicated code removed).
-			- Requires SF Runtime 8.0 and above.
+- This is a relatively major release with significant changes. Many of these will be transparent to you except for the new service deployment model (removal of DefaultServices in ApplicationManifest.xml to support ARM deployment).
+- Supports FabricObserver's Extensibility model: you can build and run ClusterObserver plugins.
+- Employs FabricObserver.Extensibility for a significant portion of its functionality (duplicated code removed).
+- Requires SF Runtime 8.0 and above.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

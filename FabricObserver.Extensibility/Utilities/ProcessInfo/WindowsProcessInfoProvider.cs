@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -32,7 +33,7 @@ namespace FabricObserver.Observers.Utilities
             return NativeGetProcessHandleCount(processId);
         }
 
-        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, IntPtr handleToSnapshot)
+        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot)
         {
             // Get descendant procs.
             List<(string ProcName, int Pid)> childProcesses = TupleGetChildProcessesWin32(parentPid, handleToSnapshot);
@@ -119,7 +120,7 @@ namespace FabricObserver.Observers.Utilities
             return childProcesses;
         }
 
-        private List<(string procName, int pid)> TupleGetChildProcessesWin32(int processId, IntPtr handleToSnapshot)
+        private List<(string procName, int pid)> TupleGetChildProcessesWin32(int processId, NativeMethods.SafeObjectHandle handleToSnapshot)
         {
             try
             {
@@ -212,7 +213,7 @@ namespace FabricObserver.Observers.Utilities
 
         private float NativeGetProcessFullWorkingSetMb(int processId)
         {
-            IntPtr handle = IntPtr.Zero;
+            SafeProcessHandle handle = null;
 
             try
             {
@@ -220,13 +221,12 @@ namespace FabricObserver.Observers.Utilities
                 memoryCounters.cb = (uint)Marshal.SizeOf(typeof(NativeMethods.PROCESS_MEMORY_COUNTERS_EX));
                 handle = NativeMethods.OpenProcess((uint)NativeMethods.ProcessAccessFlags.All, false, (uint)processId);
 
-                if (handle == IntPtr.Zero || !NativeMethods.GetProcessMemoryInfo(handle, out memoryCounters, memoryCounters.cb))
+                if (handle.IsInvalid || !NativeMethods.GetProcessMemoryInfo(handle, out memoryCounters, memoryCounters.cb))
                 {
                     throw new Win32Exception($"GetProcessMemoryInfo returned false. Error Code is {Marshal.GetLastWin32Error()}");
                 }
 
                 long workingSetSizeMb = memoryCounters.WorkingSetSize.ToInt64() / 1024 / 1024;
-
                 return workingSetSizeMb; 
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
@@ -236,23 +236,21 @@ namespace FabricObserver.Observers.Utilities
             }
             finally
             {
-                NativeMethods.ReleaseHandle(handle);
+                handle?.Dispose();
+                handle = null;
             }
         }
 
         private int NativeGetProcessHandleCount(int processId)
         {
+            SafeProcessHandle handle = null;
+
             try
             {
                 uint handles = 0;
-
-                IntPtr handle =
-                    NativeMethods.OpenProcess(
-                        (uint)NativeMethods.ProcessAccessFlags.QueryLimitedInformation | (uint)NativeMethods.ProcessAccessFlags.DuplicateHandle,
-                        false,
-                        (uint)processId);
+                handle = NativeMethods.GetProcessHandle((uint)processId);
                 
-                if (handle == IntPtr.Zero || !NativeMethods.GetProcessHandleCount(handle, out handles))
+                if (handle.IsInvalid || !NativeMethods.GetProcessHandleCount(handle, out handles))
                 {
                     Logger.LogWarning($"GetProcessHandleCount: Failed with Win32 error code {Marshal.GetLastWin32Error()}. Trying a different approach (Process obj).");
                 }
@@ -267,9 +265,14 @@ namespace FabricObserver.Observers.Utilities
                 {
                     Logger.LogWarning($"NativeGetProcessHandleCount: Exception getting working set for process {processId}:{Environment.NewLine}{e}");
                 }
-            }
 
-            return -1;
+                return -1;
+            }
+            finally
+            {
+                handle?.Dispose();
+                handle = null;
+            }
         }
 
         private int GetProcessAllocatedHandles(Process process)

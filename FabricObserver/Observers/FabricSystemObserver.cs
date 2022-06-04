@@ -924,7 +924,7 @@ namespace FabricObserver.Observers
                     TotalAllocatedHandlesAllSystemServices += handles;
 
                     // Threads
-                    int threads = ProcessInfoProvider.GetProcessThreadCount(procId, process.ProcessName);
+                    int threads = ProcessInfoProvider.GetProcessThreadCount(procId);
 
                     TotalThreadsAllSystemServices += threads;
                     

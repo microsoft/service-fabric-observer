@@ -162,7 +162,7 @@ namespace FabricObserver.Utilities.ServiceFabric
         {
             List<ReplicaOrInstanceMonitoringInfo> repList = new List<ReplicaOrInstanceMonitoringInfo>();
             List<DeployedApplication> appList = await GetAllDeployedAppsAsync(token);
-            IntPtr handleToSnapshot = IntPtr.Zero;
+            NativeMethods.SafeObjectHandle handleToSnapshot = null;
 
             if (isWindows && includeChildProcesses)
             {
@@ -196,7 +196,8 @@ namespace FabricObserver.Utilities.ServiceFabric
             {
                 if (isWindows && includeChildProcesses)
                 {
-                    NativeMethods.ReleaseHandle(handleToSnapshot);
+                    handleToSnapshot?.Dispose();
+                    handleToSnapshot = null;
                 }
             }
         }
@@ -215,7 +216,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                                                         string applicationTypeName,
                                                         DeployedServiceReplicaList deployedReplicaList,
                                                         bool includeChildProcesses,
-                                                        IntPtr handleToSnapshot,
+                                                        NativeMethods.SafeObjectHandle handleToSnapshot,
                                                         CancellationToken token)
         {
             ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList = new ConcurrentQueue<ReplicaOrInstanceMonitoringInfo>();

@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -420,15 +421,15 @@ namespace FabricObserver.Observers.Utilities
         }
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
-        public static extern IntPtr CreateToolhelp32Snapshot([In] uint dwFlags, [In] uint th32ProcessID);
+        public static extern SafeObjectHandle CreateToolhelp32Snapshot([In] uint dwFlags, [In] uint th32ProcessID);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        static extern bool Process32First([In] IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
+        static extern bool Process32First([In] SafeObjectHandle hSnapshot, ref PROCESSENTRY32 lppe);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        static extern bool Process32Next([In] IntPtr hSnapshot, ref PROCESSENTRY32 lppe);
+        static extern bool Process32Next([In] SafeObjectHandle hSnapshot, ref PROCESSENTRY32 lppe);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
@@ -441,29 +442,25 @@ namespace FabricObserver.Observers.Utilities
 
         [DllImport("psapi.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool GetProcessMemoryInfo(IntPtr hProcess, [Out] out PROCESS_MEMORY_COUNTERS_EX counters, [In] uint size);
+        public static extern bool GetProcessMemoryInfo(SafeProcessHandle hProcess, [Out] out PROCESS_MEMORY_COUNTERS_EX counters, [In] uint size);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool GetProcessHandleCount(IntPtr hProcess, out uint pdwHandleCount);
+        public static extern bool GetProcessHandleCount(SafeProcessHandle hProcess, out uint pdwHandleCount);
 
         // Process dump support.
         [DllImport("dbghelp.dll", EntryPoint = "MiniDumpWriteDump", CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode, ExactSpelling = true, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool MiniDumpWriteDump(IntPtr hProcess, uint processId, SafeHandle hFile, MINIDUMP_TYPE dumpType, IntPtr expParam, IntPtr userStreamParam, IntPtr callbackParam);
+        public static extern bool MiniDumpWriteDump(SafeProcessHandle hProcess, uint processId, SafeHandle hFile, MINIDUMP_TYPE dumpType, IntPtr expParam, IntPtr userStreamParam, IntPtr callbackParam);
 
         [DllImport("iphlpapi.dll", SetLastError = true)]
         static extern uint GetExtendedTcpTable(IntPtr pTcpTable, ref int dwOutBufLen, bool sort, int ipVersion, TCP_TABLE_CLASS tblClass, uint reserved = 0);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern IntPtr OpenProcess(uint processAccess, bool bInheritHandle,uint processId);
+        public static extern SafeProcessHandle OpenProcess(uint processAccess, bool bInheritHandle,uint processId);
 
         [DllImport("psapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        public static extern uint GetModuleBaseName(IntPtr hProcess, [Optional] IntPtr hModule, [MarshalAs(UnmanagedType.LPTStr)] StringBuilder lpBaseName, uint nSize);
-
-        [DllImport("psapi.dll", SetLastError = true, ExactSpelling = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool EnumProcessModules(IntPtr hProcess, [In, Out, MarshalAs(UnmanagedType.LPArray)] IntPtr[] lphModule, uint cb, out uint lpcbNeeded);
+        public static extern uint GetModuleBaseName(SafeProcessHandle hProcess, [Optional] IntPtr hModule, [MarshalAs(UnmanagedType.LPTStr)] StringBuilder lpBaseName, uint nSize);
 
         private static readonly string[] ignoreProcessList = new string[]
         {
@@ -477,48 +474,36 @@ namespace FabricObserver.Observers.Utilities
             "System", "System interrupts", "Secure System", "Registry"
         };
 
-        private static IntPtr GetProcessHandle(uint id)
+        internal static SafeProcessHandle GetProcessHandle(uint id)
         {
             return OpenProcess((uint)ProcessAccessFlags.VirtualMemoryRead | (uint)ProcessAccessFlags.QueryInformation, false, id);
         }
 
         private static string GetProcessNameFromId(uint pid)
         {
-            IntPtr hProc = IntPtr.Zero;
-            IntPtr[] hMods;
+            SafeProcessHandle hProc = null;
             StringBuilder sbProcName = new StringBuilder(1024);
 
             try
             {
                 hProc = GetProcessHandle(pid);
 
-                if (hProc != IntPtr.Zero)
+                if (!hProc.IsInvalid && !hProc.IsClosed)
                 {
-                    // Get how much memory we will need (size).
-                    if (!EnumProcessModules(hProc, null, 0, out uint size) && size == 0)
+                    // Get the name of the process.
+                    if (GetModuleBaseName(hProc, IntPtr.Zero, sbProcName, (uint)sbProcName.Capacity) == 0)
                     {
-                        throw new Win32Exception($"Failure in GetProcessNameFromId(uint): {Marshal.GetLastWin32Error()}");
+                        throw new Win32Exception($"Failure in GetProcessNameFromId(uint): GetModuleBaseName -> {Marshal.GetLastWin32Error()}");
                     }
-
-                    // Get array of module handles for specified process.
-                    hMods = new IntPtr[size / IntPtr.Size];
-                    if (!EnumProcessModules(hProc, hMods, size, out _))
-                    {
-                        throw new Win32Exception($"Failure in GetProcessNameFromId(uint): {Marshal.GetLastWin32Error()}");
-                    }
-
-                    // Get the name of the containing process.
-                    GetModuleBaseName(hProc, hMods[0], sbProcName, (uint)sbProcName.Capacity);
                 }
-
                 return sbProcName.ToString();
             }
             finally
             {
-                hMods = null;
                 sbProcName.Clear();
                 sbProcName = null;
-                ReleaseHandle(hProc);
+                hProc.Dispose();
+                hProc = null;
             }
         }
 
@@ -541,7 +526,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="handleToSnapshot">Handle to process snapshot (created using NativeMethods.CreateToolhelp32Snapshot).</param>
         /// <returns>A List of tuple (string procName,  int procId) representing each child process.</returns>
         /// <exception cref="Win32Exception">A Win32 Error Code will be present in the exception Message.</exception>
-        public static List<(string procName, int procId)> GetChildProcesses(int parentpid, IntPtr handleToSnapshot)
+        public static List<(string procName, int procId)> GetChildProcesses(int parentpid, SafeObjectHandle handleToSnapshot = null)
         {
             if (parentpid < 1)
             {
@@ -552,11 +537,11 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                if (handleToSnapshot == IntPtr.Zero)
+                if (handleToSnapshot == null || handleToSnapshot.IsInvalid)
                 {
                     isLocalSnapshot = true;
                     handleToSnapshot = CreateToolhelp32Snapshot((uint)CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
-                    if (handleToSnapshot == IntPtr.Zero)
+                    if (handleToSnapshot.IsInvalid)
                     {
                         throw new Win32Exception(
                             $"NativeMethods.CreateToolhelp32Snapshot: Failed to get process snapshot with error code {Marshal.GetLastWin32Error()}");
@@ -579,7 +564,7 @@ namespace FabricObserver.Observers.Utilities
                 {
                     try
                     {
-                        if (procEntry.th32ProcessID == 0 || ignoreProcessList.Any(i => i == procEntry.szExeFile))
+                        if (procEntry.th32ProcessID == 0 || ignoreProcessList.Any(f => f == procEntry.szExeFile))
                         {
                             continue;
                         }
@@ -588,9 +573,9 @@ namespace FabricObserver.Observers.Utilities
                         {
                             // Make sure the parent process is still the active process with supplied identifier.
                             string suppliedParentProcIdName = GetProcessNameFromId((uint)parentpid);
-                            string parentSnapProceName = GetProcessNameFromId(procEntry.th32ParentProcessID);
+                            string parentSnapProcName = GetProcessNameFromId(procEntry.th32ParentProcessID);
                             
-                            if (suppliedParentProcIdName.Equals(parentSnapProceName))
+                            if (suppliedParentProcIdName.Equals(parentSnapProcName))
                             {
                                 childProcs.Add((procEntry.szExeFile.Replace(".exe", ""), (int)procEntry.th32ProcessID));
                             }
@@ -613,7 +598,8 @@ namespace FabricObserver.Observers.Utilities
             {
                 if (isLocalSnapshot)
                 {
-                    ReleaseHandle(handleToSnapshot);
+                    handleToSnapshot.Dispose();
+                    handleToSnapshot = null;
                 }
             }
         }
@@ -622,11 +608,10 @@ namespace FabricObserver.Observers.Utilities
         /// Gets the number of execution threads started by the process with supplied pid.
         /// </summary>
         /// <param name="pid">The id of the process (pid).</param>
-        /// <param name="processName">The name of the process. This is used to ensure the supplied process id is still assigned to the process.</param>
         /// <param name="handleToSnapshot">Handle to process snapshot (created using NativeMethods.CreateToolhelp32Snapshot).</param>
         /// <returns>The number of execution threads started by the process.</returns>
         /// <exception cref="Win32Exception">A Win32 Error Code will be present in the exception Message.</exception>
-        public static int GetProcessThreadCount(int pid, string processName, IntPtr handleToSnapshot)
+        public static int GetProcessThreadCount(int pid, SafeObjectHandle handleToSnapshot = null)
         {
             int threadCount = 0;
 
@@ -639,11 +624,11 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                if (handleToSnapshot == IntPtr.Zero)
+                if (handleToSnapshot == null || handleToSnapshot.IsInvalid)
                 {
                     isLocalSnapshot = true;
                     handleToSnapshot = CreateToolhelp32Snapshot((uint)CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
-                    if (handleToSnapshot == IntPtr.Zero)
+                    if (handleToSnapshot.IsInvalid)
                     {
                         throw new Win32Exception(
                             $"NativeMethods.GetProcessThreadCount: Failed to get process snapshot with error code {Marshal.GetLastWin32Error()}");
@@ -665,14 +650,15 @@ namespace FabricObserver.Observers.Utilities
                 {
                     try
                     {
-                        if (procEntry.th32ProcessID == 0 || ignoreProcessList.Any(i => i == procEntry.szExeFile))
+                        if (procEntry.th32ProcessID == 0 || ignoreProcessList.Any(f => f == procEntry.szExeFile))
                         {
                             continue;
                         }
 
-                        if (pid == procEntry.th32ProcessID && procEntry.szExeFile.Replace(".exe", "") == processName)
+                        if (pid == procEntry.th32ProcessID)
                         {
-                            return (int)procEntry.cntThreads;
+                            threadCount = (int)procEntry.cntThreads;
+                            break;
                         }
                     }
                     catch (ArgumentException)
@@ -688,7 +674,8 @@ namespace FabricObserver.Observers.Utilities
             {
                 if (isLocalSnapshot)
                 {
-                    ReleaseHandle(handleToSnapshot);
+                    handleToSnapshot.Dispose();
+                    handleToSnapshot = null;
                 }
             }
         }
@@ -702,7 +689,13 @@ namespace FabricObserver.Observers.Utilities
         {
             try
             {
-                return GetProcessNameFromId((uint)pid)?.Replace(".exe", ""); 
+                string s = GetProcessNameFromId((uint)pid);
+                if (s?.Length == 0)
+                {
+                    return null;
+                }
+
+                return s.Replace(".exe", ""); 
             }
             catch (ArgumentException)
             {
@@ -779,7 +772,7 @@ namespace FabricObserver.Observers.Utilities
         }
 
         // Cleanup
-        public static void ReleaseHandle(IntPtr handle)
+        public static bool ReleaseHandle(IntPtr handle)
         {
             if (handle != IntPtr.Zero)
             {
@@ -787,6 +780,25 @@ namespace FabricObserver.Observers.Utilities
                 {
                     throw new Win32Exception($"NativeMethods.ReleaseHandle: Failed to release handle with Win32 error {Marshal.GetLastWin32Error()}");
                 }
+
+                handle = IntPtr.Zero;
+                return true;
+            }
+            return false;
+        }
+
+        // Safe object handle.
+        public sealed class SafeObjectHandle : SafeHandleZeroOrMinusOneIsInvalid
+        {
+            public SafeObjectHandle()
+                : base(ownsHandle: true)
+            {
+
+            }
+
+            protected override bool ReleaseHandle()
+            {
+                return NativeMethods.ReleaseHandle(handle);
             }
         }
     }

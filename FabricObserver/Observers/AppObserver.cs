@@ -70,34 +70,34 @@ namespace FabricObserver.Observers
         private int _appCount;
         private int _serviceCount;
         private bool _checkPrivateWorkingSet;
-        private IntPtr _handleToSnapshot = IntPtr.Zero;
+        private NativeMethods.SafeObjectHandle _handleToProcSnapshot = null;
         
-        private IntPtr HandleToSnapshot
+        private NativeMethods.SafeObjectHandle HandleToProcessSnapshot
         {
             get
             {
                 // This is only useful for Windows.
                 if (!_isWindows)
                 {
-                    return IntPtr.Zero;
+                    return null;
                 }
 
-                if (_handleToSnapshot == IntPtr.Zero)
+                if (_handleToProcSnapshot == null)
                 {
                     lock (lockObj)
                     {
-                        if (_handleToSnapshot == IntPtr.Zero)
+                        if (_handleToProcSnapshot == null)
                         {
-                            _handleToSnapshot = NativeMethods.CreateToolhelp32Snapshot((uint)NativeMethods.CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
-                            if (_handleToSnapshot == IntPtr.Zero)
+                            _handleToProcSnapshot = NativeMethods.CreateToolhelp32Snapshot((uint)NativeMethods.CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
+                            if (_handleToProcSnapshot.IsInvalid)
                             {
                                 throw new Win32Exception(
-                                    $"HandleToSnapshot: Failed to get process snapshot with error code {Marshal.GetLastWin32Error()}");
+                                    $"HandleToProcessSnapshot: Failed to get process snapshot with error code {Marshal.GetLastWin32Error()}");
                             }
                         }
                     }
                 }
-                return _handleToSnapshot;
+                return _handleToProcSnapshot;
             }
         }
 
@@ -1803,7 +1803,7 @@ namespace FabricObserver.Observers
                 // Threads
                 if (checkThreads)
                 {
-                    int threads = ProcessInfoProvider.GetProcessThreadCount(procId, procName);
+                    int threads = ProcessInfoProvider.GetProcessThreadCount(procId);
 
                     if (threads > 0)
                     {
@@ -2181,7 +2181,7 @@ namespace FabricObserver.Observers
                         {
                             // DEBUG
                             //var sw = Stopwatch.StartNew();
-                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, HandleToSnapshot);
+                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, HandleToProcessSnapshot);
 
                             if (childPids != null && childPids.Count > 0)
                             {
@@ -2227,7 +2227,7 @@ namespace FabricObserver.Observers
                         {
                             // DEBUG
                             //var sw = Stopwatch.StartNew();
-                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, HandleToSnapshot);
+                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, HandleToProcessSnapshot);
 
                             if (childPids != null && childPids.Count > 0)
                             {
@@ -2419,8 +2419,8 @@ namespace FabricObserver.Observers
 
             if (_isWindows)
             {
-                NativeMethods.ReleaseHandle(_handleToSnapshot);
-                _handleToSnapshot = IntPtr.Zero;
+                _handleToProcSnapshot?.Dispose();
+                _handleToProcSnapshot = null;
             }
         }
     }

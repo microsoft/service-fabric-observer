@@ -22,6 +22,7 @@ using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 using FabricObserver.TelemetryLib;
 using FabricObserver.Utilities.ServiceFabric;
+using Microsoft.Win32.SafeHandles;
 using ConfigSettings = FabricObserver.Observers.Utilities.ConfigSettings;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
@@ -613,7 +614,7 @@ namespace FabricObserver.Observers
                         dumpFileName = process.ProcessName;
                     }
 
-                    IntPtr processHandle = process.Handle;
+                    SafeProcessHandle processHandle = process.SafeHandle;
                     dumpFileName += $"_{DateTime.Now:ddMMyyyyHHmmssFFF}.dmp";
 
                     // Check disk space availability before writing dump file.
