@@ -164,15 +164,15 @@ namespace FabricObserver.Observers.Utilities
 
             if (data is ServiceFabricUpgradeEventData upgradeEventData)
             {
-                if (upgradeEventData.FabricUpgradeProgress.UpgradeState == System.Fabric.FabricUpgradeState.Failed 
-                    || upgradeEventData.FabricUpgradeProgress.UpgradeState == System.Fabric.FabricUpgradeState.RollingBackInProgress)
+                if (upgradeEventData.FabricUpgradeProgress?.UpgradeState == System.Fabric.FabricUpgradeState.Failed 
+                    || upgradeEventData.FabricUpgradeProgress?.UpgradeState == System.Fabric.FabricUpgradeState.RollingBackInProgress)
                 {
                     ServiceEventSource.Current.DataTypeWriteWarning(eventName, data);
                     return;
                 }
 
-                if (upgradeEventData.ApplicationUpgradeProgress.UpgradeState == System.Fabric.ApplicationUpgradeState.Failed
-                    || upgradeEventData.ApplicationUpgradeProgress.UpgradeState == System.Fabric.ApplicationUpgradeState.RollingBackInProgress)
+                if (upgradeEventData.ApplicationUpgradeProgress?.UpgradeState == System.Fabric.ApplicationUpgradeState.Failed
+                    || upgradeEventData.ApplicationUpgradeProgress?.UpgradeState == System.Fabric.ApplicationUpgradeState.RollingBackInProgress)
                 {
                     ServiceEventSource.Current.DataTypeWriteWarning(eventName, data);
                     return;
