@@ -257,9 +257,7 @@ namespace ClusterObserver
                         TelemetryClient = new LogAnalyticsTelemetry(
                                                 logAnalyticsWorkspaceId,
                                                 logAnalyticsSharedKey,
-                                                logAnalyticsLogType,
-                                                FabricClientInstance,
-                                                token);
+                                                logAnalyticsLogType);
 
                         break;
                     

@@ -42,7 +42,4 @@
 		<ProjectReference Include="..\FabricObserver.Extensibility\FabricObserver.Extensibility.csproj" />
 		<ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />
 	</ItemGroup>
-	<ItemGroup>
-		<Folder Include="PackageRoot\Data\Plugins\" />
-	</ItemGroup>
 </Project>

@@ -1104,9 +1104,7 @@ namespace FabricObserver.Observers
                     TelemetryClient = new LogAnalyticsTelemetry(
                                             logAnalyticsWorkspaceId,
                                             logAnalyticsSharedKey,
-                                            logAnalyticsLogType,
-                                            FabricClientInstance,
-                                            token);
+                                            logAnalyticsLogType);
                     break;
                     
                 case TelemetryProviderType.AzureApplicationInsights:

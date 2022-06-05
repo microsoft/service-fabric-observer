@@ -1297,12 +1297,7 @@ namespace FabricObserver.Observers
                         return;
                     }
 
-                    TelemetryClient = new LogAnalyticsTelemetry(
-                        logAnalyticsWorkspaceId,
-                        logAnalyticsSharedKey,
-                        logAnalyticsLogType,
-                        FabricClientInstance,
-                        new CancellationToken());
+                    TelemetryClient = new LogAnalyticsTelemetry(logAnalyticsWorkspaceId, logAnalyticsSharedKey, logAnalyticsLogType);
 
                     break;
 

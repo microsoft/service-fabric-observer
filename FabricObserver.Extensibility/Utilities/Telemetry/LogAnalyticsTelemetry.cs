@@ -24,8 +24,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
     public class LogAnalyticsTelemetry : ITelemetryProvider
     {
         private readonly Logger logger;
-        private readonly FabricClient fabricClient;
-        private readonly CancellationToken token;
 
         private string WorkspaceId
         {
@@ -51,15 +49,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 string workspaceId,
                 string sharedKey,
                 string logType,
-                FabricClient fabricClient,
-                CancellationToken token,
                 string apiVersion = "2016-04-01")
         {
             WorkspaceId = workspaceId;
             Key = sharedKey;
             LogType = logType;
-            this.fabricClient = fabricClient;
-            this.token = token;
             ApiVersion = apiVersion;
             logger = new Logger("TelemetryLogger");
         }
@@ -76,7 +70,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             string jsonPayload = JsonConvert.SerializeObject(
                 new
                 {
-                    clusterId = ClusterInformation.ClusterInfoTuple.ClusterId ?? string.Empty,
+                    ClusterInformation.ClusterInfoTuple.ClusterId,
                     source,
                     property = propertyName,
                     healthState = state.ToString(),
@@ -144,7 +138,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 {
                     id = $"FO_{Guid.NewGuid()}",
                     datetime = DateTime.UtcNow,
-                    clusterId = ClusterInformation.ClusterInfoTuple.ClusterId ?? string.Empty,
+                    ClusterInformation.ClusterInfoTuple.ClusterId,
                     source,
                     property = name,
                     value
@@ -167,7 +161,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 string jsonPayload = JsonConvert.SerializeObject(
                         new
                         {
-                            eventData.ClusterId,
+                            ClusterId = eventData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId,
                             Timestamp = DateTime.UtcNow,
                             eventData.OS,
                             UpgradeTargetCodeVersion = eventData.FabricUpgradeProgress.UpgradeDescription?.TargetCodeVersion,
@@ -199,7 +193,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 string jsonPayload = JsonConvert.SerializeObject(
                         new
                         {
-                            eventData.ClusterId,
+                            ClusterId = eventData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId,
                             Timestamp = DateTime.UtcNow,
                             eventData.OS,
                             ApplicationName = eventData.ApplicationUpgradeProgress.ApplicationName?.OriginalString,
