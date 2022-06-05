@@ -18,6 +18,7 @@ using Newtonsoft.Json;
 using FabricObserver.Observers;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
+using FabricObserver.TelemetryLib;
 
 namespace ClusterObserver
 {
@@ -210,6 +211,7 @@ namespace ClusterObserver
 
                     var telemetry = new TelemetryData()
                     {
+                        ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                         HealthState = HealthState.Ok,
                         Description = "Cluster has recovered from previous Error/Warning state.",
                         Metric = "AggregatedClusterHealth",
@@ -546,6 +548,7 @@ namespace ClusterObserver
 
                     var telemetryData = new TelemetryData()
                     {
+                        ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                         ApplicationName = appName.OriginalString,
                         HealthState = appHealth.AggregatedHealthState,
                         Description = telemetryDescription,
@@ -647,6 +650,7 @@ namespace ClusterObserver
 
                     var telemetryData = new TelemetryData()
                     {
+                        ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                         ApplicationName = appName.OriginalString,
                         EntityType = EntityType.Service,
                         ServiceName = serviceName.OriginalString,
@@ -747,6 +751,7 @@ namespace ClusterObserver
 
                             var telemData = new TelemetryData()
                             {
+                                ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                                 EntityType = EntityType.Node,
                                 NodeName = node.NodeName,
                                 HealthState = node.AggregatedHealthState,
@@ -778,6 +783,7 @@ namespace ClusterObserver
 
             var telemetryData = new TelemetryData()
             {
+                ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                 Description = telemetryDescription,
                 HealthState = evaluation.AggregatedHealthState,
                 Source = ObserverName
@@ -821,6 +827,7 @@ namespace ClusterObserver
 
                     var telemetry = new TelemetryData()
                     {
+                        ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                         HealthState = HealthState.Ok,
                         Description = $"{nodeDictItem.Key} is now Up.",
                         Metric = "NodeStatus",
@@ -884,6 +891,7 @@ namespace ClusterObserver
 
                         var telemetry = new TelemetryData()
                         {
+                            ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                             HealthState = HealthState.Warning,
                             Description = message,
                             Metric = "NodeStatus",

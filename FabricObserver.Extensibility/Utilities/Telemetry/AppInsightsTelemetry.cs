@@ -179,7 +179,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
                 var properties = new Dictionary<string, string>
                 {
-                    { "ClusterId", ClusterInformation.ClusterInfoTuple.ClusterId ?? string.Empty },
+                    { "ClusterId", telemetryData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId },
                     { "HealthState", Enum.GetName(typeof(HealthState), telemetryData.HealthState) },
                     { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
                     { "ServiceName", telemetryData.ServiceName ?? string.Empty },
@@ -252,7 +252,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             {
                 var properties = new Dictionary<string, string>
                 {
-                    { "ClusterId", ClusterInformation.ClusterInfoTuple.ClusterId ?? string.Empty },
+                    { "ClusterId", telemetryData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId },
                     { "HealthState", Enum.GetName(typeof(HealthState), telemetryData.HealthState) },
                     { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
                     { "ServiceName", telemetryData.ServiceName ?? string.Empty },
@@ -437,7 +437,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 {
                     { "EventName", "ClusterUpgradeEvent" },
                     { "TaskName", eventData.TaskName },
-                    { "ClusterId", eventData.ClusterId },
+                    { "ClusterId", eventData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId },
                     { "Timestamp", DateTime.UtcNow.ToString("o") },
                     { "OS", eventData.OS },
                     { "UpgradeTargetCodeVersion", eventData.FabricUpgradeProgress.UpgradeDescription?.TargetCodeVersion },
@@ -481,7 +481,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 {
                     { "EventName", "ApplicationUpgradeEvent" },
                     { "TaskName", eventData.TaskName },
-                    { "ClusterId", eventData.ClusterId },
+                    { "ClusterId", eventData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId },
                     { "Timestamp", DateTime.UtcNow.ToString("o") },
                     { "OS", eventData.OS },
                     { "ApplicationName", eventData.ApplicationUpgradeProgress.ApplicationName?.OriginalString },

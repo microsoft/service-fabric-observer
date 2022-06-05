@@ -39,7 +39,7 @@ namespace ClusterObserver
         private bool appParamsUpdating;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "2.1.16";
+        private const string InternalVersionNumber = "2.1.15";
 
         public bool EnableOperationalTelemetry
         {
@@ -257,9 +257,7 @@ namespace ClusterObserver
                         TelemetryClient = new LogAnalyticsTelemetry(
                                                 logAnalyticsWorkspaceId,
                                                 logAnalyticsSharedKey,
-                                                logAnalyticsLogType,
-                                                FabricClientInstance,
-                                                token);
+                                                logAnalyticsLogType);
 
                         break;
                     
