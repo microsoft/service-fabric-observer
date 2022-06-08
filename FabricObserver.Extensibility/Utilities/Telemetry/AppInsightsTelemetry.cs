@@ -443,7 +443,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "UpgradeTargetCodeVersion", eventData.FabricUpgradeProgress.UpgradeDescription?.TargetCodeVersion },
                     { "UpgradeTargetConfigVersion", eventData.FabricUpgradeProgress.UpgradeDescription?.TargetConfigVersion },
                     { "UpgradeState", Enum.GetName(typeof(FabricUpgradeState), eventData.FabricUpgradeProgress.UpgradeState) },
-                    { "UpgradeDomain", eventData.FabricUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName },
+                    { "CurrentUpgradeDomain", eventData.FabricUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName },
+                    { "NextUpgradeDomain", eventData.FabricUpgradeProgress?.NextUpgradeDomain },
                     { "UpgradeDuration", eventData.FabricUpgradeProgress?.CurrentUpgradeDomainDuration.ToString() },
                     { "FailureReason", eventData.FabricUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.FabricUpgradeProgress.FailureReason.Value) : null }
                 };
@@ -487,7 +488,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "ApplicationName", eventData.ApplicationUpgradeProgress.ApplicationName?.OriginalString },
                     { "UpgradeTargetTypeVersion", eventData.ApplicationUpgradeProgress.UpgradeDescription?.TargetApplicationTypeVersion },
                     { "UpgradeState", Enum.GetName(typeof(ApplicationUpgradeState), eventData.ApplicationUpgradeProgress.UpgradeState) },
-                    { "UpgradeDomain", eventData.ApplicationUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName },
+                    { "CurrentUpgradeDomain", eventData.ApplicationUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName },
+                    { "NextUpgradeDomain", eventData.ApplicationUpgradeProgress?.NextUpgradeDomain },
                     { "UpgradeDuration", eventData.ApplicationUpgradeProgress.CurrentUpgradeDomainDuration.ToString() },
                     { "FailureReason", eventData.ApplicationUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.ApplicationUpgradeProgress.FailureReason.Value) : null }
                 };
