@@ -1393,7 +1393,7 @@ namespace FabricObserver.Observers
         {
             try
             {
-                DumpsPath = Path.Combine(ObserverLogger.LogFolderBasePath, ObserverName, "MemoryDumps");
+                DumpsPath = Path.Combine(ObserverLogger.LogFolderBasePath, ObserverName, ObserverConstants.ProcessDumpFolderName);
                 Directory.CreateDirectory(DumpsPath);
             }
             catch (Exception e) when (e is ArgumentException || e is IOException || e is NotSupportedException || e is UnauthorizedAccessException)

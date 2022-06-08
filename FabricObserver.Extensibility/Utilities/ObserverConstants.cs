@@ -59,6 +59,7 @@ namespace FabricObserver.Observers.Utilities
         public const string EnableKvsLvidMonitoringParameter = "EnableKvsLvidMonitoring";
         public const string MonitorPrivateWorkingSet = "MonitorPrivateWorkingSet";
         public const string ConfigurationFileName = "ConfigurationFileName";
+        public const string ProcessDumpFolderName = "MemoryDumps";
 
         // AppObserver.
         public const string AppObserverName = "AppObserver";

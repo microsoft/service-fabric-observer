@@ -22,47 +22,143 @@ namespace FabricObserver.Observers.Utilities
         private (int, int) windowsDynamicPortRange = (-1, -1);
         private readonly List<NativeMethods.MIB_TCPROW_OWNER_PID> allTcpConnInfo;
         private const int tcpPortOutputMaxCacheTimeSeconds = 15;
-        private const int dynamicRangeMaxCacheTimeHours = 8;
+        private const int dynamicRangeMaxCacheTimeMinutes = 15;
         private DateTime LastPortCacheUpdate = DateTime.MinValue;
         private DateTime LastDynamicRangeCacheUpdate = DateTime.MinValue;
-        private readonly object _lock =  new object();
-
+        private readonly object _lock = new object();
+        
         public WindowsInfoProvider()
         {
             windowsDynamicPortRange = TupleGetDynamicPortRange();
             allTcpConnInfo = new List<NativeMethods.MIB_TCPROW_OWNER_PID>();
         }
 
-        private void GetTcpConnections()
+        public override Task<OSInfo> GetOSInfoAsync(CancellationToken cancellationToken)
         {
-            if (DateTime.UtcNow.Subtract(LastPortCacheUpdate) < TimeSpan.FromSeconds(tcpPortOutputMaxCacheTimeSeconds))
-            {
-                return;
-            }
+            ManagementObjectSearcher win32OsInfo = null;
+            ManagementObjectCollection results = null;
+            OSInfo osInfo = default;
 
-            lock (_lock)
+            try
             {
-                if (DateTime.UtcNow.Subtract(LastPortCacheUpdate) < TimeSpan.FromSeconds(tcpPortOutputMaxCacheTimeSeconds))
+                win32OsInfo = new ManagementObjectSearcher(
+                                    "SELECT Caption,Version,Status,OSLanguage,NumberOfProcesses,FreePhysicalMemory,FreeVirtualMemory," +
+                                    "TotalVirtualMemorySize,TotalVisibleMemorySize,InstallDate,LastBootUpTime FROM Win32_OperatingSystem");
+
+                results = win32OsInfo.Get();
+
+                using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = results.GetEnumerator())
                 {
-                    return;
-                }
+                    while (enumerator.MoveNext())
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        ManagementObject mObj = (ManagementObject)enumerator.Current;
 
-                allTcpConnInfo.Clear();
-                allTcpConnInfo.AddRange(NativeMethods.GetAllTcpConnections());
-                LastPortCacheUpdate = DateTime.UtcNow;
+                        try
+                        {
+                            object captionObj = mObj.Properties["Caption"].Value;
+                            object versionObj = mObj.Properties["Version"].Value;
+                            object statusObj = mObj.Properties["Status"].Value;
+                            object osLanguageObj = mObj.Properties["OSLanguage"].Value;
+                            object numProcsObj = mObj.Properties["NumberOfProcesses"].Value;
+                            object freePhysicalObj = mObj.Properties["FreePhysicalMemory"].Value;
+                            object freeVirtualTotalObj = mObj.Properties["FreeVirtualMemory"].Value;
+                            object totalVirtualObj = mObj.Properties["TotalVirtualMemorySize"].Value;
+                            object totalVisibleObj = mObj.Properties["TotalVisibleMemorySize"].Value;
+                            object installDateObj = mObj.Properties["InstallDate"].Value;
+                            object lastBootDateObj = mObj.Properties["LastBootUpTime"].Value;
+
+                            osInfo.Name = captionObj?.ToString();
+
+                            if (int.TryParse(numProcsObj?.ToString(), out int numProcesses))
+                            {
+                                osInfo.NumberOfProcesses = numProcesses;
+                            }
+                            else
+                            {
+                                osInfo.NumberOfProcesses = -1;
+                            }
+
+                            osInfo.Status = statusObj?.ToString();
+                            osInfo.Language = osLanguageObj?.ToString();
+                            osInfo.Version = versionObj?.ToString();
+                            osInfo.InstallDate = ManagementDateTimeConverter.ToDateTime(installDateObj?.ToString()).ToUniversalTime().ToString("o");
+                            osInfo.LastBootUpTime = ManagementDateTimeConverter.ToDateTime(lastBootDateObj?.ToString()).ToUniversalTime().ToString("o");
+                            osInfo.FreePhysicalMemoryKB = ulong.TryParse(freePhysicalObj?.ToString(), out ulong freePhysical) ? freePhysical : 0;
+                            osInfo.FreeVirtualMemoryKB = ulong.TryParse(freeVirtualTotalObj?.ToString(), out ulong freeVirtual) ? freeVirtual : 0;
+                            osInfo.TotalVirtualMemorySizeKB = ulong.TryParse(totalVirtualObj?.ToString(), out ulong totalVirtual) ? totalVirtual : 0;
+                            osInfo.TotalVisibleMemorySizeKB = ulong.TryParse(totalVisibleObj?.ToString(), out ulong totalVisible) ? totalVisible : 0;
+                        }
+                        catch (ManagementException me)
+                        {
+                            Logger.LogInfo($"Handled ManagementException in GetOSInfoAsync retrieval:{Environment.NewLine}{me}");
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.LogInfo($"Bug? => Exception in GetOSInfoAsync:{Environment.NewLine}{e}");
+                        }
+                        finally
+                        {
+                            mObj?.Dispose();
+                            mObj = null;
+                        }
+                    }
+                }
             }
+            finally
+            {
+                results?.Dispose();
+                results = null;
+                win32OsInfo?.Dispose();
+                win32OsInfo = null;
+            }
+
+            return Task.FromResult(osInfo);
+        }
+
+        // Not implemented. No Windows support.
+        public override int GetMaximumConfiguredFileHandlesCount()
+        {
+            return -1;
+        }
+
+        // Not implemented. No Windows support.
+        public override int GetTotalAllocatedFileHandlesCount()
+        {
+            return -1;
+        }
+
+        public override (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetSystemMemoryInfo()
+        {
+            try
+            {
+                NativeMethods.MEMORYSTATUSEX memoryInfo = NativeMethods.GetSystemMemoryInfo();
+                ulong totalMemoryBytes = memoryInfo.ullTotalPhys;
+                ulong availableMemoryBytes = memoryInfo.ullAvailPhys;
+                ulong inUse = totalMemoryBytes - availableMemoryBytes;
+                float used = (float)inUse / totalMemoryBytes;
+                float usedPct = used * 100;
+
+                return ((long)totalMemoryBytes / 1024 / 1024 / 1024, (long)inUse / 1024 / 1024, usedPct);
+            }
+            catch (Win32Exception we)
+            {
+                Logger.LogWarning($"TupleGetMemoryInfo: Failure (native) computing memory data:{Environment.NewLine}{we}");
+            }
+
+            return (0, 0, 0);
         }
 
         public override (int LowPort, int HighPort) TupleGetDynamicPortRange()
         {
-            if (DateTime.UtcNow.Subtract(LastDynamicRangeCacheUpdate) < TimeSpan.FromHours(dynamicRangeMaxCacheTimeHours))
+            if (DateTime.UtcNow.Subtract(LastDynamicRangeCacheUpdate) < TimeSpan.FromMinutes(dynamicRangeMaxCacheTimeMinutes))
             {
                 return windowsDynamicPortRange;
             }
 
             lock (_lock)
             {
-                if (DateTime.UtcNow.Subtract(LastDynamicRangeCacheUpdate) < TimeSpan.FromHours(dynamicRangeMaxCacheTimeHours))
+                if (DateTime.UtcNow.Subtract(LastDynamicRangeCacheUpdate) < TimeSpan.FromMinutes(dynamicRangeMaxCacheTimeMinutes))
                 {
                     return windowsDynamicPortRange;
                 }
@@ -83,8 +179,19 @@ namespace FabricObserver.Observers.Utilities
                             RedirectStandardOutput = true
                         };
 
-                        process.ErrorDataReceived += (sender, e) => { error += e.Data; };
-                        process.OutputDataReceived += (sender, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) { output += e.Data + Environment.NewLine; } };
+                        process.ErrorDataReceived += (sender, e) => 
+                        { 
+                            error += e.Data; 
+                        };
+
+                        process.OutputDataReceived += (sender, e) => 
+                        { 
+                            if (!string.IsNullOrWhiteSpace(e.Data)) 
+                            { 
+                                output += e.Data + Environment.NewLine; 
+                            } 
+                        };
+
                         process.StartInfo = ps;
 
                         if (!process.Start())
@@ -98,11 +205,10 @@ namespace FabricObserver.Observers.Utilities
 
                         if (process.WaitForExit(60000))
                         {
-
                             Match match = Regex.Match(
-                                                output,
-                                                @"Start Port\s+:\s+(?<startPort>\d+).+?Number of Ports\s+:\s+(?<numberOfPorts>\d+)",
-                                                RegexOptions.Singleline | RegexOptions.IgnoreCase);
+                                            output,
+                                            @"Start Port\s+:\s+(?<startPort>\d+).+?Number of Ports\s+:\s+(?<numberOfPorts>\d+)",
+                                            RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
                             string startPort = match.Groups["startPort"].Value;
                             string portCount = match.Groups["numberOfPorts"].Value;
@@ -198,104 +304,29 @@ namespace FabricObserver.Observers.Utilities
             return count;
         }
 
-        public override Task<OSInfo> GetOSInfoAsync(CancellationToken cancellationToken)
+        private void UpdateTcpConnectionsCache()
         {
-            ManagementObjectSearcher win32OsInfo = null;
-            ManagementObjectCollection results = null;
-            OSInfo osInfo = default;
-
-            try
+            if (DateTime.UtcNow.Subtract(LastPortCacheUpdate) < TimeSpan.FromSeconds(tcpPortOutputMaxCacheTimeSeconds))
             {
-                win32OsInfo = new ManagementObjectSearcher(
-                                    "SELECT Caption,Version,Status,OSLanguage,NumberOfProcesses,FreePhysicalMemory,FreeVirtualMemory," +
-                                    "TotalVirtualMemorySize,TotalVisibleMemorySize,InstallDate,LastBootUpTime FROM Win32_OperatingSystem");
+                return;
+            }
 
-                results = win32OsInfo.Get();
-
-                using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = results.GetEnumerator())
+            lock (_lock)
+            {
+                if (DateTime.UtcNow.Subtract(LastPortCacheUpdate) < TimeSpan.FromSeconds(tcpPortOutputMaxCacheTimeSeconds))
                 {
-                    while (enumerator.MoveNext())
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        ManagementObject mObj = (ManagementObject)enumerator.Current;
-
-                        try
-                        {
-                            object captionObj = mObj.Properties["Caption"].Value;
-                            object versionObj = mObj.Properties["Version"].Value;
-                            object statusObj = mObj.Properties["Status"].Value;
-                            object osLanguageObj = mObj.Properties["OSLanguage"].Value;
-                            object numProcsObj = mObj.Properties["NumberOfProcesses"].Value;
-                            object freePhysicalObj = mObj.Properties["FreePhysicalMemory"].Value;
-                            object freeVirtualTotalObj = mObj.Properties["FreeVirtualMemory"].Value;
-                            object totalVirtualObj = mObj.Properties["TotalVirtualMemorySize"].Value;
-                            object totalVisibleObj = mObj.Properties["TotalVisibleMemorySize"].Value;
-                            object installDateObj = mObj.Properties["InstallDate"].Value;
-                            object lastBootDateObj = mObj.Properties["LastBootUpTime"].Value;
-
-                            osInfo.Name = captionObj?.ToString();
-
-                            if (int.TryParse(numProcsObj?.ToString(), out int numProcesses))
-                            {
-                                osInfo.NumberOfProcesses = numProcesses;
-                            }
-                            else
-                            {
-                                osInfo.NumberOfProcesses = -1;
-                            }
-
-                            osInfo.Status = statusObj?.ToString();
-                            osInfo.Language = osLanguageObj?.ToString();
-                            osInfo.Version = versionObj?.ToString();
-                            osInfo.InstallDate = ManagementDateTimeConverter.ToDateTime(installDateObj?.ToString()).ToUniversalTime().ToString("o");
-                            osInfo.LastBootUpTime = ManagementDateTimeConverter.ToDateTime(lastBootDateObj?.ToString()).ToUniversalTime().ToString("o");
-                            osInfo.FreePhysicalMemoryKB = ulong.TryParse(freePhysicalObj?.ToString(), out ulong freePhysical) ? freePhysical : 0;
-                            osInfo.FreeVirtualMemoryKB = ulong.TryParse(freeVirtualTotalObj?.ToString(), out ulong freeVirtual) ? freeVirtual : 0;
-                            osInfo.TotalVirtualMemorySizeKB = ulong.TryParse(totalVirtualObj?.ToString(), out ulong totalVirtual) ? totalVirtual : 0;
-                            osInfo.TotalVisibleMemorySizeKB = ulong.TryParse(totalVisibleObj?.ToString(), out ulong totalVisible) ? totalVisible : 0;  
-                        }
-                        catch (ManagementException me)
-                        {
-                            Logger.LogInfo($"Handled ManagementException in GetOSInfoAsync retrieval:{Environment.NewLine}{me}");
-                        }
-                        catch (Exception e)
-                        {
-                            Logger.LogInfo($"Bug? => Exception in GetOSInfoAsync:{Environment.NewLine}{e}");
-                        }
-                        finally
-                        {
-                            mObj?.Dispose();
-                            mObj = null;
-                        }
-                    }
+                    return;
                 }
+
+                allTcpConnInfo.Clear();
+                allTcpConnInfo.AddRange(NativeMethods.GetAllTcpConnections());
+                LastPortCacheUpdate = DateTime.UtcNow;
             }
-            finally
-            {
-                results?.Dispose();
-                results = null;
-                win32OsInfo?.Dispose();
-                win32OsInfo = null;
-            }
-
-            return Task.FromResult(osInfo);
-        }
-
-        // Not implemented. No Windows support.
-        public override int GetMaximumConfiguredFileHandlesCount()
-        {
-            return -1;
-        }
-
-        // Not implemented. No Windows support.
-        public override int GetTotalAllocatedFileHandlesCount()
-        {
-            return -1;
         }
 
         private int GetTcpPortCount(int processId = -1, bool ephemeral = false)
         {
-            GetTcpConnections();
+            UpdateTcpConnectionsCache();
 
             var tempLocalPortData = new List<(int Port, uint Pid)>();
             string findStrProc = string.Empty;
@@ -347,27 +378,6 @@ namespace FabricObserver.Observers.Utilities
             tempLocalPortData = null;
 
             return count;
-        }
-
-        public override (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetSystemMemoryInfo()
-        {
-            try
-            {
-                NativeMethods.MEMORYSTATUSEX memoryInfo = NativeMethods.GetSystemMemoryInfo();
-                ulong totalMemoryBytes = memoryInfo.ullTotalPhys;
-                ulong availableMemoryBytes = memoryInfo.ullAvailPhys;
-                ulong inUse = totalMemoryBytes - availableMemoryBytes;
-                float used = (float)inUse / totalMemoryBytes;
-                float usedPct = used * 100;
-
-                return ((long)totalMemoryBytes / 1024 / 1024 / 1024, (long)inUse / 1024 / 1024, usedPct);
-            }
-            catch (Win32Exception we)
-            {
-                Logger.LogWarning($"TupleGetMemoryInfo: Failure (native) computing memory data:{Environment.NewLine}{we}");
-            }
-
-            return (0, 0, 0);
         }
     }
 }
