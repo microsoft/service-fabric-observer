@@ -13,7 +13,7 @@
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "Provide the app version number of ClusterObserver. This must be identical with the version provided for the parameter appPackageUrl. Example: '3.1.20'"
+        "description": "Provide the app version number of ClusterObserver. This must be identical with the version provided for the parameter appPackageUrl. Example: '2.1.15'"
       }
     },
     "packageUrlClusterObserver": {

@@ -85,19 +85,11 @@ FabricObserver can be run and deployed through Visual Studio or Powershell, like
 see [FOAzurePipeline.yaml](/FOAzurePipeline.yaml) for msazure devops build tasks. <strong>Please keep in mind that if your target servers do not already have
 .net6 installed (if you deploy VM images from Azure gallery, then they will not have .net6 installed), then you must deploy the SelfContained package.</strong>
 
-If you deploy via ARM, then simply add a path to the FO SFPKG you generate (create pkg folder (in VS, right-click FabricObserverApp project, select Package), zip it, rename the file to whatever you want, replace .zip with .sfpkg file extension...) from your build after updating
-the configs to make sense for your applications/services/nodes (store the sfpkg in some blob store you trust): 
+### Deploy FabricObserver using ARM 
+You can deploy FabricObserver (and ClusterObserver) using ARM. This is one reason that this version of FO (and CO) ship without DefaultServices node in ApplicationManifest.xml. Further, as you know by now, you must deploy this version to clusters that are running SF 8.x and above.
+[Learn how to deploy FabricObserver using ARM](/Documentation/Deployment/Deployment.md)
 
-```JSON
-    "appPackageUrl": {
-      "type": "string",
-      "metadata": {
-        "description": "The URL to the FO sfpkg file you generated."
-      }
-    },
-```  
-
-### Deploy FO using PowerShell  
+### Deploy FabricObserver using Client (PowerShell)  
 
 After you adjust configuration settings to meet to your needs (this means changing settings in Settings.xml for ObserverManager (ObserverManagerConfiguration section) and in ApplicationManifest.xml for observers).
 

@@ -1,13 +1,15 @@
-# How to deploy FabricObserver?
+# Deploy FabricObserver using ARM
 
 Like all elementary services such as monitoring, Windows update, scripts, scaling, etc. those services should be installed with the initial cluster deployment. 
 
 There are two options:
-1. Add the resource provided in the ARM template service-fabric-observer.json in the template which also deploys the Service Fabric cluster. To guarantee the correct deployment order the first resource has to depend on the cluster resource. Using 'dependsOn' makes sure that the Service Fabric Resource Provider waits with the application deployment till the cluster deployment is ready.
+1. Add the resource provided in the ARM template service-fabric-observer.json in the template which also deploys the Service Fabric cluster.
+   To guarantee the correct deployment order the first resource has to depend on the cluster resource.
+   Using 'dependsOn' makes sure that the Service Fabric Resource Provider deploys the application only after the cluster deployment step has completed.
 
 ```ARM
     {
-	    "apiVersion": "[variables('sfApiVersion')]",
+      "apiVersion": "[variables('sfApiVersion')]",
       "type": "Microsoft.ServiceFabric/clusters/applicationTypes",
       "name": "[concat(parameters('clusterName'), '/', variables('applicationTypeName'))]",
       "location": "[resourceGroup().location]",
