@@ -1,0 +1,15 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "clusterName": {
+            "value": "<ClusterResourceName>"
+        },
+        "applicationTypeVersionClusterObserver": {
+            "value": "2.1.16"
+        },
+        "packageUrlClusterObserver": {
+            "value": "<PUBLIC-ACCESSIBLE-URL-FOR-CLUSTEROBSERVER-SFPKG>"
+        }
+    }
+}
