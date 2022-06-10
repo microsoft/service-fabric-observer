@@ -20,7 +20,7 @@
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "This has to be a public accessible URL for the sfpkg file which contains the FabricObserver app package. Example: https://github.com/microsoft/service-fabric-observer/releases/download/48361039/Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained.3.1.20.sfpkg"
+        "description": "This has to be a public accessible URL for the sfpkg file which contains the FabricObserver app package. Example: https://github.com/microsoft/service-fabric-observer/releases/download/48361039/Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained.3.2.0.sfpkg"
       }
     }
   },
