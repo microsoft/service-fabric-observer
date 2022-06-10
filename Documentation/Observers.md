@@ -547,7 +547,7 @@ By default, FabricObserver runs as NetworkUser on Windows and sfappsuser on Linu
 running as System or root, default FabricObserver can't monitor process behavior (this is always true on Windows). That said, there are only a few system
 services you would care about: Fabric.exe and FabricGateway.exe. Fabric.exe is generally the system service that your code can directly impact with respect to machine resource usage.
 
-**NOTE: Version 3.1.26 removes support for concurrent service process monitoring and reporting by FabricSystemObserver**. This feature is not worth the resource overhead given the limited number of processes FSO monitors.
+**NOTE: Version 3.2.1 removes support for concurrent service process monitoring and reporting by FabricSystemObserver**. This feature is not worth the resource overhead given the limited number of processes FSO monitors.
 
 
 **Input - Settings.xml**: Only ClusterOperationTimeoutSeconds is set in Settings.xml.

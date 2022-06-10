@@ -3,7 +3,8 @@
 //  Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using ClusterObserver.Utilities.Telemetry;
+using FabricObserver.Observers.Utilities;
+using FabricObserver.Observers.Utilities.Telemetry;
 using System;
 using System.Fabric;
 using System.Threading;
@@ -52,7 +53,8 @@ namespace ClusterObserver.Utilities
 
                 var appUgradeEventData = new ServiceFabricUpgradeEventData()
                 {
-                    ApplicationUpgradeProgress = appUpgradeProgress
+                    ApplicationUpgradeProgress = appUpgradeProgress,
+                    TaskName = ClusterObserverConstants.ClusterObserverName
                 };
 
                 return appUgradeEventData;
@@ -92,9 +94,10 @@ namespace ClusterObserver.Utilities
                    return null;
                 }
 
-                ServiceFabricUpgradeEventData serviceFabricUpgradeEventData = new ServiceFabricUpgradeEventData()
+                var serviceFabricUpgradeEventData = new ServiceFabricUpgradeEventData()
                 {
-                    FabricUpgradeProgress = clusterUpgradeProgress
+                    FabricUpgradeProgress = clusterUpgradeProgress,
+                    TaskName = ClusterObserverConstants.ClusterObserverName
                 };
 
                 return serviceFabricUpgradeEventData;

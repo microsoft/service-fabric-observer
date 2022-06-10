@@ -1,0 +1,420 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- You can use the XML diff/merge tool XmlDiffPatchSF (located in this repo) to make upgrading your base configurations to the latest version much easier. -->
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.1" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+  <Parameters>
+    <Parameter Name="FabricObserver_InstanceCount" DefaultValue="-1" />
+    <!-- ObserverManager Configuration -->
+    <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
+    <Parameter Name="ObserverManagerObserverExecutionTimeout" DefaultValue="3600" />
+    <Parameter Name="ObserverManagerEnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="ObserverManagerEnableETWProvider" DefaultValue="true" />
+    <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
+    <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="true" />
+    <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
+    <Parameter Name="ObserverLogPath" DefaultValue="fabric_observer_logs" />
+    <!-- Observer Configuration Settings.
+         Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can run
+         versionless parameter-only application upgrades to modify them while FO is running. By design, any observer you make using our
+         extensibility model will employ the same basic config parameters as all observers do. Please see Observers.md -->
+    <Parameter Name="AppObserverEnabled" DefaultValue="true" />
+    <Parameter Name="AzureStorageUploadObserverEnabled" DefaultValue="false" />
+    <Parameter Name="CertificateObserverEnabled" DefaultValue="true" />
+    <!-- Note: You must run FO as System or Admin user on Windows in order to run ContainerObserver on Windows. -->
+    <Parameter Name="ContainerObserverEnabled" DefaultValue="false" />
+    <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
+    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
+    <Parameter Name="NetworkObserverEnabled" DefaultValue="false" />
+    <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
+    <Parameter Name="OSObserverEnabled" DefaultValue="true" />
+    <Parameter Name="SFConfigurationObserverEnabled" DefaultValue="false" />
+    <!-- Telemetry - AppInsights or LogAnalytics -->
+    <Parameter Name="AppObserverEnableTelemetry" DefaultValue="false" />
+    <Parameter Name="AzureStorageUploadObserverEnableTelemetry" DefaultValue="false" />
+    <Parameter Name="CertificateObserverEnableTelemetry" DefaultValue="false" />
+    <Parameter Name="ContainerObserverEnableTelemetry" DefaultValue="false" />
+    <Parameter Name="DiskObserverEnableTelemetry" DefaultValue="false" />
+    <Parameter Name="FabricSystemObserverEnableTelemetry" DefaultValue="false" />
+    <Parameter Name="NetworkObserverEnableTelemetry" DefaultValue="false" />
+    <Parameter Name="NodeObserverEnableTelemetry" DefaultValue="false" />
+    <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
+    <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
+    <!-- ETW - Custom EventSource Tracing -->
+    <Parameter Name="AppObserverEnableEtw" DefaultValue="false" />
+    <Parameter Name="AzureStorageUploadObserverEnableEtw" DefaultValue="false" />
+    <Parameter Name="CertificateObserverEnableEtw" DefaultValue="false" />
+    <Parameter Name="ContainerObserverEnableEtw" DefaultValue="false" />
+    <Parameter Name="DiskObserverEnableEtw" DefaultValue="false" />
+    <Parameter Name="FabricSystemObserverEnableEtw" DefaultValue="false" />
+    <Parameter Name="NetworkObserverEnableEtw" DefaultValue="false" />
+    <Parameter Name="NodeObserverEnableEtw" DefaultValue="false" />
+    <Parameter Name="OSObserverEnableEtw" DefaultValue="false" />
+    <Parameter Name="SFConfigurationObserverEnableEtw" DefaultValue="false" />
+    <!-- CSV Logging -->
+    <Parameter Name="AppObserverEnableCSVDataLogging" DefaultValue="false" />
+    <Parameter Name="ContainerObserverEnableCSVDataLogging" DefaultValue="false" />
+    <Parameter Name="FabricSystemObserverEnableCSVDataLogging" DefaultValue="false" />
+    <Parameter Name="NodeObserverEnableCSVDataLogging" DefaultValue="false" />
+    <!-- Verbose Logging -->
+    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="AzureStorageUploadObserverEnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="CertificateObserverEnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="ContainerObserverEnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="DiskObserverEnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="FabricSystemObserverEnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="NetworkObserverEnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="NodeObserverEnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
+    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00): How long an enabled observer should monitor resources (CPU and Memory) per target. This setting only applies to 3 observers.
+         If you enable concurrent monitoring for AppObserver and you are running on capable hardware (>= 4 logical processors),
+         then you should increase this value from 1 second to at most (1/2 the number of logical processors) seconds on the target machine.
+         **However, if you monitor a *very* large number of services (> 200) AND you enable concurrent monitoring AND machines have capable CPU(s), then keep this value at 1 or 2.**
+         Set this to 1 second if AppObserver is monitoring several services AND FO is running on a VM/Machine with insufficient number of logical processors (< 4). -->
+    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:01" />
+    <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:01" />
+    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:04" />
+    <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00): How often an enabled observer should run. -->
+    <Parameter Name="AppObserverRunInterval" DefaultValue="" />
+    <Parameter Name="AzureStorageUploadObserverRunInterval" DefaultValue="00:05:00" />
+    <Parameter Name="CertificateObserverRunInterval" DefaultValue="1.00:00:00" />
+    <Parameter Name="ContainerObserverRunInterval" DefaultValue="" />
+    <Parameter Name="DiskObserverRunInterval" DefaultValue="00:15:00" />
+    <Parameter Name="FabricSystemObserverRunInterval" DefaultValue="00:15:00" />
+    <Parameter Name="NetworkObserverRunInterval" DefaultValue="" />
+    <Parameter Name="NodeObserverRunInterval" DefaultValue="" />
+    <Parameter Name="OSObserverRunInterval" DefaultValue="00:15:00" />
+    <Parameter Name="SFConfigurationObserverRunInterval" DefaultValue="" />
+    <!-- AppObserver -->
+    <Parameter Name="AppObserverClusterOperationTimeoutSeconds" DefaultValue="120" />
+    <!-- Note: CircularBufferCollection is not thread safe for writes. If you enable this AND enable concurrent monitoring, a ConcurrentQueue will be used. -->
+    <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
+    <!-- Optional-If UseCircularBuffer = true -->
+    <Parameter Name="AppObserverResourceUsageDataCapacity" DefaultValue="" />
+    <!-- Configuration file name. -->
+    <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
+    <!-- Process family tree monitoring: AppObserver monitors the resource usage by child processes of target services.
+         NOTE: If you already know that your target services do *not* spawn child processes, then you should not enable this feature. -->
+    <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="false" />
+    <!-- The maximum number of child process data items to include in a sorted list of top n consumers for some metric, where n is the value of this setting. -->
+    <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
+    <!-- Service process dumps (dumpProcessOnError setting).
+         You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError to true in AppObserver.config.json
+         if you want AppObserver to dump service processes when an Error threshold has been breached for some observed metric (e.g., memoryErrorLimitPercent). -->
+    <Parameter Name="AppObserverEnableProcessDumps" DefaultValue="false" />
+    <!-- Supported values are: Mini, MiniPlus, Full. -->
+    <Parameter Name="AppObserverProcessDumpType" DefaultValue="MiniPlus" />
+    <!-- Max number of dumps to generate per service, per observed metric, within a supplied TimeSpan window. See AppObserverMaxDumpsTimeWindow. -->
+    <Parameter Name="AppObserverMaxProcessDumps" DefaultValue="3" />
+    <!-- Time window in which max dumps per process, per observed metric can occur. See AppObserverMaxProcessDumps. -->
+    <Parameter Name="AppObserverMaxDumpsTimeWindow" DefaultValue="04:00:00" />
+    <!-- Concurrency/Parallelism Support.
+         Note: If you do not monitor several services, then enabling this is not super useful. This will only add value (substantial) on machines with capable hardware (>= 4 logical procs). -->
+    <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
+    <!-- The default value is 1/4 of detected logical processors (LPs). This would mean given 20 LPs, the number of threads that will be created will be at least 5 (and seldom more than that), if possible.
+         You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
+         eating CPU and Memory to complete the parallelized monitoring on a node with lots of services (>= 100). The impact of parallelization on nodes with less than 100 services is minimal.
+         Please test and choose a value that suits your needs or simply leave this unset and go with the default. Please see Observers.md for more information. -->
+    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
+    <!-- KVS LVID Usage Monitoring - Windows-only.
+         NOTE: If you monitor stateful Actor services, then you should set this to true.
+         This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
+    <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
+    <!-- Process Working set type. 
+         Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). 
+         NOTE: If you have *several* service processes of the **same name**, this feature will add *significant* processing time (and CPU usage) to AppObserver. 
+         In that case, set this to false and the Full Working set will be measured (Private + Shared), computed using a native API call (fast). -->
+    <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
+    <!-- CertificateObserver-->
+    <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
+    <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
+    <!-- Required: These are JSON-style lists of strings, empty should be "[]", full should be "['mythumb1', 'mythumb2', etc...] or ['mycommon'1, 'mycommon2', etc...]" -->
+    <Parameter Name="AppCertThumbprintsToObserve" DefaultValue="[]" />
+    <Parameter Name="AppCertCommonNamesToObserve" DefaultValue="[]" />
+    <!-- ContainerObserver -->
+    <Parameter Name="ContainerObserverConfigurationFile" DefaultValue="ContainerObserver.config.json" />
+    <!-- Concurrency/Parallelism Support 
+         Note: If you do not monitor several containers, then enabling this is not super useful. -->
+    <Parameter Name="ContainerObserverEnableConcurrentMonitoring" DefaultValue="false" />
+    <Parameter Name="ContainerObserverMaxConcurrentTasks" DefaultValue="" />
+    <!-- Disk Observer Warning/Error Thresholds -->
+    <Parameter Name="DiskObserverDiskSpacePercentUsageWarningThreshold" DefaultValue="90" />
+    <Parameter Name="DiskObserverDiskSpacePercentUsageErrorThreshold" DefaultValue="" />
+    <Parameter Name="DiskObserverAverageQueueLengthErrorThreshold" DefaultValue="" />
+    <Parameter Name="DiskObserverAverageQueueLengthWarningThreshold" DefaultValue="15" />
+    <!-- Folder size monitoring. If you want to monitor folder sizes, then enable this feature and provide full paths (and/or path env vars) as shown below. -->
+    <Parameter Name="DiskObserverEnableFolderSizeMonitoring" DefaultValue="true" />
+    <!-- Supply full path/threshold(in MB) pairs for Warning/Error level monitoring here. Format is "fullpath0, size0 | fullpath1, size1 | fullpath2, size2 ..." -->
+    <Parameter Name="DiskObserverFolderPathsErrorThresholdsMb" DefaultValue="" />
+    <Parameter Name="DiskObserverFolderPathsWarningThresholdsMb" DefaultValue="C:\fabric_observer_logs, 250 | D:\SomeFolder, 1024 | %SOMEFULLPATH%, 4096 | %SOMEPATH%\SubFolder, 1024" />
+    <!-- FabricSystemObserver -->
+    <Parameter Name="FabricSystemObserverUseCircularBuffer" DefaultValue="false" />
+    <!-- Required-If UseCircularBuffer = True -->
+    <Parameter Name="FabricSystemObserverResourceUsageDataCapacity" DefaultValue="" />
+    <!-- KVS LVID Usage Monitoring - Windows-only.
+         This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
+    <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="false" />
+    <Parameter Name="FabricSystemObserverMonitorPrivateWorkingSet" DefaultValue="true" />
+    <!-- FabricSystemObserver Warning/Error Thresholds -->
+    <Parameter Name="FabricSystemObserverCpuErrorLimitPercent" DefaultValue="" />
+    <Parameter Name="FabricSystemObserverCpuWarningLimitPercent" DefaultValue="" />
+    <Parameter Name="FabricSystemObserverMemoryErrorLimitMb" DefaultValue="" />
+    <Parameter Name="FabricSystemObserverMemoryWarningLimitMb" DefaultValue="4096" />
+    <Parameter Name="FabricSystemObserverNetworkErrorActivePorts" DefaultValue="" />
+    <Parameter Name="FabricSystemObserverNetworkWarningActivePorts" DefaultValue="" />
+    <Parameter Name="FabricSystemObserverNetworkErrorEphemeralPorts" DefaultValue="" />
+    <Parameter Name="FabricSystemObserverNetworkWarningEphemeralPorts" DefaultValue="7000" />
+    <Parameter Name="FabricSystemObserverAllocatedHandlesErrorLimit" DefaultValue="" />
+    <Parameter Name="FabricSystemObserverAllocatedHandlesWarningLimit" DefaultValue="" />
+    <Parameter Name="FabricSystemObserverThreadCountErrorLimit" DefaultValue="" />
+    <Parameter Name="FabricSystemObserverThreadCountWarningLimit" DefaultValue="500" />
+    <!-- Whether to monitor Windows Event Log. -->
+    <Parameter Name="FabricSystemObserverMonitorWindowsEventLog" DefaultValue="false" />
+    <!-- NodeObserver -->
+    <Parameter Name="NodeObserverUseCircularBuffer" DefaultValue="false" />
+    <!-- Required-If UseCircularBuffer = True -->
+    <Parameter Name="NodeObserverResourceUsageDataCapacity" DefaultValue="" />
+    <Parameter Name="NodeObserverCpuErrorLimitPercent" DefaultValue="" />
+    <Parameter Name="NodeObserverCpuWarningLimitPercent" DefaultValue="95" />
+    <Parameter Name="NodeObserverMemoryErrorLimitMb" DefaultValue="" />
+    <Parameter Name="NodeObserverMemoryWarningLimitMb" DefaultValue="" />
+    <Parameter Name="NodeObserverMemoryErrorLimitPercent" DefaultValue="" />
+    <Parameter Name="NodeObserverMemoryWarningLimitPercent" DefaultValue="90" />
+    <Parameter Name="NodeObserverNetworkErrorActivePorts" DefaultValue="" />
+    <Parameter Name="NodeObserverNetworkWarningActivePorts" DefaultValue="50000" />
+    <Parameter Name="NodeObserverNetworkErrorFirewallRules" DefaultValue="" />
+    <Parameter Name="NodeObserverNetworkWarningFirewallRules" DefaultValue="2500" />
+    <Parameter Name="NodeObserverNetworkErrorEphemeralPorts" DefaultValue="" />
+    <Parameter Name="NodeObserverNetworkWarningEphemeralPorts" DefaultValue="20000" />
+    <Parameter Name="NodeObserverNetworkErrorEphemeralPortsPercentage" DefaultValue="" />
+    <Parameter Name="NodeObserverNetworkWarningEphemeralPortsPercentage" DefaultValue="90" />
+    <!-- The below settings only make sense for Linux. -->
+    <Parameter Name="NodeObserverLinuxFileHandlesErrorLimitPercent" DefaultValue="" />
+    <Parameter Name="NodeObserverLinuxFileHandlesWarningLimitPercent" DefaultValue="90" />
+    <Parameter Name="NodeObserverLinuxFileHandlesErrorLimitTotal" DefaultValue="" />
+    <Parameter Name="NodeObserverLinuxFileHandlesWarningLimitTotal" DefaultValue="" />
+    <!-- OSObserver Windows AutoUpdate Settings Check. -->
+    <Parameter Name="OSObserverEnableWindowsAutoUpdateCheck" DefaultValue="true" />
+    <!-- NetworkObserver -->
+    <Parameter Name="NetworkObserverConfigurationFile" DefaultValue="NetworkObserver.config.json" />
+    <!-- AzureStorageUploadObserver -->
+    <Parameter Name="AzureStorageUploadObserverBlobContainerName" DefaultValue="fodumps" />
+    <!-- This can be an encrypted string or not. The decision is yours.
+         For encrypting, please use the Invoke-ServiceFabricEncryptText PowerShell API to generate the encrypted string to use here.
+         Any encrypted string must NOT contain line breaks or spaces. This is very important. If you copy/paste the encrypted string incorrectly, then FO will not upload dumps.
+         See https://docs.microsoft.com/en-us/powershell/module/servicefabric/invoke-servicefabricencrypttext?view=azureservicefabricps
+         for details. Follow the directions in the sample for creating an encryted secret. Note the use of thumbprint in the cmd. -->
+    <Parameter Name="AzureStorageUploadObserverStorageConnectionString" DefaultValue="" />
+    <!-- OR -->
+    <Parameter Name="AzureStorageUploadObserverStorageAccountName" DefaultValue="" />
+    <!-- This can be an encrypted string or not. If encrypted, then make sure there are no line breaks and no blank spaces between any characters. This is very important. -->
+    <Parameter Name="AzureStorageUploadObserverStorageAccountKey" DefaultValue="" />
+    <!-- Zip file compression level to use: Optimal, Fastest or NoCompression. Default is Optimal if this is not set. We do not recommend NoCompression. -->
+    <Parameter Name="AzureStorageUploadObserverZipFileCompressionLevel" DefaultValue="Optimal" />
+  </Parameters>
+  <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
+       should match the Name and Version attributes of the ServiceManifest element defined in the 
+       ServiceManifest.xml file. -->
+  <ServiceManifestImport>
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.2.1" />
+    <ConfigOverrides>
+      <ConfigOverride Name="Config">
+        <Settings>
+          <Section Name="AppObserverConfiguration">
+            <Parameter Name="Enabled" Value="[AppObserverEnabled]" />
+            <Parameter Name="EnableConcurrentMonitoring" Value="[AppObserverEnableConcurrentMonitoring]" />
+            <Parameter Name="EnableKvsLvidMonitoring" Value="[AppObserverEnableKvsLvidMonitoring]" />
+            <Parameter Name="MaxConcurrentTasks" Value="[AppObserverMaxConcurrentTasks]" />
+            <Parameter Name="EnableCSVDataLogging" Value="[AppObserverEnableCSVDataLogging]" />
+            <Parameter Name="EnableEtw" Value="[AppObserverEnableEtw]" />
+            <Parameter Name="EnableTelemetry" Value="[AppObserverEnableTelemetry]" />
+            <Parameter Name="EnableVerboseLogging" Value="[AppObserverEnableVerboseLogging]" />
+            <Parameter Name="MonitorDuration" Value="[AppObserverMonitorDuration]" />
+            <Parameter Name="RunInterval" Value="[AppObserverRunInterval]" />
+            <Parameter Name="ConfigurationFileName" Value="[AppObserverConfigurationFile]" />
+            <Parameter Name="MonitorPrivateWorkingSet" Value="[AppObserverMonitorPrivateWorkingSet]" />
+            <Parameter Name="ClusterOperationTimeoutSeconds" Value="[AppObserverClusterOperationTimeoutSeconds]" />
+            <Parameter Name="UseCircularBuffer" Value="[AppObserverUseCircularBuffer]" />
+            <!-- Required-If UseCircularBuffer = True -->
+            <Parameter Name="ResourceUsageDataCapacity" Value="[AppObserverResourceUsageDataCapacity]" />
+            <Parameter Name="EnableChildProcessMonitoring" Value="[AppObserverEnableChildProcessMonitoring]" />
+            <Parameter Name="MaxChildProcTelemetryDataCount" Value="[AppObserverMaxChildProcTelemetryDataCount]" />
+            <Parameter Name="EnableProcessDumps" Value="[AppObserverEnableProcessDumps]" />
+            <Parameter Name="DumpType" Value="[AppObserverProcessDumpType]" />
+            <Parameter Name="MaxDumps" Value="[AppObserverMaxProcessDumps]" />
+            <Parameter Name="MaxDumpsTimeWindow" Value="[AppObserverMaxDumpsTimeWindow]" />
+          </Section>
+          <Section Name="CertificateObserverConfiguration">
+            <Parameter Name="Enabled" Value="[CertificateObserverEnabled]" />
+            <Parameter Name="EnableTelemetry" Value="[CertificateObserverEnableTelemetry]" />
+            <Parameter Name="EnableEtw" Value="[CertificateObserverEnableEtw]" />
+            <Parameter Name="EnableVerboseLogging" Value="[CertificateObserverEnableVerboseLogging]" />
+            <Parameter Name="RunInterval" Value="[CertificateObserverRunInterval]" />
+            <Parameter Name="DaysUntilClusterExpiryWarningThreshold" Value="[DaysUntilClusterExpiryWarningThreshold]" />
+            <Parameter Name="DaysUntilAppExpiryWarningThreshold" Value="[DaysUntilAppExpiryWarningThreshold]" />
+            <!-- Required: These are JSON-style lists of strings, empty should be "[]", full should be "['thumb1', 'thumb2']" -->
+            <Parameter Name="AppCertThumbprintsToObserve" Value="[AppCertThumbprintsToObserve]" />
+            <Parameter Name="AppCertCommonNamesToObserve" Value="[AppCertCommonNamesToObserve]" />
+          </Section>
+          <Section Name="DiskObserverConfiguration">
+            <Parameter Name="Enabled" Value="[DiskObserverEnabled]" />
+            <Parameter Name="EnableTelemetry" Value="[DiskObserverEnableTelemetry]" />
+            <Parameter Name="EnableEtw" Value="[DiskObserverEnableEtw]" />
+            <Parameter Name="EnableFolderSizeMonitoring" Value="[DiskObserverEnableFolderSizeMonitoring]" />
+            <Parameter Name="EnableVerboseLogging" Value="[DiskObserverEnableVerboseLogging]" />
+            <Parameter Name="RunInterval" Value="[DiskObserverRunInterval]" />
+            <Parameter Name="DiskSpacePercentUsageErrorThreshold" Value="[DiskObserverDiskSpacePercentUsageErrorThreshold]" />
+            <Parameter Name="DiskSpacePercentUsageWarningThreshold" Value="[DiskObserverDiskSpacePercentUsageWarningThreshold]" />
+            <Parameter Name="AverageQueueLengthErrorThreshold" Value="[DiskObserverAverageQueueLengthErrorThreshold]" />
+            <Parameter Name="AverageQueueLengthWarningThreshold" Value="[DiskObserverAverageQueueLengthWarningThreshold]" />
+            <Parameter Name="FolderPathsErrorThresholdsMb" Value="[DiskObserverFolderPathsErrorThresholdsMb]" />
+            <Parameter Name="FolderPathsWarningThresholdsMb" Value="[DiskObserverFolderPathsWarningThresholdsMb]" />
+          </Section>
+          <Section Name="FabricSystemObserverConfiguration">
+            <Parameter Name="Enabled" Value="[FabricSystemObserverEnabled]" />
+            <Parameter Name="EnableKvsLvidMonitoring" Value="[FabricSystemObserverEnableKvsLvidMonitoring]" />
+            <Parameter Name="EnableCSVDataLogging" Value="[FabricSystemObserverEnableCSVDataLogging]" />
+            <Parameter Name="EnableEtw" Value="[FabricSystemObserverEnableEtw]" />
+            <Parameter Name="EnableTelemetry" Value="[FabricSystemObserverEnableTelemetry]" />
+            <Parameter Name="EnableVerboseLogging" Value="[FabricSystemObserverEnableVerboseLogging]" />
+            <Parameter Name="MonitorDuration" Value="[FabricSystemObserverMonitorDuration]" />
+            <Parameter Name="RunInterval" Value="[FabricSystemObserverRunInterval]" />
+            <Parameter Name="MonitorPrivateWorkingSet" Value="[FabricSystemObserverMonitorPrivateWorkingSet]" />
+            <Parameter Name="UseCircularBuffer" Value="[FabricSystemObserverUseCircularBuffer]" />
+            <!-- Required-If UseCircularBuffer = True -->
+            <Parameter Name="ResourceUsageDataCapacity" Value="[FabricSystemObserverResourceUsageDataCapacity]" />
+            <!-- Optional: SF Event Log can be noisy and full of non-error errors., 
+                 so it's recommended that you only enable this for debugging purposes. This
+                 only works if you deploy the FabricObserverWebApi service and enable it above (ObserverWebApiEnabled). -->
+            <Parameter Name="MonitorWindowsEventLog" Value="[FabricSystemObserverMonitorWindowsEventLog]" />
+            <Parameter Name="CpuErrorLimitPercent" Value="[FabricSystemObserverCpuErrorLimitPercent]" />
+            <Parameter Name="CpuWarningLimitPercent" Value="[FabricSystemObserverCpuWarningLimitPercent]" />
+            <Parameter Name="MemoryErrorLimitMb" Value="[FabricSystemObserverMemoryErrorLimitMb]" />
+            <Parameter Name="MemoryWarningLimitMb" Value="[FabricSystemObserverMemoryWarningLimitMb]" />
+            <Parameter Name="NetworkErrorActivePorts" Value="[FabricSystemObserverNetworkErrorActivePorts]" />
+            <Parameter Name="NetworkWarningActivePorts" Value="[FabricSystemObserverNetworkWarningActivePorts]" />
+            <Parameter Name="NetworkErrorEphemeralPorts" Value="[FabricSystemObserverNetworkErrorEphemeralPorts]" />
+            <Parameter Name="NetworkWarningEphemeralPorts" Value="[FabricSystemObserverNetworkWarningEphemeralPorts]" />
+            <Parameter Name="AllocatedHandlesErrorLimit" Value="[FabricSystemObserverAllocatedHandlesErrorLimit]" />
+            <Parameter Name="AllocatedHandlesWarningLimit" Value="[FabricSystemObserverAllocatedHandlesWarningLimit]" />
+            <Parameter Name="ThreadCountErrorLimit" Value="[FabricSystemObserverThreadCountErrorLimit]" />
+            <Parameter Name="ThreadCountWarningLimit" Value="[FabricSystemObserverThreadCountWarningLimit]" />
+          </Section>
+          <Section Name="NetworkObserverConfiguration">
+            <Parameter Name="Enabled" Value="[NetworkObserverEnabled]" />
+            <Parameter Name="EnableTelemetry" Value="[NetworkObserverEnableTelemetry]" />
+            <Parameter Name="EnableEtw" Value="[NetworkObserverEnableEtw]" />
+            <Parameter Name="EnableVerboseLogging" Value="[NetworkObserverEnableVerboseLogging]" />
+            <Parameter Name="RunInterval" Value="[NetworkObserverRunInterval]" />
+            <Parameter Name="ConfigurationFileName" Value="[NetworkObserverConfigurationFile]" />
+          </Section>
+          <Section Name="NodeObserverConfiguration">
+            <Parameter Name="Enabled" Value="[NodeObserverEnabled]" />
+            <Parameter Name="EnableTelemetry" Value="[NodeObserverEnableTelemetry]" />
+            <Parameter Name="EnableCSVDataLogging" Value="[NodeObserverEnableCSVDataLogging]" />
+            <Parameter Name="EnableEtw" Value="[NodeObserverEnableEtw]" />
+            <Parameter Name="EnableVerboseLogging" Value="[NodeObserverEnableVerboseLogging]" />
+            <Parameter Name="MonitorDuration" Value="[NodeObserverMonitorDuration]" />
+            <Parameter Name="RunInterval" Value="[NodeObserverRunInterval]" />
+            <Parameter Name="UseCircularBuffer" Value="[NodeObserverUseCircularBuffer]" />
+            <!-- Required-If UseCircularBuffer = True -->
+            <Parameter Name="ResourceUsageDataCapacity" Value="[NodeObserverResourceUsageDataCapacity]" />
+            <Parameter Name="CpuErrorLimitPercent" Value="[NodeObserverCpuErrorLimitPercent]" />
+            <Parameter Name="CpuWarningLimitPercent" Value="[NodeObserverCpuWarningLimitPercent]" />
+            <Parameter Name="MemoryErrorLimitMb" Value="[NodeObserverMemoryErrorLimitMb]" />
+            <Parameter Name="MemoryWarningLimitMb" Value="[NodeObserverMemoryWarningLimitMb]" />
+            <Parameter Name="MemoryErrorLimitPercent" Value="[NodeObserverMemoryErrorLimitPercent]" />
+            <Parameter Name="MemoryWarningLimitPercent" Value="[NodeObserverMemoryWarningLimitPercent]" />
+            <Parameter Name="NetworkErrorActivePorts" Value="[NodeObserverNetworkErrorActivePorts]" />
+            <Parameter Name="NetworkWarningActivePorts" Value="[NodeObserverNetworkWarningActivePorts]" />
+            <Parameter Name="NetworkErrorFirewallRules" Value="[NodeObserverNetworkErrorFirewallRules]" />
+            <Parameter Name="NetworkWarningFirewallRules" Value="[NodeObserverNetworkWarningFirewallRules]" />
+            <Parameter Name="NetworkErrorEphemeralPorts" Value="[NodeObserverNetworkErrorEphemeralPorts]" />
+            <Parameter Name="NetworkWarningEphemeralPorts" Value="[NodeObserverNetworkWarningEphemeralPorts]" />
+            <Parameter Name="NetworkErrorEphemeralPortsPercentage" Value="[NodeObserverNetworkErrorEphemeralPortsPercentage]" />
+            <Parameter Name="NetworkWarningEphemeralPortsPercentage" Value="[NodeObserverNetworkWarningEphemeralPortsPercentage]" />
+            <Parameter Name="LinuxFileHandlesErrorLimitPercent" Value="[NodeObserverLinuxFileHandlesErrorLimitPercent]" />
+            <Parameter Name="LinuxFileHandlesWarningLimitPercent" Value="[NodeObserverLinuxFileHandlesWarningLimitPercent]" />
+            <Parameter Name="LinuxFileHandlesErrorLimitTotal" Value="[NodeObserverLinuxFileHandlesErrorLimitTotal]" />
+            <Parameter Name="LinuxFileHandlesWarningLimitTotal" Value="[NodeObserverLinuxFileHandlesWarningLimitTotal]" />
+          </Section>
+          <Section Name="OSObserverConfiguration">
+            <Parameter Name="Enabled" Value="[OSObserverEnabled]" />
+            <Parameter Name="EnableTelemetry" Value="[OSObserverEnableTelemetry]" />
+            <Parameter Name="EnableEtw" Value="[OSObserverEnableEtw]" />
+            <Parameter Name="EnableVerboseLogging" Value="[OSObserverEnableVerboseLogging]" />
+            <Parameter Name="EnableWindowsAutoUpdateCheck" Value="[OSObserverEnableWindowsAutoUpdateCheck]" />
+            <Parameter Name="RunInterval" Value="[OSObserverRunInterval]" />
+          </Section>
+          <Section Name="SFConfigurationObserverConfiguration">
+            <Parameter Name="Enabled" Value="[SFConfigurationObserverEnabled]" />
+            <Parameter Name="EnableTelemetry" Value="[SFConfigurationObserverEnableTelemetry]" />
+            <Parameter Name="EnableEtw" Value="[SFConfigurationObserverEnableEtw]" />
+            <Parameter Name="EnableVerboseLogging" Value="[SFConfigurationObserverEnableVerboseLogging]" />
+            <Parameter Name="RunInterval" Value="[SFConfigurationObserverRunInterval]" />
+          </Section>
+          <Section Name="AzureStorageUploadObserverConfiguration">
+            <Parameter Name="Enabled" Value="[AzureStorageUploadObserverEnabled]" />
+            <Parameter Name="EnableTelemetry" Value="[AzureStorageUploadObserverEnableTelemetry]" />
+            <Parameter Name="EnableEtw" Value="[AzureStorageUploadObserverEnableEtw]" />
+            <Parameter Name="EnableVerboseLogging" Value="[AzureStorageUploadObserverEnableVerboseLogging]" />
+            <Parameter Name="RunInterval" Value="[AzureStorageUploadObserverRunInterval]" />
+            <Parameter Name="BlobContainerName" Value="[AzureStorageUploadObserverBlobContainerName]" />
+            <!-- Azure Storage Auth: Either supply an encrypted Connection String or an account name and encrypted Account Key.
+                 Note that you *can* use unencrypted strings. This is not recommended, but the decision is yours. If you choose to do this,
+                 then you must set IsEncrypted to false both in the below settings and the corresponding settings in Settings.xml. -->
+            <Parameter Name="AzureStorageConnectionString" Value="[AzureStorageUploadObserverStorageConnectionString]" IsEncrypted="true" />
+            <!-- OR use Account Name/Account Key pair if NOT using Connection String.. -->
+            <Parameter Name="AzureStorageAccountName" Value="[AzureStorageUploadObserverStorageAccountName]" />
+            <Parameter Name="AzureStorageAccountKey" Value="[AzureStorageUploadObserverStorageAccountKey]" IsEncrypted="true" />
+            <!-- File compression level -->
+            <Parameter Name="ZipFileCompressionLevel" Value="[AzureStorageUploadObserverZipFileCompressionLevel]" />
+          </Section>
+          <Section Name="ContainerObserverConfiguration">
+            <Parameter Name="Enabled" Value="[ContainerObserverEnabled]" />
+            <Parameter Name="EnableConcurrentMonitoring" Value="[ContainerObserverEnableConcurrentMonitoring]" />
+            <Parameter Name="MaxConcurrentTasks" Value="[ContainerObserverMaxConcurrentTasks]" />
+            <Parameter Name="EnableTelemetry" Value="[ContainerObserverEnableTelemetry]" />
+            <Parameter Name="EnableEtw" Value="[ContainerObserverEnableEtw]" />
+            <Parameter Name="EnableVerboseLogging" Value="[ContainerObserverEnableVerboseLogging]" />
+            <Parameter Name="EnableCSVDataLogging" Value="[ContainerObserverEnableCSVDataLogging]" />
+            <Parameter Name="RunInterval" Value="[ContainerObserverRunInterval]" />
+            <Parameter Name="ConfigurationFileName" Value="[ContainerObserverConfigurationFile]" />
+          </Section>
+          <Section Name="ObserverManagerConfiguration">
+            <Parameter Name="ObserverLoopSleepTimeSeconds" Value="[ObserverManagerObserverLoopSleepTimeSeconds]" />
+            <Parameter Name="ObserverExecutionTimeout" Value="[ObserverManagerObserverExecutionTimeout]" />
+            <Parameter Name="EnableVerboseLogging" Value="[ObserverManagerEnableVerboseLogging]" />
+            <Parameter Name="EnableETWProvider" Value="[ObserverManagerEnableETWProvider]" />
+            <Parameter Name="EnableTelemetryProvider" Value="[ObserverManagerEnableTelemetryProvider]" />
+            <Parameter Name="EnableFabricObserverOperationalTelemetry" Value="[ObserverManagerEnableOperationalFOTelemetry]" />
+            <Parameter Name="ObserverFailureHealthStateLevel" Value="[ObserverManagerObserverFailureHealthStateLevel]" />
+            <Parameter Name="ObserverLogPath" Value="[ObserverLogPath]" />
+          </Section>
+        </Settings>
+      </ConfigOverride>
+    </ConfigOverrides>
+    <Policies>
+      <!-- Change EntryPointType attribute value to All (or remove the EntryPointType attribute entirely) if you want to run FO as system/root user. -->
+      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
+    </Policies>
+  </ServiceManifestImport>
+  <DefaultServices>
+    <!-- The section below creates instances of service types, when an instance of this 
+           application type is created. You can also create one or more instances of service type using the 
+           ServiceFabric PowerShell module.
+           The attribute ServiceTypeName below must match the name defined in the imported ServiceManifest.xml file. -->
+    <Service Name="FabricObserver" ServicePackageActivationMode="ExclusiveProcess">
+      <StatelessService ServiceTypeName="FabricObserverType" InstanceCount="[FabricObserver_InstanceCount]">
+        <SingletonPartition />
+      </StatelessService>
+    </Service>
+  </DefaultServices>
+  <Principals>
+    <Users>
+      <User Name="SystemUser" AccountType="LocalSystem" />
+    </Users>
+  </Principals>
+  <Certificates>
+    <SecretsCertificate X509FindValue="" Name="" />
+  </Certificates>
+</ApplicationManifest>

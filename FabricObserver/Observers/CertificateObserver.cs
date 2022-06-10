@@ -17,11 +17,12 @@ using System.Threading.Tasks;
 using System.Xml;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
+using FabricObserver.TelemetryLib;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
 {
-    public class CertificateObserver : ObserverBase
+    public sealed class CertificateObserver : ObserverBase
     {
         private const string HowToUpdateCnCertsSfLinkHtml =
             "<a href=\"https://aka.ms/AA69ai7\" target=\"_blank\">Click here to learn how to update expiring/expired certificates.</a>";
@@ -51,8 +52,11 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public CertificateObserver(FabricClient fabricClient, StatelessServiceContext context)
-            : base (fabricClient, context)
+        /// <summary>
+        /// Creates a new instance of the type.
+        /// </summary>
+        /// <param name="context">The StatelessServiceContext instance.</param>
+        public CertificateObserver(StatelessServiceContext context) : base (null, context)
         {
             isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
@@ -185,7 +189,7 @@ namespace FabricObserver.Observers
                 healthReport = new HealthReport
                 {
                     Observer = ObserverName,
-                    ReportType = HealthReportType.Node,
+                    EntityType = EntityType.Node,
                     EmitLogEvent = true,
                     NodeName = NodeName,
                     HealthMessage = "All cluster and monitored app certificates are healthy.",
@@ -199,7 +203,7 @@ namespace FabricObserver.Observers
                 {
                     var telemetryData = new TelemetryData()
                     {
-                        HealthState = "Ok",
+                        HealthState = HealthState.Ok,
                         NodeName = NodeName,
                         Description = "All cluster and monitored app certificates are healthy.",
                         ObserverName = ObserverName,
@@ -233,7 +237,7 @@ namespace FabricObserver.Observers
                 {
                     Code = FOErrorWarningCodes.WarningCertificateExpiration,
                     Observer = ObserverName,
-                    ReportType = HealthReportType.Node,
+                    EntityType = EntityType.Node,
                     EmitLogEvent = true,
                     NodeName = NodeName,
                     HealthMessage = healthMessage,
@@ -248,13 +252,13 @@ namespace FabricObserver.Observers
                 {
                     var telemetryData = new TelemetryData()
                     {
+                        ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                         Code = FOErrorWarningCodes.WarningCertificateExpiration,
-                        HealthState = "Warning",
+                        HealthState = HealthState.Warning,
                         NodeName = NodeName,
                         Metric = ErrorWarningProperty.CertificateExpiration,
                         Description = healthMessage,
                         ObserverName = ObserverName,
-                        OS = isWindows ? "Windows" : "Linux",
                         Source = ObserverConstants.FabricObserverName,
                     };
 
@@ -275,7 +279,7 @@ namespace FabricObserver.Observers
                                         ObserverName,
                                         OS = isWindows ? "Windows" : "Linux",
                                         Source = ObserverConstants.FabricObserverName,
-                                        Value = FOErrorWarningCodes.GetErrorWarningNameFromFOCode(FOErrorWarningCodes.WarningCertificateExpiration)
+                                        Value = FOErrorWarningCodes.GetCodeNameFromErrorCode(FOErrorWarningCodes.WarningCertificateExpiration)
                                     });
                 }
             }

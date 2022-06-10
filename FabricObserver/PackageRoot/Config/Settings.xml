@@ -30,9 +30,12 @@
          will be locally logged. This is the recommended setting. -->
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     
-    <!-- Optional: ETW (EventSource) Tracing. This will create an EventSource object in Logger instances that will emit 
-         FabricObserverDataEvent data events from an ETW Provider named FabricObserverETWProvider. -->
+    <!-- Optional: ETW (EventSource) Tracing. This will create an EventSource singleton that will be used by Logger.LogETW to emit 
+         FabricObserverDataEvent events from an ETW Provider named FabricObserverETWProvider. -->
     <Parameter Name="EnableETWProvider" Value="" MustOverride="true" />
+
+	<!-- Optional: EventSource provider name. Defaults to FabricObserverETWProvider. -->
+	<Parameter Name="ETWProviderName" Value="" MustOverride="true" />
     
     <!-- Optional: FabricObserver operational telemetry. No PII.  
          See ObserverManager.cs and TelemetryLib project for FO data that is collected. -->
@@ -153,7 +156,7 @@
     
     <!-- Required: The thresholds are held in a json file. Note that these thresholds apply to any service that is part 
          of the Target Application, which is the logical container for service processes in Service Fabric parlance.-->
-    <Parameter Name="AppObserverDataFileName" Value="" MustOverride="true" />
+    <Parameter Name="ConfigurationFileName" Value="" MustOverride="true" />
     
     <!-- Optional: Some observers make async SF Api calls that are cluster-wide operations and can take time in large deployments. -->
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="" MustOverride="true" />
@@ -281,7 +284,7 @@
     <!-- The target endpoints, which are the only endpoints that matter (default endpoints do not generate warnings.)
          are App-level configuration settings and will apply to any service that is part of the Application.
          These values are held in a json file, NetworkObserver.config.json". -->
-    <Parameter Name="NetworkObserverDataFileName" Value="NetworkObserver.config.json" />
+    <Parameter Name="ConfigurationFileName" Value="NetworkObserver.config.json" />
   </Section>
   <Section Name="NodeObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
@@ -365,21 +368,24 @@
      <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
      <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
      <Parameter Name="RunInterval" Value="" MustOverride="true" />
-     <Parameter Name="ConfigFileName" Value="" MustOverride="true" />
+     <Parameter Name="ConfigurationFileName" Value="" MustOverride="true" />
   </Section>
   <!-- Plugin model sample. Just add the configuration info here that your observer needs.
        **NOTE**: You must name these Sections in the following way: [ObserverName]Configuration.
        Example: SampleNewObserverConfiguration, where SampleNewObserver is the type name of the observer plugin.
-       See the SampleObserverPlugin project for a complete example of implementing an observer plugin. If you want to
-       enable versionless application parameter updates, then add MustOverride to the Parameters you want to be able to change without
-       redeploying FO and add them to ApplicationManifest.xml like all the other observers.
+       See the SampleObserverPlugin project for a complete example of implementing an observer plugin. 
+	   
+       If you want to enable versionless application parameter updates, then add MustOverride to the Parameters you want to be 
+       able to change without redeploying FO and add them to ApplicationManifest.xml like all the other observers.
+	   
+	   All observers are enabled by default, so even you do not supply any parameters here (like, leave this commented out) your observer plugin will run.
   <Section Name="SampleNewObserverConfiguration">
-    <Parameter Name="Enabled" Value="" MustOverride="true" />
+    <Parameter Name="Enabled" Value="true" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
-    <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
-    <Parameter Name="EnableEtw" Value="" MustOverride="true"/>
-    <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
-    <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
-    <Parameter Name="RunInterval" Value="" MustOverride="true" />
+    <Parameter Name="EnableCSVDataLogging" Value="false" />
+    <Parameter Name="EnableEtw" Value="false" />
+    <Parameter Name="EnableTelemetry" Value="false" />
+    <Parameter Name="EnableVerboseLogging" Value="false" />
+    <Parameter Name="RunInterval" Value=""  />
   </Section> -->
 </Settings>

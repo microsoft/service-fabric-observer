@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Threading;
 using Microsoft.ServiceFabric.Services.Runtime;
+using FabricObserver.Observers.Utilities.Telemetry;
 
 namespace ClusterObserver
 {
@@ -21,9 +22,7 @@ namespace ClusterObserver
                 ServiceRuntime.RegisterServiceAsync("ClusterObserverType",
                     context => new FabricClusterObserver(context)).GetAwaiter().GetResult();
 
-                ServiceEventSource.Current.ServiceTypeRegistered(
-                    Process.GetCurrentProcess().Id,
-                    typeof(ClusterObserver).Name);
+                ServiceEventSource.Current.ServiceTypeRegistered(Process.GetCurrentProcess().Id, typeof(ClusterObserver).Name);
 
                 // Prevents this host process from terminating so services keep running.
                 Thread.Sleep(Timeout.Infinite);

@@ -18,13 +18,14 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
+using FabricObserver.Observers.Utilities.Telemetry;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
 {
     // FabricSystemObserver monitors all Fabric system service processes across various resource usage metrics: 
     // CPU Time, Private Workingset, Ephemeral and Total Active TCP ports, File Handles, Threads.
-    public class FabricSystemObserver : ObserverBase
+    public sealed class FabricSystemObserver : ObserverBase
     {
         private const double KvsLvidsWarningPercentage = 75.0;
         private readonly string[] processWatchList;
@@ -46,10 +47,10 @@ namespace FabricObserver.Observers
         private bool monitorWinEventLog;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="FabricSystemObserver"/> class.
+        /// Creates a new instance of the type.
         /// </summary>
-        public FabricSystemObserver(FabricClient fabricClient, StatelessServiceContext context)
-            : base(fabricClient, context)
+        /// <param name="context">The StatelessServiceContext instance.</param>
+        public FabricSystemObserver(StatelessServiceContext context) : base(null, context)
         {
             isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
@@ -240,6 +241,7 @@ namespace FabricObserver.Observers
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "<Pending>")]
         public override Task ReportAsync(CancellationToken token)
         {
             try
@@ -294,7 +296,7 @@ namespace FabricObserver.Observers
 
                     State = HealthState.Ok,
                     HealthReportTimeToLive = timeToLiveWarning,
-                    ReportType = HealthReportType.Node
+                    EntityType = EntityType.Node
                 };
 
                 info.Clear();
@@ -362,7 +364,7 @@ namespace FabricObserver.Observers
                     // SF Eventlog Errors?
                     // Write this out to a new file, for use by the web front end log viewer.
                     // Format = HTML.
-                    int count = evtRecordList.Count();
+                    int count = evtRecordList.Count;
                     var logPath = Path.Combine(ObserverLogger.LogFolderBasePath, "EventVwrErrors.txt");
 
                     // Remove existing file.
@@ -442,9 +444,11 @@ namespace FabricObserver.Observers
             return Task.CompletedTask;
         }
 
+
         /// <summary>
         /// ReadServiceFabricWindowsEventLog().
         /// </summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "isWindows check exits the function immediately if not Windows...")]
         private void ReadServiceFabricWindowsEventLog()
         {
             if (!isWindows)
@@ -571,6 +575,7 @@ namespace FabricObserver.Observers
             return result.ToArray();
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "isWindows check exits the function immediately if not Windows...")]
         private void Initialize()
         {
             Token.ThrowIfCancellationRequested();
@@ -632,7 +637,7 @@ namespace FabricObserver.Observers
 
                 foreach (var proc in processWatchList)
                 {
-                    allEphemeralTcpPortData.Add(proc, new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, proc, frudCapacity, UseCircularBuffer));
+                    allEphemeralTcpPortData.Add(proc, new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveEphemeralPorts, proc, frudCapacity, UseCircularBuffer));
                 }
             }
 
@@ -883,9 +888,11 @@ namespace FabricObserver.Observers
                 Process process = processes[i];
 
                 try
-                { 
+                {
+                    int procId = process.Id;
+
                     // Ports - Active TCP All
-                    int activePortCount = OSInfoProvider.Instance.GetActiveTcpPortCount(process.Id, FabricServiceContext);
+                    int activePortCount = OSInfoProvider.Instance.GetActiveTcpPortCount(procId, CodePackage?.Path);
                     TotalActivePortCountAllSystemServices += activePortCount;
                     
                     if (ActiveTcpPortCountError > 0 || ActiveTcpPortCountWarning > 0)
@@ -894,7 +901,7 @@ namespace FabricObserver.Observers
                     }
 
                     // Ports - Active TCP Ephemeral
-                    int activeEphemeralPortCount = OSInfoProvider.Instance.GetActiveEphemeralPortCount(process.Id, FabricServiceContext);
+                    int activeEphemeralPortCount = OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, CodePackage?.Path);
                     TotalActiveEphemeralPortCountAllSystemServices += activeEphemeralPortCount;
                     
                     if (ActiveEphemeralPortCountError > 0 || ActiveEphemeralPortCountWarning > 0)
@@ -907,17 +914,17 @@ namespace FabricObserver.Observers
 
                     if (isWindows)
                     {
-                        handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(process.Id);
+                        handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId);
                     }
                     else
                     {
-                        handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(process.Id, FabricServiceContext);
+                        handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId, CodePackage?.Path);
                     }
 
                     TotalAllocatedHandlesAllSystemServices += handles;
 
                     // Threads
-                    int threads = ProcessInfoProvider.GetProcessThreadCount(process.Id);
+                    int threads = ProcessInfoProvider.GetProcessThreadCount(procId);
 
                     TotalThreadsAllSystemServices += threads;
                     
@@ -961,6 +968,13 @@ namespace FabricObserver.Observers
                         duration = MonitorDuration;
                     }
 
+                    // Memory MB
+                    if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
+                    {
+                        float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, checkPrivateWorkingSet ? dotnetArg : null, checkPrivateWorkingSet);
+                        allMemData[dotnetArg].AddData(processMem);
+                    }
+
                     timer.Start();
 
                     while (!process.HasExited && timer.Elapsed <= duration)
@@ -972,15 +986,8 @@ namespace FabricObserver.Observers
                             // CPU Time for service process.
                             if (CpuErrorUsageThresholdPct > 0 || CpuWarnUsageThresholdPct > 0)
                             {
-                                int cpu = (int)cpuUsage.GetCpuUsagePercentageProcess(process.Id);
+                                int cpu = (int)cpuUsage.GetCpuUsagePercentageProcess(procId);
                                 allCpuData[dotnetArg].AddData(cpu);
-                            }
-
-                            // Memory MB
-                            if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
-                            {
-                                float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(process.Id, checkPrivateWorkingSet ? dotnetArg : null, checkPrivateWorkingSet);
-                                allMemData[dotnetArg].AddData(processMem);
                             }
 
                             await Task.Delay(150, Token);
@@ -1099,7 +1106,7 @@ namespace FabricObserver.Observers
                         thresholdError,
                         thresholdWarning,
                         TTL,
-                        HealthReportType.Application);
+                        EntityType.Application);
             }
         }
 
@@ -1146,8 +1153,6 @@ namespace FabricObserver.Observers
                 allAppKvsLvidsData?.Clear();
                 allAppKvsLvidsData = null;
             }
-
-            GC.Collect();
         }
     }
 }

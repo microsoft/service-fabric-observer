@@ -9,7 +9,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <AssemblyVersion>2.0.0.0</AssemblyVersion>
     <FileVersion>2.0.0.0</FileVersion>
-    <Copyright>Copyright ©  2020</Copyright>
+    <Copyright>Copyright ©  2022</Copyright>
     <Product>TelemetryLib</Product>
     <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
@@ -20,8 +20,8 @@
     <None Remove="FOAppInsightsOperational.config" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.17.0" />
-    <PackageReference Include="Microsoft.ServiceFabric" Version="7.2.452" />
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.20.0" />
+	<PackageReference Include="Microsoft.ServiceFabric.Services" Version="5.0.516" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>

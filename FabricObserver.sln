@@ -21,15 +21,18 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		conuget.md = conuget.md
 		Documentation\Design.md = Documentation\Design.md
 		Documentation\ErrorCodes.md = Documentation\ErrorCodes.md
+		FabricObserver.Extensibility.nuspec.template = FabricObserver.Extensibility.nuspec.template
 		FabricObserver.nuspec.template = FabricObserver.nuspec.template
 		FabricObserverWebApi.nuspec.template = FabricObserverWebApi.nuspec.template
 		FOAzurePipeline.yaml = FOAzurePipeline.yaml
+		foextlib.md = foextlib.md
 		fonuget.md = fonuget.md
 		icon.png = icon.png
 		Documentation\Observers.md = Documentation\Observers.md
 		Documentation\OperationalTelemetry.md = Documentation\OperationalTelemetry.md
 		Documentation\Plugins.md = Documentation\Plugins.md
 		README.md = README.md
+		SECURITY.md = SECURITY.md
 		Documentation\Using.md = Documentation\Using.md
 	EndProjectSection
 EndProject
@@ -44,10 +47,6 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TelemetryLib", "TelemetryLib\TelemetryLib.csproj", "{7BC6991F-C840-413E-B1CD-4025947CF5FA}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FabricObserverTests", "FabricObserverTests\FabricObserverTests.csproj", "{48C88BEB-9960-4183-861B-DF25C193E4C9}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FabricObserverWeb", "FabricObserverWeb\FabricObserverWeb.csproj", "{37F314C1-CE4B-4B3D-8932-EF7E46A340B0}"
-EndProject
-Project("{A07B5EB6-E848-4116-A8D0-A826331D98C6}") = "FabricObserverWebApi", "FabricObserverWebApp\FabricObserverWebApi.sfproj", "{D7D76690-9650-433F-99DF-7D0FE4975102}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SampleObserverPlugin", "SampleObserverPlugin\SampleObserverPlugin.csproj", "{4549560C-4604-42C3-B055-BDBD80B5B291}"
 EndProject
@@ -119,26 +118,6 @@ Global
 		{48C88BEB-9960-4183-861B-DF25C193E4C9}.Release|Any CPU.Build.0 = Release|Any CPU
 		{48C88BEB-9960-4183-861B-DF25C193E4C9}.Release|x64.ActiveCfg = Release|x64
 		{48C88BEB-9960-4183-861B-DF25C193E4C9}.Release|x64.Build.0 = Release|x64
-		{37F314C1-CE4B-4B3D-8932-EF7E46A340B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{37F314C1-CE4B-4B3D-8932-EF7E46A340B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{37F314C1-CE4B-4B3D-8932-EF7E46A340B0}.Debug|x64.ActiveCfg = Debug|x64
-		{37F314C1-CE4B-4B3D-8932-EF7E46A340B0}.Debug|x64.Build.0 = Debug|x64
-		{37F314C1-CE4B-4B3D-8932-EF7E46A340B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{37F314C1-CE4B-4B3D-8932-EF7E46A340B0}.Release|Any CPU.Build.0 = Release|Any CPU
-		{37F314C1-CE4B-4B3D-8932-EF7E46A340B0}.Release|x64.ActiveCfg = Release|x64
-		{37F314C1-CE4B-4B3D-8932-EF7E46A340B0}.Release|x64.Build.0 = Release|x64
-		{D7D76690-9650-433F-99DF-7D0FE4975102}.Debug|Any CPU.ActiveCfg = Debug|x64
-		{D7D76690-9650-433F-99DF-7D0FE4975102}.Debug|Any CPU.Build.0 = Debug|x64
-		{D7D76690-9650-433F-99DF-7D0FE4975102}.Debug|Any CPU.Deploy.0 = Debug|x64
-		{D7D76690-9650-433F-99DF-7D0FE4975102}.Debug|x64.ActiveCfg = Debug|x64
-		{D7D76690-9650-433F-99DF-7D0FE4975102}.Debug|x64.Build.0 = Debug|x64
-		{D7D76690-9650-433F-99DF-7D0FE4975102}.Debug|x64.Deploy.0 = Debug|x64
-		{D7D76690-9650-433F-99DF-7D0FE4975102}.Release|Any CPU.ActiveCfg = Release|x64
-		{D7D76690-9650-433F-99DF-7D0FE4975102}.Release|Any CPU.Build.0 = Release|x64
-		{D7D76690-9650-433F-99DF-7D0FE4975102}.Release|Any CPU.Deploy.0 = Release|x64
-		{D7D76690-9650-433F-99DF-7D0FE4975102}.Release|x64.ActiveCfg = Release|x64
-		{D7D76690-9650-433F-99DF-7D0FE4975102}.Release|x64.Build.0 = Release|x64
-		{D7D76690-9650-433F-99DF-7D0FE4975102}.Release|x64.Deploy.0 = Release|x64
 		{4549560C-4604-42C3-B055-BDBD80B5B291}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{4549560C-4604-42C3-B055-BDBD80B5B291}.Debug|x64.ActiveCfg = Debug|x64
 		{4549560C-4604-42C3-B055-BDBD80B5B291}.Release|Any CPU.ActiveCfg = Release|Any CPU

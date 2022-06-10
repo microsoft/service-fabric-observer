@@ -21,7 +21,6 @@ using System.Threading.Tasks;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
-using ConfigSettings = FabricObserver.Observers.MachineInfoModel.ConfigSettings;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
@@ -61,24 +60,20 @@ namespace FabricObserver.Observers
             }
         };
 
-        private readonly string dataPackagePath;
         private readonly List<NetworkObserverConfig> userConfig = new List<NetworkObserverConfig>();
         private readonly List<ConnectionState> connectionStatus = new List<ConnectionState>();
         private readonly Dictionary<string, bool> connEndpointTestResults = new Dictionary<string, bool>();
         private readonly Stopwatch stopwatch;
-        private readonly ConfigSettings configSettings;
         private HealthState healthState = HealthState.Ok;
         private bool hasRun;
         private int tcpConnTestRetried;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="NetworkObserver"/> class.
+        /// Creates a new instance of the type.
         /// </summary>
-        public NetworkObserver(FabricClient fabricClient, StatelessServiceContext context)
-            : base(fabricClient, context)
+        /// <param name="context">The StatelessServiceContext instance.</param>
+        public NetworkObserver(StatelessServiceContext context) : base(null, context)
         {
-            configSettings = new ConfigSettings(FabricServiceContext);
-            dataPackagePath = configSettings.ConfigPackagePath;
             stopwatch = new Stopwatch();
         }
 
@@ -105,7 +100,7 @@ namespace FabricObserver.Observers
 
             Token = token;
             stopwatch.Start();
-            
+
             // Run conn tests.
             Retry.Do(InternetConnectionStateIsConnected, TimeSpan.FromSeconds(10), token);
             await ReportAsync(token).ConfigureAwait(false);
@@ -148,7 +143,8 @@ namespace FabricObserver.Observers
                         {
                             ApplicationName = conn.TargetApp,
                             Code = FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
-                            HealthState = "Warning",
+                            EntityType = EntityType.Application,
+                            HealthState = HealthState.Warning,
                             Description = healthMessage,
                             ObserverName = ObserverName,
                             Metric = ErrorWarningProperty.InternetConnectionFailure,
@@ -161,10 +157,17 @@ namespace FabricObserver.Observers
                             _ = TelemetryClient?.ReportHealthAsync(telemetryData, Token);
                         }
 
+                        // ETW.
+                        if (IsEtwEnabled)
+                        {
+                            ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, telemetryData);
+                        }
+
                         var report = new HealthReport
                         {
                             AppName = new Uri(conn.TargetApp),
                             Code = FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
+                            EntityType = EntityType.Application,
                             EmitLogEvent = EnableVerboseLogging || IsObserverWebApiAppDeployed,
                             HealthData = telemetryData,
                             HealthMessage = healthMessage,
@@ -174,7 +177,6 @@ namespace FabricObserver.Observers
                             NodeName = NodeName,
                             Observer = ObserverName,
                             Property = $"EndpointUnreachable({conn.HostName})",
-                            ReportType = HealthReportType.Application,
                             ResourceUsageDataProperty = $"{ErrorWarningProperty.InternetConnectionFailure}: {conn.HostName}"
                         };
 
@@ -183,24 +185,6 @@ namespace FabricObserver.Observers
 
                         // This means this observer created a Warning or Error SF Health Report
                         HasActiveFabricErrorOrWarning = true;
-
-                        // ETW.
-                        if (IsEtwEnabled)
-                        {
-                            ObserverLogger.LogEtw(
-                                            ObserverConstants.FabricObserverETWEventName,
-                                            new
-                                            {
-                                                ApplicationName = conn.TargetApp,
-                                                Code = FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
-                                                HealthState = "Warning",
-                                                HealthEventDescription = healthMessage,
-                                                ObserverName,
-                                                Metric = ErrorWarningProperty.InternetConnectionFailure,
-                                                NodeName,
-                                                Source = ObserverConstants.FabricObserverName
-                                            });
-                        }
                     }
                     else
                     {
@@ -225,45 +209,34 @@ namespace FabricObserver.Observers
                             NodeName = NodeName,
                             Observer = ObserverName,
                             Property = $"EndpointUnreachable({conn.HostName})",
-                            ReportType = HealthReportType.Application
+                            EntityType = EntityType.Application
                         };
 
                         HealthReporter.ReportHealthToServiceFabric(report);
 
+                        var telemetryData = new TelemetryData()
+                        {
+                            ApplicationName = conn.TargetApp,
+                            Code = FOErrorWarningCodes.Ok,
+                            EntityType = EntityType.Application,
+                            HealthState = HealthState.Ok,
+                            Description = healthMessage,
+                            ObserverName = ObserverName,
+                            Metric = "Internet Connection State",
+                            NodeName = NodeName,
+                            Source = ObserverConstants.FabricObserverName
+                        };
+
                         // Telemetry.
                         if (IsTelemetryEnabled)
                         {
-                            var telemetryData = new TelemetryData()
-                            {
-                                ApplicationName = conn.TargetApp,
-                                Code = FOErrorWarningCodes.Ok,
-                                HealthState = "Ok",
-                                Description = healthMessage,
-                                ObserverName = ObserverName,
-                                Metric = "Internet Connection State",
-                                NodeName = NodeName,
-                                Source = ObserverConstants.FabricObserverName
-                            };
-
                             _ = TelemetryClient?.ReportHealthAsync(telemetryData, Token);
                         }
 
                         // ETW.
                         if (IsEtwEnabled)
                         {
-                            ObserverLogger.LogEtw(
-                                            ObserverConstants.FabricObserverETWEventName,
-                                            new
-                                            {
-                                                ApplicationName = conn.TargetApp,
-                                                Code = FOErrorWarningCodes.Ok,
-                                                HealthState = "Ok",
-                                                HealthEventDescription = healthMessage,
-                                                ObserverName,
-                                                Metric = "Internet Connection State",
-                                                NodeName,
-                                                Source = ObserverConstants.FabricObserverName
-                                            });
+                            ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, telemetryData);
                         }
 
                         // Reset health state.
@@ -348,9 +321,8 @@ namespace FabricObserver.Observers
                 }
             }
 
-            var settings = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(ObserverConstants.ObserverConfigurationPackageName)?.Settings;
-            configSettings.Initialize(settings, ConfigurationSectionName, "NetworkObserverDataFileName");
-            var networkObserverConfigFileName = Path.Combine(dataPackagePath ?? string.Empty, configSettings.NetworkObserverConfigFileName);
+            var networkObserverConfigFileName =
+                Path.Combine(ConfigPackage.Path, GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileName));
 
             if (string.IsNullOrWhiteSpace(networkObserverConfigFileName))
             {
@@ -444,7 +416,6 @@ namespace FabricObserver.Observers
                             }
 
                             var request = (HttpWebRequest)WebRequest.Create(new Uri($"{prefix}{endpoint.HostName}:{endpoint.Port}"));
-
                             request.AuthenticationLevel = AuthenticationLevel.MutualAuthRequired;
                             request.ImpersonationLevel = TokenImpersonationLevel.Impersonation;
                             request.Timeout = 60000;
@@ -594,24 +565,24 @@ namespace FabricObserver.Observers
                     _ = connectionStatus.RemoveAll(conn => conn.HostName == endpoint.HostName);
 
                     connectionStatus.Add(
-                                    new ConnectionState
-                                    {
-                                        HostName = endpoint.HostName,
-                                        Connected = true,
-                                        Health = HealthState.Warning,
-                                        TargetApp = targetApp
-                                    });
+                        new ConnectionState
+                        {
+                            HostName = endpoint.HostName,
+                            Connected = true,
+                            Health = HealthState.Warning,
+                            TargetApp = targetApp
+                        });
                 }
                 else
                 {
                     connectionStatus.Add(
-                                    new ConnectionState
-                                    {
-                                        HostName = endpoint.HostName,
-                                        Connected = true,
-                                        Health = HealthState.Ok,
-                                        TargetApp = targetApp
-                                    });
+                        new ConnectionState
+                        {
+                            HostName = endpoint.HostName,
+                            Connected = true,
+                            Health = HealthState.Ok,
+                            TargetApp = targetApp
+                        });
                 }
             }
             else
@@ -633,9 +604,9 @@ namespace FabricObserver.Observers
                         TargetApp = targetApp
                     });
 
-                if (!AppNames.Contains(targetApp))
+                if (!ServiceNames.Contains(targetApp))
                 {
-                    AppNames.Enqueue(targetApp);
+                    ServiceNames.Enqueue(targetApp);
                 }
             }
         }

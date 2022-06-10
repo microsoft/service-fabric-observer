@@ -10,13 +10,14 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
+using FabricObserver.Observers.Utilities.Telemetry;
 
 namespace FabricObserver.Observers
 {
     // This observer monitors VM level resource usage across CPU and Memory, and reports port and firewall rule counts.
     // Thresholds for Error and Warning signals are user-supplied in NodeObserver.config.json.
     // Health Report processor will also emit ETW telemetry if configured in Settings.xml.
-    public class NodeObserver : ObserverBase
+    public sealed class NodeObserver : ObserverBase
     {
         private readonly Stopwatch stopwatch;
         private readonly bool isWindows;
@@ -129,10 +130,10 @@ namespace FabricObserver.Observers
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="NodeObserver"/> class.
+        /// Creates a new instance of the type.
         /// </summary>
-        public NodeObserver(FabricClient fabricClient, StatelessServiceContext context)
-            : base(fabricClient, context)
+        /// <param name="context">The StatelessServiceContext instance.</param>
+        public NodeObserver(StatelessServiceContext context) : base(null, context)
         {
             stopwatch = new Stopwatch();
             isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows); 
@@ -299,7 +300,8 @@ namespace FabricObserver.Observers
                             CpuTimeData,
                             CpuErrorUsageThresholdPct,
                             CpuWarningUsageThresholdPct,
-                            timeToLiveWarning);
+                            timeToLiveWarning,
+                            EntityType.Machine);
                 }
 
                 // Memory - MB in use.
@@ -309,7 +311,8 @@ namespace FabricObserver.Observers
                             MemDataInUse,
                             MemErrorUsageThresholdMb,
                             MemWarningUsageThresholdMb,
-                            timeToLiveWarning);
+                            timeToLiveWarning,
+                            EntityType.Machine);
                 }
 
                 // Memory - Percent in use.
@@ -319,7 +322,8 @@ namespace FabricObserver.Observers
                             MemDataPercent,
                             MemoryErrorLimitPercent,
                             MemoryWarningLimitPercent,
-                            timeToLiveWarning);
+                            timeToLiveWarning,
+                            EntityType.Machine);
                 }
 
                 // Windows Firewall Rules - Total number of rules in use.
@@ -329,7 +333,8 @@ namespace FabricObserver.Observers
                             FirewallData,
                             FirewallRulesErrorThreshold,
                             FirewallRulesWarningThreshold,
-                            timeToLiveWarning);
+                            timeToLiveWarning,
+                            EntityType.Machine);
                 }
 
                 // Active TCP - Total number of TCP ports in use.
@@ -339,7 +344,8 @@ namespace FabricObserver.Observers
                             ActivePortsData,
                             ActivePortsErrorThreshold,
                             ActivePortsWarningThreshold,
-                            timeToLiveWarning);
+                            timeToLiveWarning,
+                            EntityType.Machine);
                 }
 
                 /* TCP Ports - Active Ephemeral */
@@ -351,7 +357,8 @@ namespace FabricObserver.Observers
                             EphemeralPortsDataRaw,
                             EphemeralPortsRawErrorThreshold,
                             EphemeralPortsRawWarningThreshold,
-                            timeToLiveWarning);
+                            timeToLiveWarning,
+                            EntityType.Machine);
                 }
 
                 // Percent - Percentage of available ephemeral ports in use.
@@ -361,7 +368,8 @@ namespace FabricObserver.Observers
                             EphemeralPortsDataPercent,
                             EphemeralPortsPercentErrorThreshold,
                             EphemeralPortsPercentWarningThreshold,
-                            timeToLiveWarning);
+                            timeToLiveWarning,
+                            EntityType.Machine);
                 }
 
                 // Total Open File Handles % (Linux-only) - Total Percentage Allocated (in use) of the configured Maximum number of File Handles the linux kernel will allocate.
@@ -373,7 +381,8 @@ namespace FabricObserver.Observers
                                 LinuxFileHandlesDataPercentAllocated,
                                 LinuxFileHandlesErrorPercent,
                                 LinuxFileHandlesWarningPercent,
-                                timeToLiveWarning);
+                                timeToLiveWarning,
+                                EntityType.Machine);
                     }
 
                     if (LinuxFileHandlesDataTotalAllocated != null && (LinuxFileHandlesErrorTotalAllocated > 0 || LinuxFileHandlesWarningTotalAllocated > 0))
@@ -382,7 +391,8 @@ namespace FabricObserver.Observers
                                 LinuxFileHandlesDataTotalAllocated,
                                 LinuxFileHandlesErrorTotalAllocated,
                                 LinuxFileHandlesWarningTotalAllocated,
-                                timeToLiveWarning);
+                                timeToLiveWarning,
+                                EntityType.Machine);
                     }
                 }
 
@@ -724,19 +734,15 @@ namespace FabricObserver.Observers
 
                 if (EphemeralPortsDataPercent != null && (EphemeralPortsPercentErrorThreshold > 0 || EphemeralPortsPercentWarningThreshold > 0))
                 {
-                    int activeEphemeralPorts = OSInfoProvider.Instance.GetActiveEphemeralPortCount();
-                    (int LowPort, int HighPort) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
-                    int totalEphemeralPorts = HighPort - LowPort;
-
-                    if (totalEphemeralPorts > 0)
-                    {
-                        double usedPct = (double)(activeEphemeralPorts * 100) / totalEphemeralPorts;
-                        EphemeralPortsDataPercent.AddData(usedPct);
-                    }
+                    double usedPct = OSInfoProvider.Instance.GetActiveEphemeralPortCountPercentage();
+                    EphemeralPortsDataPercent.AddData(usedPct);
 
                     /* Raw ETW - Unrelated to Warnings */
                     if (IsEtwEnabled)
                     {
+                        (int LowPort, int HighPort) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
+                        int totalEphemeralPorts = HighPort - LowPort;
+
                         ObserverLogger.LogEtw(
                             ObserverConstants.FabricObserverETWEventName,
                             new

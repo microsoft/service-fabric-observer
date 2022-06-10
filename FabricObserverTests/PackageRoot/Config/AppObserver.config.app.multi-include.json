@@ -1,0 +1,14 @@
+[
+  {
+    "targetApp": "HealthMetrics",
+    "serviceIncludeList": "DoctorActorService",
+    "cpuWarningLimitPercent": 50,
+    "memoryWarningLimitPercent": 30
+  },
+  {
+    "targetApp": "HealthMetrics",
+    "serviceIncludeList": "BandActorService",
+    "cpuWarningLimitPercent": 50,
+    "memoryWarningLimitPercent": 30
+  }
+]

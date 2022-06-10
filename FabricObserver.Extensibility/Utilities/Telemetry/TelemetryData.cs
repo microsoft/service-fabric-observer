@@ -4,90 +4,156 @@
 // ------------------------------------------------------------
 
 using System.Runtime.InteropServices;
-using FabricObserver.TelemetryLib;
 using Newtonsoft.Json;
+using FabricObserver.Observers.Interfaces;
+using System.Fabric.Health;
+using System;
+using System.Fabric;
+using System.Fabric.Query;
+using System.Fabric.Description;
+using System.Diagnostics.Tracing;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
-    public class TelemetryData
+    [EventData]
+    [Serializable]
+    public class TelemetryData : ITelemetryData
     {
+        private readonly string _os;
+
+        [EventField]
         public string ApplicationName
         {
             get; set;
         }
 
-        public string ClusterId => ClusterInformation.ClusterInfoTuple.ClusterId;
-
+        [EventField]
         public string Code
         {
             get; set;
         }
 
+        [EventField]
         public string ContainerId
         {
             get; set;
         }
 
+        [EventField]
+        public string ClusterId
+        {
+            get; set;
+        }
+
+        [EventField]
         public string Description
         {
             get; set;
         }
 
-        public string HealthState
+        [EventField]
+        public EntityType EntityType
         {
             get; set;
         }
 
+        [EventField]
+        public HealthState HealthState
+        {
+            get; set;
+        }
+
+        [EventField]
         public string Metric
         {
             get; set;
         }
 
+        [EventField]
         public string NodeName
         {
             get; set;
         }
 
+        [EventField]
+        public string NodeType
+        {
+            get; set;
+        }
+
+        [EventField]
         public string ObserverName
         {
             get; set;
         }
 
+        [EventField]
         public string OS
         {
-            get; set;
-        } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
+            get { return _os; }
+        }
 
-        public string PartitionId
+        [EventField]
+        public Guid? PartitionId
         {
             get; set;
         }
 
-        public int ProcessId
+        [EventField]
+        public long ProcessId
         {
             get; set;
         }
 
+        [EventField]
+        public string Property
+        {
+            get; set;
+        }
+
+        [EventField]
         public long ReplicaId
         {
             get; set;
         }
 
+        [EventField]
+        public ReplicaRole ReplicaRole
+        {
+            get; set;
+        }
+
+        [EventField]
+        public ServiceKind ServiceKind
+        {
+            get; set;
+        }
+
+        [EventField]
         public string ServiceName
         {
             get; set;
         }
 
+        [EventField]
+        public ServicePackageActivationMode? ServicePackageActivationMode
+        {
+            get; set;
+        }
+
+        [EventField]
         public string Source
         {
             get; set;
         }
 
+        [EventField]
         public string SystemServiceProcessName
         {
             get; set;
         }
 
+        [EventField]
         public double Value
         {
             get; set;
@@ -96,7 +162,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         [JsonConstructor]
         public TelemetryData()
         {
-
+            _os = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
         }
     }
 }
