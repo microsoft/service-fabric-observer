@@ -40,7 +40,7 @@ namespace FabricObserverTests
         private static readonly CancellationToken Token = new CancellationToken();
         private static readonly ICodePackageActivationContext CodePackageContext = null;
         private static readonly StatelessServiceContext TestServiceContext = null;
-        
+
         private static FabricClient FabricClient => FabricClientUtilities.FabricClientSingleton;
 
         static ObserverTests()
@@ -75,7 +75,7 @@ namespace FabricObserverTests
                         TestServiceName,
                         null,
                         Guid.NewGuid(),
-                        long.MaxValue); 
+                        long.MaxValue);
         }
 
         /* Helpers */
@@ -360,6 +360,11 @@ namespace FabricObserverTests
         [ClassCleanup]
         public static async Task TestClassCleanupAsync()
         {
+            if (!IsSFRuntimePresentOnTestMachine)
+            {
+                return;
+            }
+
             // Remove any files generated.
             try
             {
@@ -399,11 +404,11 @@ namespace FabricObserverTests
             DeleteServiceDescription deleteServiceDescription2 = new DeleteServiceDescription(new Uri(serviceName2));
             await fabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription1);
             await fabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription2);
-           
+
             // Delete an application instance from the application type.
             DeleteApplicationDescription deleteApplicationDescription = new DeleteApplicationDescription(new Uri(appName));
             await fabricClient.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
-           
+
             // Un-provision the application type.
             await fabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
         }
@@ -432,7 +437,7 @@ namespace FabricObserverTests
         public void AAAInitializeTestInfra()
         {
             Assert.IsTrue(IsLocalSFRuntimePresent());
-            DeployHealthMetricsAppAsync().Wait(); 
+            DeployHealthMetricsAppAsync().Wait();
         }
 
         [TestMethod]
@@ -530,7 +535,7 @@ namespace FabricObserverTests
 
             using var obs = new NetworkObserver(TestServiceContext);
 
-            Assert.IsTrue(obs.ObserverLogger != null); 
+            Assert.IsTrue(obs.ObserverLogger != null);
             Assert.IsTrue(obs.HealthReporter != null);
             Assert.IsTrue(obs.ObserverName == ObserverConstants.NetworkObserverName);
         }
@@ -567,9 +572,9 @@ namespace FabricObserverTests
         public void SFConfigurationObserver_Constructor_Test()
         {
             using var client = new FabricClient();
-            
+
             ObserverManager.FabricServiceContext = TestServiceContext;
-            
+
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
@@ -1104,7 +1109,7 @@ namespace FabricObserverTests
             // to timeout in ClusterObserver.
             var obs = new ClusterObserver.ClusterObserver(TestServiceContext, ignoreDefaultQueryTimeout: true)
             {
-         
+
             };
 
             await obs.ObserveAsync(Token);
@@ -1685,7 +1690,7 @@ namespace FabricObserverTests
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-                       
+
             using var obs = new FabricSystemObserver(TestServiceContext)
             {
                 IsEnabled = true,
@@ -1719,7 +1724,7 @@ namespace FabricObserverTests
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-                        
+
             using var obs = new FabricSystemObserver(TestServiceContext)
             {
                 IsEnabled = true,
@@ -1760,8 +1765,8 @@ namespace FabricObserverTests
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-            
-           
+
+
             using var obs = new FabricSystemObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
@@ -1802,7 +1807,7 @@ namespace FabricObserverTests
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-           
+
             using var obs = new FabricSystemObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
@@ -1843,7 +1848,7 @@ namespace FabricObserverTests
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-           
+
             using var obs = new FabricSystemObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
@@ -1873,7 +1878,7 @@ namespace FabricObserverTests
 
             using var client = new FabricClient();
             var nodeList = await client.QueryManager.GetNodeListAsync();
-            
+
             // This is meant to be run on your dev machine's one node test cluster.
             if (nodeList?.Count > 1)
             {
@@ -1885,8 +1890,8 @@ namespace FabricObserverTests
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-            
-            
+
+
             using var obs = new FabricSystemObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
@@ -1926,8 +1931,8 @@ namespace FabricObserverTests
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
-            
-           
+
+
             using var obs = new FabricSystemObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
@@ -1944,6 +1949,32 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
+        }
+
+        [TestMethod]
+        public void Ephemeral_Ports_Machine_Total_Greater_Than_Zero()
+        {
+            int ports = OSInfoProvider.Instance.GetActiveEphemeralPortCount();
+
+            // 0 would mean something failed in the impl or that there are no active TCP connections on the machine (unlikely).
+            Assert.IsTrue(ports > 0);
+        }
+
+        [TestMethod]
+        public void Active_Ports_Machine_Total_Greater_Than_Zero()
+        {
+            int ports = OSInfoProvider.Instance.GetActiveTcpPortCount();
+
+            // 0 would mean something failed in the impl or that there are no active TCP connections on the machine (unlikely).
+            Assert.IsTrue(ports > 0);
+        }
+
+        [TestMethod]
+        public void Active_TCP_Port_Count_Greater_Than_Ephemeral_Port_Count_Machine()
+        {
+            int total_tcp_ports = OSInfoProvider.Instance.GetActiveTcpPortCount();
+            int ephemeral_tcp_ports = OSInfoProvider.Instance.GetActiveEphemeralPortCount();
+            Assert.IsTrue(total_tcp_ports > ephemeral_tcp_ports);
         }
     }
 }
