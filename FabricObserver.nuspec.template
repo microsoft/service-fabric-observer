@@ -5,12 +5,16 @@
 		<version>3.2.0</version>
 		<releaseNotes>
 - This is a relatively major release with significant changes. Many of these will be transparent to you except for the new service deployment model (removal of DefaultServices from ApplicationManifest.xml to support ARM deployment).
-- Support for ARM deployment.
-- Requires SF versions 8+ and .NET Core 3.1.
-- AppObserver now generates ServiceHealthReport health reports, which will put service entities into Error or Warning depending upon your configuration thresholds. There are breaking changes to FO's health reporter API. See Release Notes on repo.
-- Substantial performance improvements.
-- Several code improvements.
-- Some bug fixes.
+- Support for ARM deployment, including "one-click" ARM deployments (Deploy to Azure button).
+- For CLI/PowerShell deployments, you must now create an instance of fabric:/FabricObserver/FabricObserver service as the last step.
+- IMPORTANT: This version requires SF runtime versions 8.0 and above and .NET Core 3.1.x. Note that 3.2.0 will be the last major release of FO to support .NET Core 3.1, which will hit its EOL in 12/2022.
+- AppObserver now generates ServiceHealthReport health reports, which will put service entities into Error or Warning depending upon your configuration thresholds. There are breaking changes to FO's health reporter API. See below.
+- ObserverLogger.LogEtw now supports TelemetryData type (so, you don't have to duplicate its members in an anonymous type).
+- ObserverHealthReporter no longer takes a FabricClient parameter (breaking change).
+- HealthReport.ReportType has been replaced with HealthReport.EntityType (breaking change). HealthReportType enum no longer exists. It has been replaced with EntityType enum.
+- Substantial performance improvements and protection against most issues related to Windows Defender process scanning behavior.
+- Several code improvements and some refactorings or complete rewrites.
+- Some important bug fixes.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
@@ -25,8 +29,20 @@
 		</contentFiles>
 		<dependencies>
 			<group targetFramework="netstandard2.0"></group>
-			<group targetFramework="net6.0">
-				<dependency id="Microsoft.ServiceFabric.Services" version="6.0.1017" />
+			<group targetFramework="netcoreapp3.1">
+				<dependency id="Microsoft.Win32.Registry" version="5.0.0" />
+				<dependency id="Microsoft.ServiceFabric.Services" version="5.0.516" />
+				<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="5.0.0" />
+				<dependency id="Microsoft.ApplicationInsights" version="2.20.0" />
+				<dependency id="Microsoft.ApplicationInsights.DependencyCollector" version="2.20.0" />
+				<dependency id="Microsoft.ApplicationInsights.NLogTarget" version="2.20.0" />
+				<dependency id="Microsoft.ApplicationInsights.PerfCounterCollector" version="2.20.0" />
+				<dependency id="Microsoft.ApplicationInsights.WindowsServer" version="2.20.0" />
+				<dependency id="Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel" version="2.20.0" />
+				<dependency id="Microsoft.AspNet.WebApi.Client" version="5.2.9" />
+				<dependency id="Microsoft.Extensions.DependencyInjection" version="5.0.2" />
+				<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="5.0.0" />
+				<dependency id="NLog" version="5.0.0" />
 			</group>
 		</dependencies>
 		<projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>
@@ -35,7 +51,7 @@
 	</metadata>
 	<files>
 		<file src="**" target="contentFiles\any\any" />
-		<file src="FabricObserverPkg\Code\FabricObserver.dll" target="lib\net6.0" />
+		<file src="FabricObserverPkg\Code\FabricObserver.dll" target="lib\netcoreapp3.1" />
 		<file src="FabricObserverPkg\Code\FabricObserver.Extensibility.dll" target="lib\netstandard2.0" />
 		<file src="FabricObserverPkg\Code\TelemetryLib.dll" target="lib\netstandard2.0" />
 		<file src="%ROOT_PATH%\icon.png" target="" />

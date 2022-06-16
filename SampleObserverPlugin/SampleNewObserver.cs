@@ -272,7 +272,7 @@ namespace FabricObserver.Observers
                 Observer = ObserverName,
                 Property = "SomeUniquePropertyForMyHealthEvent",
                 EntityType = EntityType.Node, // this is an FO 3.2.0 required change.
-                //ReportType = HealthReportType.Node, // this is gone in FO 3.2.0.
+                //ReportType = HealthReportType.Node, // this is gone in FO 3.2.x.
                 State = HealthState.Ok
             };
 
@@ -291,23 +291,13 @@ namespace FabricObserver.Observers
 
             if (IsTelemetryEnabled)
             {
-                _ = TelemetryClient?.ReportHealthAsync(telemetryData, Token);
+                TelemetryClient?.ReportHealthAsync(telemetryData, Token);
             }
 
             // ETW.
             if (IsEtwEnabled)
             {
-                ObserverLogger.LogEtw(
-                    ObserverConstants.FabricObserverETWEventName,
-                    new
-                    {
-                        Code = FOErrorWarningCodes.Ok,
-                        HealthEventDescription = message.ToString(),
-                        HealthState = "Ok",
-                        NodeName,
-                        ObserverName,
-                        Source = ObserverConstants.FabricObserverName
-                    });
+                ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, telemetryData);
             }
 
             message.Clear();
