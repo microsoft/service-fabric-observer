@@ -1,12 +1,10 @@
 ﻿Sample observer plugin implementation. Please read/experiment with this project to learn how to build an observer plugin.
 
-**NOTE: FabricObserver version 3.1.0 introduces a refactored plugin implementation that will break existing plugins. The changes required by plugin authors are trivial, however. You can see what needs to be done below. Basically,
-you will need to modify your plugin's constructor to take two parameters and pass them to the base ctor. Then, in your startup class, you will need to modify the implementation to support the new IFabricStartup.ConfigureServices signature.**
-
 In general, there are two key pieces to this project, which will be required for your observer plugin:
 
 Like all observers, yours must implement IObserver, which is already mostly taken care of in the
 abstract base class, ObserverBase. Your observer must implement ObserverBase's abstract functions ObserveAsync and ReportAsync.
+FabricObserver will automatically detect and load your plugin when it starts up.
 
 Example:
 
@@ -53,7 +51,7 @@ namespace FabricObserver.Observers
 When you reference the FabricObserver nuget package, you will have access to all of the public code in FabricObserver. That is, you will have the same capabilities 
 that all other observers have. The world is your oyster when it comes to creating your custom observer to do whatever the underlying platform affords. 
 
-### Note: make sure you know if .NET Core 3.1 is installed on the target server. If it is not, then you must use the SelfContained package. This is very important.
+### Note: make sure you know if .NET 6 is installed on the target server that must also be running Service Fabric 9.0 and above. If it is not, then you must use the SelfContained package. This is very important.
 
 As you can see in this project, there are two key files:
 
@@ -81,13 +79,26 @@ namespace FabricObserver.Observers
 }
 ```  
   
-**NOTE for FO 3.1.x: If you are using ObserverHealthReporter in your current plugin, you will need to modify the ctor:**
+**NOTE: If you are using ObserverHealthReporter in your current plugin, you will need to modify your code to account for breaking changes in 3.2.x:**
 ``` C#
-// FabricClientInstance is a built-in object in ObserverBase. 
-var healthReporter = new ObserverHealthReporter(ObserverLogger, FabricClientInstance);
+var healthReporter = new ObserverHealthReporter(ObserverLogger);
+var healthReport = new HealthReport
+{
+    Code = FOErrorWarningCodes.Ok,
+    HealthMessage = message.ToString(),
+    NodeName = NodeName,
+    Observer = ObserverName,
+    Property = "SomeUniquePropertyForMyHealthEvent",
+    EntityType = EntityType.Node, // this is an FO 3.2.x breaking change.
+    //ReportType = HealthReportType.Node, // this is gone in FO 3.2.x.
+    State = HealthState.Ok
+};
+
+healthReporter.ReportHealthToServiceFabric(healthReport);
 ```
 
-When you build your plugin as a .NET Standard 2.0, copy the dll file into the Data/Plugins folder inside your build output directory. E.g., YourObserverPlugin\bin\release\netstandard2.0\win-x64. In fact, this directory will contain what is effectively a decompressed sfpkg file:  
+When you build your plugin as a .NET Standard 2.0, copy the dll file and all of its dependencies into the Data/Plugins folder inside your build output directory - if you build against the full FabricObserver nupkg.
+E.g., YourObserverPlugin\bin\release\netstandard2.0\win-x64. In fact, this directory will contain what is effectively a decompressed sfpkg file - if you installed the full FO nupkg:  
 ```
 [sourcedir]\SAMPLEOBSERVERPLUGIN\BIN\RELEASE\NETSTANDARD2.0\WIN-X64  
 │   ApplicationManifest.xml  
@@ -116,27 +127,32 @@ You can deploy using the contents of your build out directory - just remove the 
         ServiceManifest.xml        
 ```
 
-### Deploy FO from your plugin build folder (assuming you build FO on Windows - the target can be Windows or Linux, of course.): 
+#### New: Microsoft.ServiceFabricApps.FabricObserver.Extensibility nuget package
+This nuget package simplifies the the project dependencies for building a FabricObserver plugin. You just need to install the package into your plugin project. There is no need to add other FO related packages in the csproj file, unlike the full FO nupkg.
+If you use the Microsoft.ServiceFabricApps.FabricObserver.Extensibility nuget package to build your plugin, then the only output from the build will be your plugin library and pdb. This means you would copy your plugin dll and ALL of its dependencies into your local FabricObserver repo's PackageRoot\Data\Plugins folder, for example. Or, if you
+are deploying using the SFPKG from the Microsoft Github repo (Releases section), then decompress the file (change the extension to .zip first), and copy the plugin dll and ALL of its dependencies to the FabricObserverPkg\Data\Plugins folder.
+
+### Deploy FabricObserver with your plugin in place: 
 
 * Open an Admin Powershell console.
 * Connect to your cluster.
 * Set a $path variable to your deployment content
 * Copy bits to server
 * Register application type
-* Create new instance of FO, which will contain your observer plugin
+* Create new instance of FabricObserver application
+* Create a new instance of the FabricObserverService service
 ```Powershell
 $path = "[sourcedir]\MyObserverPlugin\bin\release\netstandard2.0\[target os platform, e.g., win-x64 or linux-x64]"
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FabricObserverV3116 -TimeoutSec 1800
-Register-ServiceFabricApplicationType -ApplicationPathInImageStore FabricObserverV3116
-New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.1.16
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FabricObserverV321 -TimeoutSec 1800
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FabricObserverV321
+New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.2.1
+New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName fabric:/FabricObserver -ServiceName fabric:/FabricObserver/FabricObserverService -ServiceTypeName FabricObserverType -InstanceCount -1
 ```  
 
+### What about adding nuget packages to plugins that are not also installed in FabricObserver? 
 
-### What about adding nuget packages to plugins that are not also installed in FO? 
-
-Great question. The easiest way to solve this problem is to simply put the compile time assemblies of the nuget package 
-you installed into your plugin project into FO's Plugins folder along with your plugin dll. Optionally, you could copy the plugin's
-referenced dlls from the nuget package into FO's code package (Code folder). 
+Great question. The most effective way to solve this problem is to simply put all of the compile time assemblies of the nuget package 
+you installed into your plugin project into FO's Plugins folder along with your plugin dll. 
 
 You can see an example of this in the SampleNewObserver project: there is a nuget package installed in the plugin project that is 
 not also used by FO (Polly). Post-Build events are used to copy Polly.dll (the nuget package compile time assembly) from the base nuget packages location
