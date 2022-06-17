@@ -16,6 +16,9 @@ namespace FabricObserver.Observers.Utilities
     public class WindowsProcessInfoProvider : ProcessInfoProvider
     {
         private const int MaxDescendants = 50;
+        private const int MaxInstanceNameLengthTruncated = 64;
+        private readonly object _lock = new object();
+        private volatile bool hasWarnedProcessNameLength = false;
 
         public override float GetProcessWorkingSetMb(int processId, string procName = null, bool getPrivateWorkingSet = false)
         {
@@ -136,10 +139,11 @@ namespace FabricObserver.Observers.Utilities
             
             catch (Exception e) when (e is Win32Exception) // e.g., process is no longer running.
             {
-                Logger.LogWarning($"Handled Exception in TupleGetChildProcesses:{Environment.NewLine}{e}");
+                Logger.LogWarning($"Handled Exception in TupleGetChildProcesses:{Environment.NewLine}{e.Message}");
             }
             catch (Exception e)
             {
+                // Log the full error(including stack trace) for debugging purposes.
                 Logger.LogError($"Unhandled Exception in TupleGetChildProcesses:{Environment.NewLine}{e}");
                 throw;
             }
@@ -182,10 +186,10 @@ namespace FabricObserver.Observers.Utilities
                    Only two possible exceptions can happen here: IOE and Win32Exception. */
 
                 performanceCounter = new PerformanceCounter(
-                                                categoryName,
-                                                counterName,
-                                                instanceName: internalProcName,
-                                                readOnly: true);
+                                            categoryName,
+                                            counterName,
+                                            instanceName: internalProcName,
+                                            readOnly: true);
                 
                 float result = performanceCounter.NextValue();
                 double usedPct = (double)(result * 100) / int.MaxValue;
@@ -195,12 +199,12 @@ namespace FabricObserver.Observers.Utilities
             catch (InvalidOperationException ioe)
             {
                 // The Counter layout for the Category specified is invalid? This can happen if a user messes around with Reg key values. Not likely.
-                Logger.LogWarning($"GetProcessKvsLvidsUsagePercentage: Handled Win32Exception:{Environment.NewLine}{ioe}");
+                Logger.LogWarning($"GetProcessKvsLvidsUsagePercentage: Handled Win32Exception:{Environment.NewLine}{ioe.Message}");
             }
             catch (Win32Exception we)
             {
                 // Internal exception querying counter (Win32 code). There is nothing to do here. Log the details. Most likely transient.
-                Logger.LogWarning($"GetProcessKvsLvidsUsagePercentage: Handled Win32Exception:{Environment.NewLine}{we}");
+                Logger.LogWarning($"GetProcessKvsLvidsUsagePercentage: Handled Win32Exception:{Environment.NewLine}{we.Message}");
             }
             finally
             {
@@ -213,6 +217,12 @@ namespace FabricObserver.Observers.Utilities
 
         private float NativeGetProcessFullWorkingSetMb(int processId)
         {
+            if (processId < 1)
+            {
+                Logger.LogWarning($"NativeGetProcessFullWorkingSetMb: Process ID is an unsupported value ({processId}). Returning 0F.");
+                return 0F;
+            }
+
             SafeProcessHandle handle = null;
 
             try
@@ -231,7 +241,7 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
             {
-                Logger.LogWarning($"NativeGetProcessWorkingSet: Exception getting working set for process {processId}:{Environment.NewLine}{e}");
+                Logger.LogWarning($"NativeGetProcessWorkingSet: Exception getting working set for process {processId}{Environment.NewLine}{e.Message}");
                 return 0F;
             }
             finally
@@ -252,18 +262,17 @@ namespace FabricObserver.Observers.Utilities
                 
                 if (handle.IsInvalid || !NativeMethods.GetProcessHandleCount(handle, out handles))
                 {
-                    Logger.LogWarning($"GetProcessHandleCount: Failed with Win32 error code {Marshal.GetLastWin32Error()}. Trying a different approach (Process obj).");
+                    Logger.LogWarning($"GetProcessHandleCount: Failed with Win32 error code {Marshal.GetLastWin32Error()}.");
                 }
        
-                return (int)handles;
-                
+                return (int)handles;  
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
             {
                 // Access denied (FO is running as a less privileged user than the target process).
                 if (e is Win32Exception && (e as Win32Exception).NativeErrorCode != 5)
                 {
-                    Logger.LogWarning($"NativeGetProcessHandleCount: Exception getting working set for process {processId}:{Environment.NewLine}{e}");
+                    Logger.LogWarning($"NativeGetProcessHandleCount: Exception getting working set for process {processId}:{Environment.NewLine}{e.Message}");
                 }
 
                 return -1;
@@ -275,6 +284,7 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
+        // This is too expensive on Windows. Don't use this.
         private int GetProcessAllocatedHandles(Process process)
         {
             if (process == null)
@@ -290,6 +300,37 @@ namespace FabricObserver.Observers.Utilities
 
         private float GetProcessPrivateWorkingSetMbFromPerfCounter(string procName, int procId)
         {
+            if (string.IsNullOrWhiteSpace(procName) || procId < 1)
+            {
+                Logger.LogWarning($"Process Name is null or empty, or Process ID is an unsupported value ({procId}).");
+                return 0;
+            }
+
+            // Handle the case where supplied process name exceeds the maximum length (64) supported by PerformanceCounter's InstanceName field (.NET Core 3.1).
+            // This should be very rare given this is a Windows/.NET platform restriction and users should understand the limits of the platform they use. However,
+            // the documentation (and source code comments) are confusing: One (doc) says 128 chars is max value. The other (source code comment) says 127. In reality, 
+            // it is 64 for .NET Core 3.1, based on my tests..
+            if (procName.Length >= MaxInstanceNameLengthTruncated)
+            {
+                // Only log this once to limit disk IO noise and log file size.
+                if (!hasWarnedProcessNameLength)
+                {
+                    lock (_lock)
+                    {
+                        if (!hasWarnedProcessNameLength)
+                        {
+                            Logger.LogWarning(
+                                $"Process name {procName} exceeds max length (64) for InstanceName (.NET Core 3.1). Supplying Full Working Set (Private + Shared) value instead (no PerformanceCounter usage). " +
+                                $"Will not log this again until FO restarts.");
+
+                            hasWarnedProcessNameLength = true;
+                        }
+                    }
+                }
+                return NativeGetProcessFullWorkingSetMb(procId);
+            }
+
+            // Make sure the correct process is the one we compute memory usage for (re: multiple processes of the same name..).
             string internalProcName = GetInternalProcessNameFromPerfCounter(procName, procId);
             PerformanceCounter memoryCounter = null;
 
@@ -298,13 +339,14 @@ namespace FabricObserver.Observers.Utilities
                memoryCounter = new PerformanceCounter("Process", "Working Set - Private", internalProcName, true);
                return memoryCounter.NextValue() / 1024 / 1024;
             }
-            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is UnauthorizedAccessException || e is Win32Exception)
             {
-                Logger.LogWarning($"GetProcessPrivateWorkingSetMbFromPerfCounter: Handled: Unable to get private working set for process {procName} with id {procId}. Returning 0.{Environment.NewLine}{e}");
+                Logger.LogWarning($"Handled exception in GetProcessPrivateWorkingSetMbFromPerfCounter: Returning 0.{Environment.NewLine}Error: {e.Message}");
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                Logger.LogWarning($"GetProcessPrivateWorkingSetMbFromPerfCounter: Unhandled (no-throw): Unable to get private working set for process {procName} with id {procId}. Returning 0.{Environment.NewLine}{ex}");
+                // Log the full error (including stack trace) for debugging purposes.
+                Logger.LogWarning($"Unhandled exception in GetProcessPrivateWorkingSetMbFromPerfCounter:{Environment.NewLine}{e}");
                 throw;
             }
             finally
@@ -327,6 +369,8 @@ namespace FabricObserver.Observers.Utilities
             try
             {
                 var category = new PerformanceCounterCategory("Process");
+
+                // This is *very* slow.
                 instanceNames = category.GetInstanceNames().Where(x => x.Contains($"{procName}#")).ToArray();
                 int count = instanceNames.Length;
 
@@ -349,13 +393,16 @@ namespace FabricObserver.Observers.Utilities
                     return nameCounter.InstanceName;
                 }
             }
-            catch(Exception ex) when (ex is InvalidOperationException || ex is Win32Exception || ex is UnauthorizedAccessException)
+            catch(Exception e) when (e is ArgumentException || e is InvalidOperationException || e is UnauthorizedAccessException || e is Win32Exception)
             {
-                Logger.LogWarning($"GetInternalProcessNameFromPerfCounter: Handled Exception - Unable to determine internal process name for {procName} with id {procId}{Environment.NewLine}{ex}");
+                Logger.LogWarning(
+                    $"Handled exception in GetInternalProcessNameFromPerfCounter: Unable to determine internal process name for {procName} with id {procId}{Environment.NewLine}{e.Message}");
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                Logger.LogError($"GetInternalProcessNameFromPerfCounter Unhandled Exception - Unable to determine internal process name for {procName} with id {procId}{Environment.NewLine}{ex}");
+                // Log the full error (including stack trace) for debugging purposes.
+                Logger.LogError(
+                    $"Unhandled exception in GetInternalProcessNameFromPerfCounter: Unable to determine internal process name for {procName} with id {procId}{Environment.NewLine}{e}");
                 throw;
             }
             finally
