@@ -91,11 +91,11 @@ namespace FabricObserver.Observers.Utilities
                         }
                         catch (ManagementException me)
                         {
-                            Logger.LogInfo($"Handled ManagementException in GetOSInfoAsync retrieval:{Environment.NewLine}{me}");
+                            Logger.LogInfo($"Handled ManagementException in GetOSInfoAsync retrieval:{Environment.NewLine}{me.Message}");
                         }
                         catch (Exception e)
                         {
-                            Logger.LogInfo($"Bug? => Exception in GetOSInfoAsync:{Environment.NewLine}{e}");
+                            Logger.LogWarning($"Exception in GetOSInfoAsync:{Environment.NewLine}{e.Message}");
                         }
                         finally
                         {
@@ -143,7 +143,7 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (Win32Exception we)
             {
-                Logger.LogWarning($"TupleGetMemoryInfo: Failure (native) computing memory data:{Environment.NewLine}{we}");
+                Logger.LogWarning($"TupleGetMemoryInfo: Failure (native) computing memory data:{Environment.NewLine}{we.Message}");
             }
 
             return (0, 0, 0);
@@ -240,7 +240,7 @@ namespace FabricObserver.Observers.Utilities
                                      e is Win32Exception ||
                                      e is SystemException)
                     {
-                        Logger.LogWarning($"Handled Exception in TupleGetDynamicPortRange (will return (-1, -1)):{Environment.NewLine}{e}");
+                        Logger.LogWarning($"Handled Exception in TupleGetDynamicPortRange (will return (-1, -1)):{Environment.NewLine}{e.Message}");
                     }
                 }
             }
@@ -258,7 +258,7 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (AggregateException ae)
             {
-                Logger.LogWarning($"Failed all retries (3) for GetActiveEphemeralPortCount (will return -1):{Environment.NewLine}{ae}");
+                Logger.LogWarning($"Failed all retries (3) for GetActiveEphemeralPortCount (will return -1):{Environment.NewLine}{ae.Flatten().Message}");
                 count = -1;
             }
 
@@ -297,7 +297,7 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (AggregateException ae)
             {
-                Logger.LogWarning($"Failed all retries (3) for GetActivePortCount (will return -1):{Environment.NewLine}{ae}");
+                Logger.LogWarning($"Failed all retries (3) for GetActivePortCount (will return -1):{Environment.NewLine}{ae.Flatten().Message}");
                 count = -1;
             }
 

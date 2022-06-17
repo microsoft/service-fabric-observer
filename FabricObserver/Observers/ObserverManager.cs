@@ -211,7 +211,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
-                Logger.LogWarning($"GetServiceFabricRuntimeVersion failure:{Environment.NewLine}{e}");
+                Logger.LogWarning($"GetServiceFabricRuntimeVersion failure:{Environment.NewLine}{e.Message}");
             }
 
             return null;

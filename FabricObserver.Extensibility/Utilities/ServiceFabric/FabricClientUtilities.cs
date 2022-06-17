@@ -59,7 +59,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                             return fabricClient;
                         }
                     }
-                    catch (Exception e) when (e is ObjectDisposedException || e is System.Runtime.InteropServices.InvalidComObjectException)
+                    catch (Exception e) when (e is ObjectDisposedException || e is InvalidComObjectException)
                     {
                         lock (lockObj)
                         {
@@ -251,7 +251,7 @@ namespace FabricObserver.Utilities.ServiceFabric
 
                         /* In order to provide accurate resource usage of an SF service process we need to also account for
                         any processes (children) that the service process (parent) created/spawned. */
-                        if (includeChildProcesses)
+                        if (includeChildProcesses && !handleToSnapshot.IsInvalid)
                         {
                             List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, handleToSnapshot);
 
@@ -281,7 +281,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                             ReplicaStatus = statelessInstance.ReplicaStatus
                         };
 
-                        if (includeChildProcesses)
+                        if (includeChildProcesses && !handleToSnapshot.IsInvalid)
                         {
                             List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, handleToSnapshot);
 
