@@ -1,6 +1,6 @@
 # Deploy FabricObserver using ARM
 
-Like all elementary services such as monitoring, Windows update, scripts, scaling, etc. those services should be installed with the initial cluster deployment. 
+Like all elementary services such as monitoring, Windows update, scripts, scaling, etc., FabricObserver should be installed with your initial Service Fabric cluster deployment. 
 
 There are two options:
 1. Add the resource provided in the ARM template [service-fabric-observer.json](service-fabric-observer.json) in the template which also deploys the Service Fabric cluster.
