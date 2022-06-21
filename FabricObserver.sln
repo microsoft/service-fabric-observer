@@ -19,6 +19,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Build-SFPkgs.ps1 = Build-SFPkgs.ps1
 		ClusterObserver.nuspec.template = ClusterObserver.nuspec.template
 		conuget.md = conuget.md
+		Documentation\Deployment\Deploy-FabricObserver.ps1 = Documentation\Deployment\Deploy-FabricObserver.ps1
+		Documentation\Deployment\Deployment.md = Documentation\Deployment\Deployment.md
 		Documentation\Design.md = Documentation\Design.md
 		Documentation\ErrorCodes.md = Documentation\ErrorCodes.md
 		FabricObserver.Extensibility.nuspec.template = FabricObserver.Extensibility.nuspec.template
@@ -33,6 +35,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Documentation\Plugins.md = Documentation\Plugins.md
 		README.md = README.md
 		SECURITY.md = SECURITY.md
+		Documentation\Deployment\service-fabric-cluster-observer.json = Documentation\Deployment\service-fabric-cluster-observer.json
+		Documentation\Deployment\service-fabric-cluster-observer.v2.1.15.parameters.json = Documentation\Deployment\service-fabric-cluster-observer.v2.1.15.parameters.json
+		Documentation\Deployment\service-fabric-observer.json = Documentation\Deployment\service-fabric-observer.json
+		Documentation\Deployment\service-fabric-observer.v3.2.0.parameters.json = Documentation\Deployment\service-fabric-observer.v3.2.0.parameters.json
 		Documentation\Using.md = Documentation\Using.md
 	EndProjectSection
 EndProject
