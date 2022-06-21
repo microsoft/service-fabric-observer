@@ -76,4 +76,4 @@ cd [Path to local FO repo]
 ```
 Extensibility nupkg will be located in the build output directory:
 
-[Path to local FO repo]\bin\release\FabricObserver\Nugets\Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.1.nupkg
+[Path to local FO repo]\bin\release\FabricObserver\Nugets\Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.0.nupkg
