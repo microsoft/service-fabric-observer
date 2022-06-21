@@ -1,5 +1,5 @@
 # FabricObserver 3.2.1
-### Important: Requires .NET 6 and SF Runtime 9.x
+### Important: Requires .NET 6 and SF Runtime >= 9.0
 
 [**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a complete implementation of a production-ready, generic resource usage watchdog service written as a stateless, singleton Service Fabric .NET 6 application that 
 1. Monitors a broad range of machine resources that tend to be very important to all Service Fabric applications, like disk space consumption, CPU use, memory use, endpoint availability, ephemeral TCP port use, and app/cluster certificate health out-of-the-box.
@@ -85,11 +85,17 @@ FabricObserver can be run and deployed through Visual Studio or Powershell, like
 see [FOAzurePipeline.yaml](/FOAzurePipeline.yaml) for msazure devops build tasks. <strong>Please keep in mind that if your target servers do not already have
 .net6 installed (if you deploy VM images from Azure gallery, then they will not have .net6 installed), then you must deploy the SelfContained package.</strong>
 
-### Deploy FabricObserver using ARM 
-You can deploy FabricObserver (and ClusterObserver) using ARM. This is one reason that this version of FO (and CO) ship without DefaultServices node in ApplicationManifest.xml. Further, as you know by now, you must deploy this version to Service Fabric clusters that are running SF 9.x and above.
+### Deploy FabricObserver
+**Note: You must deploy this version (3.2.1) to clusters that are running SF 9.0 and above. This version also requires .NET 6.**
+You can deploy FabricObserver (and ClusterObserver) using Visual Studio (if you build the sources yourself), PowerShell or ARM. Please note that this version of FabricObserver no longer supports the DefaultServices node in ApplicationManifest.xml.
+This means that should you deploy using PowerShell, you must create an instance of the service as the last command in your script. This was done to support ARM deployment, specifically.
+The StartupServices.xml file you see in the FabricHealerApp project now contains the service information once held in ApplicationManifest's DefaultServices node. Note that this information is primarily useful for deploying from Visual Studio.
+Your ARM template or PowerShell script will contain all the information necessary for deploying FabricObserver.
+
+#### Deploy FabricObserver using ARM
 [Learn how to deploy FabricObserver using ARM](/Documentation/Deployment/Deployment.md)
 
-### Deploy FabricObserver using Client (PowerShell)  
+#### Deploy FabricObserver using Client (PowerShell)  
 
 After you adjust configuration settings to meet to your needs (this means changing settings in Settings.xml for ObserverManager (ObserverManagerConfiguration section) and in ApplicationManifest.xml for observers).
 

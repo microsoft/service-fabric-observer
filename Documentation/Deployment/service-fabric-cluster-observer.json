@@ -67,6 +67,8 @@
         "typeName": "[variables('applicationTypeNameClusterObserver')]",
         "typeVersion": "[parameters('applicationTypeVersionClusterObserver')]",
         "parameters": {
+          "MonitorRepairJobs": "true",
+          "ClusterObserverRunInterval": "00:15:00"
         },
         "upgradePolicy": {
           "upgradeReplicaSetCheckTimeout": "01:00:00.0",

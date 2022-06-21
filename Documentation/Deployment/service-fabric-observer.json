@@ -67,8 +67,7 @@
         "typeName": "[variables('applicationTypeNameFabricObserver')]",
         "typeVersion": "[parameters('applicationTypeVersionFabricObserver')]",
         "parameters": {
-          // Example to enable FabricSystemObserverEnabled
-          // Reference: https://github.com/microsoft/service-fabric-observer/blob/main/FabricObserverApp/ApplicationPackageRoot/ApplicationManifest.xml
+          "AppObserverEnableConcurrentMonitoring": "true",
           "FabricSystemObserverEnabled": "true"
         },
         "upgradePolicy": {
