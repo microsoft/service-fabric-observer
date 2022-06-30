@@ -28,6 +28,24 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         [EventField]
+        public string ApplicationType
+        {
+            get; set;
+        }
+
+        [EventField]
+        public string ApplicationTypeVersion
+        {
+            get; set;
+        }
+
+        [EventField]
+        public string ApplicationStartTime
+        {
+            get; set;
+        }
+
+        [EventField]
         public string Code
         {
             get; set;
@@ -106,6 +124,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         [EventField]
+        public string ProcessName
+        {
+            get; set;
+        }
+
+        [EventField]
         public string Property
         {
             get; set;
@@ -130,6 +154,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         [EventField]
+        public string ServiceManifestVersion
+        {
+            get; set;
+        }
+
+        [EventField]
         public string ServiceName
         {
             get; set;
@@ -137,6 +167,18 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
         [EventField]
         public ServicePackageActivationMode? ServicePackageActivationMode
+        {
+            get; set;
+        }
+
+        [EventField]
+        public string ServiceStartTime
+        {
+            get; set;
+        }
+
+        [EventField]
+        public string ServiceTypeName
         {
             get; set;
         }

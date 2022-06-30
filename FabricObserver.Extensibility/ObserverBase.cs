@@ -33,6 +33,7 @@ namespace FabricObserver.Observers
         private bool disposed;
         private ConcurrentDictionary<string, (int DumpCount, DateTime LastDumpDate)> ServiceDumpCountDictionary;
         private readonly object lockObj = new object();
+        private bool _isWindows;
 
         public static StatelessServiceContext FabricServiceContext
         {
@@ -407,6 +408,8 @@ namespace FabricObserver.Observers
                     GetSettingParameterValue(
                         ObserverConstants.ObserverManagerConfigurationSectionName,
                         ObserverConstants.ObserverWebApiEnabled), out bool obsWeb) && obsWeb && IsObserverWebApiAppInstalled();
+
+            _isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
 
         /// <summary>
@@ -719,7 +722,7 @@ namespace FabricObserver.Observers
 
             string thresholdName = "Warning";
             bool warningOrError = false;
-            string name = string.Empty, id, drive = string.Empty;
+            string name = string.Empty, drive = string.Empty, id = null, appType = null, appTypeVersion = null, processName = null, appStartDateTime = null, serviceStartDateTime = null, serviceTypeName = null, serviceManifestVersion = null;
             int procId = 0;
             T threshold = thresholdWarning;
             HealthState healthState = HealthState.Ok;
@@ -731,11 +734,24 @@ namespace FabricObserver.Observers
             {
                 if (replicaOrInstance != null)
                 {
-                    // Create a unique id which will be used for health Warnings and OKs (clears).
+                    
                     appName = replicaOrInstance.ApplicationName;
+                    (appType, appTypeVersion) = TupleGetApplicationTypeInfo(appName);
+                    appStartDateTime = GetApplicationStartDateTime(appName);
                     serviceName = replicaOrInstance.ServiceName;
+                    serviceStartDateTime = GetServiceStartDateTime(serviceName);
+                    (serviceTypeName, serviceManifestVersion) = TupleGetServiceTypeInfo(appName, serviceName);
                     name = serviceName.OriginalString.Replace($"{appName.OriginalString}/", string.Empty);
                     procId = (int)replicaOrInstance.HostProcessId;
+
+                    if (!_isWindows)
+                    {
+                        processName = Process.GetProcessById(procId).ProcessName;
+                    }
+                    else
+                    {
+                        processName = NativeMethods.GetProcessNameFromId(procId);
+                    }
                 }
                 else // System service report from FabricSystemObserver.
                 {
@@ -760,6 +776,9 @@ namespace FabricObserver.Observers
                 telemetryData = new TelemetryData()
                 {
                     ApplicationName = appName?.OriginalString ?? null,
+                    ApplicationType = appType,
+                    ApplicationTypeVersion = appTypeVersion,
+                    ApplicationStartTime = appStartDateTime,
                     ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                     EntityType = entityType,
                     NodeName = NodeName,
@@ -769,10 +788,14 @@ namespace FabricObserver.Observers
                     Value = data.AverageDataValue,
                     PartitionId = replicaOrInstance?.PartitionId,
                     ProcessId = procId,
+                    ProcessName = processName,
                     ReplicaId = replicaOrInstance != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
                     ReplicaRole = replicaOrInstance != null ? replicaOrInstance.ReplicaRole : ReplicaRole.Unknown,
                     ServiceKind = replicaOrInstance != null ? replicaOrInstance.ServiceKind : System.Fabric.Query.ServiceKind.Invalid,
                     ServiceName = serviceName?.OriginalString ?? null,
+                    ServiceStartTime = serviceStartDateTime,
+                    ServiceTypeName = replicaOrInstance?.ServiceTypeName ?? serviceTypeName,
+                    ServiceManifestVersion = serviceManifestVersion,
                     ServicePackageActivationMode = replicaOrInstance?.ServicePackageActivationMode,
                     SystemServiceProcessName = appName?.OriginalString == ObserverConstants.SystemAppName ? name : null,
                     Source = ObserverName
@@ -1055,11 +1078,9 @@ namespace FabricObserver.Observers
                     _ = healthMessage.Append(childProcMsg);
                 }
 
-                // The health event description will be a serialized instance of telemetryData,
-                // so it should be completely constructed (filled with data) regardless
-                // of user telemetry settings.
-                telemetryData.ApplicationName = appName?.OriginalString ?? null;
-                telemetryData.ServiceName = serviceName?.OriginalString ?? null;
+                /*telemetryData.ApplicationName = appName?.OriginalString ?? null;
+                telemetryData.ApplicationType = appType;
+                telemetryData.ServiceName = serviceName?.OriginalString ?? null;*/
                 telemetryData.Code = errorWarningCode;
 
                 if (!string.IsNullOrWhiteSpace(replicaOrInstance?.ContainerId))
@@ -1125,11 +1146,9 @@ namespace FabricObserver.Observers
             {
                 if (data.ActiveErrorOrWarning)
                 {
-                    // The health event description will be a serialized instance of telemetryData,
-                    // so it should be completely constructed (filled with data) regardless
-                    // of user telemetry settings.
-                    telemetryData.ApplicationName = appName?.OriginalString ?? null;
-                    telemetryData.ServiceName = serviceName?.OriginalString ?? null;
+                    /*telemetryData.ApplicationName = appName?.OriginalString ?? null;
+                    telemetryData.ApplicationType = appType;
+                    telemetryData.ServiceName = serviceName?.OriginalString ?? null;*/
                     telemetryData.Code = FOErrorWarningCodes.Ok;
 
                     if (!string.IsNullOrWhiteSpace(replicaOrInstance?.ContainerId))
@@ -1185,6 +1204,96 @@ namespace FabricObserver.Observers
             }
 
             data.ClearData();
+        }
+
+        private (string AppType, string AppTypeVersion) TupleGetApplicationTypeInfo(Uri appName)
+        {
+            try
+            {
+                var appList = FabricClientInstance.QueryManager.GetApplicationListAsync(appName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
+
+                if (appList?.Count > 0)
+                {
+                    string appType = appList[0].ApplicationTypeName;
+                    string appTypeVersion = appList[0].ApplicationTypeVersion;
+                    return (appType, appTypeVersion);
+                }
+            }
+            catch (AggregateException)
+            {
+
+            }
+            catch (FabricException)
+            {
+
+            }
+
+            return (null, null);
+        }
+
+        private (string ServiceType, string ServiceManifestVersion) TupleGetServiceTypeInfo(Uri appName, Uri serviceName)
+        {
+            try
+            {
+                var serviceList = FabricClientInstance.QueryManager.GetServiceListAsync(appName, serviceName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
+
+                if (serviceList?.Count > 0)
+                {
+                    string serviceType = serviceList[0].ServiceTypeName;
+                    string serviceManifestVersion = serviceList[0].ServiceManifestVersion;
+                    return (serviceType, serviceManifestVersion);
+                }
+            }
+            catch (AggregateException)
+            {
+
+            }
+            catch (FabricException)
+            {
+
+            }
+
+            return (null, null);
+        }
+
+        private string GetServiceStartDateTime(Uri serviceName)
+        {
+            try
+            {
+                var r = FabricClientInstance.HealthManager.GetServiceHealthAsync(serviceName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
+
+                if (r.HealthEvents.Any(e => e.HealthInformation.SourceId == "System.FM" && e.HealthInformation.Description.Contains("Service has been created")))
+                {
+                    var time = r.HealthEvents.First(e => e.HealthInformation.SourceId == "System.FM" && e.HealthInformation.Description.Contains("Service has been created")).SourceUtcTimestamp;
+                    return time.ToString("o");
+                }  
+            }
+            catch (Exception e) when (e is AggregateException || e is ArgumentException || e is FabricException || e is InvalidOperationException)
+            {
+
+            }
+
+            return null;
+        }
+
+        private string GetApplicationStartDateTime(Uri appName)
+        {
+            try
+            {
+                var r = FabricClientInstance.HealthManager.GetApplicationHealthAsync(appName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
+
+                if (r.HealthEvents.Any(e => e.HealthInformation.SourceId == "System.CM" && e.HealthInformation.Description.Contains("Application has been created")))
+                {
+                    var time = r.HealthEvents.First(e => e.HealthInformation.SourceId == "System.CM" && e.HealthInformation.Description.Contains("Application has been created")).SourceUtcTimestamp;
+                    return time.ToString("o");
+                }
+            }
+            catch (Exception e) when (e is AggregateException || e is ArgumentException || e is FabricException || e is InvalidOperationException)
+            {
+
+            }
+
+            return null;
         }
 
         /// <summary>

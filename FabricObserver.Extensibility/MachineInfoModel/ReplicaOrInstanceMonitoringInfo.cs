@@ -61,6 +61,11 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
+        public string ServiceTypeName
+        {
+            get; set;
+        }
+
         public ServiceReplicaStatus ReplicaStatus
         {
             get; set;

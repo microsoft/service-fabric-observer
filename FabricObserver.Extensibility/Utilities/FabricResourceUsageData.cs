@@ -267,7 +267,7 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Clears numeric data of the current instance's Data property. Use this method versus adding calling Clear on Data as that
+        /// Clears numeric data of the current instance's Data property. Use this method versus calling Clear on Data as that
         /// won't work for ConcurrentQueue.
         /// </summary>
         public void ClearData()

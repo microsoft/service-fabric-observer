@@ -1246,6 +1246,7 @@ namespace FabricObserver.Observers
                 ServiceName = repOrInst.ServiceName.OriginalString,
                 NodeName = NodeName,
                 ProcessId = (int)repOrInst.HostProcessId,
+                ProcessName = _isWindows ? NativeMethods.GetProcessNameFromId((int)repOrInst.HostProcessId) : Process.GetProcessById((int)repOrInst.HostProcessId).ProcessName,
                 PartitionId = repOrInst.PartitionId.ToString(),
                 ReplicaId = repOrInst.ReplicaOrInstanceId.ToString(),
                 ChildProcessCount = childProcs.Count,
@@ -2168,6 +2169,7 @@ namespace FabricObserver.Observers
                             ReplicaRole = statefulReplica.ReplicaRole,
                             ServiceKind = statefulReplica.ServiceKind,
                             ServiceName = statefulReplica.ServiceName,
+                            ServiceTypeName = statefulReplica.ServiceTypeName,
                             ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
                             ServicePackageActivationMode = string.IsNullOrWhiteSpace(statefulReplica.ServicePackageActivationId) ? 
                                 System.Fabric.Description.ServicePackageActivationMode.SharedProcess : System.Fabric.Description.ServicePackageActivationMode.ExclusiveProcess,
@@ -2217,6 +2219,7 @@ namespace FabricObserver.Observers
                             ReplicaRole = ReplicaRole.None,
                             ServiceKind = statelessInstance.ServiceKind,
                             ServiceName = statelessInstance.ServiceName,
+                            ServiceTypeName = statelessInstance.ServiceTypeName,
                             ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
                             ServicePackageActivationMode = string.IsNullOrWhiteSpace(statelessInstance.ServicePackageActivationId) ?
                                 System.Fabric.Description.ServicePackageActivationMode.SharedProcess : System.Fabric.Description.ServicePackageActivationMode.ExclusiveProcess,

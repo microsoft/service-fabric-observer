@@ -18,6 +18,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         public string Metric;
         public double Value;
         public int ProcessId;
+        public string ProcessName;
         public string PartitionId;
         public string ReplicaId;
         public string NodeName;
