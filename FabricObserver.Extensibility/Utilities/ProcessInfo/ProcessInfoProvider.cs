@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -46,13 +47,13 @@ namespace FabricObserver.Observers.Utilities
             get; 
         } = new Logger("Utilities");
 
-        public abstract float GetProcessWorkingSetMb(int processId, string procName = null, bool getPrivateWorkingSet = false);
+        public abstract float GetProcessWorkingSetMb(int processId, string procName, CancellationToken token, bool getPrivateWorkingSet = false);
 
-        public abstract List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot);
+        public abstract List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot = null);
 
         public abstract float GetProcessAllocatedHandles(int processId, string configPath = null);
 
-        public abstract double GetProcessKvsLvidsUsagePercentage(string procName, int procId = -1);
+        public abstract double GetProcessKvsLvidsUsagePercentage(string procName, CancellationToken token, int procId = -1);
 
         /// <summary>
         /// Gets the number of execution threads owned by the process of supplied process id.

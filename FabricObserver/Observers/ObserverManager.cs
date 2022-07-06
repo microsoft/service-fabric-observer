@@ -289,9 +289,10 @@ namespace FabricObserver.Observers
                         await Task.Delay(TimeSpan.FromSeconds(15), token);
                     }
 
-                    // All observers have run at this point. Empty their trash now.
+                    // All observers have run at this point and threads are completed. Empty the trash now.
                     GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
                     GC.Collect(2, GCCollectionMode.Forced, true, true);
+                    await Task.Delay(TimeSpan.FromSeconds(15), token);
                 }
             }
             catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)

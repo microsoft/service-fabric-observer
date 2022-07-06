@@ -176,18 +176,22 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
-
                 var properties = new Dictionary<string, string>
                 {
                     { "ClusterId", telemetryData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId },
                     { "HealthState", Enum.GetName(typeof(HealthState), telemetryData.HealthState) },
                     { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
+                    { "ApplicationTypeName", telemetryData.ApplicationType ?? string.Empty },
+                    { "ApplicationTypeVersion", telemetryData.ApplicationTypeVersion ?? string.Empty },
                     { "ServiceName", telemetryData.ServiceName ?? string.Empty },
+                    { "ServiceTypeName", telemetryData.ServiceTypeName ?? string.Empty },
+                    { "ServiceManifestVersion", telemetryData.ServiceManifestVersion ?? string.Empty },
                     { "ReplicaRole", telemetryData.ReplicaRole.ToString() },
                     { "ServiceKind", telemetryData.ServiceKind.ToString() },
                     { "ServicePackageActivationMode", telemetryData.ServicePackageActivationMode?.ToString() ?? string.Empty },
-                    { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
-                    { "ProcessId", telemetryData.ProcessId.ToString() },
+                    { "ProcessId", telemetryData.ProcessId == 0 ? string.Empty : telemetryData.ProcessId.ToString() },
+                    { "ProcessName", telemetryData.ProcessName },
+                    { "ProcessStartTime", telemetryData.ProcessStartTime },
                     { "ErrorCode", telemetryData.Code ?? string.Empty },
                     { "Description", telemetryData.Description ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
@@ -255,12 +259,17 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "ClusterId", telemetryData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId },
                     { "HealthState", Enum.GetName(typeof(HealthState), telemetryData.HealthState) },
                     { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
+                    { "ApplicationTypeName", telemetryData.ApplicationType ?? string.Empty },
+                    { "ApplicationTypeVersion", telemetryData.ApplicationTypeVersion ?? string.Empty },
                     { "ServiceName", telemetryData.ServiceName ?? string.Empty },
+                    { "ServiceTypeName", telemetryData.ServiceTypeName ?? string.Empty },
+                    { "ServiceManifestVersion", telemetryData.ServiceManifestVersion ?? string.Empty },
                     { "ReplicaRole", telemetryData.ReplicaRole.ToString() },
                     { "ServiceKind", telemetryData.ServiceKind.ToString() },
                     { "ServicePackageActivationMode", telemetryData.ServicePackageActivationMode?.ToString() ?? string.Empty },
-                    { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
-                    { "ProcessId", telemetryData.ProcessId.ToString() },
+                    { "ProcessId", telemetryData.ProcessId == 0 ? string.Empty : telemetryData.ProcessId.ToString() },
+                    { "ProcessName", telemetryData.ProcessName },
+                    { "ProcessStartTime", telemetryData.ProcessStartTime },
                     { "ErrorCode", telemetryData.Code ?? string.Empty },
                     { "Description", telemetryData.Description ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
@@ -269,7 +278,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "ReplicaId", telemetryData.ReplicaId.ToString() },
                     { "ObserverName", telemetryData.ObserverName },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
-                    { "OS", telemetryData.OS ?? string.Empty }
+                    { "OS", telemetryData.OS ?? string.Empty },
                 };
 
                 var metric = new Dictionary<string, double>
@@ -312,6 +321,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                         { "ApplicationName", telemData.ApplicationName ?? string.Empty },
                         { "ServiceName", telemData.ServiceName ?? string.Empty },
                         { "ProcessId", telemData.ProcessId.ToString() },
+                        { "ProcessName", telemData.ProcessName },
                         { "ChildProcessInfo", JsonConvert.SerializeObject(telemData.ChildProcessInfo) },
                         { "PartitionId", telemData.PartitionId },
                         { "ReplicaId", telemData.ReplicaId },

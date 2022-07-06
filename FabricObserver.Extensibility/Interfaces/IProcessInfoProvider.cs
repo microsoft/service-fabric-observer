@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Threading;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -17,7 +18,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="procName">Optional: The name of the process. This value is required if you supply true for getPrivateWorkingSet.</param>
         /// <param name="getPrivateWorkingSet">Optional: return data for Private working set only.</param>
         /// <returns>The amount, in megabytes, of Working Set memory for a specified process (total or active private, depending on how the function is called).</returns>
-        float GetProcessWorkingSetMb(int processId, string procName = null, bool getPrivateWorkingSet = false);
+        float GetProcessWorkingSetMb(int processId, string procName, CancellationToken token, bool getPrivateWorkingSet = false);
 
         /// <summary>
         /// Gets the number of allocated (in use) file handles for a specified process.
@@ -33,7 +34,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="parentPid">The parent process id.</param>
         /// <param name="handleToSnapshot">Windows only. Handle to a Windows process snapshot(created using NativeMethods.CreateToolhelp32Snapshot). This has no meaning for Linux, just supply IntPtr.Zero.</param>
         /// <returns>List of tuple (string ProcName, int Pid) for descendants of the parent process or null if the parent has no children.</returns>
-        List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot);
+        List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot = null);
 
         /// <summary>
         /// Windows only. Determines the percentage of Windows KVS LVIDs currently in use.
@@ -42,6 +43,6 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="procId" type="optional">If there may be multiple processes with the same name, 
         /// then also supply this value to ensure the correct process is measured.</param>
         /// <returns>double representing the current percentage of LVIDs in use out of a possible int.MaxValue total.</returns>
-        double GetProcessKvsLvidsUsagePercentage(string procName, int procId = -1);
+        double GetProcessKvsLvidsUsagePercentage(string procName, CancellationToken token, int procId = -1);
     }
 }
