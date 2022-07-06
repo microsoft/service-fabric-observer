@@ -25,7 +25,7 @@
     <!-- Note: You must run FO as System or Admin user on Windows in order to run ContainerObserver on Windows. -->
     <Parameter Name="ContainerObserverEnabled" DefaultValue="false" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="true" />
+    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
     <Parameter Name="NetworkObserverEnabled" DefaultValue="false" />
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
@@ -119,7 +119,7 @@
          You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
          eating some additional CPU and Memory to complete the parallelized monitoring on a node with lots of services (>= 100). The impact of parallelization on nodes with less than 100 services is minimal.
          Please test and choose a value that suits your needs or simply leave this unset and go with the default. Please see Observers.md for more information. -->
-    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="10" />
+    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
     <!-- KVS LVID Usage Monitoring - Windows-only.
          NOTE: If you monitor stateful Actor services, then you should set this to true.
          This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
