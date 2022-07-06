@@ -78,6 +78,7 @@ namespace FabricObserver.Observers
                 {
                     "Fabric",
                     "FabricApplicationGateway",
+                    "FabricCAS",
                     "FabricDCA",
                     "FabricDnsService",
                     "FabricFAS",
