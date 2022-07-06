@@ -72,10 +72,6 @@ namespace FabricObserver.Observers.Interfaces
         /// </summary>
         string Source { get; set; }
         /// <summary>
-        /// The name of the Service Fabric system executable (e.g., Fabric.exe).
-        /// </summary>
-        string SystemServiceProcessName { get; set; }
-        /// <summary>
         /// The supported resource usage metric value.
         /// </summary>
         double Value { get; set; }

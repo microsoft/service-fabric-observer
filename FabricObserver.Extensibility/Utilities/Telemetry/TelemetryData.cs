@@ -40,12 +40,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         [EventField]
-        public string ApplicationStartTime
-        {
-            get; set;
-        }
-
-        [EventField]
         public string Code
         {
             get; set;
@@ -136,6 +130,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         [EventField]
+        public string ProcessStartTime
+        {
+            get; set;
+        }
+
+        [EventField]
         public long ReplicaId
         {
             get; set;
@@ -172,12 +172,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         [EventField]
-        public string ServiceStartTime
-        {
-            get; set;
-        }
-
-        [EventField]
         public string ServiceTypeName
         {
             get; set;
@@ -185,12 +179,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
         [EventField]
         public string Source
-        {
-            get; set;
-        }
-
-        [EventField]
-        public string SystemServiceProcessName
         {
             get; set;
         }

@@ -704,6 +704,7 @@ namespace FabricObserver.Observers
         /// <param name="thresholdWarning">Warning threshold (numeric)</param>
         /// <param name="healthReportTtl">Health report Time to Live (TimeSpan)</param>
         /// <param name="entityType">Service Fabric Entity type. Note, only Application and Node types are supported by this function.</param>
+        /// <param name="processName">For service reporting, you must provide a process name for the target service instance.</param>
         /// <param name="replicaOrInstance">Replica or Instance information contained in a type.</param>
         /// <param name="dumpOnErrorOrWarning">Whether or not to dump process if Error threshold has been reached.</param>
         public void ProcessResourceDataReportHealth<T>(
@@ -712,6 +713,7 @@ namespace FabricObserver.Observers
                         T thresholdWarning,
                         TimeSpan healthReportTtl,
                         EntityType entityType,
+                        string processName = null,
                         ReplicaOrInstanceMonitoringInfo replicaOrInstance = null,
                         bool dumpOnErrorOrWarning = false) where T : struct
         {
@@ -722,7 +724,7 @@ namespace FabricObserver.Observers
 
             string thresholdName = "Warning";
             bool warningOrError = false;
-            string name = string.Empty, drive = string.Empty, id = null, appType = null, appTypeVersion = null, processName = null, appStartDateTime = null, serviceStartDateTime = null, serviceTypeName = null, serviceManifestVersion = null;
+            string drive = string.Empty, id = null, appType = null, appTypeVersion = null, processStartTime = null,  serviceTypeName = null, serviceManifestVersion = null;
             int procId = 0;
             T threshold = thresholdWarning;
             HealthState healthState = HealthState.Ok;
@@ -734,41 +736,74 @@ namespace FabricObserver.Observers
             {
                 if (replicaOrInstance != null)
                 {
-                    
                     appName = replicaOrInstance.ApplicationName;
                     (appType, appTypeVersion) = TupleGetApplicationTypeInfo(appName);
-                    appStartDateTime = GetApplicationStartDateTime(appName);
                     serviceName = replicaOrInstance.ServiceName;
-                    serviceStartDateTime = GetServiceStartDateTime(serviceName);
                     (serviceTypeName, serviceManifestVersion) = TupleGetServiceTypeInfo(appName, serviceName);
-                    name = serviceName.OriginalString.Replace($"{appName.OriginalString}/", string.Empty);
                     procId = (int)replicaOrInstance.HostProcessId;
 
-                    if (!_isWindows)
+                    if (string.IsNullOrWhiteSpace(processName))
                     {
-                        processName = Process.GetProcessById(procId).ProcessName;
+                        ObserverLogger.LogWarning("ProcessResourceDataReportHealth: Process name is required for service level reporting. Exiting.");
+                        return;
                     }
-                    else
+
+                    if (!EnsureProcess(processName, procId))
                     {
-                        processName = NativeMethods.GetProcessNameFromId(procId);
+                        ObserverLogger.LogWarning($"ProcessResourceDataReportHealth: Process name {processName} is not mapped to pid {procId}. Exiting.");
+                        return;
+                    }
+
+                    try
+                    {
+                        // Accessing Process properties is really expensive for Windows (net core).
+                        if (_isWindows)
+                        {
+                            processStartTime = NativeMethods.GetProcessStartTime(procId).ToString("o");
+                        }
+                        else
+                        {
+                            using (Process proc = Process.GetProcessById(procId))
+                            {
+                                processStartTime = proc.StartTime.ToString("o");
+                            }
+                        }
+                    }
+                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is PlatformNotSupportedException || e is Win32Exception)
+                    {
+                        // Process may no longer be alive. It makes no sense to report on it.
+                        data.ClearData();
+                        return;
                     }
                 }
                 else // System service report from FabricSystemObserver.
                 {
+                    if (string.IsNullOrWhiteSpace(processName))
+                    {
+                        data.ClearData();
+                        return;
+                    }
+
                     appName = new Uri(ObserverConstants.SystemAppName);
-                    name = data.Id;
 
                     try
                     {
-                        procId = (int)Process.GetProcessesByName(name).First()?.Id;
+                        using (Process proc = Process.GetProcessesByName(processName)?.First())
+                        {
+                            procId = proc.Id;
+                            processStartTime = proc.StartTime.ToString("o");
+                        }
                     }
                     catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is PlatformNotSupportedException || e is Win32Exception)
                     {
-
+                        // Process may no longer be alive or we can't access privileged information (FO running as user with lesser privilege than target process).
+                        // It makes no sense to report on it.
+                        data.ClearData();
+                        return;
                     }
                 }
 
-                id = $"{NodeName}_{name}_{data.Property.Replace(" ", string.Empty)}";
+                id = $"{NodeName}_{processName}_{data.Property.Replace(" ", string.Empty)}";
 
                 // The health event description will be a serialized instance of telemetryData,
                 // so it should be completely constructed (filled with data) regardless
@@ -778,34 +813,26 @@ namespace FabricObserver.Observers
                     ApplicationName = appName?.OriginalString ?? null,
                     ApplicationType = appType,
                     ApplicationTypeVersion = appTypeVersion,
-                    ApplicationStartTime = appStartDateTime,
                     ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                     EntityType = entityType,
+                    Metric = data.Property,
                     NodeName = NodeName,
                     NodeType = NodeType,
                     ObserverName = ObserverName,
-                    Metric = data.Property,
-                    Value = data.AverageDataValue,
                     PartitionId = replicaOrInstance?.PartitionId,
                     ProcessId = procId,
                     ProcessName = processName,
+                    ProcessStartTime = processStartTime,
                     ReplicaId = replicaOrInstance != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
                     ReplicaRole = replicaOrInstance != null ? replicaOrInstance.ReplicaRole : ReplicaRole.Unknown,
                     ServiceKind = replicaOrInstance != null ? replicaOrInstance.ServiceKind : System.Fabric.Query.ServiceKind.Invalid,
                     ServiceName = serviceName?.OriginalString ?? null,
-                    ServiceStartTime = serviceStartDateTime,
                     ServiceTypeName = replicaOrInstance?.ServiceTypeName ?? serviceTypeName,
                     ServiceManifestVersion = serviceManifestVersion,
                     ServicePackageActivationMode = replicaOrInstance?.ServicePackageActivationMode,
-                    SystemServiceProcessName = appName?.OriginalString == ObserverConstants.SystemAppName ? name : null,
-                    Source = ObserverName
+                    Source = ObserverName,
+                    Value = data.AverageDataValue
                 };
-
-                // If the source issue is from FSO, then set the SystemServiceProcessName on TD instance.
-                if (appName != null && appName.OriginalString == ObserverConstants.SystemAppName)
-                {
-                    telemetryData.SystemServiceProcessName = name;
-                }
 
                 // Container
                 if (!string.IsNullOrWhiteSpace(replicaOrInstance?.ContainerId))
@@ -1067,7 +1094,7 @@ namespace FabricObserver.Observers
                 if (replicaOrInstance != null && replicaOrInstance.ChildProcesses != null)
                 {
                     childProcMsg = $" Note that {serviceName.OriginalString} has spawned one or more child processes ({replicaOrInstance.ChildProcesses.Count}). " +
-                                   $"Their cumulative impact on {name}'s resource usage has been applied.";
+                                   $"Their cumulative impact on {processName}'s resource usage has been applied.";
                 }
 
                 _ = healthMessage.Append($"{drive}{data.Property}{dynamicRange} has exceeded the specified {thresholdName} limit ({threshold}{data.Units})");
@@ -1256,44 +1283,24 @@ namespace FabricObserver.Observers
             return (null, null);
         }
 
-        private string GetServiceStartDateTime(Uri serviceName)
+        /// <summary>
+        /// Ensures the supplied process id is still mapped to the supplied process name.
+        /// </summary>
+        /// <param name="procName">The process name.</param>
+        /// <param name="procId">The process id.</param>
+        /// <returns>True if the pid is mapped to the process of supplied name. False otherwise.</returns>
+        public bool EnsureProcess(string procName, int procId)
         {
-            try
+            // net core's ProcessManager.EnsureState is a CPU bottleneck on Windows.
+            if (!_isWindows)
             {
-                var r = FabricClientInstance.HealthManager.GetServiceHealthAsync(serviceName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
-
-                if (r.HealthEvents.Any(e => e.HealthInformation.SourceId == "System.FM" && e.HealthInformation.Description.Contains("Service has been created")))
+                using (Process proc = Process.GetProcessById(procId))
                 {
-                    var time = r.HealthEvents.First(e => e.HealthInformation.SourceId == "System.FM" && e.HealthInformation.Description.Contains("Service has been created")).SourceUtcTimestamp;
-                    return time.ToString("o");
-                }  
-            }
-            catch (Exception e) when (e is AggregateException || e is ArgumentException || e is FabricException || e is InvalidOperationException)
-            {
-
-            }
-
-            return null;
-        }
-
-        private string GetApplicationStartDateTime(Uri appName)
-        {
-            try
-            {
-                var r = FabricClientInstance.HealthManager.GetApplicationHealthAsync(appName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
-
-                if (r.HealthEvents.Any(e => e.HealthInformation.SourceId == "System.CM" && e.HealthInformation.Description.Contains("Application has been created")))
-                {
-                    var time = r.HealthEvents.First(e => e.HealthInformation.SourceId == "System.CM" && e.HealthInformation.Description.Contains("Application has been created")).SourceUtcTimestamp;
-                    return time.ToString("o");
+                    return proc.ProcessName == procName;
                 }
             }
-            catch (Exception e) when (e is AggregateException || e is ArgumentException || e is FabricException || e is InvalidOperationException)
-            {
 
-            }
-
-            return null;
+            return NativeMethods.GetProcessNameFromId(procId) == procName;
         }
 
         /// <summary>

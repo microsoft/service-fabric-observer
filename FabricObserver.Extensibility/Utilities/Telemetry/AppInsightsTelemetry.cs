@@ -176,42 +176,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
-
-                /*
-                {
-                    "ApplicationName": "fabric:/Voting",
-                    "ApplicationType": "VotingType",
-                    "ApplicationTypeVersion": "1.0.0",
-                    "ApplicationStartTime": "2022-05-04T18:27:11.8656771Z",
-                    "Code": "FO040",
-                    "ContainerId": null,
-                    "ClusterId": "undefined",
-                    "Description": "Thread Count has exceeded the specified Warning limit (50) - Thread Count: 79",
-                    "EntityType": 2,
-                    "HealthState": 2,
-                    "Metric": "Thread Count",
-                    "NodeName": "_Node_0",
-                    "NodeType": "NodeType0",
-                    "ObserverName": "AppObserver",
-                    "OS": "Windows",
-                    "PartitionId": "4a2e5825-b039-44ea-963b-cb380392ee7b",
-                    "ProcessId": 65876,
-                    "ProcessName": "VotingData",
-                    "Property": "_Node_0_VotingData_ThreadCount",
-                    "ReplicaId": 132961624322779440,
-                    "ReplicaRole": 2,
-                    "ServiceKind": 2,
-                    "ServiceManifestVersion": "1.0.0",
-                    "ServiceName": "fabric:/Voting/VotingData",
-                    "ServicePackageActivationMode": 0,
-                    "ServiceStartTime": "2022-05-04T18:27:11.8646770Z",
-                    "ServiceTypeName": "VotingDataType",
-                    "Source": "AppObserver(FO040)",
-                    "SystemServiceProcessName": null,
-                    "Value": 79
-                }
-
-                */
                 var properties = new Dictionary<string, string>
                 {
                     { "ClusterId", telemetryData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId },
@@ -219,17 +183,15 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
                     { "ApplicationTypeName", telemetryData.ApplicationType ?? string.Empty },
                     { "ApplicationTypeVersion", telemetryData.ApplicationTypeVersion ?? string.Empty },
-                    { "ApplicationStartTime", telemetryData.ApplicationStartTime ?? string.Empty },
                     { "ServiceName", telemetryData.ServiceName ?? string.Empty },
                     { "ServiceTypeName", telemetryData.ServiceTypeName ?? string.Empty },
                     { "ServiceManifestVersion", telemetryData.ServiceManifestVersion ?? string.Empty },
-                    { "ServiceStartTime", telemetryData.ServiceStartTime ?? string.Empty },
                     { "ReplicaRole", telemetryData.ReplicaRole.ToString() },
                     { "ServiceKind", telemetryData.ServiceKind.ToString() },
                     { "ServicePackageActivationMode", telemetryData.ServicePackageActivationMode?.ToString() ?? string.Empty },
-                    { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
                     { "ProcessId", telemetryData.ProcessId == 0 ? string.Empty : telemetryData.ProcessId.ToString() },
                     { "ProcessName", telemetryData.ProcessName },
+                    { "ProcessStartTime", telemetryData.ProcessStartTime },
                     { "ErrorCode", telemetryData.Code ?? string.Empty },
                     { "Description", telemetryData.Description ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
@@ -299,17 +261,15 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
                     { "ApplicationTypeName", telemetryData.ApplicationType ?? string.Empty },
                     { "ApplicationTypeVersion", telemetryData.ApplicationTypeVersion ?? string.Empty },
-                    { "ApplicationStartTime", telemetryData.ApplicationStartTime ?? string.Empty },
                     { "ServiceName", telemetryData.ServiceName ?? string.Empty },
                     { "ServiceTypeName", telemetryData.ServiceTypeName ?? string.Empty },
                     { "ServiceManifestVersion", telemetryData.ServiceManifestVersion ?? string.Empty },
-                    { "ServiceStartTime", telemetryData.ServiceStartTime ?? string.Empty },
                     { "ReplicaRole", telemetryData.ReplicaRole.ToString() },
                     { "ServiceKind", telemetryData.ServiceKind.ToString() },
                     { "ServicePackageActivationMode", telemetryData.ServicePackageActivationMode?.ToString() ?? string.Empty },
-                    { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
                     { "ProcessId", telemetryData.ProcessId == 0 ? string.Empty : telemetryData.ProcessId.ToString() },
                     { "ProcessName", telemetryData.ProcessName },
+                    { "ProcessStartTime", telemetryData.ProcessStartTime },
                     { "ErrorCode", telemetryData.Code ?? string.Empty },
                     { "Description", telemetryData.Description ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
@@ -318,7 +278,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "ReplicaId", telemetryData.ReplicaId.ToString() },
                     { "ObserverName", telemetryData.ObserverName },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
-                    { "OS", telemetryData.OS ?? string.Empty }
+                    { "OS", telemetryData.OS ?? string.Empty },
                 };
 
                 var metric = new Dictionary<string, double>

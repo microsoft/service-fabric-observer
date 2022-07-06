@@ -13,6 +13,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
     public class ChildProcessInfo
     {
         public string ProcessName;
+        public string ProcessStartTime;
         public double Value;
     }
 }

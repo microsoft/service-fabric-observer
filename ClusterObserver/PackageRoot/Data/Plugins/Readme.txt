@@ -5,7 +5,7 @@ You must build your plugin as a .NET Standard 2.0 library.
 
 -- How to implement an observer plugin with our extensibility model --
 
-Note that the observer API surface lives in its own library (.NET Standard 2.0), FabricObserver.Extensibility.dll. FO also uses this library for its internal observer impls.
+Note that the observer API surface lives in its own library (.NET Standard 2.0), FabricObserver.Extensibility.dll. FO and CO also use this library for their internal observer impls.
 
 1. Create a new .NET Standard (2.0) library project.
 2. Install the latest Microsoft.ServiceFabricApps.FabricObserver.Extensibility nupkg from https://www.nuget.org/profiles/ServiceFabricApps into your plugin project.

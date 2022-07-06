@@ -181,84 +181,84 @@ namespace FabricObserver.Observers
                     if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
                     {
                         CsvFileLogger.LogData(
-                                        fileName,
-                                        NodeName,
-                                        "CPU Time",
-                                        "Average",
-                                        Math.Round(CpuTimeData.AverageDataValue, 1));
+                            fileName,
+                            NodeName,
+                            "CPU Time",
+                            "Average",
+                            Math.Round(CpuTimeData.AverageDataValue, 1));
 
                         CsvFileLogger.LogData(
-                                        fileName,
-                                        NodeName,
-                                        "CPU Time",
-                                        "Peak",
-                                        Math.Round(CpuTimeData.MaxDataValue, 1));
+                            fileName,
+                            NodeName,
+                            "CPU Time",
+                            "Peak",
+                            Math.Round(CpuTimeData.MaxDataValue, 1));
                     }
 
                     // Memory - Committed (MB)
                     if (MemDataInUse != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
                     {
                         CsvFileLogger.LogData(
-                                        fileName,
-                                        NodeName,
-                                        "Committed Memory (MB)",
-                                        "Average",
-                                        Math.Round(MemDataInUse.AverageDataValue, 1));
+                            fileName,
+                            NodeName,
+                            "Committed Memory (MB)",
+                            "Average",
+                            Math.Round(MemDataInUse.AverageDataValue, 1));
 
                         CsvFileLogger.LogData(
-                                        fileName,
-                                        NodeName,
-                                        "Committed Memory (MB)",
-                                        "Peak",
-                                        Math.Round(MemDataInUse.MaxDataValue));
+                            fileName,
+                            NodeName,
+                            "Committed Memory (MB)",
+                            "Peak",
+                            Math.Round(MemDataInUse.MaxDataValue));
                     }
 
                     // % of Total
                     if (MemDataPercent != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
                     {
                         CsvFileLogger.LogData(
-                                        fileName,
-                                        NodeName,
-                                        "Memory in Use (%)",
-                                        "Average",
-                                        Math.Round(MemDataPercent.AverageDataValue, 1));
+                            fileName,
+                            NodeName,
+                            "Memory in Use (%)",
+                            "Average",
+                            Math.Round(MemDataPercent.AverageDataValue, 1));
 
                         CsvFileLogger.LogData(
-                                        fileName,
-                                        NodeName,
-                                        "Memory in Use (%)",
-                                        "Peak",
-                                        Math.Round(MemDataPercent.MaxDataValue, 1));
+                            fileName,
+                            NodeName,
+                            "Memory in Use (%)",
+                            "Peak",
+                            Math.Round(MemDataPercent.MaxDataValue, 1));
                     }
 
                     if (ActivePortsData != null && (ActivePortsErrorThreshold > 0 || ActivePortsWarningThreshold > 0))
                     {
                         CsvFileLogger.LogData(
-                                        fileName,
-                                        NodeName,
-                                        "All Active Ports",
-                                        "Total",
-                                        Math.Round(ActivePortsData.AverageDataValue));
+                            fileName,
+                            NodeName,
+                            "All Active Ports",
+                            "Total",
+                            Math.Round(ActivePortsData.AverageDataValue));
                     }
 
                     if (EphemeralPortsDataRaw != null && (EphemeralPortsRawErrorThreshold > 0 || EphemeralPortsRawWarningThreshold > 0))
                     {
                         CsvFileLogger.LogData(
-                                        fileName,
-                                        NodeName,
-                                        "Ephemeral Active Ports",
-                                        "Total",
-                                        Math.Round(EphemeralPortsDataRaw.AverageDataValue));
+                            fileName,
+                            NodeName,
+                            "Ephemeral Active Ports",
+                            "Total",
+                            Math.Round(EphemeralPortsDataRaw.AverageDataValue));
                     }
 
                     if (FirewallData != null && isWindows && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
                     {
                         CsvFileLogger.LogData(
-                                        fileName,
-                                        NodeName,
-                                        "Firewall Rules",
-                                        "Total",
-                                        Math.Round(FirewallData.AverageDataValue));
+                            fileName,
+                            NodeName,
+                            "Firewall Rules",
+                            "Total",
+                            Math.Round(FirewallData.AverageDataValue));
                     }
 
                     // Windows does not have a corresponding FD/FH limit which can be set by a user, nor does Windows have a reliable way of determining the total number of open handles in the system.
@@ -268,21 +268,21 @@ namespace FabricObserver.Observers
                         if (LinuxFileHandlesDataPercentAllocated != null && (LinuxFileHandlesErrorPercent > 0 || LinuxFileHandlesWarningPercent > 0))
                         {
                             CsvFileLogger.LogData(
-                                            fileName,
-                                            NodeName,
-                                            ErrorWarningProperty.AllocatedFileHandlesPct,
-                                            "Percent In Use",
-                                            Math.Round(LinuxFileHandlesDataPercentAllocated.AverageDataValue));
+                                fileName,
+                                NodeName,
+                                ErrorWarningProperty.AllocatedFileHandlesPct,
+                                "Percent In Use",
+                                Math.Round(LinuxFileHandlesDataPercentAllocated.AverageDataValue));
                         }
 
                         if (LinuxFileHandlesDataTotalAllocated != null && (LinuxFileHandlesErrorTotalAllocated > 0 || LinuxFileHandlesWarningTotalAllocated > 0))
                         {
                             CsvFileLogger.LogData(
-                                            fileName,
-                                            NodeName,
-                                            ErrorWarningProperty.AllocatedFileHandles,
-                                            "Total Allocated",
-                                            Math.Round(LinuxFileHandlesDataTotalAllocated.AverageDataValue));
+                                fileName,
+                                NodeName,
+                                ErrorWarningProperty.AllocatedFileHandles,
+                                "Total Allocated",
+                                Math.Round(LinuxFileHandlesDataTotalAllocated.AverageDataValue));
                         }
                     }
 

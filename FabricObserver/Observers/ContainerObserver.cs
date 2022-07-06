@@ -163,6 +163,7 @@ namespace FabricObserver.Observers
                     app.CpuWarningLimitPercent,
                     timeToLive,
                     EntityType.Service,
+                    null,
                     repOrInst);
 
                 ProcessResourceDataReportHealth(
@@ -171,6 +172,7 @@ namespace FabricObserver.Observers
                     app.MemoryWarningLimitMb,
                     timeToLive,
                     EntityType.Service,
+                    null,
                     repOrInst);
 
             });

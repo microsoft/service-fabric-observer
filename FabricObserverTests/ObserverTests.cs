@@ -979,7 +979,8 @@ namespace FabricObserverTests
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_warnings.config.json"),
-                EnableConcurrentMonitoring = true
+                EnableConcurrentMonitoring = true,
+                CheckPrivateWorkingSet = true
             };
 
             await obs.ObserveAsync(Token);
@@ -1766,11 +1767,10 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-
             using var obs = new FabricSystemObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                ActiveTcpPortCountWarning = 5
+                ActiveTcpPortCountWarning = 3
             };
 
             await obs.ObserveAsync(Token);

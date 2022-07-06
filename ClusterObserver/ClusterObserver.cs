@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Fabric;
-using System.Fabric.Description;
 using System.Fabric.Health;
 using System.Fabric.Query;
 using System.Fabric.Repair;
@@ -79,7 +78,7 @@ namespace ClusterObserver
         /// Initializes a new instance of the <see cref="ClusterObserver"/> class.
         /// This observer is a singleton (one partition) stateless service that runs on one node in an SF cluster.
         /// </summary>
-        public ClusterObserver(StatelessServiceContext serviceContext, ConfigurationSettings settings = null, bool ignoreDefaultQueryTimeout = false) : base (null, serviceContext)
+        public ClusterObserver(StatelessServiceContext serviceContext, bool ignoreDefaultQueryTimeout = false) : base (null, serviceContext)
         {
             NodeStatusDictionary = new Dictionary<string, (NodeStatus NodeStatus, DateTime FirstDetectedTime, DateTime LastDetectedTime)>();
             ApplicationUpgradesCompletedStatus = new Dictionary<string, bool>();

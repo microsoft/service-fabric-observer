@@ -11,6 +11,7 @@ using System.Linq;
 using System.Net;
 using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
 using System.Security;
 using System.Text;
 
@@ -462,6 +463,10 @@ namespace FabricObserver.Observers.Utilities
         [DllImport("psapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
         public static extern uint GetModuleBaseName(SafeProcessHandle hProcess, [Optional] IntPtr hModule, [MarshalAs(UnmanagedType.LPTStr)] StringBuilder lpBaseName, uint nSize);
 
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GetProcessTimes(SafeProcessHandle ProcessHandle, out FILETIME CreationTime, out FILETIME ExitTime, out FILETIME KernelTime, out FILETIME UserTime);
+
         private static readonly string[] ignoreProcessList = new string[]
         {
             "cmd.exe", "conhost.exe", "csrss.exe","fontdrvhost.exe", "lsass.exe",
@@ -707,6 +712,44 @@ namespace FabricObserver.Observers.Utilities
             }
 
             return null;
+        }
+
+        public static DateTime GetProcessStartTime(int procId)
+        {
+            SafeProcessHandle procHandle = null;
+
+            try
+            {
+                procHandle = GetProcessHandle((uint)procId);
+
+                if (procHandle.IsInvalid)
+                {
+                    throw new Win32Exception($"Failure in GetProcessStartTime: {Marshal.GetLastWin32Error()}");
+                }
+
+                if (!GetProcessTimes(procHandle, out FILETIME ftCreation, out _, out _, out _))
+                {
+                    throw new Win32Exception($"Failure in GetProcessStartTime: {Marshal.GetLastWin32Error()}");
+                }
+
+                try
+                {
+                    ulong ufiletime = unchecked((((ulong)(uint)ftCreation.dwHighDateTime) << 32) | (uint)ftCreation.dwLowDateTime);
+                    var startTime = DateTime.FromFileTimeUtc((long)ufiletime);
+                    return startTime;
+                }
+                catch (ArgumentException)
+                {
+
+                }
+
+                return DateTime.MinValue;
+            }
+            finally
+            {
+                procHandle?.Dispose();
+                procHandle = null;
+            }
         }
 
         // Networking \\
