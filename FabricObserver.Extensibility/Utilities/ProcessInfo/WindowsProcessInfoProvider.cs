@@ -301,7 +301,11 @@ namespace FabricObserver.Observers.Utilities
                 
                 if (handle.IsInvalid || !NativeMethods.GetProcessHandleCount(handle, out handles))
                 {
-                    Logger.LogWarning($"GetProcessHandleCount: Failed with Win32 error code {Marshal.GetLastWin32Error()}.");
+                    // The related Observer will have logged any privilege related failure.
+                    if (Marshal.GetLastWin32Error() != 5)
+                    {
+                        Logger.LogWarning($"GetProcessHandleCount for process id {processId}: Failed with Win32 error code {Marshal.GetLastWin32Error()}.");
+                    }
                 }
        
                 return (int)handles;  
@@ -333,7 +337,12 @@ namespace FabricObserver.Observers.Utilities
 
             if (NativeMethods.GetProcessNameFromId(procId) != procName)
             {
-                Logger.LogWarning($"GetPrivateWorkingSetMbPerfCounter: The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for (it already exited).");
+                // The related Observer will have logged any privilege related failure.
+                if (Marshal.GetLastWin32Error() != 5)
+                {
+                    Logger.LogWarning($"GetPrivateWorkingSetMbPerfCounter: The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for. Error Code: {Marshal.GetLastWin32Error()}");
+                }
+                
                 return 0F;
             }
 

@@ -21,12 +21,12 @@
          extensibility model will employ the same basic config parameters as all observers do. Please see Observers.md -->
     <Parameter Name="AppObserverEnabled" DefaultValue="true" />
     <Parameter Name="AzureStorageUploadObserverEnabled" DefaultValue="false" />
-    <Parameter Name="CertificateObserverEnabled" DefaultValue="false" />
+    <Parameter Name="CertificateObserverEnabled" DefaultValue="true" />
     <!-- Note: You must run FO as System or Admin user on Windows in order to run ContainerObserver on Windows. -->
     <Parameter Name="ContainerObserverEnabled" DefaultValue="false" />
-    <Parameter Name="DiskObserverEnabled" DefaultValue="false" />
+    <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
     <Parameter Name="FabricSystemObserverEnabled" DefaultValue="true" />
-    <Parameter Name="NetworkObserverEnabled" DefaultValue="true" />
+    <Parameter Name="NetworkObserverEnabled" DefaultValue="false" />
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
     <Parameter Name="SFConfigurationObserverEnabled" DefaultValue="false" />
@@ -58,7 +58,7 @@
     <Parameter Name="FabricSystemObserverEnableCSVDataLogging" DefaultValue="false" />
     <Parameter Name="NodeObserverEnableCSVDataLogging" DefaultValue="false" />
     <!-- Verbose Logging -->
-    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="true" />
+    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="AzureStorageUploadObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="ContainerObserverEnableVerboseLogging" DefaultValue="false" />

@@ -217,7 +217,6 @@ namespace FabricObserver.Observers
                 ObserverLogger.LogInfo($"Run Duration: {RunDuration}");
             }
 
-            CleanUp();
             stopwatch.Reset();
             LastRunDateTime = DateTime.Now;
         }
@@ -241,6 +240,7 @@ namespace FabricObserver.Observers
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "Windows Event data code only ever gets reached on Windows...")]
         public override Task ReportAsync(CancellationToken token)
         {
             try
@@ -358,7 +358,7 @@ namespace FabricObserver.Observers
                 }
 
                 // Windows Event Log
-                if (IsObserverWebApiAppDeployed && monitorWinEventLog)
+                if (isWindows && IsObserverWebApiAppDeployed && monitorWinEventLog)
                 {
                     // SF Eventlog Errors?
                     // Write this out to a new file, for use by the web front end log viewer.
@@ -574,6 +574,7 @@ namespace FabricObserver.Observers
             return result.ToArray();
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "<Pending>")]
         private void Initialize()
         {
             Token.ThrowIfCancellationRequested();
@@ -895,7 +896,10 @@ namespace FabricObserver.Observers
                     
                     if (ActiveTcpPortCountError > 0 || ActiveTcpPortCountWarning > 0)
                     {
-                        allActiveTcpPortData[dotnetArg].AddData(activePortCount);
+                        if (allActiveTcpPortData.ContainsKey(dotnetArg))
+                        {
+                            allActiveTcpPortData[dotnetArg].AddData(activePortCount);
+                        }
                     }
 
                     // Ports - Active TCP Ephemeral
@@ -904,7 +908,10 @@ namespace FabricObserver.Observers
                     
                     if (ActiveEphemeralPortCountError > 0 || ActiveEphemeralPortCountWarning > 0)
                     {
-                        allEphemeralTcpPortData[dotnetArg].AddData(activeEphemeralPortCount);
+                        if (allEphemeralTcpPortData.ContainsKey(dotnetArg))
+                        {
+                            allEphemeralTcpPortData[dotnetArg].AddData(activeEphemeralPortCount);
+                        }
                     }
 
                     // Allocated Handles
@@ -937,13 +944,19 @@ namespace FabricObserver.Observers
                     // Handles/FDs
                     if (AllocatedHandlesError > 0 || AllocatedHandlesWarning > 0)
                     {
-                        allHandlesData[dotnetArg].AddData(handles);
+                        if (allHandlesData.ContainsKey(dotnetArg))
+                        {
+                            allHandlesData[dotnetArg].AddData(handles);
+                        }
                     }
 
                     // Threads
                     if (ThreadCountError > 0 || ThreadCountWarning > 0)
                     {
-                        allThreadsData[dotnetArg].AddData(threads);
+                        if (allThreadsData.ContainsKey(dotnetArg))
+                        {
+                            allThreadsData[dotnetArg].AddData(threads);
+                        }
                     }
 
                     // KVS LVIDs
@@ -954,7 +967,10 @@ namespace FabricObserver.Observers
                         // ProcessGetCurrentKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
                         if (lvidPct > -1)
                         {
-                            allAppKvsLvidsData[dotnetArg].AddData(lvidPct);
+                            if (allAppKvsLvidsData.ContainsKey(dotnetArg))
+                            {
+                                allAppKvsLvidsData[dotnetArg].AddData(lvidPct);
+                            }
                         }
                     }
 
@@ -970,7 +986,11 @@ namespace FabricObserver.Observers
                     if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
                     {
                         float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, dotnetArg, Token, checkPrivateWorkingSet);
-                        allMemData[dotnetArg].AddData(processMem);
+
+                        if (allMemData.ContainsKey(dotnetArg))
+                        {
+                            allMemData[dotnetArg].AddData(processMem);
+                        }
                     }
 
                     timer.Start();
@@ -985,7 +1005,11 @@ namespace FabricObserver.Observers
                             if (CpuErrorUsageThresholdPct > 0 || CpuWarnUsageThresholdPct > 0)
                             {
                                 int cpu = (int)cpuUsage.GetCpuUsagePercentageProcess(procId);
-                                allCpuData[dotnetArg].AddData(cpu);
+
+                                if (allCpuData.ContainsKey(dotnetArg))
+                                {
+                                    allCpuData[dotnetArg].AddData(cpu);
+                                }
                             }
 
                             await Task.Delay(150, Token);
@@ -1040,54 +1064,42 @@ namespace FabricObserver.Observers
                 // CPU data
                 if (allCpuData != null)
                 {
-                    allCpuData.Remove(dotnetArg);
+                    _ = allCpuData.Remove(dotnetArg);
                 }
 
                 // Memory data
                 if (allMemData != null)
                 {
-                    allMemData.Remove(dotnetArg);
+                    _ = allMemData.Remove(dotnetArg);
                 }
 
                 // Ports
                 if (allActiveTcpPortData != null)
                 {
-                    allActiveTcpPortData.Remove(dotnetArg);
+                    _ = allActiveTcpPortData.Remove(dotnetArg);
                 }
 
                 if (allEphemeralTcpPortData != null)
                 {
-                    allEphemeralTcpPortData.Remove(dotnetArg);
+                    _ = allEphemeralTcpPortData.Remove(dotnetArg);
                 }
 
                 // Handles
                 if (allHandlesData != null)
                 {
-                    allHandlesData.Remove(dotnetArg);
+                    _ = allHandlesData.Remove(dotnetArg);
                 }
 
                 // Threads
                 if (allThreadsData != null)
                 {
-                    allThreadsData.Remove(dotnetArg);
+                    _ = allThreadsData.Remove(dotnetArg);
                 }
 
                 // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
-                if (EnableKvsLvidMonitoring && allAppKvsLvidsData != null)
+                if (allAppKvsLvidsData != null)
                 {
-                    allAppKvsLvidsData = new Dictionary<string, FabricResourceUsageData<double>>();
-
-                    foreach (var proc in processWatchList)
-                    {
-                        Token.ThrowIfCancellationRequested();
-
-                        if (proc != "Fabric" && proc != "FabricRM")
-                        {
-                            continue;
-                        }
-
-                        allAppKvsLvidsData.Remove(proc);
-                    }
+                    _ = allAppKvsLvidsData.Remove(dotnetArg);
                 }
             }
             catch (Exception e) when (e is ArgumentException || e is KeyNotFoundException)
