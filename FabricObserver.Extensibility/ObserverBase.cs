@@ -724,7 +724,7 @@ namespace FabricObserver.Observers
 
             string thresholdName = "Warning";
             bool warningOrError = false;
-            string drive = string.Empty, id = null, appType = null, appTypeVersion = null, processStartTime = null,  serviceTypeName = null, serviceManifestVersion = null;
+            string drive = string.Empty, id = null, appType = null, processStartTime = null;
             int procId = 0;
             T threshold = thresholdWarning;
             HealthState healthState = HealthState.Ok;
@@ -737,9 +737,8 @@ namespace FabricObserver.Observers
                 if (replicaOrInstance != null)
                 {
                     appName = replicaOrInstance.ApplicationName;
-                    (appType, appTypeVersion) = TupleGetApplicationTypeInfo(appName);
+                    appType = replicaOrInstance.ApplicationTypeName;
                     serviceName = replicaOrInstance.ServiceName;
-                    (serviceTypeName, serviceManifestVersion) = TupleGetServiceTypeInfo(appName, serviceName);
                     procId = (int)replicaOrInstance.HostProcessId;
 
                     if (string.IsNullOrWhiteSpace(processName))
@@ -812,7 +811,6 @@ namespace FabricObserver.Observers
                 {
                     ApplicationName = appName?.OriginalString ?? null,
                     ApplicationType = appType,
-                    ApplicationTypeVersion = appTypeVersion,
                     ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                     EntityType = entityType,
                     Metric = data.Property,
@@ -827,8 +825,6 @@ namespace FabricObserver.Observers
                     ReplicaRole = replicaOrInstance != null ? replicaOrInstance.ReplicaRole : ReplicaRole.Unknown,
                     ServiceKind = replicaOrInstance != null ? replicaOrInstance.ServiceKind : System.Fabric.Query.ServiceKind.Invalid,
                     ServiceName = serviceName?.OriginalString ?? null,
-                    ServiceTypeName = replicaOrInstance?.ServiceTypeName ?? serviceTypeName,
-                    ServiceManifestVersion = serviceManifestVersion,
                     ServicePackageActivationMode = replicaOrInstance?.ServicePackageActivationMode,
                     Source = ObserverName,
                     Value = data.AverageDataValue
@@ -1105,9 +1101,6 @@ namespace FabricObserver.Observers
                     _ = healthMessage.Append(childProcMsg);
                 }
 
-                /*telemetryData.ApplicationName = appName?.OriginalString ?? null;
-                telemetryData.ApplicationType = appType;
-                telemetryData.ServiceName = serviceName?.OriginalString ?? null;*/
                 telemetryData.Code = errorWarningCode;
 
                 if (!string.IsNullOrWhiteSpace(replicaOrInstance?.ContainerId))
@@ -1173,9 +1166,6 @@ namespace FabricObserver.Observers
             {
                 if (data.ActiveErrorOrWarning)
                 {
-                    /*telemetryData.ApplicationName = appName?.OriginalString ?? null;
-                    telemetryData.ApplicationType = appType;
-                    telemetryData.ServiceName = serviceName?.OriginalString ?? null;*/
                     telemetryData.Code = FOErrorWarningCodes.Ok;
 
                     if (!string.IsNullOrWhiteSpace(replicaOrInstance?.ContainerId))

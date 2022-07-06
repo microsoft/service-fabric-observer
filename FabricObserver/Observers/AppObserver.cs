@@ -87,7 +87,9 @@ namespace FabricObserver.Observers
                     {
                         if (_handleToProcSnapshot == null)
                         {
-                            _handleToProcSnapshot = NativeMethods.CreateToolhelp32Snapshot((uint)NativeMethods.CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
+                            _handleToProcSnapshot = 
+                                NativeMethods.CreateToolhelp32Snapshot(
+                                    (uint)NativeMethods.CreateToolhelp32SnapshotFlags.TH32CS_INHERIT | (uint)NativeMethods.CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
                             
                             if (_handleToProcSnapshot.IsInvalid)
                             {
@@ -1851,7 +1853,7 @@ namespace FabricObserver.Observers
                 if (checkThreads)
                 {
                     int threads = ProcessInfoProvider.GetProcessThreadCount(procId);
-
+                    
                     if (threads > 0)
                     {
                         // Parent process (the service process).
@@ -2196,7 +2198,7 @@ namespace FabricObserver.Observers
                         replicaInfo = new ReplicaOrInstanceMonitoringInfo
                         {
                             ApplicationName = appName,
-                            ApplicationTypeName = appTypeName,
+                            ApplicationTypeName = appTypeName ?? _deployedApps.First(app => app.ApplicationName == appName).ApplicationTypeName,
                             HostProcessId = statefulReplica.HostProcessId,
                             ReplicaOrInstanceId = statefulReplica.ReplicaId,
                             PartitionId = statefulReplica.Partitionid,

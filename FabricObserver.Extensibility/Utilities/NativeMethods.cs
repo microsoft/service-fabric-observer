@@ -469,7 +469,7 @@ namespace FabricObserver.Observers.Utilities
 
         private static readonly string[] ignoreProcessList = new string[]
         {
-            "cmd.exe", "conhost.exe", "csrss.exe","fontdrvhost.exe", "lsass.exe",
+            "cmd.exe", "conhost.exe", "csrss.exe","fontdrvhost.exe", "lsass.exe", "backgroundTaskHost.exe",
             "LsaIso.exe", "services.exe", "smss.exe", "svchost.exe", "taskhostw.exe",
             "wininit.exe", "winlogon.exe", "WUDFHost.exe", "WmiPrvSE.exe",
             "TextInputHost.exe", "vmcompute.exe", "vmms.exe", "vmwp.exe", "vmmem",
@@ -542,7 +542,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                if (handleToSnapshot == null || handleToSnapshot.IsInvalid)
+                if (handleToSnapshot == null || handleToSnapshot.IsInvalid || handleToSnapshot.IsClosed)
                 {
                     isLocalSnapshot = true;
                     handleToSnapshot = CreateToolhelp32Snapshot((uint)CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
@@ -629,7 +629,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                if (handleToSnapshot == null || handleToSnapshot.IsInvalid)
+                if (handleToSnapshot == null || handleToSnapshot.IsInvalid || handleToSnapshot.IsClosed)
                 {
                     isLocalSnapshot = true;
                     handleToSnapshot = CreateToolhelp32Snapshot((uint)CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
@@ -660,10 +660,9 @@ namespace FabricObserver.Observers.Utilities
                             continue;
                         }
 
-                        if (pid == procEntry.th32ProcessID)
+                        if (pid == procEntry.th32ProcessID && GetProcessNameFromId((uint)pid) == procEntry.szExeFile)
                         {
-                            threadCount = (int)procEntry.cntThreads;
-                            break;
+                            return (int)procEntry.cntThreads;
                         }
                     }
                     catch (ArgumentException)

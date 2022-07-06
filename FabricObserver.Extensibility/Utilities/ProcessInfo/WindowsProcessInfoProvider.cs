@@ -25,9 +25,10 @@ namespace FabricObserver.Observers.Utilities
         private readonly object _lockUpdate = new object();
         private volatile bool hasWarnedProcessNameLength = false;
         private DateTime sameNamedProcCacheLastUpdated = DateTime.MinValue;
-        private TimeSpan maxLifetimeForProcCache = TimeSpan.FromMinutes(1);
+        private TimeSpan maxLifetimeForProcCache = TimeSpan.FromMinutes(3);
         private readonly ConcurrentDictionary<string, List<(string InternalName, int Pid)>> _procCache =
             new ConcurrentDictionary<string, List<(string InternalName, int Pid)>>();
+        PerformanceCounter memoryCounter = null;
 
         public override float GetProcessWorkingSetMb(int processId, string procName, CancellationToken token, bool getPrivateWorkingSet = false)
         {
@@ -203,10 +204,10 @@ namespace FabricObserver.Observers.Utilities
                             return -1;
                         }
                     }
-                    catch (InvalidOperationException)
+                    catch (InvalidOperationException e)
                     {
                         Logger.LogWarning($"GetProcessKvsLvidsUsagePercentage (Returning -1): Handled Exception from GetInternalProcessName.{Environment.NewLine}" +
-                                          $"The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for (it is not present in the internal name/id cache).");
+                                          $"The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for: {e.Message}");
                         return -1;
                     }
                 }
@@ -340,7 +341,8 @@ namespace FabricObserver.Observers.Utilities
                 // The related Observer will have logged any privilege related failure.
                 if (Marshal.GetLastWin32Error() != 5)
                 {
-                    Logger.LogWarning($"GetPrivateWorkingSetMbPerfCounter: The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for. Error Code: {Marshal.GetLastWin32Error()}");
+                    Logger.LogWarning($"GetPrivateWorkingSetMbPerfCounter: The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for. " +
+                                      $"Error Code: {Marshal.GetLastWin32Error()}");
                 }
                 
                 return 0F;
@@ -395,20 +397,31 @@ namespace FabricObserver.Observers.Utilities
                     return 0F;
                 }
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException e)
             {
-                // Most likely the process isn't the one we are looking for (procId no longer maps to procName, for example).
+                // Most likely the process isn't the one we are looking for (current procId no longer maps to internal procName as contained in the same-named proc data cache).
+#if DEBUG
                 Logger.LogWarning($"GetPrivateWorkingSetMbPerfCounter (Returning 0): Handled Exception from GetInternalProcessName.{Environment.NewLine}" +
-                                  $"The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for (it is not present in the internal name/id cache).");
+                                  $"The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for: {e.Message}");
+#endif
                 return 0F;
             }
-            
-            PerformanceCounter memoryCounter = null;
-
+  
             try
             {
-               memoryCounter = new PerformanceCounter("Process", "Working Set - Private", internalProcName, true);
-               return memoryCounter.NextValue() / 1024 / 1024;
+                if (memoryCounter == null)
+                {
+                    lock (_lock)
+                    {
+                        if (memoryCounter == null)
+                        {
+                            memoryCounter = new PerformanceCounter("Process", "Working Set - Private", true);
+                        }
+                    }
+                }
+
+                memoryCounter.InstanceName = internalProcName;
+                return memoryCounter.NextValue() / 1024 / 1024;
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is UnauthorizedAccessException || e is Win32Exception)
             {
@@ -418,12 +431,8 @@ namespace FabricObserver.Observers.Utilities
             {
                 // Log the full error (including stack trace) for debugging purposes.
                 Logger.LogWarning($"Unhandled exception in GetPrivateWorkingSetMbPerfCounter:{Environment.NewLine}{e}");
+                
                 throw;
-            }
-            finally
-            {
-                memoryCounter?.Dispose();
-                memoryCounter = null;
             }
 
             return 0F;
@@ -437,7 +446,12 @@ namespace FabricObserver.Observers.Utilities
             {
                 if (NativeMethods.GetProcessNameFromId(pid) != procName)
                 {
-                    Logger.LogWarning($"GetInternalProcessNameFromPerfCounter: Process Name ({procName}) is no longer mapped to supplied ID ({pid}). The original process has exited.");
+                    // The related Observer will have logged any privilege related failure.
+                    if (Marshal.GetLastWin32Error() != 5)
+                    {
+                        Logger.LogWarning($"GetInternalProcessName: Process Name ({procName}) is no longer mapped to supplied ID ({pid}): {Marshal.GetLastWin32Error()}.");
+                    }
+
                     return null;
                 }
 
@@ -458,16 +472,18 @@ namespace FabricObserver.Observers.Utilities
                     return _procCache[procName].First(inst => inst.Pid == pid).InternalName;
                 }
             }
-            catch (Exception e) when (e is ArgumentException || e is KeyNotFoundException)
+            catch (ArgumentException)
             {
-                
+#if DEBUG
+                Logger.LogWarning($"GetInternalProcessName: Failure getting data from cache. Name: {procName}, Pid: {pid}");
+#endif
             }
             catch (Exception e) when (!(e is InvalidOperationException || e is OperationCanceledException || e is TaskCanceledException))
             {
                 // Log the full error (including stack trace) for debugging purposes. Note: Caller must handle InvalidOperationException as in this case it likely means
                 // the process no longer exists with the same id (or internal name). So, don't re-throw as Unhandled here.
                 Logger.LogError(
-                    $"Unhandled exception in GetInternalProcessNameFromPerfCounter: Unable to determine internal process name for {procName} with id {pid}{Environment.NewLine}{e}");
+                    $"Unhandled exception in GetInternalProcessName: Unable to determine internal process name for {procName} with id {pid}{Environment.NewLine}{e}");
 
                 throw;
             }
@@ -503,7 +519,7 @@ namespace FabricObserver.Observers.Utilities
 
                         return instance;
                     }
-                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is UnauthorizedAccessException || e is Win32Exception)
+                    catch (Exception e) when (e is InvalidOperationException || e is UnauthorizedAccessException || e is Win32Exception)
                     {
 
                     }
