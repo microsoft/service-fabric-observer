@@ -9,6 +9,9 @@ using System.Fabric.Health;
 
 namespace FabricObserver.Observers.Interfaces
 {
+    /// <summary>
+    /// Interface that all TelemetryData types must implement.
+    /// </summary>
     public interface ITelemetryData
     {
         /// <summary>
@@ -43,10 +46,6 @@ namespace FabricObserver.Observers.Interfaces
         /// The name of the node where the entity resides.
         /// </summary>
         string NodeName { get; set; }
-        /// <summary>
-        /// The name of the observer that generated the health information.
-        /// </summary>
-        string ObserverName { get; set; }
         /// <summary>
         /// The OS hosting Service Fabric. This is read-only.
         /// </summary>

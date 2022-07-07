@@ -87,10 +87,13 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
 
+        /// <summary>
+        /// The name of the observer that generated the health information.
+        /// </summary>
         [EventField]
-        public string ObserverName
-        {
-            get; set;
+        public string ObserverName 
+        { 
+            get; set; 
         }
 
         [EventField]
