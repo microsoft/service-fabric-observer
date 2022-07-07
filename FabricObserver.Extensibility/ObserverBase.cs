@@ -704,7 +704,7 @@ namespace FabricObserver.Observers
         /// <param name="thresholdWarning">Warning threshold (numeric)</param>
         /// <param name="healthReportTtl">Health report Time to Live (TimeSpan)</param>
         /// <param name="entityType">Service Fabric Entity type. Note, only Application and Node types are supported by this function.</param>
-        /// <param name="processName">For service reporting, you must provide a process name for the target service instance.</param>
+        /// <param name="processName">For service reporting, you must provide a process name for the target service instance. Except for ContainerObserver, where this does not apply.</param>
         /// <param name="replicaOrInstance">Replica or Instance information contained in a type.</param>
         /// <param name="dumpOnErrorOrWarning">Whether or not to dump process if Error threshold has been reached.</param>
         public void ProcessResourceDataReportHealth<T>(
@@ -741,38 +741,42 @@ namespace FabricObserver.Observers
                     serviceName = replicaOrInstance.ServiceName;
                     procId = (int)replicaOrInstance.HostProcessId;
 
-                    if (string.IsNullOrWhiteSpace(processName))
+                    // This doesn't apply to ContainerObserver.
+                    if (string.IsNullOrWhiteSpace(replicaOrInstance.ContainerId))
                     {
-                        ObserverLogger.LogWarning("ProcessResourceDataReportHealth: Process name is required for service level reporting. Exiting.");
-                        return;
-                    }
-
-                    if (!EnsureProcess(processName, procId))
-                    {
-                        ObserverLogger.LogWarning($"ProcessResourceDataReportHealth: Process name {processName} is not mapped to pid {procId}. Exiting.");
-                        return;
-                    }
-
-                    try
-                    {
-                        // Accessing Process properties is really expensive for Windows (net core).
-                        if (_isWindows)
+                        if (string.IsNullOrWhiteSpace(processName))
                         {
-                            processStartTime = NativeMethods.GetProcessStartTime(procId).ToString("o");
+                            ObserverLogger.LogWarning("ProcessResourceDataReportHealth: Process name is required for service level reporting. Exiting.");
+                            return;
                         }
-                        else
+
+                        if (!EnsureProcess(processName, procId))
                         {
-                            using (Process proc = Process.GetProcessById(procId))
+                            ObserverLogger.LogWarning($"ProcessResourceDataReportHealth: Process name {processName} is not mapped to pid {procId}. Exiting.");
+                            return;
+                        }
+
+                        try
+                        {
+                            // Accessing Process properties is really expensive for Windows (net core).
+                            if (_isWindows)
                             {
-                                processStartTime = proc.StartTime.ToString("o");
+                                processStartTime = NativeMethods.GetProcessStartTime(procId).ToString("o");
+                            }
+                            else
+                            {
+                                using (Process proc = Process.GetProcessById(procId))
+                                {
+                                    processStartTime = proc.StartTime.ToString("o");
+                                }
                             }
                         }
-                    }
-                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is PlatformNotSupportedException || e is Win32Exception)
-                    {
-                        // Process may no longer be alive. It makes no sense to report on it.
-                        data.ClearData();
-                        return;
+                        catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is PlatformNotSupportedException || e is Win32Exception)
+                        {
+                            // Process may no longer be alive. It makes no sense to report on it.
+                            data.ClearData();
+                            return;
+                        }
                     }
                 }
                 else // System service report from FabricSystemObserver.
