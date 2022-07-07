@@ -44,10 +44,6 @@ namespace FabricObserver.Observers.Interfaces
         /// </summary>
         string NodeName { get; set; }
         /// <summary>
-        /// The name of the observer that generated the health information.
-        /// </summary>
-        string ObserverName { get; set; }
-        /// <summary>
         /// The OS hosting Service Fabric. This is read-only.
         /// </summary>
         string OS { get; }

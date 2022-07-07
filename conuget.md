@@ -1,5 +1,5 @@
-### ClusterObserver 2.1.15
-### Requires .NET Core 3.1 and SF Runtime >= 8
+## ClusterObserver 2.1.15
+#### This version is built for .NET Core 3.1 and SF Runtime >= 8.0
 
 [ClusterObserver](https://github.com/microsoft/service-fabric-observer/tree/main/ClusterObserver) (CO) is a stateless singleton Service Fabric service that runs on one node in a cluster. CO observes cluster health (aggregated) and sends telemetry when a cluster is in Error or Warning. CO shares a very small subset of FabricObserver's (FO) code. It is designed to be completely independent from FO sources, but lives in this repo (and SLN) because it is very useful to have both services deployed, especially for those who want cluster-level health observation and reporting in addition to the node-level user-defined resource monitoring, health event creation, and health reporting done by FO. FabricObserver is designed to generate Service Fabric health events based on user-defined resource usage Warning and Error thresholds which ClusterObserver sends to your log analytics and alerting service.
 
