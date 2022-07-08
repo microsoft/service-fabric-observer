@@ -1,4 +1,4 @@
-# FabricObserver 3.2.1
+# FabricObserver 3.2.9.60
 ### This version is built for .NET 6 and SF Runtime >= 9.0
 
 [**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a complete implementation of a production-ready, generic resource usage watchdog service written as a stateless, singleton Service Fabric .NET 6 application that 
@@ -10,12 +10,7 @@
 
 FO is a Stateless Service Fabric Application composed of a single service that runs on every node in your cluster, so it can be deployed and run alongside your applications without any changes to them. Each FO service instance knows nothing about other FO instances in the cluster, by design. 
 
-Note that in version 3.1.18 and higher, AppObserver and ContainerObserver can run their monitoring loops in parallel on capable hardware (logical CPU processors >= 4).
-This feature is enabled by default. You can disable/enable with parameter-only, versionless application upgrades with the related settings found in ApplicationManifest.xml under the AppObserver, ContainerObserver and FabricSystemObserver settings sections.
-Enabling this feature greatly decreases the time it takes for an observer running on capable hardware to complete monitoring. This is especially important if you monitor a large number of services.
-
-
-> FO is not an alternative to existing Monitoring and Diagnostics services. Running side-by-side with existing monitoring services, FO provides useful and timely health information for the nodes (VMs), apps, and services that make up your Service Fabric deployment. 
+> Running side-by-side with existing monitoring services, FabricObserver provides useful and timely health information for the nodes (VMs), apps, and services that make up your Service Fabric deployment. 
 
 
 [Read more about Service Fabric health monitoring](https://docs.microsoft.com/azure/service-fabric/service-fabric-health-introduction) 
@@ -86,7 +81,7 @@ see [FOAzurePipeline.yaml](/FOAzurePipeline.yaml) for msazure devops build tasks
 .net6 installed (if you deploy VM images from Azure gallery, then they will not have .net6 installed), then you must deploy the SelfContained package.</strong>
 
 ### Deploy FabricObserver
-**Note: You must deploy this version (3.2.1) to clusters that are running SF 9.0 and above. This version also requires .NET 6.**
+**Note: You must deploy this version (3.2.9.60) to clusters that are running SF 9.0 and above. This version also requires .NET 6.**
 You can deploy FabricObserver (and ClusterObserver) using Visual Studio (if you build the sources yourself), PowerShell or ARM. Please note that this version of FabricObserver no longer supports the DefaultServices node in ApplicationManifest.xml.
 This means that should you deploy using PowerShell, you must create an instance of the service as the last command in your script. This was done to support ARM deployment, specifically.
 The StartupServices.xml file you see in the FabricHealerApp project now contains the service information once held in ApplicationManifest's DefaultServices node. Note that this information is primarily useful for deploying from Visual Studio.
@@ -132,7 +127,7 @@ Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO321
 
 #Create FO application (if not already deployed at lesser version):
 
-New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.2.1   
+New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.2.9.60   
 
 #Create the Service instance:  
 
@@ -140,7 +135,7 @@ New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName f
 
 #OR if updating existing version:  
 
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.2.1 -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.2.9.60 -Monitored -FailureAction rollback
 ```  
 
 ## Configuration Change Support

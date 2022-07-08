@@ -39,7 +39,7 @@ namespace ClusterObserver
         private bool appParamsUpdating;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "2.1.16";
+        private const string InternalVersionNumber = "2.2.9.60";
 
         public bool EnableOperationalTelemetry
         {

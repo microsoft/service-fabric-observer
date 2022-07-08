@@ -397,10 +397,15 @@ namespace FabricObserver.Observers.Utilities
                     return 0F;
                 }
             }
+#if RELEASE
+            catch (InvalidOperationException)
+            { 
+#endif
+#if DEBUG
             catch (InvalidOperationException e)
             {
                 // Most likely the process isn't the one we are looking for (current procId no longer maps to internal procName as contained in the same-named proc data cache).
-#if DEBUG
+
                 Logger.LogWarning($"GetPrivateWorkingSetMbPerfCounter (Returning 0): Handled Exception from GetInternalProcessName.{Environment.NewLine}" +
                                   $"The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for: {e.Message}");
 #endif
