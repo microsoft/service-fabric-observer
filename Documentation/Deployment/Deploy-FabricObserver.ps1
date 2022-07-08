@@ -9,7 +9,7 @@ Try {
 
 $resourceGroup = "<YOUR-CLUSTER-RESOURCE-NAME>"
 $armTemplate = "service-fabric-observer.json"
-$armTemplateParameters = "service-fabric-observer.v3.2.0.parameters.json"
+$armTemplateParameters = "service-fabric-observer.v3.2.8.31.parameters.json"
 
 cd "<LOCAL-FO-REPO-PATH>\Documentation\Deployment"
 

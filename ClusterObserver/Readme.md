@@ -1,4 +1,4 @@
-## ClusterObserver 2.1.15
+## ClusterObserver 2.2.8.31
 #### This version is built for .NET Core 3.1 and SF Runtime >= 8.0
 
 ClusterObserver (CO) is a stateless singleton Service Fabric .NET Core 3.1 application that runs on one node in a cluster. CO observes cluster health (aggregated) 
@@ -13,7 +13,7 @@ you want by implementing the IObserverTelemetryProvider interface. As stated, th
 
 The core idea is that you use the aggregated cluster error/warning/Ok health state information from ClusterObserver to fire alerts and/or trigger some other action that gets your attention and/or some SF on-call's enagement via auto-creating a support incident (and an Ok signal would mean auto-mitigate the related incident/ticket).  
 
-```As of version 2.1.15, ClusterObserver supports the FabricObserver extensibility model. This means you can extend the behavior of ClusterObserver by writing your own observer plugins just as you can do with FabricObserver.```
+```As of version 2.2.8.31, ClusterObserver supports the FabricObserver extensibility model. This means you can extend the behavior of ClusterObserver by writing your own observer plugins just as you can do with FabricObserver.```
 
 [FabricObserver plugin documentation](https://github.com/microsoft/service-fabric-observer/blob/main/Documentation/Plugins.md) applies to ClusterObserver as well. The difference, of course, is that you will copy your plugin dll and its dependencies into ClusterObserver\PackageRoot\Data folder.
 
@@ -34,7 +34,7 @@ $appParams = @{ "RunInterval" = "00:10:00"; "MaxTimeNodeStatusNotOk" = "04:00:00
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -ApplicationTypeVersion 2.1.15 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -ApplicationTypeVersion 2.2.8.31 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```
 
 ### ClusterObserver Configuration 
@@ -134,7 +134,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -
 
 ``` XML
 <?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.1.15" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.2.8.31" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- ClusterObserverManager settings. -->
     <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
@@ -162,7 +162,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.1.15" />
+    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.2.8.31" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>

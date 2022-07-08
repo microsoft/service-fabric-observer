@@ -49,7 +49,7 @@ namespace FabricObserver.Observers
 When you reference the FabricObserver.Extensibility nuget package, you will have access to all of the public code that native FabricObserver observers consume. That is, you will have the same capabilities 
 that all other observers have. The world is your oyster when it comes to creating your custom observer to do whatever the underlying platform affords. 
 
-### Note: make sure you know if .NET Core 3.1 (for FO 3.2.0) or .NET 6 (for FO 3.2.1, which only runs on SF version 9 and above) is installed on the target server. If it is not, then you must use the SelfContained package. This is very important.
+### Note: make sure you know if .NET Core 3.1 (for FO 3.2.8.31) or .NET 6 (for FO 3.2.9.60, which only runs on SF version 9 and above) is installed on the target server. If it is not, then you must use the SelfContained package. This is very important.
 
 As you can see in this project, there are two key files:
 
@@ -77,7 +77,7 @@ namespace FabricObserver.Observers
 }
 ```  
   
-**NOTE for FO 3.2.x: If you are using ObserverHealthReporter in your current plugin, you will need to modify the ctor and change one parameter in the HealthReport type:**
+**NOTE for FO 3.2.x.x: If you are using ObserverHealthReporter in your current plugin, you will need to modify the ctor and change one parameter in the HealthReport type:**
 ``` C#
 var healthReporter = new ObserverHealthReporter(ObserverLogger);
 var healthReport = new HealthReport
@@ -87,8 +87,8 @@ var healthReport = new HealthReport
     NodeName = NodeName,
     Observer = ObserverName,
     Property = "SomeUniquePropertyForMyHealthEvent",
-    EntityType = EntityType.Node, // this is an FO 3.2.0 required change.
-    //ReportType = HealthReportType.Node, // this is gone in FO 3.2.0.
+    EntityType = EntityType.Node, // this is an FO 3.2.8.31 required change.
+    //ReportType = HealthReportType.Node, // this is gone in FO 3.2.8.31.
     State = HealthState.Ok
 };
 
@@ -136,9 +136,9 @@ If you consume the full FabricObserver nupkg (versus just the FabricObserver.Ext
 * Create a new instance of the fabric:/FabricObserver/FabricObserverService service
 ```Powershell
 $path = "[sourcedir]\MyObserverPlugin\bin\release\netstandard2.0\[target os platform, e.g., win-x64 or linux-x64]"
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FabricObserverV320 -TimeoutSec 1800
-Register-ServiceFabricApplicationType -ApplicationPathInImageStore FabricObserverV320
-New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.2.0
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FabricObserverV32831 -TimeoutSec 1800
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FabricObserverV32831
+New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.2.8.31
 New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName fabric:/FabricObserver -ServiceName fabric:/FabricObserver/FabricObserverService -ServiceTypeName FabricObserverType -InstanceCount -1
 ```  
 

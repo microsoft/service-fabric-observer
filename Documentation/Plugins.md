@@ -1,6 +1,6 @@
 ## How to implement an observer plugin using FO's extensibility model
 
-#### Note that starting in version 2.1.15, ClusterObserver supports the FO plugin model. So, you can build cluster-level monitoring plugins should you so desire.
+#### Note that starting in version 2.2.8.31, ClusterObserver supports the FO plugin model. So, you can build cluster-level monitoring plugins should you so desire.
 
 1. Create a new .NET Standard (2.0) library project.
 
@@ -72,5 +72,5 @@ cd C:\Users\me\source\repos\service-fabric-observer
 ./Build-FabricObserver
 ./Build-NugetPackages
 ```
-The output from the above commands, FabricObserver platform-specific nupkgs and a package you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.1.nupkg, would be located in 
+The output from the above commands, FabricObserver platform-specific nupkgs and a package you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.0.nupkg, would be located in 
 C:\Users\me\source\repos\service-fabric-observer\bin\release\FabricObserver\Nugets.
