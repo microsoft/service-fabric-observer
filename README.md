@@ -124,11 +124,11 @@ Connect-ServiceFabricCluster -ConnectionEndpoint @('sf-win-cluster.westus2.cloud
 
 #Copy $path contents (FO app package) to server:
 
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FO320 -TimeoutSec 1800
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FO32831 -TimeoutSec 1800
 
 #Register FO ApplicationType:
 
-Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO320
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO32831
 
 #Create FO application (if not already deployed at lesser version):
 
