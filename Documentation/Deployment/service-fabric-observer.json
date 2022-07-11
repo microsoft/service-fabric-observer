@@ -13,14 +13,14 @@
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "Provide the app version number of FabricObserver. This must be identical with the version provided for the parameter appPackageUrl. Example: '3.2.8.31'"
+        "description": "Provide the app version number of FabricObserver. This must be identical with the version provided for the parameter appPackageUrl. Example: '3.2.0.831'"
       }
     },
     "packageUrlFabricObserver": {
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "This has to be a public accessible URL for the sfpkg file which contains the FabricObserver app package. Example: https://github.com/microsoft/service-fabric-observer/releases/download/48361039/Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained.3.2.8.31.sfpkg"
+        "description": "This has to be a public accessible URL for the sfpkg file which contains the FabricObserver app package. Example: https://github.com/microsoft/service-fabric-observer/releases/download/48361039/Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained.3.2.0.831.sfpkg"
       }
     }
   },
