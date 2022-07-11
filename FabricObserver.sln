@@ -37,9 +37,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		SECURITY.md = SECURITY.md
 		Documentation\Deployment\service-fabric-cluster-observer.json = Documentation\Deployment\service-fabric-cluster-observer.json
 		Documentation\Deployment\service-fabric-observer.json = Documentation\Deployment\service-fabric-observer.json
-		Documentation\Deployment\service-fabric-cluster-observer.v2.2.9.60.parameters.json = Documentation\Deployment\service-fabric-cluster-observer.v2.2.9.60.parameters.json
+		Documentation\Deployment\service-fabric-cluster-observer.v2.2.0.960.parameters.json = Documentation\Deployment\service-fabric-cluster-observer.v2.2.0.960.parameters.json
 		Documentation\Using.md = Documentation\Using.md
-		Documentation\Deployment\service-fabric-observer.v3.2.9.60.parameters.json = Documentation\Deployment\service-fabric-observer.v3.2.9.60.parameters.json
+		Documentation\Deployment\service-fabric-observer.v3.2.0.960.parameters.json = Documentation\Deployment\service-fabric-observer.v3.2.0.960.parameters.json
 	EndProjectSection
 EndProject
 Project("{A07B5EB6-E848-4116-A8D0-A826331D98C6}") = "ClusterObserverApp", "ClusterObserverApp\ClusterObserverApp.sfproj", "{BD5D216F-5F89-4CC4-92FD-D6FDEC5A19AD}"
