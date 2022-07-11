@@ -1,4 +1,4 @@
-### ClusterObserver 2.2.9.60
+### ClusterObserver 2.2.0.960
 #### Requires .net6.0+ and SF Runtime 9.0+
 
 ClusterObserver (CO) is a stateless singleton Service Fabric .net6.0 service that runs on one node in a cluster. CO observes cluster health (aggregated) 
