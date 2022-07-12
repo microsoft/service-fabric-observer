@@ -233,8 +233,8 @@ Here is a full example of exactly what is sent in one of these telemetry events,
     "TaskName": "ClusterObserver",
     "ClusterId": "00000000-1111-1111-0000-00f00d000d",
     "ClusterType": "SFRP",
-    "COVersion": "2.1.14",
-    "Timestamp": "2021-11-22T19:02:04.4287671Z",
+    "COVersion": "2.2.0.831",
+    "Timestamp": "2022-07-12T19:02:04.4287671Z",
     "OS": "Windows"
 }
 ```
