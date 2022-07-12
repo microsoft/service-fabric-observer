@@ -1,35 +1,60 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
-  <metadata minClientVersion="3.3.0">
-    <id>%PACKAGE_ID%</id>
-    <version>3.1.26</version>
-    <releaseNotes>
-Bug fix: AppObserver targetAppType regression.
-Bug fix: Concurrency setting missing for AppObserver's CPU FRUD type.
-AppObserver: Added support for specifying serviceIncludeList in multiple config objects for one targetApp/targetAppType.
-	</releaseNotes>
-    <authors>Microsoft</authors>
-    <license type="expression">MIT</license>
-    <requireLicenseAcceptance>true</requireLicenseAcceptance>
-    <title>Service Fabric FabricObserver Application</title>
-    <icon>icon.png</icon>
-	<readme>fonuget.md</readme>
-    <language>en-US</language>
-    <description>This package contains the FabricObserver Application, a highly configurable and extensible resource usage watchdog service that is designed to be run in Azure Service Fabric Windows and Linux clusters. This package contains the entire application and is required to build .NET Standard 2.0 observer plugins.</description>
-    <contentFiles>
-      <files include="**" buildAction="None" copyToOutput="true" />
-    </contentFiles>
-    <dependencies>
-      <group targetFramework=".NETStandard2.0" />
-    </dependencies>
-    <projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>
-    <tags>azure service-fabric fabric-observer utility watchdog-service observability</tags>
-    <copyright>© Microsoft Corporation. All rights reserved.</copyright>
-  </metadata>
-  <files>
-    <file src="**" target="contentFiles\any\any" />
-    <file src="FabricObserverPkg\Code\FabricObserver.Extensibility.dll" target="lib\netstandard2.0" />
-    <file src="%ROOT_PATH%\icon.png" target="" />
-	<file src="%ROOT_PATH%\fonuget.md" target="" />
-  </files>
+	<metadata minClientVersion="3.3.0">
+		<id>%PACKAGE_ID%</id>
+		<version>3.2.0.831</version>
+		<releaseNotes>
+- This is a relatively major release with significant changes. Many of these will be transparent to you except for the new service deployment model (removal of DefaultServices from ApplicationManifest.xml to support ARM deployment).
+- Support for ARM deployment, including "one-click" ARM deployments (Deploy to Azure button).
+- For CLI/PowerShell deployments, you must now create an instance of fabric:/FabricObserver/FabricObserver service as the last step.
+- IMPORTANT: This version requires SF runtime versions 8.0 and above and .NET Core 3.1.x. Note that 3.2.0.831 will be the last major release of FO to support .NET Core 3.1, which will hit its EOL in 12/2022.
+- AppObserver now generates ServiceHealthReport health reports, which will put service entities into Error or Warning depending upon your configuration thresholds. There are breaking changes to FO's health reporter API. See below.
+- ObserverLogger.LogEtw now supports TelemetryData type (so, you don't have to duplicate its members in an anonymous type).
+- ObserverHealthReporter no longer takes a FabricClient parameter (breaking change).
+- HealthReport.ReportType has been replaced with HealthReport.EntityType (breaking change). HealthReportType enum no longer exists. It has been replaced with EntityType enum.
+- Substantial performance improvements and protection against most issues related to Windows Defender process scanning behavior.
+- Several code improvements and some refactorings or complete rewrites.
+- Some important bug fixes.
+		</releaseNotes>
+		<authors>Microsoft</authors>
+		<license type="expression">MIT</license>
+		<requireLicenseAcceptance>true</requireLicenseAcceptance>
+		<title>Service Fabric FabricObserver Application</title>
+		<icon>icon.png</icon>
+		<readme>fonuget.md</readme>
+		<language>en-US</language>
+		<description>This package contains the FabricObserver Application (built for .NET Core 3.1, requires SF Runtime 8.0 and above), a highly configurable and extensible resource usage watchdog service that is designed to be run in Azure Service Fabric Windows and Linux clusters. This package contains the entire application and can be used to build .NET Standard 2.0 observer plugins.</description>
+		<contentFiles>
+			<files include="**" buildAction="None" copyToOutput="true" />
+		</contentFiles>
+		<dependencies>
+			<group targetFramework="netstandard2.0"></group>
+			<group targetFramework="netcoreapp3.1">
+				<dependency id="Microsoft.Win32.Registry" version="5.0.0" />
+				<dependency id="Microsoft.ServiceFabric.Services" version="5.0.516" />
+				<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="5.0.0" />
+				<dependency id="Microsoft.ApplicationInsights" version="2.20.0" />
+				<dependency id="Microsoft.ApplicationInsights.DependencyCollector" version="2.20.0" />
+				<dependency id="Microsoft.ApplicationInsights.NLogTarget" version="2.20.0" />
+				<dependency id="Microsoft.ApplicationInsights.PerfCounterCollector" version="2.20.0" />
+				<dependency id="Microsoft.ApplicationInsights.WindowsServer" version="2.20.0" />
+				<dependency id="Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel" version="2.20.0" />
+				<dependency id="Microsoft.AspNet.WebApi.Client" version="5.2.9" />
+				<dependency id="Microsoft.Extensions.DependencyInjection" version="5.0.2" />
+				<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="5.0.0" />
+				<dependency id="NLog" version="5.0.0" />
+			</group>
+		</dependencies>
+		<projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>
+		<tags>azure service-fabric fabric-observer utility watchdog-service observability</tags>
+		<copyright>© Microsoft Corporation. All rights reserved.</copyright>
+	</metadata>
+	<files>
+		<file src="**" target="contentFiles\any\any" />
+		<file src="FabricObserverPkg\Code\FabricObserver.dll" target="lib\netcoreapp3.1" />
+		<file src="FabricObserverPkg\Code\FabricObserver.Extensibility.dll" target="lib\netstandard2.0" />
+		<file src="FabricObserverPkg\Code\TelemetryLib.dll" target="lib\netstandard2.0" />
+		<file src="%ROOT_PATH%\icon.png" target="" />
+		<file src="%ROOT_PATH%\fonuget.md" target="" />
+	</files>
 </package>

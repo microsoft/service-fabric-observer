@@ -41,23 +41,5 @@
     "serviceIncludeList": "MyActorService",
     "cpuWarningLimitPercent": 20,
     "memoryWarningLimitMb": 800
-  },
-  {
-    "targetApp": "GettingStartedApplication",
-    "serviceIncludeList": "StatefulBackendService",
-    "cpuWarningLimitPercent": 0.05,
-    "memoryWarningLimitMb": 700
-  },
-  {
-    "targetApp": "Voting",
-    "serviceExcludeList": "VotingWeb",
-    "cpuWarningLimitPercent": 0.05,
-    "memoryWarningLimitMb": 1500
-  },
-  {
-    "targetApp": "Foo",
-    "serviceIncludeList": "FooService",
-    "cpuWarningLimitPercent": 0.05,
-    "memoryWarningLimitMb": 500
   }
 ]

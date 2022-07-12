@@ -6,7 +6,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Fabric;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,13 +30,13 @@ namespace FabricObserver.Observers.Utilities
             return (totalMem, memUsed, Math.Round(pctUsed, 2));
         }
 
-        public override int GetActiveTcpPortCount(int processId = -1, ServiceContext context = null)
+        public override int GetActiveTcpPortCount(int processId = -1, string configPath = null)
         {
-            int count = GetPortCount(processId, predicate: line => true, context);
+            int count = GetPortCount(processId, predicate: line => true, configPath);
             return count;
         }
 
-        public override int GetActiveEphemeralPortCount(int processId = -1, ServiceContext context = null)
+        public override int GetActiveEphemeralPortCount(int processId = -1, string configPath = null)
         {
             (int lowPort, int highPort) = TupleGetDynamicPortRange();
 
@@ -45,9 +44,31 @@ namespace FabricObserver.Observers.Utilities
             {
                 int port = GetPortFromNetstatOutput(line);
                 return port >= lowPort && port <= highPort;
-            }, context);
+            }, configPath);
 
             return count;
+        }
+
+        public override double GetActiveEphemeralPortCountPercentage(int processId = -1, string configPath = null)
+        {
+            double usedPct = 0.0;
+            int count = GetActiveEphemeralPortCount(processId, configPath);
+
+            // Something went wrong.
+            if (count <= 0)
+            {
+                return usedPct;
+            }
+
+            (int LowPort, int HighPort) = TupleGetDynamicPortRange();
+            int totalEphemeralPorts = HighPort - LowPort;
+
+            if (totalEphemeralPorts > 0)
+            {
+                usedPct = (double)(count * 100) / totalEphemeralPorts;
+            }
+           
+            return usedPct;
         }
 
         public override (int LowPort, int HighPort) TupleGetDynamicPortRange()
@@ -107,7 +128,7 @@ namespace FabricObserver.Observers.Utilities
             return osInfo;
         }
 
-        private static int GetPortCount(int processId, Predicate<string> predicate, ServiceContext context = null)
+        private static int GetPortCount(int processId, Predicate<string> predicate, string configPath = null)
         {
             string processIdStr = processId == -1 ? string.Empty : " " + processId + "/";
 
@@ -122,21 +143,20 @@ namespace FabricObserver.Observers.Utilities
 
             if (processId > -1)
             {
-                if (context == null)
+                if (string.IsNullOrWhiteSpace(configPath))
                 {
                     return -1;
                 }
 
                 // We need the full path to the currently deployed FO CodePackage, which is were our 
                 // proxy binary lives, which is used for elevated netstat call.
-                string path = context.CodePackageActivationContext.GetCodePackageObject("Code").Path;
                 arg = string.Empty;
 
                 // This is a proxy binary that uses Capabilities to run netstat -tpna with elevated privilege.
                 // FO runs as sfappsuser (SF default, Linux normal user), which can't run netstat -tpna. 
                 // During deployment, a setup script is run (as root user)
                 // that adds capabilities to elevated_netstat program, which will *only* run (execv) "netstat -tpna".
-                bin = $"{path}/elevated_netstat";
+                bin = $"{configPath}/elevated_netstat";
             }
 
             var startInfo = new ProcessStartInfo

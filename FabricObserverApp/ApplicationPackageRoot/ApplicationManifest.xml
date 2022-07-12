@@ -1,13 +1,16 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<!-- You can use the XML diff/merge tool XmlDiffPatchSF (located in this repo) to make upgrading your base configurations to the latest version much easier. -->
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.1.26" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<!-- You can try the XML diff/merge tool XmlDiffPatchSF (located in this repo) to make upgrading your base configurations to the latest version much easier. -->
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.0.831" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
-    <Parameter Name="FabricObserver_InstanceCount" DefaultValue="-1" />
     <!-- ObserverManager Configuration -->
     <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
-    <Parameter Name="ObserverManagerObserverExecutionTimeout" DefaultValue="3600" />
+    <Parameter Name="ObserverManagerObserverExecutionTimeoutSeconds" DefaultValue="3600" />
     <Parameter Name="ObserverManagerEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="ObserverManagerEnableETWProvider" DefaultValue="true" />
+    <!-- You only need to set this if you want to use a different EventSource provider name than the default, FabricObserverETWProvider.
+         This is primarily useful for scenarios where you have multiple instances of FO running on a node and you want to ensure that each instance writes 
+         ETW event data to different named sinks. This is more of an advanced scenario. In general, just leave this blank. -->
+    <Parameter Name="ObserverManagerETWProviderName" DefaultValue="" />
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
     <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="true" />
     <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
@@ -39,7 +42,7 @@
     <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
     <!-- ETW - Custom EventSource Tracing -->
-    <Parameter Name="AppObserverEnableEtw" DefaultValue="false" />
+    <Parameter Name="AppObserverEnableEtw" DefaultValue="true" />
     <Parameter Name="AzureStorageUploadObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="ContainerObserverEnableEtw" DefaultValue="false" />
@@ -108,21 +111,24 @@
     <!-- Time window in which max dumps per process, per observed metric can occur. See AppObserverMaxProcessDumps. -->
     <Parameter Name="AppObserverMaxDumpsTimeWindow" DefaultValue="04:00:00" />
     <!-- Concurrency/Parallelism Support.
-         Note: If you do not monitor several services, then enabling this is not super useful. This will only add value (substantial) on machines with capable hardware (>= 4 logical procs). -->
+         Note: If you do not monitor 50, 100, or even 1000 or more services, then enabling this is not super useful. This will only add any value (substantial) on machines with capable hardware (>= 8 logical processors).
+         If you do run on capable hardware and want AppObserver to complete a run faster than at sequential speed, then enable this. You can control the level of concurrency by setting the AppObserverMaxConcurrentTasks
+         setting. -->
     <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
     <!-- The default value is 1/4 of detected logical processors (LPs). This would mean given 20 LPs, the number of threads that will be created will be at least 5 (and seldom more than that), if possible.
          You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
-         eating CPU and Memory to complete the parallelized monitoring on a node with lots of services (>= 100). The impact of parallelization on nodes with less than 100 services is minimal.
+         eating some additional CPU and Memory to complete the parallelized monitoring on a node with lots of services (>= 100). The impact of parallelization on nodes with less than 100 services is minimal.
          Please test and choose a value that suits your needs or simply leave this unset and go with the default. Please see Observers.md for more information. -->
     <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
     <!-- KVS LVID Usage Monitoring - Windows-only.
          NOTE: If you monitor stateful Actor services, then you should set this to true.
          This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
     <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
-    <!-- Process Working set type. 
+    <!-- Process Working set type for AppObserver to monitor. 
          Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). 
-         NOTE: If you have *several* service processes of the **same name**, this feature will add *significant* processing time (and CPU usage) to AppObserver. 
-         In that case, set this to false and the Full Working set will be measured (Private + Shared), computed using a native API call (fast). -->
+         NOTE: If you have *several* service processes of the **same name**, this feature will add *significant* time-to-completion and increased CPU usage to AppObserver. 
+         In the case where you are monitoring 100s of same-named service processes, you should set this to false and monitor Full Working set (Private + Shared), 
+         which will be computed using NativeMethods.GetProcessMemoryInfo function (very fast). -->
     <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
@@ -152,7 +158,7 @@
     <Parameter Name="FabricSystemObserverResourceUsageDataCapacity" DefaultValue="" />
     <!-- KVS LVID Usage Monitoring - Windows-only.
          This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
-    <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="false" />
+    <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="true" />
     <Parameter Name="FabricSystemObserverMonitorPrivateWorkingSet" DefaultValue="true" />
     <!-- FabricSystemObserver Warning/Error Thresholds -->
     <Parameter Name="FabricSystemObserverCpuErrorLimitPercent" DefaultValue="" />
@@ -215,7 +221,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.1.26" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.2.0.831" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -230,7 +236,7 @@
             <Parameter Name="EnableVerboseLogging" Value="[AppObserverEnableVerboseLogging]" />
             <Parameter Name="MonitorDuration" Value="[AppObserverMonitorDuration]" />
             <Parameter Name="RunInterval" Value="[AppObserverRunInterval]" />
-            <Parameter Name="AppObserverDataFileName" Value="[AppObserverConfigurationFile]" />
+            <Parameter Name="ConfigurationFileName" Value="[AppObserverConfigurationFile]" />
             <Parameter Name="MonitorPrivateWorkingSet" Value="[AppObserverMonitorPrivateWorkingSet]" />
             <Parameter Name="ClusterOperationTimeoutSeconds" Value="[AppObserverClusterOperationTimeoutSeconds]" />
             <Parameter Name="UseCircularBuffer" Value="[AppObserverUseCircularBuffer]" />
@@ -305,7 +311,7 @@
             <Parameter Name="EnableEtw" Value="[NetworkObserverEnableEtw]" />
             <Parameter Name="EnableVerboseLogging" Value="[NetworkObserverEnableVerboseLogging]" />
             <Parameter Name="RunInterval" Value="[NetworkObserverRunInterval]" />
-            <Parameter Name="NetworkObserverDataFileName" Value="[NetworkObserverConfigurationFile]" />
+            <Parameter Name="ConfigurationFileName" Value="[NetworkObserverConfigurationFile]" />
           </Section>
           <Section Name="NodeObserverConfiguration">
             <Parameter Name="Enabled" Value="[NodeObserverEnabled]" />
@@ -378,13 +384,14 @@
             <Parameter Name="EnableVerboseLogging" Value="[ContainerObserverEnableVerboseLogging]" />
             <Parameter Name="EnableCSVDataLogging" Value="[ContainerObserverEnableCSVDataLogging]" />
             <Parameter Name="RunInterval" Value="[ContainerObserverRunInterval]" />
-            <Parameter Name="ConfigFileName" Value="[ContainerObserverConfigurationFile]" />
+            <Parameter Name="ConfigurationFileName" Value="[ContainerObserverConfigurationFile]" />
           </Section>
           <Section Name="ObserverManagerConfiguration">
             <Parameter Name="ObserverLoopSleepTimeSeconds" Value="[ObserverManagerObserverLoopSleepTimeSeconds]" />
-            <Parameter Name="ObserverExecutionTimeout" Value="[ObserverManagerObserverExecutionTimeout]" />
+            <Parameter Name="ObserverExecutionTimeout" Value="[ObserverManagerObserverExecutionTimeoutSeconds]" />
             <Parameter Name="EnableVerboseLogging" Value="[ObserverManagerEnableVerboseLogging]" />
             <Parameter Name="EnableETWProvider" Value="[ObserverManagerEnableETWProvider]" />
+            <Parameter Name="ETWProviderName" Value="[ObserverManagerETWProviderName]" />
             <Parameter Name="EnableTelemetryProvider" Value="[ObserverManagerEnableTelemetryProvider]" />
             <Parameter Name="EnableFabricObserverOperationalTelemetry" Value="[ObserverManagerEnableOperationalFOTelemetry]" />
             <Parameter Name="ObserverFailureHealthStateLevel" Value="[ObserverManagerObserverFailureHealthStateLevel]" />
@@ -394,21 +401,12 @@
       </ConfigOverride>
     </ConfigOverrides>
     <Policies>
-      <!-- Change EntryPointType attribute value to All (or remove the EntryPointType attribute entirely) if you want to run FO as system/root user. -->
+      <!-- NOTE: On Windows and Linux, FO runs custom Setup scripts that must be run as elevated user. Do not remove this policy or change EntryPointType to Main, for example. 
+           Either leave EntryPointType as Setup and run FO as a restricted user, or set EntryPointType to All or remove EntryPointType attribute altogether to run everything 
+           as elevated user (Setup and FO service process). -->
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
     </Policies>
   </ServiceManifestImport>
-  <DefaultServices>
-    <!-- The section below creates instances of service types, when an instance of this 
-           application type is created. You can also create one or more instances of service type using the 
-           ServiceFabric PowerShell module.
-           The attribute ServiceTypeName below must match the name defined in the imported ServiceManifest.xml file. -->
-    <Service Name="FabricObserver" ServicePackageActivationMode="ExclusiveProcess">
-      <StatelessService ServiceTypeName="FabricObserverType" InstanceCount="[FabricObserver_InstanceCount]">
-        <SingletonPartition />
-      </StatelessService>
-    </Service>
-  </DefaultServices>
   <Principals>
     <Users>
       <User Name="SystemUser" AccountType="LocalSystem" />

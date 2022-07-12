@@ -193,5 +193,9 @@ namespace FabricObserver.Observers.Interfaces
             double deviation,
             IDictionary<string, string> properties,
             CancellationToken cancellationToken);
+
+        Task ReportClusterUpgradeStatusAsync(ServiceFabricUpgradeEventData eventData, CancellationToken token);
+
+        Task ReportApplicationUpgradeStatusAsync(ServiceFabricUpgradeEventData appUpgradeInfo, CancellationToken token);
     }
 }

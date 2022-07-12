@@ -3,7 +3,6 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using NLog.Filters;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -268,7 +267,7 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Clears numeric data of the current instance's Data property. Use this method versus adding calling Clear on Data as that
+        /// Clears numeric data of the current instance's Data property. Use this method versus calling Clear on Data as that
         /// won't work for ConcurrentQueue.
         /// </summary>
         public void ClearData()

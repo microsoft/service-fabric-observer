@@ -1,43 +1,45 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <ProjectGuid>{5E990052-7B55-4AF1-BCD9-48DE6EA0E547}</ProjectGuid>
-    <OutputType>Exe</OutputType>
-    <RootNamespace>ClusterObserver</RootNamespace>
-    <AssemblyName>ClusterObserver</AssemblyName>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
-    <PlatformTarget>x64</PlatformTarget>
-	<Copyright>Copyright © 2022</Copyright>
-	<Product>ClusterObserver</Product>
-	<Version>2.1.14</Version>
-	<FileVersion>2.1.14</FileVersion>
-    <!-- ***NOTE***: If deploying to SF cluster directly from Visual Studio, you must use single target RID:
+	<PropertyGroup>
+		<ProjectGuid>{5E990052-7B55-4AF1-BCD9-48DE6EA0E547}</ProjectGuid>
+		<OutputType>Exe</OutputType>
+		<RootNamespace>ClusterObserver</RootNamespace>
+		<AssemblyName>ClusterObserver</AssemblyName>
+		<TargetFramework>netcoreapp3.1</TargetFramework>
+		<PlatformTarget>x64</PlatformTarget>
+		<Copyright>Copyright © 2022</Copyright>
+		<Product>ClusterObserver</Product>
+		<Version>2.2.0.831</Version>
+		<FileVersion>2.2.0.831</FileVersion>
+		<!-- ***NOTE***: If deploying to SF cluster directly from Visual Studio, you must use single target RID:
          For Windows, use win-x64. For Linux, use linux-x64.
     <RuntimeIdentifier>win-x64</RuntimeIdentifier> -->
-    <!-- For multi-target publish (say, from Azure Pipeline build), you can use multi-target RIDs: 
+		<!-- For multi-target publish (say, from Azure Pipeline build), you can use multi-target RIDs: 
          linux-x64;win-x64. -->
-    <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <StartupObject>ClusterObserver.Program</StartupObject>
-    <Platforms>AnyCPU;x64</Platforms>
-  </PropertyGroup>
-  <ItemGroup>
-    <Compile Remove="Utilities\ClusterIdentificationUtility.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Remove="ApplicationInsights.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.17.0" />
-    <PackageReference Include="Microsoft.AspNet.WebApi.Client" Version="5.2.7" />
-    <PackageReference Include="Microsoft.ServiceFabric" Version="7.2.452" />
-    <PackageReference Include="Microsoft.ServiceFabric.Services" Version="4.2.452" />
-    <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-    <PackageReference Include="NLog" Version="4.7.10" />
-    <PackageReference Include="Octokit" Version="0.50.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />
-  </ItemGroup>
+		<RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
+		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<StartupObject>ClusterObserver.Program</StartupObject>
+		<Platforms>AnyCPU;x64</Platforms>
+	</PropertyGroup>
+	<ItemGroup>
+		<Compile Remove="Utilities\ClusterIdentificationUtility.cs" />
+	</ItemGroup>
+	<ItemGroup>
+		<None Remove="ApplicationInsights.config" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.2" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
+		<PackageReference Include="Microsoft.ApplicationInsights" Version="2.20.0" />
+		<PackageReference Include="Microsoft.AspNet.WebApi.Client" Version="5.2.9" />
+		<PackageReference Include="Microsoft.ServiceFabric.Services" Version="5.0.516" />
+		<PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+		<PackageReference Include="Octokit" Version="0.51.0" />
+		<PackageReference Include="McMaster.NETCore.Plugins" Version="1.4.0" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\FabricObserver.Extensibility\FabricObserver.Extensibility.csproj" />
+		<ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />
+	</ItemGroup>
 </Project>

@@ -88,7 +88,7 @@ namespace FabricObserver.Observers.MachineInfoModel
         }
 
         private ConfigurationSettings configurationSettings;
-        private StatelessServiceContext serviceContext;
+        private readonly StatelessServiceContext serviceContext;
     }
 }
 

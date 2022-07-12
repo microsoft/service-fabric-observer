@@ -78,7 +78,6 @@ namespace FabricObserver.TelemetryLib
                     {
                         using (var xreader = XmlReader.Create(sreader, new XmlReaderSettings { XmlResolver = null }))
                         {
-                            // TODO: This is not necessary as the only caller is a property getter, where a lock is already in place around the call to this function.
                             lock (_lock2)
                             {
                                 clusterManifestXdoc?.Load(xreader);

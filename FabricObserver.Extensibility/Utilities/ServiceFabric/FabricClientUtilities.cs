@@ -3,11 +3,13 @@ using FabricObserver.Observers.Utilities;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Description;
 using System.Fabric.Query;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,34 +20,98 @@ namespace FabricObserver.Utilities.ServiceFabric
     /// </summary>
     public class FabricClientUtilities
     {
-        private readonly FabricClient _fabricClient;
-        private readonly ServiceContext _serviceContext;
-        private readonly ParallelOptions _parallelOptions;
+        private readonly ParallelOptions parallelOptions;
+        private readonly string nodeName;
 
-        public FabricClientUtilities(FabricClient fabricClient, ServiceContext serviceContext)
+        // This is the FC singleton that will be used for the lifetime of this FO instance.
+        private static FabricClient fabricClient = null;
+        private static readonly object lockObj = new object();
+        private readonly bool isWindows;
+
+        /// <summary>
+        /// The singleton FabricClient instance that is used throughout FabricObserver.
+        /// </summary>
+        public static FabricClient FabricClientSingleton
         {
-            _fabricClient = fabricClient;
-            _serviceContext = serviceContext;
+            get
+            {
+                if (fabricClient == null)
+                {
+                    lock (lockObj)
+                    {
+                        if (fabricClient == null)
+                        {
+                            fabricClient = new FabricClient();
+                            fabricClient.Settings.HealthReportSendInterval = TimeSpan.FromSeconds(1);
+                            fabricClient.Settings.HealthReportRetrySendInterval = TimeSpan.FromSeconds(3);
+                            return fabricClient;
+                        }
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        // This call with throw an ObjectDisposedException if fabricClient was disposed by, say, a plugin or if the runtime
+                        // disposed of it for some random (unlikely..) reason. This is just a test to ensure it is not in a disposed state.
+                        if (fabricClient.Settings.HealthReportSendInterval > TimeSpan.MinValue)
+                        {
+                            return fabricClient;
+                        }
+                    }
+                    catch (Exception e) when (e is ObjectDisposedException || e is InvalidComObjectException)
+                    {
+                        lock (lockObj)
+                        {
+                            fabricClient = null;
+                            fabricClient = new FabricClient();
+                            fabricClient.Settings.HealthReportSendInterval = TimeSpan.FromSeconds(1);
+                            fabricClient.Settings.HealthReportRetrySendInterval = TimeSpan.FromSeconds(3);
+                            return fabricClient;
+                        }
+                    }
+                }
+
+                return fabricClient;
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="NodeName">Name of the Fabric node FabricObserver instance is running on.</param>
+        public FabricClientUtilities(string nodeName = null)
+        {
             int maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
-            _parallelOptions = new ParallelOptions
+            parallelOptions = new ParallelOptions
             {
                 MaxDegreeOfParallelism = Environment.ProcessorCount >= 4 ? maxDegreeOfParallelism : 1,
                 TaskScheduler = TaskScheduler.Default
             };
+
+            if (string.IsNullOrEmpty(nodeName))
+            {
+                this.nodeName = FabricRuntime.GetNodeContext().NodeName;
+            }
+            else
+            {
+                this.nodeName = nodeName;
+            }
+
+            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
 
         /// <summary>
         /// Gets a list of all deployed applications on the current (local) node (the Fabric node on which this function is called).
         /// </summary>
         /// <param name="token">CancellationToken instance</param>
+        /// <param name="nodeName">Optional Fabric node name. By default, the local node where this code is running is the target.</param>
         /// <param name="appNameFilter">Optional ApplicatioName filter Uri</param>
         /// <returns>A List of DeployedApplication objects representing all deployed apps on the local node.</returns>
-        public async Task<List<DeployedApplication>> GetAllLocalDeployedAppsAsync(CancellationToken token, Uri appNameFilter = null)
+        public async Task<List<DeployedApplication>> GetAllDeployedAppsAsync(CancellationToken token, string nodeName = null, Uri appNameFilter = null)
         {
-            string nodeName = _serviceContext.NodeContext.NodeName;
-
             // Get info for 50 apps at a time that are deployed to the same node this FO instance is running on.
-            var deployedAppQueryDesc = new PagedDeployedApplicationQueryDescription(nodeName)
+            var deployedAppQueryDesc = new PagedDeployedApplicationQueryDescription(!string.IsNullOrEmpty(nodeName) ? nodeName : this.nodeName)
             {
                 IncludeHealthState = false,
                 MaxResults = 50,
@@ -53,11 +119,11 @@ namespace FabricObserver.Utilities.ServiceFabric
             };
 
             var appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                        () => _fabricClient.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                    deployedAppQueryDesc,
-                                                    TimeSpan.FromSeconds(120),
-                                                    token),
-                                        token);
+                                    () => FabricClientSingleton.QueryManager.GetDeployedApplicationPagedListAsync(
+                                            deployedAppQueryDesc,
+                                            TimeSpan.FromSeconds(120),
+                                            token),
+                                    token);
 
             // DeployedApplicationList is a wrapper around List, but does not support AddRange.. Thus, cast it ToList and add to the temp list, then iterate through it.
             // In reality, this list will never be greater than, say, 1000 apps deployed to a node, but it's a good idea to be prepared since AppObserver supports
@@ -72,15 +138,13 @@ namespace FabricObserver.Utilities.ServiceFabric
 
                 deployedAppQueryDesc.ContinuationToken = appList.ContinuationToken;
                 appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                        () => _fabricClient.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                    deployedAppQueryDesc,
-                                                    TimeSpan.FromSeconds(120),
-                                                    token),
-                                        token);
+                                    () => FabricClientSingleton.QueryManager.GetDeployedApplicationPagedListAsync(
+                                            deployedAppQueryDesc,
+                                            TimeSpan.FromSeconds(120),
+                                            token),
+                                    token);
 
                 apps.AddRange(appList.ToList());
-
-                // TODO: Add random wait (ms) impl, include cluster size in calc.
                 await Task.Delay(250, token);
             }
 
@@ -90,37 +154,75 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// <summary>
         /// Gets a list of all replicas (stateful and stateless) on the local node.
         /// </summary>
+        /// <param name="includeChildProcesses">Whether or not to include the desendant processes of the service replica's host process.</param>
+        /// <param name="nodeName">Optional. If specified, the Fabric node to get deployed replicas. By default, the local node where this code is running is the target.</param>
         /// <param name="token">CancellationToken instance.</param>
-        /// <returns>A List of ReplicaOrInstanceMonitoringInfo objects representing all replicas in any status (consumer should filter Status per need) on the local node.</returns>
-        public async Task<List<ReplicaOrInstanceMonitoringInfo>> GetAllLocalReplicasOrInstances(CancellationToken token)
+        /// <returns>A List of ReplicaOrInstanceMonitoringInfo objects representing all replicas in any status (consumer should filter Status per need) on the local (or specified) node.</returns>
+        public async Task<List<ReplicaOrInstanceMonitoringInfo>> GetAllDeployedReplicasOrInstances(bool includeChildProcesses, CancellationToken token, string nodeName = null)
         {
-            string nodeName = _serviceContext.NodeContext.NodeName;
             List<ReplicaOrInstanceMonitoringInfo> repList = new List<ReplicaOrInstanceMonitoringInfo>();
-            List<DeployedApplication> appList = await GetAllLocalDeployedAppsAsync(token);
+            List<DeployedApplication> appList = await GetAllDeployedAppsAsync(token);
+            NativeMethods.SafeObjectHandle handleToSnapshot = null;
 
-            foreach (DeployedApplication app in appList)
+            if (isWindows && includeChildProcesses)
             {
-                token.ThrowIfCancellationRequested();
-
-                var deployedReplicaList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                   () => _fabricClient.QueryManager.GetDeployedReplicaListAsync(nodeName, app.ApplicationName),
-                                                   token);
-
-                repList.AddRange(GetInstanceOrReplicaMonitoringList(app.ApplicationName, deployedReplicaList, token));
+                handleToSnapshot = NativeMethods.CreateToolhelp32Snapshot((uint)NativeMethods.CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
             }
 
-            return repList;
+            try
+            {
+                foreach (DeployedApplication app in appList)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    var deployedReplicaList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                                       () => FabricClientSingleton.QueryManager.GetDeployedReplicaListAsync(
+                                                                !string.IsNullOrWhiteSpace(nodeName) ? nodeName : this.nodeName, app.ApplicationName),
+                                                       token);
+
+                    repList.AddRange(
+                            GetInstanceOrReplicaMonitoringList(
+                                app.ApplicationName, 
+                                app.ApplicationTypeName, 
+                                deployedReplicaList,
+                                includeChildProcesses,
+                                handleToSnapshot, 
+                                token));
+                }
+
+                return repList.Distinct().ToList();
+            }
+            finally
+            {
+                if (isWindows && includeChildProcesses)
+                {
+                    handleToSnapshot?.Dispose();
+                    handleToSnapshot = null;
+                }
+            }
         }
 
+        /// <summary>
+        /// Returns a list of ReplicaOrInstanceMonitoringInfo objects that will contain child process information if handleToSnapshot is provided.
+        /// </summary>
+        /// <param name="appName">Name of the target application.</param>
+        /// <param name="applicationTypeName">Type name of the target application</param>
+        /// <param name="deployedReplicaList">List of deployed replicas.</param>
+        /// <param name="handleToSnapshot">Handle to process snapshot.</param>
+        /// <param name="token">Cancellation Token</param>
+        /// <returns></returns>
         private List<ReplicaOrInstanceMonitoringInfo> GetInstanceOrReplicaMonitoringList(
-                                                            Uri appName,
-                                                            DeployedServiceReplicaList deployedReplicaList,
-                                                            CancellationToken token)
+                                                        Uri appName,
+                                                        string applicationTypeName,
+                                                        DeployedServiceReplicaList deployedReplicaList,
+                                                        bool includeChildProcesses,
+                                                        NativeMethods.SafeObjectHandle handleToSnapshot,
+                                                        CancellationToken token)
         {
             ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList = new ConcurrentQueue<ReplicaOrInstanceMonitoringInfo>();
-            _parallelOptions.CancellationToken = token;
+            parallelOptions.CancellationToken = token;
 
-            _ = Parallel.For(0, deployedReplicaList.Count, _parallelOptions, (i, state) =>
+            _ = Parallel.For(0, deployedReplicaList.Count, parallelOptions, (i, state) =>
             {
                 token.ThrowIfCancellationRequested();
 
@@ -134,6 +236,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                         replicaInfo = new ReplicaOrInstanceMonitoringInfo
                         {
                             ApplicationName = appName,
+                            ApplicationTypeName = applicationTypeName,
                             HostProcessId = statefulReplica.HostProcessId,
                             ReplicaOrInstanceId = statefulReplica.ReplicaId,
                             PartitionId = statefulReplica.Partitionid,
@@ -141,17 +244,21 @@ namespace FabricObserver.Utilities.ServiceFabric
                             ServiceKind = statefulReplica.ServiceKind,
                             ServiceName = statefulReplica.ServiceName,
                             ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
+                            ServicePackageActivationMode = string.IsNullOrWhiteSpace(statefulReplica.ServicePackageActivationId) ?
+                                ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
                             ReplicaStatus = statefulReplica.ReplicaStatus
                         };
 
                         /* In order to provide accurate resource usage of an SF service process we need to also account for
                         any processes (children) that the service process (parent) created/spawned. */
-
-                        List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId);
-
-                        if (childPids != null && childPids.Count > 0)
+                        if (includeChildProcesses && !handleToSnapshot.IsInvalid)
                         {
-                            replicaInfo.ChildProcesses = childPids;          
+                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, handleToSnapshot);
+
+                            if (childPids != null && childPids.Count > 0)
+                            {
+                                replicaInfo.ChildProcesses = childPids;
+                            }
                         }
 
                         break;
@@ -161,6 +268,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                         replicaInfo = new ReplicaOrInstanceMonitoringInfo
                         {
                             ApplicationName = appName,
+                            ApplicationTypeName = applicationTypeName,
                             HostProcessId = statelessInstance.HostProcessId,
                             ReplicaOrInstanceId = statelessInstance.InstanceId,
                             PartitionId = statelessInstance.Partitionid,
@@ -168,21 +276,26 @@ namespace FabricObserver.Utilities.ServiceFabric
                             ServiceKind = statelessInstance.ServiceKind,
                             ServiceName = statelessInstance.ServiceName,
                             ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
+                            ServicePackageActivationMode = string.IsNullOrWhiteSpace(statelessInstance.ServicePackageActivationId) ?
+                                ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
                             ReplicaStatus = statelessInstance.ReplicaStatus
                         };
 
-                        List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId);
-
-                        if (childPids != null && childPids.Count > 0)
+                        if (includeChildProcesses && !handleToSnapshot.IsInvalid)
                         {
-                            replicaInfo.ChildProcesses = childPids;
+                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, handleToSnapshot);
+
+                            if (childPids != null && childPids.Count > 0)
+                            {
+                                replicaInfo.ChildProcesses = childPids;
+                            }
                         }
 
                         break;
-                    }
+                    }    
                 }
 
-                if (replicaInfo != null)
+                if (replicaInfo?.HostProcessId > 0)
                 {
                     replicaMonitoringList.Enqueue(replicaInfo);
                 }
@@ -195,7 +308,7 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// Builds a List of tuple (string ServiceName, string ProcName, int Pid) from a List of ReplicaOrInstanceMonitoringInfo.
         /// </summary>
         /// <param name="repOrInsts">List of ReplicaOrInstanceMonitoringInfo</param>
-        /// <returns>A List of tuple (string ServiceName, string ProcName, int Pid) representing all services supplied in the ReplicaOrInstanceMonitoringInfo instance.</returns>
+        /// <returns>A List of tuple (string ServiceName, string ProcName, int Pid) representing all services supplied in the ReplicaOrInstanceMonitoringInfo instance, including child processes of each service, if any.</returns>
         public List<(string ServiceName, string ProcName, int Pid)> GetServiceProcessInfo(List<ReplicaOrInstanceMonitoringInfo> repOrInsts)
         {
             List<(string ServiceName, string ProcName, int Pid)> pids = new List<(string ServiceName, string ProcName, int Pid)>();
@@ -208,8 +321,17 @@ namespace FabricObserver.Utilities.ServiceFabric
                     {
                         pids.Add((repOrInst.ServiceName.OriginalString, proc.ProcessName, (int)repOrInst.HostProcessId));
                     }
+
+                    // Child processes?
+                    if (repOrInst.ChildProcesses != null && repOrInst.ChildProcesses.Count > 0)
+                    {
+                        foreach (var (procName, Pid) in repOrInst.ChildProcesses)
+                        {
+                            pids.Add((repOrInst.ServiceName.OriginalString, procName, Pid));
+                        }
+                    }
                 }
-                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
                 {
                     // process with supplied pid may not be running..
                     continue;

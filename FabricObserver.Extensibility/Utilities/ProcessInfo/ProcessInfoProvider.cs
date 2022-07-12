@@ -6,8 +6,8 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Fabric;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -47,15 +47,19 @@ namespace FabricObserver.Observers.Utilities
             get; 
         } = new Logger("Utilities");
 
-        public abstract float GetProcessWorkingSetMb(int processId, string procName = null, bool getPrivateWorkingSet = false);
+        public abstract float GetProcessWorkingSetMb(int processId, string procName, CancellationToken token, bool getPrivateWorkingSet = false);
 
-        public abstract List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid);
+        public abstract List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot = null);
 
-        public abstract float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null);
+        public abstract float GetProcessAllocatedHandles(int processId, string configPath = null);
 
-        public abstract double GetProcessKvsLvidsUsagePercentage(string procName, int procId = -1);
+        public abstract double GetProcessKvsLvidsUsagePercentage(string procName, CancellationToken token, int procId = -1);
 
-        // This is supported on both Linux and Windows.
+        /// <summary>
+        /// Gets the number of execution threads owned by the process of supplied process id.
+        /// </summary>
+        /// <param name="processId">Id of the process.</param>
+        /// <returns>Number of threads owned by specified process.</returns>
         public static int GetProcessThreadCount(int processId)
         {
             try

@@ -1,0 +1,117 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "clusterName": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "The Service Fabric cluster resource name from the Azure resource group. Example: servicefabriccluster123"
+      }
+    },
+    "applicationTypeVersionClusterObserver": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Provide the app version number of ClusterObserver. This must be identical with the version provided for the parameter appPackageUrl. Example: '2.2.0.831'"
+      }
+    },
+    "packageUrlClusterObserver": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "This has to be a public accessible URL for the sfpkg file which contains the ClusterObserver app package. Example: https://github.com/microsoft/service-fabric-observer/releases/download/51751968/Microsoft.ServiceFabricApps.ClusterObserver.Windows.SelfContained.2.2.0.831.sfpkg"
+      }
+    }
+  },
+  "variables": {
+    "applicationTypeNameClusterObserver": "ClusterObserverType",
+    "applicationNameClusterObserver": "ClusterObserverApplication",
+    "serviceNameClusterObserver": "[concat(variables('applicationNameClusterObserver'), '~ClusterObserverService')]",
+    "serviceTypeNameClusterObserver": "ClusterObserverType",
+    "sfrpApiVersion": "2021-06-01"
+  },
+  "resources": [
+    {
+      "apiVersion": "[variables('sfrpApiVersion')]",
+      "type": "Microsoft.ServiceFabric/clusters/applicationTypes",
+      "name": "[concat(parameters('clusterName'), '/', variables('applicationTypeNameClusterObserver'))]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "provisioningState": "Default"
+      }
+    },
+    {
+      "apiVersion": "[variables('sfrpApiVersion')]",
+      "type": "Microsoft.ServiceFabric/clusters/applicationTypes/versions",
+      "name": "[concat(parameters('clusterName'), '/', variables('applicationTypeNameClusterObserver'), '/', parameters('applicationTypeVersionClusterObserver'))]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.ServiceFabric/clusters/', parameters('clusterName'), '/applicationTypes/', variables('applicationTypeNameClusterObserver'))]"
+      ],
+      "properties": {
+        "provisioningState": "Default",
+        "appPackageUrl": "[parameters('packageUrlClusterObserver')]"
+      }
+    },
+    {
+      "apiVersion": "[variables('sfrpApiVersion')]",
+      "type": "Microsoft.ServiceFabric/clusters/applications",
+      "name": "[concat(parameters('clusterName'), '/', variables('applicationNameClusterObserver'))]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.ServiceFabric/clusters/', parameters('clusterName'), '/applicationTypes/', variables('applicationTypeNameClusterObserver'), '/versions/', parameters('applicationTypeVersionClusterObserver'))]"
+      ],
+      "properties": {
+        "provisioningState": "Default",
+        "typeName": "[variables('applicationTypeNameClusterObserver')]",
+        "typeVersion": "[parameters('applicationTypeVersionClusterObserver')]",
+        "parameters": {
+          "MonitorRepairJobs": "true",
+          "ClusterObserverRunInterval": "00:15:00"
+        },
+        "upgradePolicy": {
+          "upgradeReplicaSetCheckTimeout": "01:00:00.0",
+          "forceRestart": "false",
+          "rollingUpgradeMonitoringPolicy": {
+            "healthCheckWaitDuration": "00:02:00.0",
+            "healthCheckStableDuration": "00:05:00.0",
+            "healthCheckRetryTimeout": "00:10:00.0",
+            "upgradeTimeout": "01:00:00.0",
+            "upgradeDomainTimeout": "00:20:00.0"
+          },
+          "applicationHealthPolicy": {
+            "considerWarningAsError": "false",
+            "maxPercentUnhealthyDeployedApplications": "50",
+            "defaultServiceTypeHealthPolicy": {
+              "maxPercentUnhealthyServices": "50",
+              "maxPercentUnhealthyPartitionsPerService": "50",
+              "maxPercentUnhealthyReplicasPerPartition": "50"
+            }
+          }
+        }
+      }
+    },
+    {
+      "apiVersion": "[variables('sfrpApiVersion')]",
+      "type": "Microsoft.ServiceFabric/clusters/applications/services",
+      "name": "[concat(parameters('clusterName'), '/', variables('applicationNameClusterObserver'), '/', variables('serviceNameClusterObserver'))]",
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.ServiceFabric/clusters/', parameters('clusterName'), '/applications/', variables('applicationNameClusterObserver'))]"
+      ],
+      "properties": {
+        "provisioningState": "Default",
+        "serviceKind": "Stateless",
+        "serviceTypeName": "[variables('serviceTypeNameClusterObserver')]",
+        "instanceCount": "1",
+        "partitionDescription": {
+          "partitionScheme": "Singleton"
+        },
+        "correlationScheme": [],
+        "serviceLoadMetrics": [],
+        "servicePlacementPolicies": []
+      }
+    }
+  ]
+}

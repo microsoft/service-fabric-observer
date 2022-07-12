@@ -17,12 +17,13 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
+using FabricObserver.Observers.Utilities.Telemetry;
 
 namespace FabricObserver.Observers
 {
     // DiskObserver monitors logical disk states (space consumption, queue length and folder sizes) and creates Service Fabric
     // Warning or Error Node-level health reports based on settings in ApplicationManifest.xml.
-    public class DiskObserver : ObserverBase
+    public sealed class DiskObserver : ObserverBase
     {
         // Data storage containers for post run analysis.
         private List<FabricResourceUsageData<float>> DiskAverageQueueLengthData;
@@ -72,10 +73,10 @@ namespace FabricObserver.Observers
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="DiskObserver"/> class.
+        /// Creates a new instance of the type.
         /// </summary>
-        public DiskObserver(FabricClient fabricClient, StatelessServiceContext context)
-            : base(fabricClient, context)
+        /// <param name="context">The StatelessServiceContext instance.</param>
+        public DiskObserver(StatelessServiceContext context) : base(null, context)
         {
             isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
             stopWatch = new Stopwatch();
@@ -140,6 +141,18 @@ namespace FabricObserver.Observers
 
                     string id = d.Name;
 
+                    if (isWindows)
+                    {
+                        try
+                        {
+                            id = d.Name.Remove(2, 1);
+                        }
+                        catch (ArgumentException)
+                        {
+
+                        }
+                    }
+
                     // Since these live across iterations, do not duplicate them in the containing list.
                     // Disk space %.
                     if (DiskSpaceUsagePercentageData.All(data => data.Id != id) && (DiskSpacePercentErrorThreshold > 0 || DiskSpacePercentWarningThreshold > 0))
@@ -167,15 +180,9 @@ namespace FabricObserver.Observers
 
                     // It is important to check if code is running on Windows, since d.Name.Substring(0, 2) will fail on Linux for / (root) mount point.
                     // Also, this feature is not supported for Linux yet.
-                    if (isWindows)
+                    if (isWindows && (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0))
                     {
-                        if (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0)
-                        {
-                            // Warm up counter.
-                            _ = DiskUsage.GetAverageDiskQueueLength(d.Name[..2]);
-                            await Task.Delay(250);
-                            DiskAverageQueueLengthData.Find(x => x.Id == id)?.AddData(DiskUsage.GetAverageDiskQueueLength(d.Name[..2]));
-                        }
+                        DiskAverageQueueLengthData.Find(x => x.Id == id)?.AddData(DiskUsage.GetAverageDiskQueueLength(d.Name[..2]));
                     }
 
                     if (DiskSpacePercentErrorThreshold > 0 || DiskSpacePercentWarningThreshold > 0)
@@ -374,7 +381,7 @@ namespace FabricObserver.Observers
                     HealthMessage = message,
                     HealthReportTimeToLive = GetHealthReportTimeToLive(),
                     Property = $"InvalidConfigFormat({folderSizeConfig})",
-                    ReportType = HealthReportType.Node,
+                    EntityType = EntityType.Node,
                     State = ObserverManager.ObserverFailureHealthStateLevel,
                     NodeName = NodeName,
                     Observer = ObserverConstants.DiskObserverName,
@@ -387,25 +394,25 @@ namespace FabricObserver.Observers
                 if (IsTelemetryEnabled)
                 {
                     _ = TelemetryClient?.ReportHealthAsync(
-                                                $"InvalidConfigFormat",
-                                                ObserverManager.ObserverFailureHealthStateLevel,
-                                                message,
-                                                ObserverName,
-                                                Token);
+                            $"InvalidConfigFormat",
+                            ObserverManager.ObserverFailureHealthStateLevel,
+                            message,
+                            ObserverName,
+                            Token);
                 }
 
                 // ETW.
                 if (IsEtwEnabled)
                 {
                     ObserverLogger.LogEtw(
-                                    ObserverConstants.FabricObserverETWEventName,
-                                    new
-                                    {
-                                        Property = $"InvalidConfigFormat",
-                                        Level = ObserverManager.ObserverFailureHealthStateLevel,
-                                        Message = message,
-                                        ObserverName
-                                    });
+                        ObserverConstants.FabricObserverETWEventName,
+                        new
+                        {
+                            Property = $"InvalidConfigFormat",
+                            Level = ObserverManager.ObserverFailureHealthStateLevel,
+                            Message = message,
+                            ObserverName
+                        });
                 }
             }
             catch (ArgumentException)
@@ -509,10 +516,11 @@ namespace FabricObserver.Observers
                     var data = DiskSpaceUsagePercentageData[i];
 
                     ProcessResourceDataReportHealth(
-                                        data,
-                                        DiskSpacePercentErrorThreshold,
-                                        DiskSpacePercentWarningThreshold,
-                                        timeToLiveWarning);
+                        data,
+                        DiskSpacePercentErrorThreshold,
+                        DiskSpacePercentWarningThreshold,
+                        timeToLiveWarning,
+                        EntityType.Disk);
                 }
 
                 // Folder size.
@@ -535,10 +543,11 @@ namespace FabricObserver.Observers
                     }
 
                     ProcessResourceDataReportHealth(
-                                        data,
-                                        errorThreshold,
-                                        warningThreshold,
-                                        timeToLiveWarning);
+                        data,
+                        errorThreshold,
+                        warningThreshold,
+                        timeToLiveWarning,
+                        EntityType.Disk);
                 }
 
                 // User-supplied Average disk queue length thresholds from ApplicationManifest.xml. Windows only.
@@ -550,10 +559,11 @@ namespace FabricObserver.Observers
                         var data = DiskAverageQueueLengthData[i];
 
                         ProcessResourceDataReportHealth(
-                                            data,
-                                            AverageQueueLengthErrorThreshold,
-                                            AverageQueueLengthWarningThreshold,
-                                            timeToLiveWarning);
+                            data,
+                            AverageQueueLengthErrorThreshold,
+                            AverageQueueLengthWarningThreshold,
+                            timeToLiveWarning,
+                            EntityType.Disk);
                     }
                 }
 
@@ -566,7 +576,7 @@ namespace FabricObserver.Observers
                     {
                         token.ThrowIfCancellationRequested();
                         var data = DiskSpaceAvailableMbData[i];
-                        ProcessResourceDataReportHealth(data, 0, 0, timeToLiveWarning);
+                        ProcessResourceDataReportHealth(data, 0, 0, timeToLiveWarning, EntityType.Disk);
                     }
 
                     // Disk Space Total
@@ -574,7 +584,7 @@ namespace FabricObserver.Observers
                     {
                         token.ThrowIfCancellationRequested();
                         var data = DiskSpaceTotalMbData[i];
-                        ProcessResourceDataReportHealth(data, 0, 0, timeToLiveWarning);
+                        ProcessResourceDataReportHealth(data, 0, 0, timeToLiveWarning, EntityType.Disk);
                     }
                 }
 
@@ -608,8 +618,8 @@ namespace FabricObserver.Observers
             try
             {
                 if (int.TryParse(GetSettingParameterValue(
-                                    ConfigurationSectionName,
-                                    ObserverConstants.DiskObserverDiskSpacePercentError), out int diskUsedError))
+                            ConfigurationSectionName,
+                            ObserverConstants.DiskObserverDiskSpacePercentError), out int diskUsedError))
                 {
                     DiskSpacePercentErrorThreshold = diskUsedError;
                 }
@@ -617,8 +627,8 @@ namespace FabricObserver.Observers
                 Token.ThrowIfCancellationRequested();
 
                 if (int.TryParse(GetSettingParameterValue(
-                                    ConfigurationSectionName,
-                                    ObserverConstants.DiskObserverDiskSpacePercentWarning), out int diskUsedWarning))
+                            ConfigurationSectionName,
+                            ObserverConstants.DiskObserverDiskSpacePercentWarning), out int diskUsedWarning))
                 {
                     DiskSpacePercentWarningThreshold = diskUsedWarning;
                 }
@@ -626,8 +636,8 @@ namespace FabricObserver.Observers
                 Token.ThrowIfCancellationRequested();
 
                 if (int.TryParse(GetSettingParameterValue(
-                                    ConfigurationSectionName,
-                                    ObserverConstants.DiskObserverAverageQueueLengthError), out int diskCurrentQueueLengthError))
+                            ConfigurationSectionName,
+                            ObserverConstants.DiskObserverAverageQueueLengthError), out int diskCurrentQueueLengthError))
                 {
                     AverageQueueLengthErrorThreshold = diskCurrentQueueLengthError;
                 }
@@ -635,16 +645,16 @@ namespace FabricObserver.Observers
                 Token.ThrowIfCancellationRequested();
 
                 if (int.TryParse(GetSettingParameterValue(
-                                    ConfigurationSectionName,
-                                    ObserverConstants.DiskObserverAverageQueueLengthWarning), out int diskCurrentQueueLengthWarning))
+                            ConfigurationSectionName,
+                            ObserverConstants.DiskObserverAverageQueueLengthWarning), out int diskCurrentQueueLengthWarning))
                 {
                     AverageQueueLengthWarningThreshold = diskCurrentQueueLengthWarning;
                 }
 
                 // Folder size monitoring.
                 if (bool.TryParse(GetSettingParameterValue(
-                                    ConfigurationSectionName,
-                                    ObserverConstants.DiskObserverEnableFolderSizeMonitoring), out bool enableFolderMonitoring))
+                            ConfigurationSectionName,
+                            ObserverConstants.DiskObserverEnableFolderSizeMonitoring), out bool enableFolderMonitoring))
                 {
                     FolderSizeMonitoringEnabled = enableFolderMonitoring;
                     
