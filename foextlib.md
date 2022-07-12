@@ -1,4 +1,4 @@
-## FabricObserver Extensibility Library 3.2.0.831
+## FabricObserver Extensibility Library 3.2.0
 
 This .NET Standard 2.0 library is for building FabricObserver plugins, which are custom observers that extend FabricObserver's capabilities to match your needs. Each plugin is managed like a first class observer.
 
@@ -10,7 +10,9 @@ This .NET Standard 2.0 library is for building FabricObserver plugins, which are
 
 3. Write an observer plugin!
 
-    E.g., create a new class file, MyObserver.cs.
+### Steps
+
+- Create a new class file, MyObserver.cs.
 
     This is the required signature for your plugin's constructor: 
 
@@ -21,7 +23,7 @@ This .NET Standard 2.0 library is for building FabricObserver plugins, which are
     }
 ```
 
-You must implement ObserverBase's two abstract functions: 
+- Implement ObserverBase's two abstract functions: 
 
 ```C#
     public override Task ObserveAsync()
@@ -33,7 +35,7 @@ You must implement ObserverBase's two abstract functions:
     }
 ```
 
-4. Create a [PluginTypeName]Startup.cs file with this format (e.g., MyObserver is the name of your plugin class.):
+- Create a [PluginTypeName]Startup.cs file
     
 ```C#
     using System.Fabric;
@@ -54,26 +56,12 @@ You must implement ObserverBase's two abstract functions:
     }
 ```
 
-5. Build your observer project, drop the output dll and *ALL* of its dependencies, both managed and native (this is *very* important), into the Config/Data/Plugins folder in FabricObserver/PackageRoot. 
-   You can place your plugin dll and all of its dependencies in its own (*same*) folder under the Plugins directory (useful if you have multiple plugins). 
-   Again, ALL plugin dll dependencies (and their dependencies, if any) need to live in the *same* folder as the plugin dll.
+- Build, put the output dll and *ALL* of its dependencies, both managed and native (this is *very* important), into the Config/Data/Plugins folder in FabricObserver/PackageRoot. 
+  You can place your plugin dll and all of its dependencies in its own folder under the Plugins directory (useful if you have multiple plugins). 
+  Again, ALL plugin dll dependencies (and their dependencies, if any) need to live in the *same* folder as the plugin dll. Note that if FabricObserver already employs the same version of dependency dll,
+  then you can omit adding the dependency manually.
 
-6. Add a new config section for your observer in FabricObserver/PackageRoot/Config/Settings.xml (see example at bottom of that file)
-   Update ApplicationManifest.xml with Parameters if you want to support Versionless Application Parameter-only Upgrades for your plugin.
-   (Look at both FabricObserver/PackageRoot/Config/Settings.xml and FabricObserverApp/ApplicationPackageRoot/ApplicationManifest.xml for several examples of how to do this.)
+- Add a new config section for your observer in FabricObserver/PackageRoot/Config/Settings.xml (see example at bottom of that file)
+  Update ApplicationManifest.xml with Parameters if you want to support Versionless Application Parameter-only Upgrades for your plugin.
 
-7. Ship it! (Well, test it first =)
-
-
-If you want to build your own nupkg from FO source, then:
-
-Open a PowerShell console, navigate to the top level directory of the FO repo (in this example, C:\Users\me\source\repos\service-fabric-observer):
-
-```PowerShell
-cd [Path to local FO repo]
-./Build-FabricObserver
-./Build-NugetPackages
-```
-Extensibility nupkg will be located in the build output directory:
-
-[Path to local FO repo]\bin\release\FabricObserver\Nugets\Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.0.nupkg
+- Ship it! (Well, test it first =)
