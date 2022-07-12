@@ -1,7 +1,7 @@
 ### ClusterObserver 2.2.0.960
-#### Requires .net6.0+ and SF Runtime 9.0+
+#### This version requires SF Runtime >= 9.0 and targets .NET 6
 
-ClusterObserver (CO) is a stateless singleton Service Fabric .net6.0 service that runs on one node in a cluster. CO observes cluster health (aggregated) 
+ClusterObserver (CO) is a stateless singleton Service Fabric .NET 6 service that runs on one node in a cluster. CO observes cluster health (aggregated) 
 and sends telemetry when a cluster is in Error or Warning. CO shares a very small subset of FabricObserver's (FO) code. It is designed to be completely independent from FO sources, 
 but lives in this repo (and SLN) because it is very useful to have both services deployed, especially for those who want cluster-level health observation and reporting in addition to 
 the node-level user-defined resource monitoring, health event creation, and health reporting done by FO. FabricObserver is designed to generate Service Fabric health events based on user-defined resource usage Warning and Error thresholds which ClusterObserver sends to your log analytics and alerting service.
@@ -13,7 +13,7 @@ you want by implementing the IObserverTelemetryProvider interface. As stated, th
 
 The core idea is that you use the aggregated cluster error/warning/Ok health state information from ClusterObserver to fire alerts and/or trigger some other action that gets your attention and/or some SF on-call's enagement via auto-creating a support incident (and an Ok signal would mean auto-mitigate the related incident/ticket).  
 
-```As of version 2.1.15, ClusterObserver supports the FabricObserver extensibility model. This means you can extend the behavior of ClusterObserver by writing your own observer plugins just as you can do with FabricObserver.```
+```As of version 2.2.0.831, ClusterObserver supports the FabricObserver extensibility model. This means you can extend the behavior of ClusterObserver by writing your own observer plugins just as you can do with FabricObserver.```
 
 [FabricObserver plugin documentation](https://github.com/microsoft/service-fabric-observer/blob/main/Documentation/Plugins.md) applies to ClusterObserver as well. The difference, of course, is that you will copy your plugin dll and its dependencies into ClusterObserver\PackageRoot\Data folder.
 
@@ -34,7 +34,7 @@ $appParams = @{ "RunInterval" = "00:10:00"; "MaxTimeNodeStatusNotOk" = "04:00:00
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -ApplicationTypeVersion 2.1.15 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -ApplicationTypeVersion 2.2.0.960 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```
 
 ### ClusterObserver Configuration 
