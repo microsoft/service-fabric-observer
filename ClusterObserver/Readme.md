@@ -1,5 +1,5 @@
 ## ClusterObserver 2.2.0.831
-#### This version is built for .NET Core 3.1 and SF Runtime >= 8.0
+#### This version requires SF Runtime >= 8.0 and targets .NET Core 3.1
 
 ClusterObserver (CO) is a stateless singleton Service Fabric .NET Core 3.1 application that runs on one node in a cluster. CO observes cluster health (aggregated) 
 and sends telemetry when a cluster is in Error or Warning. CO shares a very small subset of FabricObserver's (FO) code. It is designed to be completely independent from FO sources, 
