@@ -20,7 +20,7 @@
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "This has to be a public accessible URL for the sfpkg file which contains the ClusterObserver app package. Example: https://github.com/microsoft/service-fabric-observer/releases/download/51751968/Microsoft.ServiceFabricApps.ClusterObserver.Windows.SelfContained.2.2.0.831.sfpkg"
+        "description": "This has to be a public accessible URL for the sfpkg file which contains the ClusterObserver app package. Example: https://github.com/microsoft/service-fabric-observer/releases/download/57635490/Microsoft.ServiceFabricApps.ClusterObserver.Windows.SelfContained.2.2.0.831.sfpkg"
       }
     }
   },
