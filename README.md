@@ -15,7 +15,7 @@ This feature is enabled by default. You can disable/enable with parameter-only, 
 Enabling this feature greatly decreases the time it takes for an observer running on capable hardware to complete monitoring. This is especially important if you monitor a large number of services.
 
 
-> FO is not an alternative to existing Monitoring and Diagnostics services. Running side-by-side with existing monitoring services, FO provides useful and timely health information for the nodes (VMs), apps, and services that make up your Service Fabric deployment. 
+> Running side-by-side with existing monitoring services, FO provides useful and timely health information for the nodes (VMs), apps, and services that make up your Service Fabric deployment. 
 
 
 [Read more about Service Fabric health monitoring](https://docs.microsoft.com/azure/service-fabric/service-fabric-health-introduction) 
