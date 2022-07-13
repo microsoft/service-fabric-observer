@@ -1,5 +1,5 @@
 ## FabricObserver 3.2.0.960
-#### This version targets .NET 6 and requires SF Runtime >= 9.0
+#### NOTE: This version targets .NET 6 and requires SF Runtime >= 9.0
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-observer%2Fnet6%2FDocumentation%2FDeployment%2Fservice-fabric-observer.json)
 
