@@ -11,9 +11,9 @@
     },
     "applicationTypeVersionFabricObserver": {
       "type": "string",
-      "defaultValue": "",
+      "defaultValue": "3.2.0.831",
       "metadata": {
-        "description": "Provide the app version number of FabricObserver. This must be identical with the version provided for the parameter appPackageUrl. Example: '3.2.0.831'"
+        "description": "Provide the app version number of FabricObserver. This must be identical to the version, 3.2.0.831, in the referenced sfpkg specified in packageUrlFabricObserver."
       }
     },
     "packageUrlFabricObserver": {
@@ -67,7 +67,7 @@
         "typeName": "[variables('applicationTypeNameFabricObserver')]",
         "typeVersion": "[parameters('applicationTypeVersionFabricObserver')]",
         "parameters": {
-          "AppObserverEnableConcurrentMonitoring": "true",
+          "AppObserverEnableChildProcessMonitoring": "true",
           "FabricSystemObserverEnabled": "true"
         },
         "upgradePolicy": {
