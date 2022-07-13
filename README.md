@@ -1,7 +1,9 @@
 ## FabricObserver 3.2.0.831
-#### This version targets .NET Core 3.1 and requires SF Runtime >= 8.0
+#### NOTE: This version targets .NET Core 3.1 and requires SF Runtime >= 8.0 
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-observer%2Fmain%2FDocumentation%2FDeployment%2Fservice-fabric-observer.json)
+
+(The [net6](https://github.com/microsoft/service-fabric-observer/tree/net6) branch houses the version for .NET 6 and SF Runtime >= 9.0)
 
 [**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a complete implementation of a production-ready, generic resource usage watchdog service written as a stateless, singleton Service Fabric .NET Core 3.1 application that 
 1. Monitors a broad range of machine resources that tend to be very important to all Service Fabric applications, like disk space consumption, CPU use, memory use, endpoint availability, ephemeral TCP port use, and app/cluster certificate health out-of-the-box.
