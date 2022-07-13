@@ -11,16 +11,16 @@
     },
     "applicationTypeVersionFabricObserver": {
       "type": "string",
-      "defaultValue": "",
+      "defaultValue": "3.2.0.960",
       "metadata": {
-        "description": "Provide the app version number of FabricObserver. This must be identical with the version provided for the parameter appPackageUrl. Example: '3.2.0.960'"
+        "description": "Provide the app version number of FabricObserver. This must be identical to the version of the SFPKG you reference in packageUrlFabricObserver."
       }
     },
     "packageUrlFabricObserver": {
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "This has to be a public accessible URL for the sfpkg file which contains the FabricObserver app package. Example: https://github.com/microsoft/service-fabric-observer/releases/download/48361039/Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained.3.2.0.960.sfpkg"
+        "description": "This has to be a public accessible URL for the sfpkg file which contains the FabricObserver app package. Example: https://github.com/microsoft/service-fabric-observer/releases/download/57648098/Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained.3.2.0.960.sfpkg"
       }
     }
   },
@@ -67,7 +67,7 @@
         "typeName": "[variables('applicationTypeNameFabricObserver')]",
         "typeVersion": "[parameters('applicationTypeVersionFabricObserver')]",
         "parameters": {
-          "AppObserverEnableConcurrentMonitoring": "true",
+          "AppObserverEnableChildProcessMonitoring": "true",
           "FabricSystemObserverEnabled": "true"
         },
         "upgradePolicy": {
