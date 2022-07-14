@@ -26,7 +26,7 @@
   },
   "variables": {
     "applicationTypeNameClusterObserver": "ClusterObserverType",
-    "applicationNameClusterObserver": "ClusterObserverApplication",
+    "applicationNameClusterObserver": "ClusterObserver",
     "serviceNameClusterObserver": "[concat(variables('applicationNameClusterObserver'), '~ClusterObserverService')]",
     "serviceTypeNameClusterObserver": "ClusterObserverType",
     "sfrpApiVersion": "2021-06-01"
