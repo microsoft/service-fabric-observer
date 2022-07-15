@@ -2,19 +2,9 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
 	<metadata minClientVersion="3.3.0">
 		<id>%PACKAGE_ID%</id>
-		<version>3.2.0.831</version>
+		<version>3.2.1.831</version>
 		<releaseNotes>
-- This is a relatively major release with significant changes. Many of these will be transparent to you except for the new service deployment model (removal of DefaultServices from ApplicationManifest.xml to support ARM deployment).
-- Support for ARM deployment, including "one-click" ARM deployments (Deploy to Azure button).
-- For CLI/PowerShell deployments, you must now create an instance of fabric:/FabricObserver/FabricObserver service as the last step.
-- IMPORTANT: This version requires SF runtime versions 8.0 and above and .NET Core 3.1.x. Note that 3.2.0.831 will be the last major release of FO to support .NET Core 3.1, which will hit its EOL in 12/2022.
-- AppObserver now generates ServiceHealthReport health reports, which will put service entities into Error or Warning depending upon your configuration thresholds. There are breaking changes to FO's health reporter API. See below.
-- ObserverLogger.LogEtw now supports TelemetryData type (so, you don't have to duplicate its members in an anonymous type).
-- ObserverHealthReporter no longer takes a FabricClient parameter (breaking change).
-- HealthReport.ReportType has been replaced with HealthReport.EntityType (breaking change). HealthReportType enum no longer exists. It has been replaced with EntityType enum.
-- Substantial performance improvements and protection against most issues related to Windows Defender process scanning behavior.
-- Several code improvements and some refactorings or complete rewrites.
-- Some important bug fixes.
+- Updated ChildProcessInfo to include ProcessId of child process.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

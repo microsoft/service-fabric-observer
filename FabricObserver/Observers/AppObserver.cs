@@ -1315,7 +1315,7 @@ namespace FabricObserver.Observers
 
                             if (IsEtwEnabled || IsTelemetryEnabled)
                             {
-                                var childProcInfo = new ChildProcessInfo { ProcessName = childProcName, ProcessStartTime = startTime, Value = value };
+                                var childProcInfo = new ChildProcessInfo { ProcessId = childPid, ProcessName = childProcName, ProcessStartTime = startTime, Value = value };
                                 childProcessInfoData.ChildProcessInfo.Add(childProcInfo);
                             }
 
