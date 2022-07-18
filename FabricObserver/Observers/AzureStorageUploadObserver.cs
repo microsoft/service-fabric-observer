@@ -26,7 +26,6 @@ namespace FabricObserver.Observers
     public sealed class AzureStorageUploadObserver : ObserverBase
     {
         private readonly Stopwatch stopwatch;
-        private readonly bool isWindows;
 
         // Only AppObserver is supported today. No other observers generate dmp files.
         private const string AppObserverDumpFolder = "MemoryDumps";
@@ -69,7 +68,6 @@ namespace FabricObserver.Observers
         public AzureStorageUploadObserver(StatelessServiceContext context) : base(null, context)
         {
             stopwatch = new Stopwatch();
-            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -78,7 +76,7 @@ namespace FabricObserver.Observers
             // The dumps created are *not* crash dumps, they are live dumps of a process's memory, handles, threads, stack.. So, the target process will not be killed.
             // By default, the dmp files are MiniPlus, so they will roughly be as large as the process's private working set. You can set to Mini (similar size) or 
             // Full, much larger. You probably do not need to create Full dumps in most cases.
-            if (!isWindows)
+            if (!IsWindows)
             {
                 return;
             }

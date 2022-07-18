@@ -7,11 +7,12 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading;
+using FabricObserver.Interfaces;
 
 namespace FabricObserver.Observers.Utilities
 {
-    // .NET Standard Process-based impl (cross-platform)
-    public class CpuUsage
+    // Cross plaform impl, but used only for Linux. For Windows, Utilities.CpuUsageWin32 employs a much more efficient impl than .NET's Process class.
+    public class CpuUsageProcess : ICpuUsage
     {
         private DateTime prevTime = DateTime.MinValue;
         private DateTime currentTimeTime = DateTime.MinValue;
@@ -23,7 +24,7 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         /// <param name="procId">Target Process object</param>
         /// <returns>CPU percentage in use as double value</returns>
-        public double GetCpuUsagePercentageProcess(int procId)
+        public double GetCurrentCpuUsagePercentage(int procId, string procName = null)
         {
             try
             {

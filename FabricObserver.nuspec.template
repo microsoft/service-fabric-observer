@@ -2,19 +2,9 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
 	<metadata minClientVersion="3.3.0">
 		<id>%PACKAGE_ID%</id>
-		<version>3.2.0.960</version>
+		<version>3.2.1.960</version>
 		<releaseNotes>
-- This is a major release with significant changes. Many of these will be transparent to you except for the new service deployment model (removal of DefaultServices from ApplicationManifest.xml to support ARM deployment).
-- Support for ARM deployment, including "one-click" ARM deployments (Deploy to Azure button).
-- For CLI/PowerShell deployments, you must now create an instance of fabric:/FabricObserver/FabricObserver service as the last step.
-- IMPORTANT: This version requires SF runtime versions 9.0 and above and .NET 6.
-- AppObserver now generates ServiceHealthReport health reports, which will put service entities into Error or Warning depending upon your configuration thresholds. There are breaking changes to FO's health reporter API. See below.
-- ObserverLogger.LogEtw now supports TelemetryData type (so, you don't have to duplicate its members in an anonymous type).
-- ObserverHealthReporter no longer takes a FabricClient parameter (breaking change).
-- HealthReport.ReportType has been replaced with HealthReport.EntityType (breaking change). HealthReportType enum no longer exists. It has been replaced with EntityType enum.
-- Substantial performance improvements.
-- Several code improvements and some refactorings or complete rewrites.
-- Some minor (rare) bug fixes.
+
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

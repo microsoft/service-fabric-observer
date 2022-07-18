@@ -10,7 +10,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -129,8 +128,7 @@ namespace FabricObserver.Observers.Utilities
                 QueueLengthCounter.InstanceName = instance;
 
                 // Warm up counter.
-                _ = QueueLengthCounter.NextValue();
-                Thread.Sleep(150);
+                _ = QueueLengthCounter.RawValue;
 
                 return QueueLengthCounter.NextValue();
             }

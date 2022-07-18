@@ -13,13 +13,13 @@ using System.Fabric.Health;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
+using FabricObserver.Interfaces;
 
 namespace FabricObserver.Observers
 {
@@ -29,7 +29,6 @@ namespace FabricObserver.Observers
     {
         private const double KvsLvidsWarningPercentage = 75.0;
         private readonly string[] processWatchList;
-        private readonly bool isWindows;
         private Stopwatch stopwatch;
         private bool checkPrivateWorkingSet;
 
@@ -52,10 +51,8 @@ namespace FabricObserver.Observers
         /// <param name="context">The StatelessServiceContext instance.</param>
         public FabricSystemObserver(StatelessServiceContext context) : base(null, context)
         {
-            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-
             // Linux
-            if (!isWindows)
+            if (!IsWindows)
             {
                 processWatchList = new[]
                 {
@@ -202,7 +199,7 @@ namespace FabricObserver.Observers
                 throw;
             }
 
-            if (isWindows && IsObserverWebApiAppDeployed && monitorWinEventLog)
+            if (IsWindows && IsObserverWebApiAppDeployed && monitorWinEventLog)
             {
                 ReadServiceFabricWindowsEventLog();
             }
@@ -232,7 +229,7 @@ namespace FabricObserver.Observers
 
                 string dotnet = string.Empty;
 
-                if (!isWindows && procName.EndsWith(".dll"))
+                if (!IsWindows && procName.EndsWith(".dll"))
                 {
                     dotnet = "dotnet ";
                 }
@@ -257,8 +254,7 @@ namespace FabricObserver.Observers
                                 $"FabricGateway memory: {allMemData.FirstOrDefault(x => x.Key.Contains("FabricGateway")).Value.AverageDataValue} MB{Environment.NewLine}" +
 
                                 // On Windows, FO runs as NetworkUser by default and therefore can't monitor FabricHost process, which runs as System.
-                                (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
-                                    $"FabricHost memory: {allMemData["FabricHost"].AverageDataValue} MB{Environment.NewLine}" : string.Empty));
+                                (!IsWindows ? $"FabricHost memory: {allMemData["FabricHost"].AverageDataValue} MB{Environment.NewLine}" : string.Empty));
                 }
 
                 if (allHandlesData != null)
@@ -268,8 +264,7 @@ namespace FabricObserver.Observers
                                 $"FabricGateway file handles: {allHandlesData.FirstOrDefault(x => x.Key.Contains("FabricGateway")).Value.AverageDataValue}{Environment.NewLine}" +
 
                                 // On Windows, FO runs as NetworkUser by default and therefore can't monitor FabricHost process, which runs as System. 
-                                (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
-                                    $"FabricHost file handles: {allHandlesData["FabricHost"]?.AverageDataValue}{Environment.NewLine}" : string.Empty));
+                                (!IsWindows ? $"FabricHost file handles: {allHandlesData["FabricHost"]?.AverageDataValue}{Environment.NewLine}" : string.Empty));
                 }
 
                 if (allThreadsData != null)
@@ -279,8 +274,7 @@ namespace FabricObserver.Observers
                                 $"FabricGateway threads: {allThreadsData.FirstOrDefault(x => x.Key.Contains("FabricGateway")).Value.AverageDataValue}{Environment.NewLine}" +
 
                                 // On Windows, FO runs as NetworkUser by default and therefore can't monitor FabricHost process, which runs as System. 
-                                (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ?
-                                    $"FabricHost threads: {allThreadsData["FabricHost"]?.AverageDataValue}" : string.Empty));
+                                (!IsWindows ? $"FabricHost threads: {allThreadsData["FabricHost"]?.AverageDataValue}" : string.Empty));
                 }
 
                 // Informational report.
@@ -353,13 +347,13 @@ namespace FabricObserver.Observers
                 }
 
                 // No need to progress on Linux.
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                if (!IsWindows)
                 {
                     return Task.CompletedTask;
                 }
 
                 // Windows Event Log
-                if (isWindows && IsObserverWebApiAppDeployed && monitorWinEventLog)
+                if (IsWindows && IsObserverWebApiAppDeployed && monitorWinEventLog)
                 {
                     // SF Eventlog Errors?
                     // Write this out to a new file, for use by the web front end log viewer.
@@ -448,10 +442,10 @@ namespace FabricObserver.Observers
         /// <summary>
         /// ReadServiceFabricWindowsEventLog().
         /// </summary>
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "isWindows check exits the function immediately if not Windows...")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "IsWindows check exits the function immediately if not Windows...")]
         private void ReadServiceFabricWindowsEventLog()
         {
-            if (!isWindows)
+            if (!IsWindows)
             {
                 return;
             }
@@ -527,7 +521,7 @@ namespace FabricObserver.Observers
 
         private Process[] GetDotnetLinuxProcessesByFirstArgument(string argument)
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            if (IsWindows)
             {
                 throw new PlatformNotSupportedException("This function should only be called on Linux platforms.");
             }
@@ -681,7 +675,7 @@ namespace FabricObserver.Observers
                 }
             }
 
-            if (isWindows && monitorWinEventLog && evtRecordList == null)
+            if (IsWindows && monitorWinEventLog && evtRecordList == null)
             {
                 evtRecordList = new List<EventRecord>();
             }
@@ -836,7 +830,7 @@ namespace FabricObserver.Observers
             }
 
             // KVS LVID Monitoring - Windows-only.
-            if (isWindows && bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableKvsLvidMonitoringParameter), out bool enableLvidMonitoring))
+            if (IsWindows && bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableKvsLvidMonitoringParameter), out bool enableLvidMonitoring))
             {
                 // Observers that monitor LVIDs should ensure the static ObserverManager.CanInstallLvidCounter is true before attempting to monitor LVID usage.
                 EnableKvsLvidMonitoring = enableLvidMonitoring && ObserverManager.IsLvidCounterEnabled;
@@ -844,7 +838,7 @@ namespace FabricObserver.Observers
 
             // Monitor Windows event log for SF and System Error/Critical events?
             // This can be noisy. Use wisely. Return if running on Linux.
-            if (!isWindows)
+            if (!IsWindows)
             {
                 return;
             }
@@ -864,7 +858,7 @@ namespace FabricObserver.Observers
             string dotnetArg = procName;
             Process[] processes;
 
-            if (!isWindows && procName.Contains("dotnet"))
+            if (!IsWindows && procName.Contains("dotnet"))
             {
                 dotnetArg = $"{procName.Replace("dotnet ", string.Empty)}";
                 processes = GetDotnetLinuxProcessesByFirstArgument(dotnetArg);
@@ -918,7 +912,7 @@ namespace FabricObserver.Observers
                     // Allocated Handles
                     float handles;
 
-                    if (isWindows)
+                    if (IsWindows)
                     {
                         handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId);
                     }
@@ -930,7 +924,16 @@ namespace FabricObserver.Observers
                     TotalAllocatedHandlesAllSystemServices += handles;
 
                     // Threads
-                    int threads = ProcessInfoProvider.GetProcessThreadCount(procId);
+                    int threads = 0;
+
+                    if (IsWindows)
+                    {
+                        threads = NativeMethods.GetProcessThreadCount(procId);
+                    }
+                    else
+                    {
+                        threads = ProcessInfoProvider.GetProcessThreadCount(procId);
+                    }
 
                     TotalThreadsAllSystemServices += threads;
                     
@@ -975,7 +978,17 @@ namespace FabricObserver.Observers
                         }
                     }
 
-                    CpuUsage cpuUsage = new CpuUsage();
+                    ICpuUsage cpuUsage;
+
+                    if (IsWindows)
+                    {
+                        cpuUsage = new CpuUsageWin32();
+                    }
+                    else
+                    {
+                        cpuUsage = new CpuUsageProcess();
+                    }
+
                     TimeSpan duration = TimeSpan.FromSeconds(1);
 
                     if (MonitorDuration > TimeSpan.MinValue)
@@ -1005,7 +1018,7 @@ namespace FabricObserver.Observers
                             // CPU Time for service process.
                             if (CpuErrorUsageThresholdPct > 0 || CpuWarnUsageThresholdPct > 0)
                             {
-                                int cpu = (int)cpuUsage.GetCpuUsagePercentageProcess(procId);
+                                int cpu = (int)cpuUsage.GetCurrentCpuUsagePercentage(procId, IsWindows ? dotnetArg : null);
 
                                 if (allCpuData.ContainsKey(dotnetArg))
                                 {
@@ -1157,7 +1170,7 @@ namespace FabricObserver.Observers
                     try
                     {
                         int procId = -1;
-                        Process[] ps = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? GetDotnetLinuxProcessesByFirstArgument(frud.Id) : Process.GetProcessesByName(frud.Id);
+                        Process[] ps = !IsWindows ? GetDotnetLinuxProcessesByFirstArgument(frud.Id) : Process.GetProcessesByName(frud.Id);
 
                         if (ps.Length > 0)
                         {
@@ -1185,51 +1198,6 @@ namespace FabricObserver.Observers
                         TTL,
                         EntityType.Application,
                         procName);
-            }
-        }
-
-        private void CleanUp()
-        {
-            if (allCpuData != null && !allCpuData.Any(frud => frud.Value.ActiveErrorOrWarning))
-            {
-                allCpuData?.Clear();
-                allCpuData = null;
-            }
-
-            if (allEphemeralTcpPortData != null && !allEphemeralTcpPortData.Any(frud => frud.Value.ActiveErrorOrWarning))
-            {
-                allEphemeralTcpPortData?.Clear();
-                allEphemeralTcpPortData = null;
-            }
-
-            if (allHandlesData != null && !allHandlesData.Any(frud => frud.Value.ActiveErrorOrWarning))
-            {
-                allHandlesData?.Clear();
-                allHandlesData = null;
-            }
-
-            if (allMemData != null && !allMemData.Any(frud => frud.Value.ActiveErrorOrWarning))
-            {
-                allMemData?.Clear();
-                allMemData = null;
-            }
-
-            if (allActiveTcpPortData != null && !allActiveTcpPortData.Any(frud => frud.Value.ActiveErrorOrWarning))
-            {
-                allActiveTcpPortData?.Clear();
-                allActiveTcpPortData = null;
-            }
-
-            if (allThreadsData != null && !allThreadsData.Any(frud => frud.Value.ActiveErrorOrWarning))
-            {
-                allThreadsData?.Clear();
-                allThreadsData = null;
-            }
-
-            if (allAppKvsLvidsData != null && !allAppKvsLvidsData.Any(frud => frud.Value.ActiveErrorOrWarning))
-            {
-                allAppKvsLvidsData?.Clear();
-                allAppKvsLvidsData = null;
             }
         }
     }

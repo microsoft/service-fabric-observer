@@ -150,6 +150,18 @@ namespace FabricObserver.Observers.Utilities
         }
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        private struct THREADENTRY32
+        {
+            internal uint dwSize;
+            internal uint cntUsage;
+            internal uint th32ThreadID;
+            internal uint th32OwnerProcessID;
+            internal uint tpBasePri;
+            internal uint tpDeltaPri;
+            internal uint dwFlags;
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
         public class MEMORYSTATUSEX
         {
             /// <summary>
@@ -421,12 +433,437 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        public struct PSS_THREAD_INFORMATION
+        {
+            /// <summary>
+            /// <para>The count of threads in the snapshot.</para>
+            /// </summary>
+            public uint ThreadsCaptured;
+
+            /// <summary>
+            /// <para>The length of the <c>CONTEXT</c> record captured, in bytes.</para>
+            /// </summary>
+            public uint ContextLength;
+        }
+
+        // For PSCaptureSnapshot/PSQuerySnapshot \\
+
+        [Flags]
+        public enum PSS_CAPTURE_FLAGS : uint
+        {
+            /// <summary>Capture nothing.</summary>
+            PSS_CAPTURE_NONE = 0x00000000,
+
+            /// <summary>
+            /// Capture a snapshot of all cloneable pages in the process. The clone includes all MEM_PRIVATE regions, as well as all sections
+            /// (MEM_MAPPED and MEM_IMAGE) that are shareable. All Win32 sections created via CreateFileMapping are shareable.
+            /// </summary>
+            PSS_CAPTURE_VA_CLONE = 0x00000001,
+
+            /// <summary>(Do not use.)</summary>
+            PSS_CAPTURE_RESERVED_00000002 = 0x00000002,
+
+            /// <summary>Capture the handle table (handle values only).</summary>
+            PSS_CAPTURE_HANDLES = 0x00000004,
+
+            /// <summary>Capture name information for each handle.</summary>
+            PSS_CAPTURE_HANDLE_NAME_INFORMATION = 0x00000008,
+
+            /// <summary>Capture basic handle information such as HandleCount, PointerCount, GrantedAccess, etc.</summary>
+            PSS_CAPTURE_HANDLE_BASIC_INFORMATION = 0x00000010,
+
+            /// <summary>Capture type-specific information for supported object types: Process, Thread, Event, Mutant, Section.</summary>
+            PSS_CAPTURE_HANDLE_TYPE_SPECIFIC_INFORMATION = 0x00000020,
+
+            /// <summary>Capture the handle tracing table.</summary>
+            PSS_CAPTURE_HANDLE_TRACE = 0x00000040,
+
+            /// <summary>Capture thread information (IDs only).</summary>
+            PSS_CAPTURE_THREADS = 0x00000080,
+
+            /// <summary>Capture the context for each thread.</summary>
+            PSS_CAPTURE_THREAD_CONTEXT = 0x00000100,
+
+            /// <summary>Capture extended context for each thread (e.g. CONTEXT_XSTATE).</summary>
+            PSS_CAPTURE_THREAD_CONTEXT_EXTENDED = 0x00000200,
+
+            /// <summary>(Do not use.)</summary>
+            PSS_CAPTURE_RESERVED_00000400 = 0x00000400,
+
+            /// <summary>
+            /// Capture a snapshot of the virtual address space. The VA space is captured as an array of MEMORY_BASIC_INFORMATION structures.
+            /// This flag does not capture the contents of the pages.
+            /// </summary>
+            PSS_CAPTURE_VA_SPACE = 0x00000800,
+
+            /// <summary>
+            /// For MEM_IMAGE and MEM_MAPPED regions, dumps the path to the file backing the sections (identical to what GetMappedFileName
+            /// returns). For MEM_IMAGE regions, also dumps: The PROCESS_VM_READ access right is required on the process handle.
+            /// </summary>
+            PSS_CAPTURE_VA_SPACE_SECTION_INFORMATION = 0x00001000,
+
+            /// <summary/>
+            PSS_CAPTURE_IPT_TRACE = 0x00002000,
+
+            /// <summary>
+            /// The breakaway is optional. If the clone process fails to create as a breakaway, then it is created still inside the job. This
+            /// flag must be specified in combination with either PSS_CREATE_FORCE_BREAKAWAY and/or PSS_CREATE_BREAKAWAY.
+            /// </summary>
+            PSS_CREATE_BREAKAWAY_OPTIONAL = 0x04000000,
+
+            /// <summary>The clone is broken away from the parent process' job. This is equivalent to CreateProcess flag CREATE_BREAKAWAY_FROM_JOB.</summary>
+            PSS_CREATE_BREAKAWAY = 0x08000000,
+
+            /// <summary>The clone is forcefully broken away the parent process's job. This is only allowed for Tcb-privileged callers.</summary>
+            PSS_CREATE_FORCE_BREAKAWAY = 0x10000000,
+
+            /// <summary>
+            /// The facility should not use the process heap for any persistent or transient allocations. The use of the heap may be
+            /// undesirable in certain contexts such as creation of snapshots in the exception reporting path (where the heap may be corrupted).
+            /// </summary>
+            PSS_CREATE_USE_VM_ALLOCATIONS = 0x20000000,
+
+            /// <summary>
+            /// Measure performance of the facility. Performance counters can be retrieved via PssQuerySnapshot with the
+            /// PSS_QUERY_PERFORMANCE_COUNTERS information class of PSS_QUERY_INFORMATION_CLASS.
+            /// </summary>
+            PSS_CREATE_MEASURE_PERFORMANCE = 0x40000000,
+
+            /// <summary>
+            /// The virtual address (VA) clone process does not hold a reference to the underlying image. This will cause functions such as
+            /// QueryFullProcessImageName to fail on the VA clone process.
+            /// </summary>
+            PSS_CREATE_RELEASE_SECTION = 0x80000000
+        }
+
+        public enum PSS_QUERY_INFORMATION_CLASS
+        {
+            /// <summary>Returns a PSS_PROCESS_INFORMATION structure, with information about the original process.</summary>
+            PSS_QUERY_PROCESS_INFORMATION,
+
+            /// <summary>Returns a PSS_VA_CLONE_INFORMATION structure, with a handle to the VA clone.</summary>
+            PSS_QUERY_VA_CLONE_INFORMATION,
+
+            /// <summary>Returns a PSS_AUXILIARY_PAGES_INFORMATION structure, which contains the count of auxiliary pages captured.</summary>
+            PSS_QUERY_AUXILIARY_PAGES_INFORMATION,
+
+            /// <summary>Returns a PSS_VA_SPACE_INFORMATION structure, which contains the count of regions captured.</summary>
+            PSS_QUERY_VA_SPACE_INFORMATION,
+
+            /// <summary>Returns a PSS_HANDLE_INFORMATION structure, which contains the count of handles captured.</summary>
+            PSS_QUERY_HANDLE_INFORMATION,
+
+            /// <summary>Returns a PSS_THREAD_INFORMATION structure, which contains the count of threads captured.</summary>
+            PSS_QUERY_THREAD_INFORMATION,
+
+            /// <summary>
+            /// Returns a PSS_HANDLE_TRACE_INFORMATION structure, which contains a handle to the handle trace section, and its size.
+            /// </summary>
+            PSS_QUERY_HANDLE_TRACE_INFORMATION,
+
+            /// <summary>Returns a PSS_PERFORMANCE_COUNTERS structure, which contains various performance counters.</summary>
+            PSS_QUERY_PERFORMANCE_COUNTERS,
+        }
+
+        [Flags]
+        public enum PSS_THREAD_FLAGS
+        {
+            /// <summary>No flag.</summary>
+            PSS_THREAD_FLAGS_NONE = 0x0000,
+
+            /// <summary>The thread terminated.</summary>
+            PSS_THREAD_FLAGS_TERMINATED = 0x0001
+        }
+
+        [Flags]
+        public enum PSS_PROCESS_FLAGS
+        {
+            /// <summary>No flag.</summary>
+            PSS_PROCESS_FLAGS_NONE = 0x00000000,
+
+            /// <summary>The process is protected.</summary>
+            PSS_PROCESS_FLAGS_PROTECTED = 0x00000001,
+
+            /// <summary>The process is a 32-bit process running on a 64-bit native OS.</summary>
+            PSS_PROCESS_FLAGS_WOW64 = 0x00000002,
+
+            /// <summary>Undefined.</summary>
+            PSS_PROCESS_FLAGS_RESERVED_03 = 0x00000004,
+
+            /// <summary>Undefined.</summary>
+            PSS_PROCESS_FLAGS_RESERVED_04 = 0x00000008,
+
+            /// <summary>
+            /// The process is frozen; for example, a debugger is attached and broken into the process or a Store process is suspended by a
+            /// lifetime management service.
+            /// </summary>
+            PSS_PROCESS_FLAGS_FROZEN = 0x00000010
+        }
+
+        public enum ProcessorArchitecture : ushort
+        {
+            /// <summary>x86</summary>
+            PROCESSOR_ARCHITECTURE_INTEL = 0,
+
+            /// <summary>Unspecified</summary>
+            PROCESSOR_ARCHITECTURE_MIPS = 1,
+
+            /// <summary>Unspecified</summary>
+            PROCESSOR_ARCHITECTURE_ALPHA = 2,
+
+            /// <summary>Unspecified</summary>
+            PROCESSOR_ARCHITECTURE_PPC = 3,
+
+            /// <summary>Unspecified</summary>
+            PROCESSOR_ARCHITECTURE_SHX = 4,
+
+            /// <summary>ARM</summary>
+            PROCESSOR_ARCHITECTURE_ARM = 5,
+
+            /// <summary>Intel Itanium-based</summary>
+            PROCESSOR_ARCHITECTURE_IA64 = 6,
+
+            /// <summary>Unspecified</summary>
+            PROCESSOR_ARCHITECTURE_ALPHA64 = 7,
+
+            /// <summary>Unspecified</summary>
+            PROCESSOR_ARCHITECTURE_MSIL = 8,
+
+            /// <summary>x64 (AMD or Intel)</summary>
+            PROCESSOR_ARCHITECTURE_AMD64 = 9,
+
+            /// <summary>Unspecified</summary>
+            PROCESSOR_ARCHITECTURE_IA32_ON_WIN64 = 10,
+
+            /// <summary>Unspecified</summary>
+            PROCESSOR_ARCHITECTURE_NEUTRAL = 11,
+
+            /// <summary>Unspecified</summary>
+            PROCESSOR_ARCHITECTURE_ARM64 = 12,
+
+            /// <summary>Unspecified</summary>
+            PROCESSOR_ARCHITECTURE_ARM32_ON_WIN64 = 13,
+
+            /// <summary>Unknown architecture.</summary>
+            PROCESSOR_ARCHITECTURE_UNKNOWN = 0xFFFF
+        }
+
+        public static class CONTEXT_FLAG
+        {
+            /// <summary>Undocumented.</summary>
+            public const uint CONTEXT_AMD64 = 0x00100000;
+
+            /// <summary>Undocumented.</summary>
+            public const uint CONTEXT_ARM = 0x00200000;
+
+            /// <summary>Undocumented.</summary>
+            public const uint CONTEXT_EXCEPTION_ACTIVE = 0x08000000;
+
+            /// <summary>Undocumented.</summary>
+            public const uint CONTEXT_EXCEPTION_REPORTING = 0x80000000;
+
+            /// <summary>Undocumented.</summary>
+            public const uint CONTEXT_EXCEPTION_REQUEST = 0x40000000;
+
+            /// <summary>Undocumented.</summary>
+            public const uint CONTEXT_i386 = 0x00010000;
+
+            /// <summary>Undocumented.</summary>
+            public const uint CONTEXT_KERNEL_DEBUGGER = 0x04000000;
+
+            /// <summary>Undocumented.</summary>
+            public const uint CONTEXT_SERVICE_ACTIVE = 0x10000000;
+
+            private static readonly uint systemContext;
+
+            static CONTEXT_FLAG()
+            {
+                GetNativeSystemInfo(out var info);
+
+                switch (info.wProcessorArchitecture)
+                {
+                    case ProcessorArchitecture.PROCESSOR_ARCHITECTURE_INTEL:
+                        systemContext = CONTEXT_i386;
+                        break;
+
+                    case ProcessorArchitecture.PROCESSOR_ARCHITECTURE_ARM:
+                        systemContext = CONTEXT_ARM;
+                        break;
+
+                    case ProcessorArchitecture.PROCESSOR_ARCHITECTURE_AMD64:
+                        systemContext = CONTEXT_AMD64;
+                        break;
+
+                    default:
+                        throw new InvalidOperationException("Processor context not recognized.");
+                }
+            }
+
+            /// <summary>Undocumented.</summary>
+            public static uint CONTEXT_ALL => CONTEXT_CONTROL | CONTEXT_INTEGER | CONTEXT_SEGMENTS | CONTEXT_FLOATING_POINT | CONTEXT_DEBUG_REGISTERS;
+
+            /// <summary>Undocumented.</summary>
+            public static uint CONTEXT_CONTROL => systemContext | 0x00000001;
+
+            /// <summary>Undocumented.</summary>
+            public static uint CONTEXT_DEBUG_REGISTERS => systemContext | 0x00000010;
+
+            /// <summary>Undocumented.</summary>
+            public static uint CONTEXT_EXTENDED_REGISTERS => systemContext | 0x00000020;
+
+            /// <summary>Undocumented.</summary>
+            public static uint CONTEXT_FLOATING_POINT => systemContext | 0x00000008;
+
+            /// <summary>Undocumented.</summary>
+            public static uint CONTEXT_FULL => CONTEXT_CONTROL | CONTEXT_INTEGER | CONTEXT_FLOATING_POINT;
+
+            /// <summary>Undocumented.</summary>
+            public static uint CONTEXT_INTEGER => systemContext | 0x00000002;
+
+            /// <summary>Undocumented.</summary>
+            public static uint CONTEXT_SEGMENTS => systemContext | 0x00000004;
+
+            /// <summary>Undocumented.</summary>
+            public static uint CONTEXT_XSTATE => systemContext | 0x00000040;
+        }
+
+        public struct SYSTEM_INFO
+        {
+            /// <summary>
+            /// <para>The processor architecture of the installed operating system. This member can be one of the following values.</para>
+            /// <para>
+            /// <list type="table">
+            /// <listheader>
+            /// <term>Value</term>
+            /// <term>Meaning</term>
+            /// </listheader>
+            /// <item>
+            /// <term>PROCESSOR_ARCHITECTURE_AMD649</term>
+            /// <term>x64 (AMD or Intel)</term>
+            /// </item>
+            /// <item>
+            /// <term>PROCESSOR_ARCHITECTURE_ARM5</term>
+            /// <term>ARM</term>
+            /// </item>
+            /// <item>
+            /// <term>PROCESSOR_ARCHITECTURE_ARM6412</term>
+            /// <term>ARM64</term>
+            /// </item>
+            /// <item>
+            /// <term>PROCESSOR_ARCHITECTURE_IA646</term>
+            /// <term>Intel Itanium-based</term>
+            /// </item>
+            /// <item>
+            /// <term>PROCESSOR_ARCHITECTURE_INTEL0</term>
+            /// <term>x86</term>
+            /// </item>
+            /// <item>
+            /// <term>PROCESSOR_ARCHITECTURE_UNKNOWN0xffff</term>
+            /// <term>Unknown architecture.</term>
+            /// </item>
+            /// </list>
+            /// </para>
+            /// </summary>
+            public ProcessorArchitecture wProcessorArchitecture;
+
+            /// <summary>This member is reserved for future use.</summary>
+            public ushort wReserved;
+
+            /// <summary>
+            /// The page size and the granularity of page protection and commitment. This is the page size used by the <c>VirtualAlloc</c> function.
+            /// </summary>
+            public uint dwPageSize;
+
+            /// <summary>A pointer to the lowest memory address accessible to applications and dynamic-link libraries (DLLs).</summary>
+            public IntPtr lpMinimumApplicationAddress;
+
+            /// <summary>A pointer to the highest memory address accessible to applications and DLLs.</summary>
+            public IntPtr lpMaximumApplicationAddress;
+
+            /// <summary>
+            /// A mask representing the set of processors configured into the system. Bit 0 is processor 0; bit 31 is processor 31.
+            /// </summary>
+            public UIntPtr dwActiveProcessorMask;
+
+            /// <summary>
+            /// The number of logical processors in the current group. To retrieve this value, use the <c>GetLogicalProcessorInformation</c> function.
+            /// </summary>
+            public uint dwNumberOfProcessors;
+
+            /// <summary>
+            /// An obsolete member that is retained for compatibility. Use the <c>wProcessorArchitecture</c>, <c>wProcessorLevel</c>, and
+            /// <c>wProcessorRevision</c> members to determine the type of processor.
+            /// </summary>
+            public uint dwProcessorType;
+
+            /// <summary>
+            /// The granularity for the starting address at which virtual memory can be allocated. For more information, see <c>VirtualAlloc</c>.
+            /// </summary>
+            public uint dwAllocationGranularity;
+
+            /// <summary>
+            /// <para>
+            /// The architecture-dependent processor level. It should be used only for display purposes. To determine the feature set of a
+            /// processor, use the <c>IsProcessorFeaturePresent</c> function.
+            /// </para>
+            /// <para>If <c>wProcessorArchitecture</c> is PROCESSOR_ARCHITECTURE_INTEL, <c>wProcessorLevel</c> is defined by the CPU vendor.</para>
+            /// <para>If <c>wProcessorArchitecture</c> is PROCESSOR_ARCHITECTURE_IA64, <c>wProcessorLevel</c> is set to 1.</para>
+            /// </summary>
+            public ushort wProcessorLevel;
+
+            /// <summary>
+            /// <para>
+            /// The architecture-dependent processor revision. The following table shows how the revision value is assembled for each type of
+            /// processor architecture.
+            /// </para>
+            /// <para>
+            /// <list type="table">
+            /// <listheader>
+            /// <term>Processor</term>
+            /// <term>Value</term>
+            /// </listheader>
+            /// <item>
+            /// <term>Intel Pentium, Cyrix, or NextGen 586</term>
+            /// <term>
+            /// The high byte is the model and the low byte is the stepping. For example, if the value is xxyy, the model number and stepping
+            /// can be displayed as
+            /// follows: Model xx, Stepping yy
+            /// </term>
+            /// </item>
+            /// <item>
+            /// <term>Intel 80386 or 80486</term>
+            /// <term>
+            /// A value of the form xxyz. If xx is equal to 0xFF, y - 0xA is the model number, and z is the stepping identifier.If xx is not
+            /// equal to 0xFF, xx + 'A' is the stepping letter and yz is the minor stepping.
+            /// </term>
+            /// </item>
+            /// <item>
+            /// <term>ARM</term>
+            /// <term>Reserved.</term>
+            /// </item>
+            /// </list>
+            /// </para>
+            /// </summary>
+            public ushort wProcessorRevision;
+        }
+
+        // Method Imports \\
+
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
         public static extern SafeObjectHandle CreateToolhelp32Snapshot([In] uint dwFlags, [In] uint th32ProcessID);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool Process32First([In] SafeObjectHandle hSnapshot, ref PROCESSENTRY32 lppe);
+
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool Thread32Next([In] SafeObjectHandle hSnapshot, ref THREADENTRY32 lppe);
+
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool Thread32First([In] SafeObjectHandle hSnapshot, ref THREADENTRY32 lppe);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -466,6 +903,26 @@ namespace FabricObserver.Observers.Utilities
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool GetProcessTimes(SafeProcessHandle ProcessHandle, out FILETIME CreationTime, out FILETIME ExitTime, out FILETIME KernelTime, out FILETIME UserTime);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern bool GetSystemTimes(out FILETIME lpIdleTime, out FILETIME lpKernelTime, out FILETIME lpUserTime);
+
+        [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
+        internal static extern int PssCaptureSnapshot(SafeProcessHandle ProcessHandle, PSS_CAPTURE_FLAGS CaptureFlags, uint ThreadContextFlags, out IntPtr SnapshotHandle);
+
+        [DllImport("kernel32.dll", SetLastError = false, ExactSpelling = true)]
+        public static extern int PssQuerySnapshot(IntPtr SnapshotHandle, PSS_QUERY_INFORMATION_CLASS InformationClass, IntPtr Buffer, uint BufferLength);
+
+        [DllImport("kernel32.dll", SetLastError = false, ExactSpelling = true)]
+        public static extern int PssFreeSnapshot(IntPtr ProcessHandle, IntPtr SnapshotHandle);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        public static extern IntPtr GetCurrentProcess();
+
+        [DllImport("kernel32.dll", SetLastError = false, ExactSpelling = true)]
+        public static extern void GetNativeSystemInfo(out SYSTEM_INFO lpSystemInfo);
+
+        // Impls/Helpers \\
 
         private static readonly string[] ignoreProcessList = new string[]
         {
@@ -546,6 +1003,7 @@ namespace FabricObserver.Observers.Utilities
                 {
                     isLocalSnapshot = true;
                     handleToSnapshot = CreateToolhelp32Snapshot((uint)CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
+                    
                     if (handleToSnapshot.IsInvalid)
                     {
                         throw new Win32Exception(
@@ -613,75 +1071,69 @@ namespace FabricObserver.Observers.Utilities
         /// Gets the number of execution threads started by the process with supplied pid.
         /// </summary>
         /// <param name="pid">The id of the process (pid).</param>
-        /// <param name="handleToSnapshot">Handle to process snapshot (created using NativeMethods.CreateToolhelp32Snapshot).</param>
         /// <returns>The number of execution threads started by the process.</returns>
         /// <exception cref="Win32Exception">A Win32 Error Code will be present in the exception Message.</exception>
-        public static int GetProcessThreadCount(int pid, SafeObjectHandle handleToSnapshot = null)
+        public static int GetProcessThreadCount(int pid)
         {
-            int threadCount = 0;
-
-            if (pid < 1)
-            {
-                return threadCount;
-            }
-
-            bool isLocalSnapshot = false;
+            uint threadCnt = 0;
+            IntPtr snap = IntPtr.Zero;
+            IntPtr buffer = IntPtr.Zero;
+            SafeProcessHandle hProc = null;
+            const uint psProcHandleFlags =
+                        (uint)ProcessAccessFlags.QueryInformation |
+                        (uint)ProcessAccessFlags.VirtualMemoryOperation |
+                        (uint)ProcessAccessFlags.VirtualMemoryRead |
+                        (uint)ProcessAccessFlags.DuplicateHandle;
 
             try
             {
-                if (handleToSnapshot == null || handleToSnapshot.IsInvalid || handleToSnapshot.IsClosed)
+                hProc = OpenProcess(psProcHandleFlags, false, (uint)pid);
+
+                if (hProc.IsInvalid)
                 {
-                    isLocalSnapshot = true;
-                    handleToSnapshot = CreateToolhelp32Snapshot((uint)CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
-                    if (handleToSnapshot.IsInvalid)
-                    {
-                        throw new Win32Exception(
-                            $"NativeMethods.GetProcessThreadCount: Failed to get process snapshot with error code {Marshal.GetLastWin32Error()}");
-                    }
+                    return 0;
                 }
 
-                PROCESSENTRY32 procEntry = new PROCESSENTRY32
-                {
-                    dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32))
-                };
+                int retSnap = PssCaptureSnapshot(hProc, PSS_CAPTURE_FLAGS.PSS_CAPTURE_THREADS, CONTEXT_FLAG.CONTEXT_ALL, out snap);
 
-                if (!Process32First(handleToSnapshot, ref procEntry))
+                if (retSnap != 0 || snap == IntPtr.Zero)
                 {
                     throw new Win32Exception(
-                        $"NativeMethods.GetProcessThreadCount({pid}): Failed to process snapshot at Process32First with Win32 error code {Marshal.GetLastWin32Error()}");
+                       $"GetProcessThreadCount({pid}) [PssCaptureSnapshot]: Failed with Win32 error code {Marshal.GetLastWin32Error()}");
                 }
 
-                do
+                int size = Marshal.SizeOf(typeof(PSS_THREAD_INFORMATION));
+
+                // For memory pressure case (underlying machine running out of available memory), let the OOM take FO down: Never catch OOM.
+                buffer = Marshal.AllocHGlobal(size);
+
+                int retQuery = PssQuerySnapshot(snap, PSS_QUERY_INFORMATION_CLASS.PSS_QUERY_THREAD_INFORMATION, buffer, (uint)size);
+                if (retQuery != 0)
                 {
-                    try
-                    {
-                        if (procEntry.th32ProcessID == 0 || ignoreProcessList.Any(f => f == procEntry.szExeFile))
-                        {
-                            continue;
-                        }
+                    throw new Win32Exception(
+                       $"GetProcessThreadCount({pid}) [PssQuerySnapshot]: Failed with Win32 error code {Marshal.GetLastWin32Error()}");
+                }
 
-                        if (pid == procEntry.th32ProcessID && GetProcessNameFromId((uint)pid) == procEntry.szExeFile)
-                        {
-                            return (int)procEntry.cntThreads;
-                        }
-                    }
-                    catch (ArgumentException)
-                    {
-
-                    }
-
-                } while (Process32Next(handleToSnapshot, ref procEntry));
-
-                return threadCount;
+                PSS_THREAD_INFORMATION threadInfo = (PSS_THREAD_INFORMATION)Marshal.PtrToStructure(buffer, typeof(PSS_THREAD_INFORMATION));
+                threadCnt = threadInfo.ThreadsCaptured;
+            }
+            catch (ArgumentException)
+            {
+                return 0;
             }
             finally
             {
-                if (isLocalSnapshot)
+                Marshal.FreeHGlobal(buffer);
+                int success = PssFreeSnapshot(GetCurrentProcess(), snap);
+                if (success != 0)
                 {
-                    handleToSnapshot.Dispose();
-                    handleToSnapshot = null;
+                    //...
                 }
+                hProc.Dispose();
+                hProc = null;
             }
+
+            return (int)threadCnt;
         }
 
         /// <summary>
