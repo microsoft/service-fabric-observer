@@ -9,7 +9,6 @@ using System.Fabric;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -29,8 +28,6 @@ namespace FabricObserver.Observers
 
         private const string HowToUpdateSelfSignedCertSfLinkHtml =
            "<a href=\"https://aka.ms/AA6cicw\" target=\"_blank\">Click here to learn how to fix expired self-signed certificates.</a>";
-
-        private readonly bool isWindows;
 
         private TimeSpan HealthReportTimeToLive
         {
@@ -58,7 +55,7 @@ namespace FabricObserver.Observers
         /// <param name="context">The StatelessServiceContext instance.</param>
         public CertificateObserver(StatelessServiceContext context) : base (null, context)
         {
-            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+
         }
 
         public int DaysUntilClusterExpireWarningThreshold
@@ -108,7 +105,7 @@ namespace FabricObserver.Observers
             NotFoundWarnings = new List<string>();
 
             // Unix LocalMachine X509Store is limited to the Root and CertificateAuthority stores.
-            var store = new X509Store(RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? StoreName.Root : StoreName.My, StoreLocation.LocalMachine);
+            var store = new X509Store(IsWindows ? StoreName.My : StoreName.Root, StoreLocation.LocalMachine);
 
             try
             {
@@ -277,7 +274,7 @@ namespace FabricObserver.Observers
                                         Metric = ErrorWarningProperty.CertificateExpiration,
                                         HealthEventDescription = healthMessage,
                                         ObserverName,
-                                        OS = isWindows ? "Windows" : "Linux",
+                                        OS = IsWindows ? "Windows" : "Linux",
                                         Source = ObserverConstants.FabricObserverName,
                                         Value = FOErrorWarningCodes.GetCodeNameFromErrorCode(FOErrorWarningCodes.WarningCertificateExpiration)
                                     });
@@ -488,7 +485,7 @@ namespace FabricObserver.Observers
 
             if (certificates.Count == 0)
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                if (!IsWindows)
                 {
                     if (!TryFindCertificate("/var/lib/sfcerts", thumbprint, out certificate) &&
                         !TryFindCertificate("/var/lib/waagent", thumbprint, out certificate))

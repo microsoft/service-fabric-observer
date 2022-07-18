@@ -33,11 +33,15 @@ namespace FabricObserver.Observers
         private bool disposed;
         private ConcurrentDictionary<string, (int DumpCount, DateTime LastDumpDate)> ServiceDumpCountDictionary;
         private readonly object lockObj = new object();
-        private bool _isWindows;
 
         public static StatelessServiceContext FabricServiceContext
         {
             get; private set;
+        }
+
+        public bool IsWindows
+        {
+            get;
         }
 
         // Process dump settings. Only AppObserver and Windows is supported. \\
@@ -409,7 +413,7 @@ namespace FabricObserver.Observers
                         ObserverConstants.ObserverManagerConfigurationSectionName,
                         ObserverConstants.ObserverWebApiEnabled), out bool obsWeb) && obsWeb && IsObserverWebApiAppInstalled();
 
-            _isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
 
         /// <summary>
@@ -759,7 +763,7 @@ namespace FabricObserver.Observers
                         try
                         {
                             // Accessing Process properties is really expensive for Windows (net core).
-                            if (_isWindows)
+                            if (IsWindows)
                             {
                                 processStartTime = NativeMethods.GetProcessStartTime(procId).ToString("o");
                             }
@@ -794,7 +798,15 @@ namespace FabricObserver.Observers
                         using (Process proc = Process.GetProcessesByName(processName)?.First())
                         {
                             procId = proc.Id;
-                            processStartTime = proc.StartTime.ToString("o");
+
+                            if (IsWindows)
+                            {
+                                processStartTime = NativeMethods.GetProcessStartTime(procId).ToString("o");
+                            }
+                            else
+                            {
+                                processStartTime = proc.StartTime.ToString("o");
+                            }
                         }
                     }
                     catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is PlatformNotSupportedException || e is Win32Exception)
@@ -1286,7 +1298,7 @@ namespace FabricObserver.Observers
         public bool EnsureProcess(string procName, int procId)
         {
             // net core's ProcessManager.EnsureState is a CPU bottleneck on Windows.
-            if (!_isWindows)
+            if (!IsWindows)
             {
                 using (Process proc = Process.GetProcessById(procId))
                 {

@@ -1,4 +1,9 @@
-﻿using FabricObserver.Observers.MachineInfoModel;
+﻿// ------------------------------------------------------------
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
+// ------------------------------------------------------------
+
+using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using System;
 using System.Collections.Concurrent;

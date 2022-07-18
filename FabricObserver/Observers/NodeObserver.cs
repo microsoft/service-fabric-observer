@@ -6,7 +6,6 @@
 using System;
 using System.Diagnostics;
 using System.Fabric;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
@@ -20,7 +19,6 @@ namespace FabricObserver.Observers
     public sealed class NodeObserver : ObserverBase
     {
         private readonly Stopwatch stopwatch;
-        private readonly bool isWindows;
 
         // These are public properties because they are used in unit tests.
         public FabricResourceUsageData<float> MemDataInUse;
@@ -136,7 +134,6 @@ namespace FabricObserver.Observers
         public NodeObserver(StatelessServiceContext context) : base(null, context)
         {
             stopwatch = new Stopwatch();
-            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows); 
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -251,7 +248,7 @@ namespace FabricObserver.Observers
                             Math.Round(EphemeralPortsDataRaw.AverageDataValue));
                     }
 
-                    if (FirewallData != null && isWindows && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
+                    if (FirewallData != null && IsWindows && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
                     {
                         CsvFileLogger.LogData(
                             fileName,
@@ -263,7 +260,7 @@ namespace FabricObserver.Observers
 
                     // Windows does not have a corresponding FD/FH limit which can be set by a user, nor does Windows have a reliable way of determining the total number of open handles in the system.
                     // As such, it does not make sense to monitor system-wide, percent usage of ALL available file handles on Windows. This feature of NodeObserver is therefore Linux-only.
-                    if (!isWindows)
+                    if (!IsWindows)
                     {
                         if (LinuxFileHandlesDataPercentAllocated != null && (LinuxFileHandlesErrorPercent > 0 || LinuxFileHandlesWarningPercent > 0))
                         {
@@ -327,7 +324,7 @@ namespace FabricObserver.Observers
                 }
 
                 // Windows Firewall Rules - Total number of rules in use.
-                if (FirewallData != null && isWindows && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
+                if (FirewallData != null && IsWindows && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
                 {
                     ProcessResourceDataReportHealth(
                             FirewallData,
@@ -373,7 +370,7 @@ namespace FabricObserver.Observers
                 }
 
                 // Total Open File Handles % (Linux-only) - Total Percentage Allocated (in use) of the configured Maximum number of File Handles the linux kernel will allocate.
-                if (!isWindows)
+                if (!IsWindows)
                 {
                     if (LinuxFileHandlesDataPercentAllocated != null && (LinuxFileHandlesErrorPercent > 0 || LinuxFileHandlesWarningPercent > 0))
                     {
@@ -462,7 +459,7 @@ namespace FabricObserver.Observers
             }
 
             // This only makes sense for Linux.
-            if (!isWindows)
+            if (!IsWindows)
             {
                 if (LinuxFileHandlesDataPercentAllocated == null && (LinuxFileHandlesErrorPercent > 0 || LinuxFileHandlesWarningPercent > 0))
                 {
@@ -538,7 +535,7 @@ namespace FabricObserver.Observers
             }
 
             // Linux FDs.
-            if (!isWindows)
+            if (!IsWindows)
             {
                 var errFileHandlesPercentUsed = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverLinuxFileHandlesErrorLimitPct);
 
@@ -622,7 +619,7 @@ namespace FabricObserver.Observers
 
             /* Linux FDs */
 
-            if (isWindows)
+            if (IsWindows)
             {
                 return;
             }
@@ -659,7 +656,7 @@ namespace FabricObserver.Observers
             try
             {
                 // Firewall rules.
-                if (isWindows && FirewallData != null)
+                if (IsWindows && FirewallData != null)
                 {
                     int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
                     FirewallData.AddData(firewalls);
@@ -690,7 +687,7 @@ namespace FabricObserver.Observers
                 // OS-level file handle monitoring only makes sense for Linux, where the Maximum system-wide number of handles the kernel will allocate is a user-configurable setting.
                 // Windows does not have a configurable setting for Max Handles as the number of handles available to the system is dynamic (even if the max per process is not). 
                 // As such, for Windows, GetMaximumConfiguredFileHandlesCount always return -1, by design. Also, GetTotalAllocatedFileHandlesCount is not implemented for Windows (just returns -1).
-                if (!isWindows)
+                if (!IsWindows)
                 {
                     if (LinuxFileHandlesDataPercentAllocated != null && (LinuxFileHandlesErrorPercent > 0 || LinuxFileHandlesWarningPercent > 0))
                     {
@@ -799,7 +796,7 @@ namespace FabricObserver.Observers
             }
             finally
             {
-                if (isWindows)
+                if (IsWindows)
                 {
                     CpuUtilizationProvider.Instance?.Dispose();
                     CpuUtilizationProvider.Instance = null;

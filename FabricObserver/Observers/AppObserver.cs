@@ -16,6 +16,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using FabricObserver.Interfaces;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
@@ -29,7 +30,6 @@ namespace FabricObserver.Observers
     public sealed class AppObserver : ObserverBase
     {
         private const double KvsLvidsWarningPercentage = 75.0;
-        private readonly bool _isWindows;
         private readonly object _lock = new object();
 
         // These are the concurrent data containers that hold all monitoring data for all application targets for specific metrics.
@@ -76,7 +76,7 @@ namespace FabricObserver.Observers
             get
             {
                 // This is only useful for Windows.
-                if (!_isWindows)
+                if (!IsWindows)
                 {
                     return null;
                 }
@@ -88,8 +88,7 @@ namespace FabricObserver.Observers
                         if (_handleToProcSnapshot == null)
                         {
                             _handleToProcSnapshot = 
-                                NativeMethods.CreateToolhelp32Snapshot(
-                                    (uint)NativeMethods.CreateToolhelp32SnapshotFlags.TH32CS_INHERIT | (uint)NativeMethods.CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
+                                NativeMethods.CreateToolhelp32Snapshot((uint)NativeMethods.CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
                             
                             if (_handleToProcSnapshot.IsInvalid)
                             {
@@ -155,7 +154,6 @@ namespace FabricObserver.Observers
         public AppObserver(StatelessServiceContext context) : base(null, context)
         {
             _stopwatch = new Stopwatch();
-            _isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -1200,7 +1198,7 @@ namespace FabricObserver.Observers
             };
 
             // KVS LVID Monitoring - Windows-only.
-            if (_isWindows && bool.TryParse(
+            if (IsWindows && bool.TryParse(
                     GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableKvsLvidMonitoringParameter), out bool enableLvidMonitoring))
             {
                 // Observers that monitor LVIDs should ensure the static ObserverManager.CanInstallLvidCounter is true before attempting to monitor LVID usage.
@@ -1268,7 +1266,7 @@ namespace FabricObserver.Observers
                 ServiceName = repOrInst.ServiceName.OriginalString,
                 NodeName = NodeName,
                 ProcessId = (int)repOrInst.HostProcessId,
-                ProcessName = _isWindows ? NativeMethods.GetProcessNameFromId((int)repOrInst.HostProcessId) : Process.GetProcessById((int)repOrInst.HostProcessId)?.ProcessName,
+                ProcessName = IsWindows ? NativeMethods.GetProcessNameFromId((int)repOrInst.HostProcessId) : Process.GetProcessById((int)repOrInst.HostProcessId)?.ProcessName,
                 PartitionId = repOrInst.PartitionId.ToString(),
                 ReplicaId = repOrInst.ReplicaOrInstanceId.ToString(),
                 ChildProcessCount = childProcs.Count,
@@ -1290,7 +1288,7 @@ namespace FabricObserver.Observers
                         continue;
                     }
 
-                    if (_isWindows)
+                    if (IsWindows)
                     {
                         startTime = NativeMethods.GetProcessStartTime(childPid).ToString("o");
                     }
@@ -1321,7 +1319,7 @@ namespace FabricObserver.Observers
 
                             // Windows process dump support for descendant/child processes \\
 
-                            if (_isWindows && app.DumpProcessOnError && EnableProcessDumps)
+                            if (IsWindows && app.DumpProcessOnError && EnableProcessDumps)
                             {
                                 string prop = frud.Value.Property;
                                 bool dump = false;
@@ -1528,7 +1526,7 @@ namespace FabricObserver.Observers
                         }
 
                         // net core's ProcessManager.EnsureState is a CPU bottleneck on Windows.
-                        if (!_isWindows)
+                        if (!IsWindows)
                         {
                             parentProcName = parentProc.ProcessName;
                         }
@@ -1546,7 +1544,7 @@ namespace FabricObserver.Observers
                     }
                     catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
                     {
-                        if (!_isWindows || ObserverManager.ObserverFailureHealthStateLevel == HealthState.Unknown)
+                        if (!IsWindows || ObserverManager.ObserverFailureHealthStateLevel == HealthState.Unknown)
                         {
                             return;
                         }
@@ -1833,7 +1831,7 @@ namespace FabricObserver.Observers
                 // Handles/FDs
                 if (checkHandles)
                 {
-                    float handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId, _isWindows ? null : CodePackage?.Path);
+                    float handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId, IsWindows ? null : CodePackage?.Path);
 
                     if (handles > 0F)
                     {
@@ -1852,8 +1850,19 @@ namespace FabricObserver.Observers
                 // Threads
                 if (checkThreads)
                 {
-                    int threads = ProcessInfoProvider.GetProcessThreadCount(procId);
-                    
+                    int threads = 0;
+
+                    if (!IsWindows)
+                    {
+                        // Lightweight on Linux..
+                        threads = ProcessInfoProvider.GetProcessThreadCount(procId);
+                    }
+                    else
+                    {
+                        // Much faster, less memory.. employs Win32's PSSCaptureSnapshot/PSSQuerySnapshot.
+                        threads = NativeMethods.GetProcessThreadCount(procId);
+                    }
+
                     if (threads > 0)
                     {
                         // Parent process (the service process).
@@ -1915,7 +1924,7 @@ namespace FabricObserver.Observers
                 }
 
                 // KVS LVIDs
-                if (_isWindows && checkLvids && repOrInst.HostProcessId == procId && repOrInst.ServiceKind == ServiceKind.Stateful)
+                if (IsWindows && checkLvids && repOrInst.HostProcessId == procId && repOrInst.ServiceKind == ServiceKind.Stateful)
                 {
                     var lvidPct = ProcessInfoProvider.Instance.GetProcessKvsLvidsUsagePercentage(procName, Token, procId);
 
@@ -1984,7 +1993,17 @@ namespace FabricObserver.Observers
 
                 // CPU \\
 
-                CpuUsage cpuUsage = checkCpu ? new CpuUsage() : null;
+                ICpuUsage cpuUsage;
+
+                if (IsWindows)
+                {
+                    cpuUsage = new CpuUsageWin32();
+                }
+                else
+                {
+                    cpuUsage = new CpuUsageProcess();
+                }
+
                 Stopwatch timer = Stopwatch.StartNew();
 
                 while (timer.Elapsed <= maxDuration)
@@ -1996,17 +2015,13 @@ namespace FabricObserver.Observers
 
                     // CPU (all cores) \\
 
-                    if (checkCpu && cpuUsage != null)
+                    if (checkCpu)
                     {
-                        double cpu = cpuUsage.GetCpuUsagePercentageProcess(procId);
+                        double cpu = 0;
+                        cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, IsWindows ? procName : null);
 
-                        if (cpu >= 0)
+                        if (cpu >= 0.0001)
                         {
-                            if (cpu > 100)
-                            {
-                                cpu = 100;
-                            }
-
                             if (procId == parentPid)
                             {
                                 AllAppCpuData[id].AddData(cpu);
@@ -2221,7 +2236,7 @@ namespace FabricObserver.Observers
                             //var sw = Stopwatch.StartNew();
                             List<(string ProcName, int Pid)> childPids;
 
-                            if (_isWindows)
+                            if (IsWindows)
                             {
                                 childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, Win32HandleToProcessSnapshot);
                             }
@@ -2465,7 +2480,7 @@ namespace FabricObserver.Observers
                 AllAppKvsLvidsData = null;
             }
 
-            if (_isWindows)
+            if (IsWindows)
             {
                 _handleToProcSnapshot?.Dispose();
                 _handleToProcSnapshot = null;
