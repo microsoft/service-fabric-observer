@@ -19,7 +19,7 @@
          You just need to copy the plugin dll and ALL of its dependencies to the output folder's PackageRoot\Data\Plugins folder. Then deploy from there. -->
 	<!-- <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" Version="3.2.1.831" /> -->
 	<!-- Required if using the full FabricObserver nupkg, which is no longer required as the extensibility library is all you need to build a plugin. -->
-	<!-- <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" /> -->
+	<!-- <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="6.0.0" /> -->
 	<!-- Required if using the full FabricObserver nupkg, which is no longer required as the extensibility library is all you need to build a plugin. -->
 	<!-- <PackageReference Include="Microsoft.ServiceFabric" Version="8.0.516" /> -->
 	

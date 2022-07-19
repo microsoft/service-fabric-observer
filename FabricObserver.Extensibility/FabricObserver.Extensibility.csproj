@@ -32,10 +32,10 @@
 		<PackageReference Include="Microsoft.ApplicationInsights" Version="2.20.0" />
 		<PackageReference Include="Microsoft.ApplicationInsights.NLogTarget" Version="2.20.0" />
 		<PackageReference Include="Microsoft.ServiceFabric.Services" Version="5.0.516" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.2" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="6.0.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-		<PackageReference Include="NLog" Version="5.0.0" />
+		<PackageReference Include="NLog" Version="5.0.1" />
 		<PackageReference Include="System.Management" Version="6.0.0" />
 	</ItemGroup>
 	<ItemGroup>

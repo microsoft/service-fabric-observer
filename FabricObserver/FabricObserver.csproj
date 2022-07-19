@@ -8,7 +8,7 @@
 		<PlatformTarget>x64</PlatformTarget>
 		<!-- ***NOTE***: If deploying to SF cluster directly from Visual Studio, you must use single target RID:
          For Windows, use win-x64. For Linux, use linux-x64.
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier> -->
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier> -->
 		<!-- For multi-target publish (say, from Azure Pipeline build or for when you build FO using supplied scripts), you can use multi-target RIDs: 
          linux-x64;win-x64. -->
 		<RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
@@ -27,12 +27,10 @@
 		<None Remove="ApplicationInsights.config" />
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="Azure.Storage.Blobs" Version="12.12.0" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.2" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="5.0.0" />
+		<PackageReference Include="Azure.Storage.Blobs" Version="12.13.0" />
 		<PackageReference Include="Microsoft.ServiceFabric.Services" Version="5.0.516" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-		<PackageReference Include="Octokit" Version="0.51.0" />
+		<PackageReference Include="Octokit" Version="1.0.0" />
 		<PackageReference Include="System.Diagnostics.DiagnosticSource" Version="6.0.0" />
 		<PackageReference Include="System.Diagnostics.EventLog" Version="6.0.0" />
 		<PackageReference Include="System.IO" Version="4.3.0" />

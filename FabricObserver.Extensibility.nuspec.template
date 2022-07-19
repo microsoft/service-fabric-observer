@@ -29,8 +29,8 @@
 				<dependency id="Microsoft.ApplicationInsights.WindowsServer" version="2.20.0" />
 				<dependency id="Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel" version="2.20.0" />
 				<dependency id="Microsoft.AspNet.WebApi.Client" version="5.2.9" />
-				<dependency id="Microsoft.Extensions.DependencyInjection" version="5.0.2" />
-				<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="5.0.0" />
+				<dependency id="Microsoft.Extensions.DependencyInjection" version="6.0.0" />
+				<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="6.0.0" />
 				<dependency id="NLog" version="5.0.0" />
 			</group>
 		</dependencies>
