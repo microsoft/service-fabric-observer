@@ -601,253 +601,6 @@ namespace FabricObserver.Observers.Utilities
             PSS_PROCESS_FLAGS_FROZEN = 0x00000010
         }
 
-        public enum ProcessorArchitecture : ushort
-        {
-            /// <summary>x86</summary>
-            PROCESSOR_ARCHITECTURE_INTEL = 0,
-
-            /// <summary>Unspecified</summary>
-            PROCESSOR_ARCHITECTURE_MIPS = 1,
-
-            /// <summary>Unspecified</summary>
-            PROCESSOR_ARCHITECTURE_ALPHA = 2,
-
-            /// <summary>Unspecified</summary>
-            PROCESSOR_ARCHITECTURE_PPC = 3,
-
-            /// <summary>Unspecified</summary>
-            PROCESSOR_ARCHITECTURE_SHX = 4,
-
-            /// <summary>ARM</summary>
-            PROCESSOR_ARCHITECTURE_ARM = 5,
-
-            /// <summary>Intel Itanium-based</summary>
-            PROCESSOR_ARCHITECTURE_IA64 = 6,
-
-            /// <summary>Unspecified</summary>
-            PROCESSOR_ARCHITECTURE_ALPHA64 = 7,
-
-            /// <summary>Unspecified</summary>
-            PROCESSOR_ARCHITECTURE_MSIL = 8,
-
-            /// <summary>x64 (AMD or Intel)</summary>
-            PROCESSOR_ARCHITECTURE_AMD64 = 9,
-
-            /// <summary>Unspecified</summary>
-            PROCESSOR_ARCHITECTURE_IA32_ON_WIN64 = 10,
-
-            /// <summary>Unspecified</summary>
-            PROCESSOR_ARCHITECTURE_NEUTRAL = 11,
-
-            /// <summary>Unspecified</summary>
-            PROCESSOR_ARCHITECTURE_ARM64 = 12,
-
-            /// <summary>Unspecified</summary>
-            PROCESSOR_ARCHITECTURE_ARM32_ON_WIN64 = 13,
-
-            /// <summary>Unknown architecture.</summary>
-            PROCESSOR_ARCHITECTURE_UNKNOWN = 0xFFFF
-        }
-
-        public static class CONTEXT_FLAG
-        {
-            /// <summary>Undocumented.</summary>
-            public const uint CONTEXT_AMD64 = 0x00100000;
-
-            /// <summary>Undocumented.</summary>
-            public const uint CONTEXT_ARM = 0x00200000;
-
-            /// <summary>Undocumented.</summary>
-            public const uint CONTEXT_EXCEPTION_ACTIVE = 0x08000000;
-
-            /// <summary>Undocumented.</summary>
-            public const uint CONTEXT_EXCEPTION_REPORTING = 0x80000000;
-
-            /// <summary>Undocumented.</summary>
-            public const uint CONTEXT_EXCEPTION_REQUEST = 0x40000000;
-
-            /// <summary>Undocumented.</summary>
-            public const uint CONTEXT_i386 = 0x00010000;
-
-            /// <summary>Undocumented.</summary>
-            public const uint CONTEXT_KERNEL_DEBUGGER = 0x04000000;
-
-            /// <summary>Undocumented.</summary>
-            public const uint CONTEXT_SERVICE_ACTIVE = 0x10000000;
-
-            private static readonly uint systemContext;
-
-            static CONTEXT_FLAG()
-            {
-                GetNativeSystemInfo(out var info);
-
-                switch (info.wProcessorArchitecture)
-                {
-                    case ProcessorArchitecture.PROCESSOR_ARCHITECTURE_INTEL:
-                        systemContext = CONTEXT_i386;
-                        break;
-
-                    case ProcessorArchitecture.PROCESSOR_ARCHITECTURE_ARM:
-                        systemContext = CONTEXT_ARM;
-                        break;
-
-                    case ProcessorArchitecture.PROCESSOR_ARCHITECTURE_AMD64:
-                        systemContext = CONTEXT_AMD64;
-                        break;
-
-                    default:
-                        throw new InvalidOperationException("Processor context not recognized.");
-                }
-            }
-
-            /// <summary>Undocumented.</summary>
-            public static uint CONTEXT_ALL => CONTEXT_CONTROL | CONTEXT_INTEGER | CONTEXT_SEGMENTS | CONTEXT_FLOATING_POINT | CONTEXT_DEBUG_REGISTERS;
-
-            /// <summary>Undocumented.</summary>
-            public static uint CONTEXT_CONTROL => systemContext | 0x00000001;
-
-            /// <summary>Undocumented.</summary>
-            public static uint CONTEXT_DEBUG_REGISTERS => systemContext | 0x00000010;
-
-            /// <summary>Undocumented.</summary>
-            public static uint CONTEXT_EXTENDED_REGISTERS => systemContext | 0x00000020;
-
-            /// <summary>Undocumented.</summary>
-            public static uint CONTEXT_FLOATING_POINT => systemContext | 0x00000008;
-
-            /// <summary>Undocumented.</summary>
-            public static uint CONTEXT_FULL => CONTEXT_CONTROL | CONTEXT_INTEGER | CONTEXT_FLOATING_POINT;
-
-            /// <summary>Undocumented.</summary>
-            public static uint CONTEXT_INTEGER => systemContext | 0x00000002;
-
-            /// <summary>Undocumented.</summary>
-            public static uint CONTEXT_SEGMENTS => systemContext | 0x00000004;
-
-            /// <summary>Undocumented.</summary>
-            public static uint CONTEXT_XSTATE => systemContext | 0x00000040;
-        }
-
-        public struct SYSTEM_INFO
-        {
-            /// <summary>
-            /// <para>The processor architecture of the installed operating system. This member can be one of the following values.</para>
-            /// <para>
-            /// <list type="table">
-            /// <listheader>
-            /// <term>Value</term>
-            /// <term>Meaning</term>
-            /// </listheader>
-            /// <item>
-            /// <term>PROCESSOR_ARCHITECTURE_AMD649</term>
-            /// <term>x64 (AMD or Intel)</term>
-            /// </item>
-            /// <item>
-            /// <term>PROCESSOR_ARCHITECTURE_ARM5</term>
-            /// <term>ARM</term>
-            /// </item>
-            /// <item>
-            /// <term>PROCESSOR_ARCHITECTURE_ARM6412</term>
-            /// <term>ARM64</term>
-            /// </item>
-            /// <item>
-            /// <term>PROCESSOR_ARCHITECTURE_IA646</term>
-            /// <term>Intel Itanium-based</term>
-            /// </item>
-            /// <item>
-            /// <term>PROCESSOR_ARCHITECTURE_INTEL0</term>
-            /// <term>x86</term>
-            /// </item>
-            /// <item>
-            /// <term>PROCESSOR_ARCHITECTURE_UNKNOWN0xffff</term>
-            /// <term>Unknown architecture.</term>
-            /// </item>
-            /// </list>
-            /// </para>
-            /// </summary>
-            public ProcessorArchitecture wProcessorArchitecture;
-
-            /// <summary>This member is reserved for future use.</summary>
-            public ushort wReserved;
-
-            /// <summary>
-            /// The page size and the granularity of page protection and commitment. This is the page size used by the <c>VirtualAlloc</c> function.
-            /// </summary>
-            public uint dwPageSize;
-
-            /// <summary>A pointer to the lowest memory address accessible to applications and dynamic-link libraries (DLLs).</summary>
-            public IntPtr lpMinimumApplicationAddress;
-
-            /// <summary>A pointer to the highest memory address accessible to applications and DLLs.</summary>
-            public IntPtr lpMaximumApplicationAddress;
-
-            /// <summary>
-            /// A mask representing the set of processors configured into the system. Bit 0 is processor 0; bit 31 is processor 31.
-            /// </summary>
-            public UIntPtr dwActiveProcessorMask;
-
-            /// <summary>
-            /// The number of logical processors in the current group. To retrieve this value, use the <c>GetLogicalProcessorInformation</c> function.
-            /// </summary>
-            public uint dwNumberOfProcessors;
-
-            /// <summary>
-            /// An obsolete member that is retained for compatibility. Use the <c>wProcessorArchitecture</c>, <c>wProcessorLevel</c>, and
-            /// <c>wProcessorRevision</c> members to determine the type of processor.
-            /// </summary>
-            public uint dwProcessorType;
-
-            /// <summary>
-            /// The granularity for the starting address at which virtual memory can be allocated. For more information, see <c>VirtualAlloc</c>.
-            /// </summary>
-            public uint dwAllocationGranularity;
-
-            /// <summary>
-            /// <para>
-            /// The architecture-dependent processor level. It should be used only for display purposes. To determine the feature set of a
-            /// processor, use the <c>IsProcessorFeaturePresent</c> function.
-            /// </para>
-            /// <para>If <c>wProcessorArchitecture</c> is PROCESSOR_ARCHITECTURE_INTEL, <c>wProcessorLevel</c> is defined by the CPU vendor.</para>
-            /// <para>If <c>wProcessorArchitecture</c> is PROCESSOR_ARCHITECTURE_IA64, <c>wProcessorLevel</c> is set to 1.</para>
-            /// </summary>
-            public ushort wProcessorLevel;
-
-            /// <summary>
-            /// <para>
-            /// The architecture-dependent processor revision. The following table shows how the revision value is assembled for each type of
-            /// processor architecture.
-            /// </para>
-            /// <para>
-            /// <list type="table">
-            /// <listheader>
-            /// <term>Processor</term>
-            /// <term>Value</term>
-            /// </listheader>
-            /// <item>
-            /// <term>Intel Pentium, Cyrix, or NextGen 586</term>
-            /// <term>
-            /// The high byte is the model and the low byte is the stepping. For example, if the value is xxyy, the model number and stepping
-            /// can be displayed as
-            /// follows: Model xx, Stepping yy
-            /// </term>
-            /// </item>
-            /// <item>
-            /// <term>Intel 80386 or 80486</term>
-            /// <term>
-            /// A value of the form xxyz. If xx is equal to 0xFF, y - 0xA is the model number, and z is the stepping identifier.If xx is not
-            /// equal to 0xFF, xx + 'A' is the stepping letter and yz is the minor stepping.
-            /// </term>
-            /// </item>
-            /// <item>
-            /// <term>ARM</term>
-            /// <term>Reserved.</term>
-            /// </item>
-            /// </list>
-            /// </para>
-            /// </summary>
-            public ushort wProcessorRevision;
-        }
-
         // Method Imports \\
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
@@ -907,20 +660,17 @@ namespace FabricObserver.Observers.Utilities
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool GetSystemTimes(out FILETIME lpIdleTime, out FILETIME lpKernelTime, out FILETIME lpUserTime);
 
-        [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
-        internal static extern int PssCaptureSnapshot(SafeProcessHandle ProcessHandle, PSS_CAPTURE_FLAGS CaptureFlags, uint ThreadContextFlags, out IntPtr SnapshotHandle);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        internal static extern int PssCaptureSnapshot(SafeProcessHandle ProcessHandle, PSS_CAPTURE_FLAGS CaptureFlags, uint ContextFlags, out IntPtr SnapshotHandle);
 
-        [DllImport("kernel32.dll", SetLastError = false, ExactSpelling = true)]
+        [DllImport("kernel32.dll", SetLastError = false)]
         public static extern int PssQuerySnapshot(IntPtr SnapshotHandle, PSS_QUERY_INFORMATION_CLASS InformationClass, IntPtr Buffer, uint BufferLength);
 
-        [DllImport("kernel32.dll", SetLastError = false, ExactSpelling = true)]
+        [DllImport("kernel32.dll", SetLastError = false)]
         public static extern int PssFreeSnapshot(IntPtr ProcessHandle, IntPtr SnapshotHandle);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern IntPtr GetCurrentProcess();
-
-        [DllImport("kernel32.dll", SetLastError = false, ExactSpelling = true)]
-        public static extern void GetNativeSystemInfo(out SYSTEM_INFO lpSystemInfo);
 
         // Impls/Helpers \\
 
@@ -1076,27 +826,20 @@ namespace FabricObserver.Observers.Utilities
         public static int GetProcessThreadCount(int pid)
         {
             uint threadCnt = 0;
-            IntPtr snap = IntPtr.Zero;
-            IntPtr buffer = IntPtr.Zero;
+            IntPtr snapShot = IntPtr.Zero;
+            IntPtr threadInfoBuffer = IntPtr.Zero;
             SafeProcessHandle hProc = null;
-            const uint psProcHandleFlags =
-                        (uint)ProcessAccessFlags.QueryInformation |
-                        (uint)ProcessAccessFlags.VirtualMemoryOperation |
-                        (uint)ProcessAccessFlags.VirtualMemoryRead |
-                        (uint)ProcessAccessFlags.DuplicateHandle;
 
             try
             {
-                hProc = OpenProcess(psProcHandleFlags, false, (uint)pid);
+                hProc = OpenProcess((uint)ProcessAccessFlags.All, false, (uint)pid);
 
-                if (hProc.IsInvalid)
+                if (hProc == null || hProc.IsInvalid)
                 {
                     return 0;
                 }
 
-                int retSnap = PssCaptureSnapshot(hProc, PSS_CAPTURE_FLAGS.PSS_CAPTURE_THREADS, CONTEXT_FLAG.CONTEXT_ALL, out snap);
-
-                if (retSnap != 0 || snap == IntPtr.Zero)
+                if (PssCaptureSnapshot(hProc, PSS_CAPTURE_FLAGS.PSS_CAPTURE_THREADS, 0, out snapShot) != 0)
                 {
                     throw new Win32Exception(
                        $"GetProcessThreadCount({pid}) [PssCaptureSnapshot]: Failed with Win32 error code {Marshal.GetLastWin32Error()}");
@@ -1104,17 +847,16 @@ namespace FabricObserver.Observers.Utilities
 
                 int size = Marshal.SizeOf(typeof(PSS_THREAD_INFORMATION));
 
-                // For memory pressure case (underlying machine running out of available memory), let the OOM take FO down: Never catch OOM.
-                buffer = Marshal.AllocHGlobal(size);
-
-                int retQuery = PssQuerySnapshot(snap, PSS_QUERY_INFORMATION_CLASS.PSS_QUERY_THREAD_INFORMATION, buffer, (uint)size);
-                if (retQuery != 0)
+                // For memory pressure case (underlying machine is running out of available memory), let the OOM take FO down: Never catch OOM.
+                threadInfoBuffer = Marshal.AllocHGlobal(size);
+                
+                if (PssQuerySnapshot(snapShot, PSS_QUERY_INFORMATION_CLASS.PSS_QUERY_THREAD_INFORMATION, threadInfoBuffer, (uint)size) != 0)
                 {
                     throw new Win32Exception(
                        $"GetProcessThreadCount({pid}) [PssQuerySnapshot]: Failed with Win32 error code {Marshal.GetLastWin32Error()}");
                 }
 
-                PSS_THREAD_INFORMATION threadInfo = (PSS_THREAD_INFORMATION)Marshal.PtrToStructure(buffer, typeof(PSS_THREAD_INFORMATION));
+                PSS_THREAD_INFORMATION threadInfo = (PSS_THREAD_INFORMATION)Marshal.PtrToStructure(threadInfoBuffer, typeof(PSS_THREAD_INFORMATION));
                 threadCnt = threadInfo.ThreadsCaptured;
             }
             catch (ArgumentException)
@@ -1123,12 +865,8 @@ namespace FabricObserver.Observers.Utilities
             }
             finally
             {
-                Marshal.FreeHGlobal(buffer);
-                int success = PssFreeSnapshot(GetCurrentProcess(), snap);
-                if (success != 0)
-                {
-                    //...
-                }
+                Marshal.FreeHGlobal(threadInfoBuffer);
+                _ = PssFreeSnapshot(GetCurrentProcess(), snapShot);
                 hProc.Dispose();
                 hProc = null;
             }
