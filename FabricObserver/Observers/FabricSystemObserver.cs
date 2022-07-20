@@ -234,7 +234,7 @@ namespace FabricObserver.Observers
                     dotnet = "dotnet ";
                 }
 
-                await GetProcessInfoAsync($"{dotnet}{procName}", token).ConfigureAwait(false);
+                await GetProcessInfoAsync($"{dotnet}{procName}", token);
             }
         }
 
@@ -856,34 +856,54 @@ namespace FabricObserver.Observers
             // This is to support differences between Linux and Windows dotnet process naming pattern.
             // Default value is what Windows expects for proc name. In linux, the procname is an argument (typically) of a dotnet command.
             string dotnetArg = procName;
-            Process[] processes;
+            Process[] processes = null;
 
             if (!IsWindows && procName.Contains("dotnet"))
             {
                 dotnetArg = $"{procName.Replace("dotnet ", string.Empty)}";
                 processes = GetDotnetLinuxProcessesByFirstArgument(dotnetArg);
             }
-            else
-            {
-                processes = Process.GetProcessesByName(procName);
-            }
 
-            if (processes.Length == 0)
+            if (!IsWindows && processes?.Length == 0)
             {
                 return;
             }
 
             Stopwatch timer = new Stopwatch();
 
-            for (int i = 0; i < processes.Length; i++)
+            for (int i = 0; i < (processes?.Length ?? 1); i++)
             {
                 token.ThrowIfCancellationRequested();
+                Process process = null;
 
-                Process process = processes[i];
+                if (!IsWindows)
+                {
+                    process = processes[i];
+                }
 
                 try
                 {
-                    int procId = process.Id;
+                    int procId;
+
+                    if (!IsWindows)
+                    {
+                        procId = process.Id;
+                    }
+                    else
+                    {
+                        procId = NativeMethods.GetProcessIdFromName(procName);
+                        
+                        if (procId < 1)
+                        {
+                            // This will be a Win32Exception or InvalidOperationException if FabricObserver.exe is not running as Admin or LocalSystem on Windows.
+                            // It's OK. Just means that the elevated process (like FabricHost.exe) won't be observed. 
+                            // It is generally *not* worth running FO process as a Windows elevated user just for this scenario. On Linux, FO always should be run as normal user, not root.
+#if DEBUG
+                            ObserverLogger.LogWarning($"FabricObserver must be running as System or Admin user on Windows to monitor {dotnetArg}.");
+#endif
+                            TryRemoveTargetFromFruds(dotnetArg);
+                        }
+                    }
 
                     // Ports - Active TCP All
                     int activePortCount = OSInfoProvider.Instance.GetActiveTcpPortCount(procId, CodePackage?.Path);
@@ -968,7 +988,7 @@ namespace FabricObserver.Observers
                     {
                         double lvidPct = ProcessInfoProvider.Instance.GetProcessKvsLvidsUsagePercentage(dotnetArg, Token);
 
-                        // ProcessGetCurrentKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
+                        // GetProcessKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
                         if (lvidPct > -1)
                         {
                             if (allAppKvsLvidsData.ContainsKey(dotnetArg))
@@ -1009,7 +1029,7 @@ namespace FabricObserver.Observers
 
                     timer.Start();
 
-                    while (!process.HasExited && timer.Elapsed <= duration)
+                    while (timer.Elapsed <= duration)
                     {
                         token.ThrowIfCancellationRequested();
 
@@ -1037,16 +1057,8 @@ namespace FabricObserver.Observers
                         }
                     }
                 }
-                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
                 {
-                    // This will be a Win32Exception or InvalidOperationException if FabricObserver.exe is not running as Admin or LocalSystem on Windows.
-                    // It's OK. Just means that the elevated process (like FabricHost.exe) won't be observed. 
-                    // It is generally *not* worth running FO process as a Windows elevated user just for this scenario. On Linux, FO always should be run as normal user, not root.
-#if DEBUG
-                    ObserverLogger.LogWarning($"Can't observe {dotnetArg} due to it's privilege level. " +
-                                              $"FabricObserver must be running as System or Admin on Windows for this specific task.");
-#endif       
-                    TryRemoveTargetFromFruds(dotnetArg);
                     continue;
                 }
                 catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
@@ -1170,11 +1182,18 @@ namespace FabricObserver.Observers
                     try
                     {
                         int procId = -1;
-                        Process[] ps = !IsWindows ? GetDotnetLinuxProcessesByFirstArgument(frud.Id) : Process.GetProcessesByName(frud.Id);
+                        Process[] ps = !IsWindows ? GetDotnetLinuxProcessesByFirstArgument(frud.Id) : null;
 
-                        if (ps.Length > 0)
+                        if (!IsWindows)
                         {
-                            procId = ps.First().Id;
+                            if (ps?.Length > 0)
+                            {
+                                procId = ps.First().Id;
+                            }
+                        }
+                        else
+                        {
+                            procId = NativeMethods.GetProcessIdFromName(frud.Id);
                         }
 
                         if (procId > 0)
@@ -1182,9 +1201,9 @@ namespace FabricObserver.Observers
                             CsvFileLogger.LogData(fileName, frud.Id, "ProcessId", "", procId);
                         }
                     }
-                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
                     {
-
+                        
                     }
 
                     CsvFileLogger.LogData(fileName, frud.Id, dataLogMonitorType, "Average", frud.AverageDataValue);

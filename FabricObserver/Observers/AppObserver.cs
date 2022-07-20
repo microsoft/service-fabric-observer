@@ -1516,22 +1516,27 @@ namespace FabricObserver.Observers
 
                     try
                     {
-                        parentProc = Process.GetProcessById(parentPid);
-
-                        // On Windows, this will throw a Win32Exception (NativeErrorCode = 5) if target process is running at a higher user privilege than FO.
-                        // If it is not, then this would mean the process has exited so move on to next process.
-                        if (parentProc.HasExited)
-                        {
-                            return;
-                        }
-
-                        // net core's ProcessManager.EnsureState is a CPU bottleneck on Windows.
                         if (!IsWindows)
                         {
+                            parentProc = Process.GetProcessById(parentPid);
+
+                            if (parentProc.HasExited)
+                            {
+                                return;
+                            }
+
                             parentProcName = parentProc.ProcessName;
+                            
                         }
                         else
                         {
+                            // Has the process exited?
+                            if (NativeMethods.GetProcessExitTime(parentPid) != DateTime.MinValue)
+                            {
+                                return;
+                            }
+
+                            // On Windows, this will throw a Win32Exception if target process is running at a higher user privilege than FO, handled below.
                             parentProcName = NativeMethods.GetProcessNameFromId(parentPid);
                         }
 
@@ -1542,59 +1547,63 @@ namespace FabricObserver.Observers
                             return;
                         }
                     }
-                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is NotSupportedException || e is Win32Exception)
                     {
                         if (!IsWindows || ObserverManager.ObserverFailureHealthStateLevel == HealthState.Unknown)
                         {
                             return;
                         }
 
-                        if (e is Win32Exception exception && (exception.NativeErrorCode == 5 || exception.NativeErrorCode == 6 ))
+                        if (e is Win32Exception exception)
                         {
-                            string message = $"{repOrInst?.ServiceName?.OriginalString} is running as Admin or System user on Windows and can't be monitored by FabricObserver, which is running as Network Service.{Environment.NewLine}" +
-                                             $"Please configure FabricObserver to run as Admin or System user on Windows to solve this problem and/or determine if {repOrInst?.ServiceName?.OriginalString} really needs to run as Admin or System user on Windows.";
-
-                            var healthReport = new Utilities.HealthReport
+                            if (exception.NativeErrorCode == 5 || exception.NativeErrorCode == 6)
                             {
-                                ServiceName = ServiceName,
-                                EmitLogEvent = EnableVerboseLogging,
-                                HealthMessage = message,
-                                HealthReportTimeToLive = GetHealthReportTimeToLive(),
-                                Property = $"UserAccount({parentProc.ProcessName})",
-                                EntityType = EntityType.Service,
-                                State = ObserverManager.ObserverFailureHealthStateLevel,
-                                NodeName = NodeName,
-                                Observer = ObserverName
-                            };
+                                string message = $"{repOrInst?.ServiceName?.OriginalString} is running as Admin or System user on Windows and can't be monitored by FabricObserver, which is running as Network Service.{Environment.NewLine}" +
+                                                 $"Please configure FabricObserver to run as Admin or System user on Windows to solve this problem and/or determine if {repOrInst?.ServiceName?.OriginalString} really needs to run as Admin or System user on Windows.";
 
-                            // Generate a Service Fabric Health Report.
-                            HealthReporter.ReportHealthToServiceFabric(healthReport);
+                                string property = $"ProcessAccessDenied({(repOrInst?.ApplicationName?.OriginalString ?? parentPid.ToString())})";
+                                var healthReport = new Utilities.HealthReport
+                                {
+                                    ServiceName = ServiceName,
+                                    EmitLogEvent = EnableVerboseLogging,
+                                    HealthMessage = message,
+                                    HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                                    Property = property,
+                                    EntityType = EntityType.Service,
+                                    State = ObserverManager.ObserverFailureHealthStateLevel,
+                                    NodeName = NodeName,
+                                    Observer = ObserverName
+                                };
 
-                            // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
-                            if (IsTelemetryEnabled)
-                            {
-                                _ = TelemetryClient?.ReportHealthAsync(
-                                        $"UserAccountPrivilege({parentProc.ProcessName})",
-                                        ObserverManager.ObserverFailureHealthStateLevel,
-                                        message,
-                                        ObserverName,
-                                        token,
-                                        repOrInst?.ServiceName?.OriginalString);
-                            }
+                                // Generate a Service Fabric Health Report.
+                                HealthReporter.ReportHealthToServiceFabric(healthReport);
 
-                            // ETW.
-                            if (IsEtwEnabled)
-                            {
-                                ObserverLogger.LogEtw(
-                                    ObserverConstants.FabricObserverETWEventName,
-                                    new
-                                    {
-                                        Property = $"UserAccountPrivilege({parentProc.ProcessName})",
-                                        Level = Enum.GetName(typeof(HealthState), ObserverManager.ObserverFailureHealthStateLevel),
-                                        Message = message,
-                                        ObserverName,
-                                        ServiceName = repOrInst?.ServiceName?.OriginalString
-                                    });
+                                // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
+                                if (IsTelemetryEnabled)
+                                {
+                                    _ = TelemetryClient?.ReportHealthAsync(
+                                            property,
+                                            ObserverManager.ObserverFailureHealthStateLevel,
+                                            message,
+                                            ObserverName,
+                                            token,
+                                            repOrInst?.ServiceName?.OriginalString);
+                                }
+
+                                // ETW.
+                                if (IsEtwEnabled)
+                                {
+                                    ObserverLogger.LogEtw(
+                                        ObserverConstants.FabricObserverETWEventName,
+                                        new
+                                        {
+                                            Property = property,
+                                            Level = Enum.GetName(typeof(HealthState), ObserverManager.ObserverFailureHealthStateLevel),
+                                            Message = message,
+                                            ObserverName,
+                                            ServiceName = repOrInst?.ServiceName?.OriginalString
+                                        });
+                                }
                             }
                         }
 
@@ -1754,21 +1763,21 @@ namespace FabricObserver.Observers
                     // Compute the resource usage of the family of processes (each proc in the family tree). This is also parallelized and has real perf benefits when 
                     // a service process has mulitple descendants.
                     ComputeResourceUsage(
-                            capacity,
-                            parentPid,
-                            checkCpu,
-                            checkMemMb,
-                            checkMemPct,
-                            checkAllPorts,
-                            checkEphemeralPorts,
-                            checkPercentageEphemeralPorts,
-                            checkHandles,
-                            checkThreads,
-                            checkLvids,
-                            procs,
-                            id,
-                            repOrInst,
-                            token);
+                        capacity,
+                        parentPid,
+                        checkCpu,
+                        checkMemMb,
+                        checkMemPct,
+                        checkAllPorts,
+                        checkEphemeralPorts,
+                        checkPercentageEphemeralPorts,
+                        checkHandles,
+                        checkThreads,
+                        checkLvids,
+                        procs,
+                        id,
+                        repOrInst,
+                        token);
                 }
                 catch (Exception e)
                 {

@@ -672,6 +672,33 @@ namespace FabricObserver.Observers.Utilities
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern IntPtr GetCurrentProcess();
 
+        [DllImport("kernel32", SetLastError = true)]
+        static extern int GetProcessId(SafeProcessHandle hProcess);
+
+        [DllImport("psapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool EnumProcesses([In, Out, MarshalAs(UnmanagedType.LPArray)] uint[] lpidProcess, uint cb, out uint lpcbNeeded);
+
+        private static uint[] EnumProcesses()
+        {
+            uint rsz = 1024, sz;
+            uint[] ids;
+
+            do
+            {
+                sz = rsz * 2;
+                ids = new uint[sz / sizeof(uint)];
+
+                if (!EnumProcesses(ids, sz, out rsz))
+                {
+                    throw new Win32Exception($"Failure enumerating processes with Win32 Error code {Marshal.GetLastWin32Error()}");
+                }
+
+            } while (sz == rsz);
+
+            return ids;
+        }
+
         // Impls/Helpers \\
 
         private static readonly string[] ignoreProcessList = new string[]
@@ -688,7 +715,7 @@ namespace FabricObserver.Observers.Utilities
 
         internal static SafeProcessHandle GetProcessHandle(uint id)
         {
-            return OpenProcess((uint)ProcessAccessFlags.VirtualMemoryRead | (uint)ProcessAccessFlags.QueryInformation, false, id);
+            return OpenProcess((uint)ProcessAccessFlags.All, false, id);
         }
 
         private static string GetProcessNameFromId(uint pid)
@@ -700,14 +727,17 @@ namespace FabricObserver.Observers.Utilities
             {
                 hProc = GetProcessHandle(pid);
 
-                if (!hProc.IsInvalid && !hProc.IsClosed)
+                if (!hProc.IsInvalid)
                 {
                     // Get the name of the process.
+                    // If GetModuleBaseName succeeds, the return value specifies the length of the string copied to the buffer, in characters.
+                    // If GetModuleBaseName fails, the return value is 0.
                     if (GetModuleBaseName(hProc, IntPtr.Zero, sbProcName, (uint)sbProcName.Capacity) == 0)
                     {
-                        throw new Win32Exception($"Failure in GetProcessNameFromId(uint): GetModuleBaseName -> {Marshal.GetLastWin32Error()}");
+                        throw new Win32Exception(Marshal.GetLastWin32Error());
                     }
                 }
+
                 return sbProcName.ToString();
             }
             finally
@@ -866,7 +896,9 @@ namespace FabricObserver.Observers.Utilities
             finally
             {
                 Marshal.FreeHGlobal(threadInfoBuffer);
-                _ = PssFreeSnapshot(GetCurrentProcess(), snapShot);
+                IntPtr currentHProc = GetCurrentProcess();
+                _ = PssFreeSnapshot(currentHProc, snapShot);
+                _ = ReleaseHandle(currentHProc);
                 hProc.Dispose();
                 hProc = null;
             }
@@ -884,6 +916,7 @@ namespace FabricObserver.Observers.Utilities
             try
             {
                 string s = GetProcessNameFromId((uint)pid);
+
                 if (s?.Length == 0)
                 {
                     return null;
@@ -895,12 +928,57 @@ namespace FabricObserver.Observers.Utilities
             {
 
             }
-            catch (Win32Exception)
+            catch (Win32Exception e)
             {
-
+                if (e.NativeErrorCode == 5 || e.NativeErrorCode == 6)
+                {
+                    throw;
+                }
             }
 
             return null;
+        }
+
+        public static int GetProcessIdFromName(string procName)
+        {
+            uint[] ids = EnumProcesses();
+
+            for (int i = 0; i < ids.Length; i++)
+            {
+                uint id = ids[i];
+                
+                if (id < 5)
+                {
+                    continue;
+                }
+
+                string name = null;
+
+                try
+                {
+                    name = GetProcessNameFromId(id);
+                }
+                catch (Win32Exception)
+                {
+
+                }
+
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    continue;
+                }
+
+                name = name.Replace(".exe", string.Empty);
+
+                if (name != procName)
+                {
+                    continue;
+                }
+
+                return (int)id;
+            }
+
+            return -1;
         }
 
         public static DateTime GetProcessStartTime(int procId)
@@ -913,12 +991,12 @@ namespace FabricObserver.Observers.Utilities
 
                 if (procHandle.IsInvalid)
                 {
-                    throw new Win32Exception($"Failure in GetProcessStartTime: {Marshal.GetLastWin32Error()}");
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
                 }
 
                 if (!GetProcessTimes(procHandle, out FILETIME ftCreation, out _, out _, out _))
                 {
-                    throw new Win32Exception($"Failure in GetProcessStartTime: {Marshal.GetLastWin32Error()}");
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
                 }
 
                 try
@@ -926,6 +1004,50 @@ namespace FabricObserver.Observers.Utilities
                     ulong ufiletime = unchecked((((ulong)(uint)ftCreation.dwHighDateTime) << 32) | (uint)ftCreation.dwLowDateTime);
                     var startTime = DateTime.FromFileTimeUtc((long)ufiletime);
                     return startTime;
+                }
+                catch (ArgumentException)
+                {
+
+                }
+
+                return DateTime.MinValue;
+            }
+            finally
+            {
+                procHandle?.Dispose();
+                procHandle = null;
+            }
+        }
+
+        public static DateTime GetProcessExitTime(int procId)
+        {
+            SafeProcessHandle procHandle = null;
+
+            try
+            {
+                procHandle = GetProcessHandle((uint)procId);
+
+                if (procHandle.IsInvalid)
+                {
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                }
+
+                if (!GetProcessTimes(procHandle, out FILETIME ftCreation, out FILETIME ftExit, out _, out _))
+                {
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                }
+
+                try
+                {
+                    ulong uExitfiletime = unchecked((((ulong)(uint)ftExit.dwHighDateTime) << 32) | (uint)ftExit.dwLowDateTime);
+                    
+                    // Has not exited.
+                    if (uExitfiletime == 0)
+                    {
+                        return DateTime.MinValue;
+                    }
+
+                    return DateTime.FromFileTimeUtc((long)uExitfiletime);
                 }
                 catch (ArgumentException)
                 {
