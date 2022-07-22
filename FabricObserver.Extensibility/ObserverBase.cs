@@ -795,16 +795,25 @@ namespace FabricObserver.Observers
 
                     try
                     {
-                        using (Process proc = Process.GetProcessesByName(processName)?.First())
+                        if (IsWindows)
                         {
-                            procId = proc.Id;
+                            procId = NativeMethods.GetProcessIdFromName(processName);
 
-                            if (IsWindows)
+                            if (procId == -1)
                             {
-                                processStartTime = NativeMethods.GetProcessStartTime(procId).ToString("o");
+                                // Process may no longer be alive or we can't access privileged information (FO running as user with lesser privilege than target process).
+                                // It makes no sense to report on it.
+                                data.ClearData();
+                                return;
                             }
-                            else
+
+                            processStartTime = NativeMethods.GetProcessStartTime(procId).ToString("o");
+                        }
+                        else
+                        {
+                            using (Process proc = Process.GetProcessesByName(processName)?.First())
                             {
+                                procId = proc.Id;
                                 processStartTime = proc.StartTime.ToString("o");
                             }
                         }
