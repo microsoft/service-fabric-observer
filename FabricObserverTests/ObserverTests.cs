@@ -26,6 +26,8 @@ using System.Fabric.Description;
 using System.Xml;
 using FabricObserver.Observers.Utilities.Telemetry;
 using FabricObserver.Utilities.ServiceFabric;
+using Microsoft.VisualStudio.TestPlatform.ObjectModel;
+using Microsoft.Extensions.DependencyInjection;
 
 /***PLEASE RUN ALL OF THESE TESTS ON YOUR LOCAL DEV MACHINE WITH A RUNNING SF CLUSTER BEFORE SUBMITTING A PULL REQUEST***/
 
@@ -48,6 +50,7 @@ namespace FabricObserverTests
             /* SF runtime mocking care of ServiceFabric.Mocks by loekd.
                https://github.com/loekd/ServiceFabric.Mocks */
 
+            // NOTE: Make changes in Settings.xml located in this project (FabricObserverTests) PackageRoot/Config directory to configure observer settings.
             string configPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "Settings.xml");
             ConfigurationPackage configPackage = BuildConfigurationPackageFromSettingsFile(configPath);
 
@@ -1195,8 +1198,11 @@ namespace FabricObserverTests
             ObserverManager.EtwEnabled = false;
 
             using var obs = new CertificateObserver(TestServiceContext);
+            IServiceCollection services = new ServiceCollection();
+            services.AddScoped(typeof(ObserverBase), s => obs);
+            await using ServiceProvider serviceProvider = services.BuildServiceProvider();
 
-            using var obsMgr = new ObserverManager(obs)
+            using var obsMgr = new ObserverManager(serviceProvider, Token)
             {
                 ApplicationName = "fabric:/TestApp0"
             };
@@ -1454,6 +1460,7 @@ namespace FabricObserverTests
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
+
             var warningDictionary = new Dictionary<string, double>
             {
                 /* Windows paths.. */
@@ -1478,7 +1485,11 @@ namespace FabricObserverTests
                 MonitorDuration = TimeSpan.FromSeconds(5)
             };
 
-            using var obsMgr = new ObserverManager(obs)
+            IServiceCollection services = new ServiceCollection();
+            services.AddScoped(typeof(ObserverBase), s => obs);
+            await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+
+            using var obsMgr = new ObserverManager(serviceProvider, Token)
             {
                 ApplicationName = "fabric:/TestApp0"
             };
@@ -1610,7 +1621,10 @@ namespace FabricObserverTests
                 EphemeralPortsPercentWarningThreshold = 0.01 // This will generate Warning for sure.
             };
 
-            using var obsMgr = new ObserverManager(obs);
+            IServiceCollection services = new ServiceCollection();
+            services.AddScoped(typeof(ObserverBase), s => obs);
+            await using ServiceProvider serviceProvider = services.BuildServiceProvider();
+            using var obsMgr = new ObserverManager(serviceProvider, Token);
             await obs.ObserveAsync(Token);
 
             // observer ran to completion with no errors.

@@ -178,11 +178,11 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            ParallelLoopResult result = await MonitorDeployedAppsAsync(token).ConfigureAwait(false);
+            ParallelLoopResult result = await MonitorDeployedAppsAsync(token);
             
             if (result.IsCompleted)
             {
-                await ReportAsync(token).ConfigureAwait(false);
+                await ReportAsync(token);
             }
 
             _stopwatch.Stop();
@@ -1180,13 +1180,16 @@ namespace FabricObserver.Observers
             {
                 // Default to using [1/4 of available logical processors ~* 2] threads if MaxConcurrentTasks setting is not supplied.
                 // So, this means around 10 - 11 threads (or less) could be used if processor count = 20. This is only being done to limit the impact
-                // FabricObserver has on the resources it monitors and alerts on...
+                // FabricObserver has on the resources it monitors and alerts on.
                 maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
                 
                 // If user configures MaxConcurrentTasks setting, then use that value instead.
                 if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasks), out int maxTasks))
                 {
-                    maxDegreeOfParallelism = maxTasks;
+                    if (maxTasks > 0)
+                    {
+                        maxDegreeOfParallelism = maxTasks;
+                    }
                 }
             }
 
