@@ -6,13 +6,14 @@
 using Microsoft.Win32.SafeHandles;
 using System.Runtime.InteropServices.ComTypes;
 using FabricObserver.Interfaces;
+using System.Threading;
 
 namespace FabricObserver.Observers.Utilities
 {
     public class CpuUsageWin32 : ICpuUsage
     {
-        // Win32
         private FILETIME processTimesLastUserTime, processTimesLastKernelTime, systemTimesLastUserTime, systemTimesLastKernelTime;
+        bool hasRunOnce = false;
 
         /// <summary>
         /// This function computes the total percentage of all cpus that the supplied process is currently using.
@@ -22,7 +23,7 @@ namespace FabricObserver.Observers.Utilities
         /// <returns>CPU percentage in use as double value</returns>
         public double GetCurrentCpuUsagePercentage(int procId, string procName)
         {
-            // Ensure this is the process were still looking for.
+            // Ensure this is the process we're still looking for.
             if (NativeMethods.GetProcessNameFromId(procId) != procName)
             {
                 return 0;
@@ -49,13 +50,18 @@ namespace FabricObserver.Observers.Utilities
 
                 ulong processTimesDelta =
                     SubtractTimes(processTimesRawUserTime, processTimesLastUserTime) + SubtractTimes(processTimesRawKernelTime, processTimesLastKernelTime);
-
                 ulong systemTimesDelta =
                     SubtractTimes(systemTimesRawUserTime, systemTimesLastUserTime) + SubtractTimes(systemTimesRawKernelTime, systemTimesLastKernelTime);
-
                 double cpuUsage = (double)systemTimesDelta == 0 ? 0 : processTimesDelta * 100 / (double)systemTimesDelta;
-
                 UpdateTimes(processTimesRawUserTime, processTimesRawKernelTime, systemTimesRawUserTime, systemTimesRawKernelTime);
+
+                if (!hasRunOnce)
+                {
+                    Thread.Sleep(100);
+                    hasRunOnce = true;
+                    return GetCurrentCpuUsagePercentage(procId, procName);
+                }
+    
                 return cpuUsage;
             }
             finally

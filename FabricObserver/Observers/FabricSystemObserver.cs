@@ -871,213 +871,208 @@ namespace FabricObserver.Observers
 
             Stopwatch timer = new Stopwatch();
 
-            for (int i = 0; i < (processes?.Length ?? 1); i++)
+            token.ThrowIfCancellationRequested();
+            Process process = null;
+
+            if (!IsWindows)
             {
-                token.ThrowIfCancellationRequested();
-                Process process = null;
+                process = processes.First();
+            }
+
+            try
+            {
+                int procId;
 
                 if (!IsWindows)
                 {
-                    process = processes[i];
+                    procId = process.Id;
                 }
-
-                try
+                else
                 {
-                    int procId;
-
-                    if (!IsWindows)
-                    {
-                        procId = process.Id;
-                    }
-                    else
-                    {
-                        procId = NativeMethods.GetProcessIdFromName(procName);
+                    procId = NativeMethods.GetProcessIdFromName(procName);
                         
-                        if (procId < 1)
-                        {
-                            // This will be a Win32Exception or InvalidOperationException if FabricObserver.exe is not running as Admin or LocalSystem on Windows.
-                            // It's OK. Just means that the elevated process (like FabricHost.exe) won't be observed. 
-                            // It is generally *not* worth running FO process as a Windows elevated user just for this scenario. On Linux, FO always should be run as normal user, not root.
+                    if (procId < 1)
+                    {
+                        // This will be a Win32Exception or InvalidOperationException if FabricObserver.exe is not running as Admin or LocalSystem on Windows.
+                        // It's OK. Just means that the elevated process (like FabricHost.exe) won't be observed. 
+                        // It is generally *not* worth running FO process as a Windows elevated user just for this scenario. On Linux, FO always should be run as normal user, not root.
 #if DEBUG
-                            ObserverLogger.LogWarning($"FabricObserver must be running as System or Admin user on Windows to monitor {dotnetArg}.");
+                        ObserverLogger.LogWarning($"FabricObserver must be running as System or Admin user on Windows to monitor {dotnetArg}.");
 #endif
-                            TryRemoveTargetFromFruds(dotnetArg);
-                        }
-                    }
-
-                    // Ports - Active TCP All
-                    int activePortCount = OSInfoProvider.Instance.GetActiveTcpPortCount(procId, CodePackage?.Path);
-                    TotalActivePortCountAllSystemServices += activePortCount;
-                    
-                    if (ActiveTcpPortCountError > 0 || ActiveTcpPortCountWarning > 0)
-                    {
-                        if (allActiveTcpPortData.ContainsKey(dotnetArg))
-                        {
-                            allActiveTcpPortData[dotnetArg].AddData(activePortCount);
-                        }
-                    }
-
-                    // Ports - Active TCP Ephemeral
-                    int activeEphemeralPortCount = OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, CodePackage?.Path);
-                    TotalActiveEphemeralPortCountAllSystemServices += activeEphemeralPortCount;
-                    
-                    if (ActiveEphemeralPortCountError > 0 || ActiveEphemeralPortCountWarning > 0)
-                    {
-                        if (allEphemeralTcpPortData.ContainsKey(dotnetArg))
-                        {
-                            allEphemeralTcpPortData[dotnetArg].AddData(activeEphemeralPortCount);
-                        }
-                    }
-
-                    // Allocated Handles
-                    float handles;
-
-                    if (IsWindows)
-                    {
-                        handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId);
-                    }
-                    else
-                    {
-                        handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId, CodePackage?.Path);
-                    }
-
-                    TotalAllocatedHandlesAllSystemServices += handles;
-
-                    // Threads
-                    int threads = 0;
-
-                    if (IsWindows)
-                    {
-                        threads = NativeMethods.GetProcessThreadCount(procId);
-                    }
-                    else
-                    {
-                        threads = ProcessInfoProvider.GetProcessThreadCount(procId);
-                    }
-
-                    TotalThreadsAllSystemServices += threads;
-                    
-                    // No need to proceed further if there are no configuration settings for CPU, Memory, Handles thresholds.
-                    // Returning here is correct as supplied thresholds apply to all system services.
-                    if (CpuErrorUsageThresholdPct <= 0 && CpuWarnUsageThresholdPct <= 0 && MemErrorUsageThresholdMb <= 0 && MemWarnUsageThresholdMb <= 0
-                        && AllocatedHandlesError <= 0 && AllocatedHandlesWarning <= 0 && ThreadCountError <= 0 && ThreadCountWarning <= 0 && !EnableKvsLvidMonitoring)
-                    {
+                        TryRemoveTargetFromFruds(dotnetArg);
                         return;
                     }
+                }
 
-                    // Handles/FDs
-                    if (AllocatedHandlesError > 0 || AllocatedHandlesWarning > 0)
+                // Ports - Active TCP All
+                int activePortCount = OSInfoProvider.Instance.GetActiveTcpPortCount(procId, CodePackage?.Path);
+                TotalActivePortCountAllSystemServices += activePortCount;
+                    
+                if (ActiveTcpPortCountError > 0 || ActiveTcpPortCountWarning > 0)
+                {
+                    if (allActiveTcpPortData.ContainsKey(dotnetArg))
                     {
-                        if (allHandlesData.ContainsKey(dotnetArg))
+                        allActiveTcpPortData[dotnetArg].AddData(activePortCount);
+                    }
+                }
+
+                // Ports - Active TCP Ephemeral
+                int activeEphemeralPortCount = OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, CodePackage?.Path);
+                TotalActiveEphemeralPortCountAllSystemServices += activeEphemeralPortCount;
+                    
+                if (ActiveEphemeralPortCountError > 0 || ActiveEphemeralPortCountWarning > 0)
+                {
+                    if (allEphemeralTcpPortData.ContainsKey(dotnetArg))
+                    {
+                        allEphemeralTcpPortData[dotnetArg].AddData(activeEphemeralPortCount);
+                    }
+                }
+
+                // Allocated Handles
+                float handles;
+
+                if (IsWindows)
+                {
+                    handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId);
+                }
+                else
+                {
+                    handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId, CodePackage?.Path);
+                }
+
+                TotalAllocatedHandlesAllSystemServices += handles;
+
+                // Threads
+                int threads = 0;
+
+                if (IsWindows)
+                {
+                    threads = NativeMethods.GetProcessThreadCount(procId);
+                }
+                else
+                {
+                    threads = ProcessInfoProvider.GetProcessThreadCount(procId);
+                }
+
+                TotalThreadsAllSystemServices += threads;
+                    
+                // No need to proceed further if there are no configuration settings for CPU, Memory, Handles thresholds.
+                // Returning here is correct as supplied thresholds apply to all system services.
+                if (CpuErrorUsageThresholdPct <= 0 && CpuWarnUsageThresholdPct <= 0 && MemErrorUsageThresholdMb <= 0 && MemWarnUsageThresholdMb <= 0
+                    && AllocatedHandlesError <= 0 && AllocatedHandlesWarning <= 0 && ThreadCountError <= 0 && ThreadCountWarning <= 0 && !EnableKvsLvidMonitoring)
+                {
+                    return;
+                }
+
+                // Handles/FDs
+                if (AllocatedHandlesError > 0 || AllocatedHandlesWarning > 0)
+                {
+                    if (allHandlesData.ContainsKey(dotnetArg))
+                    {
+                        allHandlesData[dotnetArg].AddData(handles);
+                    }
+                }
+
+                // Threads
+                if (ThreadCountError > 0 || ThreadCountWarning > 0)
+                {
+                    if (allThreadsData.ContainsKey(dotnetArg))
+                    {
+                        allThreadsData[dotnetArg].AddData(threads);
+                    }
+                }
+
+                // KVS LVIDs
+                if (EnableKvsLvidMonitoring && (dotnetArg == "Fabric" || dotnetArg == "FabricRM"))
+                {
+                    double lvidPct = ProcessInfoProvider.Instance.GetProcessKvsLvidsUsagePercentage(dotnetArg, Token);
+
+                    // GetProcessKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
+                    if (lvidPct > -1)
+                    {
+                        if (allAppKvsLvidsData.ContainsKey(dotnetArg))
                         {
-                            allHandlesData[dotnetArg].AddData(handles);
+                            allAppKvsLvidsData[dotnetArg].AddData(lvidPct);
                         }
                     }
+                }
 
-                    // Threads
-                    if (ThreadCountError > 0 || ThreadCountWarning > 0)
+                ICpuUsage cpuUsage;
+
+                if (IsWindows)
+                {
+                    cpuUsage = new CpuUsageWin32();
+                }
+                else
+                {
+                    cpuUsage = new CpuUsageProcess();
+                }
+
+                TimeSpan duration = TimeSpan.FromSeconds(1);
+
+                if (MonitorDuration > TimeSpan.MinValue)
+                {
+                    duration = MonitorDuration;
+                }
+
+                // Memory MB
+                if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
+                {
+                    float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, dotnetArg, Token, checkPrivateWorkingSet);
+
+                    if (allMemData.ContainsKey(dotnetArg))
                     {
-                        if (allThreadsData.ContainsKey(dotnetArg))
-                        {
-                            allThreadsData[dotnetArg].AddData(threads);
-                        }
+                        allMemData[dotnetArg].AddData(processMem);
                     }
+                }
 
-                    // KVS LVIDs
-                    if (EnableKvsLvidMonitoring && (dotnetArg == "Fabric" || dotnetArg == "FabricRM"))
+                timer.Start();
+
+                while (timer.Elapsed <= duration)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    try
                     {
-                        double lvidPct = ProcessInfoProvider.Instance.GetProcessKvsLvidsUsagePercentage(dotnetArg, Token);
-
-                        // GetProcessKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
-                        if (lvidPct > -1)
+                        // CPU Time for service process.
+                        if (CpuErrorUsageThresholdPct > 0 || CpuWarnUsageThresholdPct > 0)
                         {
-                            if (allAppKvsLvidsData.ContainsKey(dotnetArg))
+                            int cpu = (int)cpuUsage.GetCurrentCpuUsagePercentage(procId, IsWindows ? dotnetArg : null);
+
+                            if (allCpuData.ContainsKey(dotnetArg))
                             {
-                                allAppKvsLvidsData[dotnetArg].AddData(lvidPct);
+                                allCpuData[dotnetArg].AddData(cpu);
                             }
                         }
+
+                        await Task.Delay(150, Token);
                     }
-
-                    ICpuUsage cpuUsage;
-
-                    if (IsWindows)
+                    catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
                     {
-                        cpuUsage = new CpuUsageWin32();
+                        ObserverLogger.LogWarning($"Unhandled Exception thrown in GetProcessInfoAsync:{Environment.NewLine}{e}");
+
+                        // Fix the bug..
+                        throw;
                     }
-                    else
-                    {
-                        cpuUsage = new CpuUsageProcess();
-                    }
-
-                    TimeSpan duration = TimeSpan.FromSeconds(1);
-
-                    if (MonitorDuration > TimeSpan.MinValue)
-                    {
-                        duration = MonitorDuration;
-                    }
-
-                    // Memory MB
-                    if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
-                    {
-                        float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, dotnetArg, Token, checkPrivateWorkingSet);
-
-                        if (allMemData.ContainsKey(dotnetArg))
-                        {
-                            allMemData[dotnetArg].AddData(processMem);
-                        }
-                    }
-
-                    timer.Start();
-
-                    while (timer.Elapsed <= duration)
-                    {
-                        token.ThrowIfCancellationRequested();
-
-                        try
-                        {
-                            // CPU Time for service process.
-                            if (CpuErrorUsageThresholdPct > 0 || CpuWarnUsageThresholdPct > 0)
-                            {
-                                int cpu = (int)cpuUsage.GetCurrentCpuUsagePercentage(procId, IsWindows ? dotnetArg : null);
-
-                                if (allCpuData.ContainsKey(dotnetArg))
-                                {
-                                    allCpuData[dotnetArg].AddData(cpu);
-                                }
-                            }
-
-                            await Task.Delay(150, Token);
-                        }
-                        catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
-                        {
-                            ObserverLogger.LogWarning($"Unhandled Exception thrown in GetProcessInfoAsync:{Environment.NewLine}{e}");
-
-                            // Fix the bug..
-                            throw;
-                        }
-                    }
-                }
-                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
-                {
-                    continue;
-                }
-                catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
-                {
-                    ObserverLogger.LogError($"Unhandled exception in GetProcessInfoAsync:{Environment.NewLine}{e}");
-
-                    // Fix the bug..
-                    throw;
-                }
-                finally
-                {
-                    process?.Dispose();
-                    process = null;
                 }
 
                 timer.Stop();
-                timer.Reset();
+            }
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+            {
+               
+            }
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            {
+                ObserverLogger.LogError($"Unhandled exception in GetProcessInfoAsync:{Environment.NewLine}{e}");
 
-                await Task.Delay(150, Token).ConfigureAwait(false);
+                // Fix the bug..
+                throw;
+            }
+            finally
+            {
+                process?.Dispose();
+                process = null;
             }
 
             processes = null;
@@ -1123,7 +1118,7 @@ namespace FabricObserver.Observers
                 }
 
                 // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
-                if (allAppKvsLvidsData != null)
+                if (EnableKvsLvidMonitoring && allAppKvsLvidsData != null)
                 {
                     _ = allAppKvsLvidsData.Remove(dotnetArg);
                 }

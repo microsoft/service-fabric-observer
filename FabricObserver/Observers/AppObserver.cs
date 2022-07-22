@@ -165,7 +165,7 @@ namespace FabricObserver.Observers
 
             Token = token;
             _stopwatch.Start();
-            bool initialized = await InitializeAsync().ConfigureAwait(false);
+            bool initialized = await InitializeAsync();
 
             if (!initialized)
             {
@@ -556,7 +556,7 @@ namespace FabricObserver.Observers
             SetPropertiesFromApplicationSettings();
 
             // Process JSON object configuration settings (housed in [AppObserver.config].json) for this run.
-            if (await ProcessJSONConfigAsync().ConfigureAwait(false) == false)
+            if (!await ProcessJSONConfigAsync())
             {
                 return false;
             }
@@ -565,7 +565,7 @@ namespace FabricObserver.Observers
             FilterTargetAppFormat();
 
             // Support for specifying single configuration JSON object for all applications.
-            await ProcessGlobalThresholdSettingsAsync().ConfigureAwait(false);
+            await ProcessGlobalThresholdSettingsAsync();
 
             int settingsFail = 0;
 
@@ -1561,7 +1561,7 @@ namespace FabricObserver.Observers
                                 string message = $"{repOrInst?.ServiceName?.OriginalString} is running as Admin or System user on Windows and can't be monitored by FabricObserver, which is running as Network Service.{Environment.NewLine}" +
                                                  $"Please configure FabricObserver to run as Admin or System user on Windows to solve this problem and/or determine if {repOrInst?.ServiceName?.OriginalString} really needs to run as Admin or System user on Windows.";
 
-                                string property = $"ProcessAccessDenied({(repOrInst?.ApplicationName?.OriginalString ?? parentPid.ToString())})";
+                                string property = $"ProcessAccess({repOrInst?.ServiceName?.OriginalString ?? parentPid.ToString()})";
                                 var healthReport = new Utilities.HealthReport
                                 {
                                     ServiceName = ServiceName,
