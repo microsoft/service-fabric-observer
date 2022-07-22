@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<!-- You can use the XML diff/merge tool XmlDiffPatchSF (located in this repo) to make upgrading your base configurations to the latest version much easier. -->
+<!-- You can try the XML diff/merge tool XmlDiffPatchSF (located in this repo) to make upgrading your base configurations to the latest version much easier. -->
 <ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.1.960" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- ObserverManager Configuration -->
@@ -12,6 +12,7 @@
          ETW event data to different named sinks. This is more of an advanced scenario. In general, just leave this blank. -->
     <Parameter Name="ObserverManagerETWProviderName" DefaultValue="" />
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
+    <!-- We would really appreciate it if you kept this set to true. The information we collect contains no PII and helps us understand how FO is doing in the wild. -->
     <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="true" />
     <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
     <Parameter Name="ObserverLogPath" DefaultValue="fabric_observer_logs" />
@@ -111,9 +112,9 @@
     <!-- Time window in which max dumps per process, per observed metric can occur. See AppObserverMaxProcessDumps. -->
     <Parameter Name="AppObserverMaxDumpsTimeWindow" DefaultValue="04:00:00" />
     <!-- Concurrency/Parallelism Support.
-         Note: If you do not monitor 50, 100, or even 1000 or more services, then enabling this is not super useful. This will only add any value (substantial) on machines with capable hardware (>= 8 logical processors).
-         If you do run on capable hardware and want AppObserver to complete a run faster than at sequential speed, then enable this. You can control the level of concurrency by setting the AppObserverMaxConcurrentTasks
-         setting. -->
+         Note: This will only add real value (substantial) on machines with capable hardware (>= 8 logical processors). FO will not attempt to do anything concurrently if
+         the number of logical processors is less than 4, even if this is set to true. If you do run on capable hardware and want AppObserver to complete a run much faster than at sequential speed, then keep this enabled.
+         You can control the level of concurrency by setting the AppObserverMaxConcurrentTasks setting. -->
     <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
     <!-- The default value is 1/4 of detected logical processors (LPs). This would mean given 20 LPs, the number of threads that will be created will be at least 5 (and seldom more than that), if possible.
          You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
@@ -126,8 +127,8 @@
     <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
     <!-- Process Working set type for AppObserver to monitor. 
          Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). 
-         NOTE: If you have *several* service processes of the **same name**, this feature will add *significant* time-to-completion and increased CPU usage to AppObserver. 
-         In the case where you are monitoring 100s of same-named service processes, you should set this to false and monitor Full Working set (Private + Shared), 
+         NOTE: If you have *several* service processes of the **same name**, this feature will add *significant* time-to-completion and increased CPU usage (small, but more than necessary) to AppObserver. 
+         In the case where you are monitoring 100s of **same-named** service processes, you should set this to false and monitor Full Working set (Private + Shared), 
          which will be computed using NativeMethods.GetProcessMemoryInfo function (very fast). -->
     <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
     <!-- CertificateObserver-->
@@ -158,19 +159,19 @@
     <Parameter Name="FabricSystemObserverResourceUsageDataCapacity" DefaultValue="" />
     <!-- KVS LVID Usage Monitoring - Windows-only.
          This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
-    <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="true" />
+    <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="false" />
     <Parameter Name="FabricSystemObserverMonitorPrivateWorkingSet" DefaultValue="true" />
     <!-- FabricSystemObserver Warning/Error Thresholds -->
     <Parameter Name="FabricSystemObserverCpuErrorLimitPercent" DefaultValue="" />
-    <Parameter Name="FabricSystemObserverCpuWarningLimitPercent" DefaultValue="80" />
+    <Parameter Name="FabricSystemObserverCpuWarningLimitPercent" DefaultValue="" />
     <Parameter Name="FabricSystemObserverMemoryErrorLimitMb" DefaultValue="" />
     <Parameter Name="FabricSystemObserverMemoryWarningLimitMb" DefaultValue="4096" />
     <Parameter Name="FabricSystemObserverNetworkErrorActivePorts" DefaultValue="" />
-    <Parameter Name="FabricSystemObserverNetworkWarningActivePorts" DefaultValue="20000" />
+    <Parameter Name="FabricSystemObserverNetworkWarningActivePorts" DefaultValue="" />
     <Parameter Name="FabricSystemObserverNetworkErrorEphemeralPorts" DefaultValue="" />
-    <Parameter Name="FabricSystemObserverNetworkWarningEphemeralPorts" DefaultValue="10000" />
+    <Parameter Name="FabricSystemObserverNetworkWarningEphemeralPorts" DefaultValue="7000" />
     <Parameter Name="FabricSystemObserverAllocatedHandlesErrorLimit" DefaultValue="" />
-    <Parameter Name="FabricSystemObserverAllocatedHandlesWarningLimit" DefaultValue="5000" />
+    <Parameter Name="FabricSystemObserverAllocatedHandlesWarningLimit" DefaultValue="" />
     <Parameter Name="FabricSystemObserverThreadCountErrorLimit" DefaultValue="" />
     <Parameter Name="FabricSystemObserverThreadCountWarningLimit" DefaultValue="500" />
     <!-- Whether to monitor Windows Event Log. -->

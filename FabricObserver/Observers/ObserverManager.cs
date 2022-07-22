@@ -49,7 +49,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.2.1.960";
+        private const string InternalVersionNumber = "3.2.1.831";
 
         private bool RuntimeTokenCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;
@@ -139,39 +139,15 @@ namespace FabricObserver.Observers
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ObserverManager"/> class.
-        /// This is only used by unit tests.
-        /// </summary>
-        /// <param name="observer">Observer instance.</param>
-        /// <param name="fabricClient">FabricClient instance</param>
-        public ObserverManager(ObserverBase observer)
-        {
-            cts = new CancellationTokenSource();
-            token = cts.Token;
-            Logger = new Logger("ObserverManagerSingleObserverRun");
-            HealthReporter = new ObserverHealthReporter(Logger);
-            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-            nodeName = FabricServiceContext.NodeContext.NodeName;
-
-            // The unit tests expect file output from some observers.
-            ObserverWebAppDeployed = true;
-            observers = new List<ObserverBase>(new[]
-            {
-                observer
-            });
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ObserverManager"/> class.
         /// </summary>
         /// <param name="serviceProvider">IServiceProvider for retrieving service instance.</param>
-        /// <param name="fabricClient">FabricClient instance.</param>
         /// <param name="token">Cancellation token.</param>
         public ObserverManager(IServiceProvider serviceProvider, CancellationToken token)
         {
             this.token = token;
             cts = new CancellationTokenSource();
             linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, this.token);
-            FabricServiceContext = serviceProvider.GetRequiredService<StatelessServiceContext>();
+            FabricServiceContext ??= serviceProvider.GetRequiredService<StatelessServiceContext>();
             nodeName = FabricServiceContext.NodeContext.NodeName;
             FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
             isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
@@ -237,11 +213,11 @@ namespace FabricObserver.Observers
                 {
                     if (!isConfigurationUpdateInProgress && (shutdownSignaled || token.IsCancellationRequested))
                     {
-                        await ShutDownAsync().ConfigureAwait(false);
+                        await ShutDownAsync();
                         break;
                     }
 
-                    await RunObserversAsync().ConfigureAwait(false);
+                    await RunObserversAsync();
 
                     // Identity-agnostic internal operational telemetry sent to Service Fabric team (only) for use in
                     // understanding generic behavior of FH in the real world (no PII). This data is sent once a day and will be retained for no more
@@ -596,7 +572,7 @@ namespace FabricObserver.Observers
 
             if (!isConfigurationUpdateInProgress)
             {
-                SignalAbortToRunningObserver();
+                await SignalAbortToRunningObserverAsync();
 
                 // Clear any ObserverManager warnings/errors.
                 await RemoveObserverManagerHealthReportsAsync();
@@ -1142,13 +1118,18 @@ namespace FabricObserver.Observers
         /// This will eventually cause the observer to stop processing as this will throw an OperationCancelledException 
         /// in one of the observer's executing code paths.
         /// </summary>
-        private void SignalAbortToRunningObserver()
+        private async Task SignalAbortToRunningObserverAsync(int waitTimeSeconds = 0)
         {
             Logger.LogInfo("Signalling task cancellation to currently running Observer.");
 
             try
             {
                 cts?.Cancel();
+
+                if (waitTimeSeconds > 0)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(waitTimeSeconds));
+                }
             }
             catch (ObjectDisposedException)
             {
@@ -1171,6 +1152,7 @@ namespace FabricObserver.Observers
                     continue;
                 }
 
+                // Don't run observers during a versionless, parameter-only app upgrade.
                 if (isConfigurationUpdateInProgress)
                 {
                     return;
@@ -1183,26 +1165,26 @@ namespace FabricObserver.Observers
                         return;
                     }
 
-                    // Is it healthy?
-                    if (observer.IsUnhealthy)
-                    {
-                        continue;
-                    }
-
                     Logger.LogInfo($"Starting {observer.ObserverName}");
 
                     // Synchronous call.
-                    bool isCompleted = observer.ObserveAsync(linkedSFRuntimeObserverTokenSource?.Token ?? token).Wait(ObserverExecutionTimeout);
+                    bool isCompleted = 
+                        observer.ObserveAsync(
+                            linkedSFRuntimeObserverTokenSource?.Token ?? token).Wait(
+                                (int)ObserverExecutionTimeout.TotalMilliseconds, linkedSFRuntimeObserverTokenSource?.Token ?? token);
 
-                    // The observer is taking too long (hung?), move on to next observer.
-                    // Currently, this observer will not run again for the lifetime of this FO service instance.
+                    // The observer is taking too long. Abort the run. Move on to next observer.
                     if (!isCompleted && !(RuntimeTokenCancelled || shutdownSignaled))
                     {
-                        string observerHealthWarning = $"{observer.ObserverName} on node {nodeName} has exceeded its specified Maximum run time of {ObserverExecutionTimeout.TotalSeconds} seconds. " +
-                                                       $"This means something went wrong with {observer.ObserverName} during its last run.";
+                        string observerHealthWarning = $"{observer.ObserverName} on node {nodeName} did not complete successfully within the allotted time. Aborting run.";
+                        Logger.LogWarning(observerHealthWarning);
+                        await SignalAbortToRunningObserverAsync(10);
 
-                        Logger.LogError(observerHealthWarning);
-                        observer.IsUnhealthy = true;
+                        // Refresh FO CancellationTokenSources.
+                        cts?.Dispose();
+                        linkedSFRuntimeObserverTokenSource?.Dispose();
+                        cts = new CancellationTokenSource();
+                        linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, token);
 
                         // Telemetry.
                         if (TelemetryEnabled)
@@ -1244,7 +1226,7 @@ namespace FabricObserver.Observers
                                 ServiceName = FabricServiceContext.ServiceName,
                                 EmitLogEvent = false,
                                 HealthMessage = observerHealthWarning,
-                                HealthReportTimeToLive = TimeSpan.FromMinutes(15),
+                                HealthReportTimeToLive = TimeSpan.FromMinutes(5),
                                 Property = $"{observer.ObserverName}_HealthState",
                                 EntityType = EntityType.Service,
                                 State = ObserverFailureHealthStateLevel,
@@ -1341,7 +1323,7 @@ namespace FabricObserver.Observers
                 }
                 catch (Exception e) when (e is FabricException || e is TimeoutException || e is Win32Exception)
                 {
-
+                    // Transient.
                 }
                 catch (Exception e) when (!(e is LinuxPermissionException))
                 {
