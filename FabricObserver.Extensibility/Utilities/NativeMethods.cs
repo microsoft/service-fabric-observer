@@ -5,6 +5,7 @@
 
 using Microsoft.Win32.SafeHandles;
 using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -25,6 +26,10 @@ namespace FabricObserver.Observers.Utilities
     {
         public const int AF_INET = 2;
         public const int AF_INET6 = 23;
+        private const int ERROR_SUCCESS = 0;
+        private const int THREAD_STILL_ACTIVE = 259;
+        private const int ERROR_NO_MORE_ITEMS = 259;
+        private static readonly Logger logger = new Logger("NativeMethods");
 
         [Flags]
         public enum MINIDUMP_TYPE
@@ -448,7 +453,7 @@ namespace FabricObserver.Observers.Utilities
         }
 
         // For PSCaptureSnapshot/PSQuerySnapshot \\
-
+        // Credit (MIT): https://github.com/dahall/Vanara/blob/master/PInvoke/Kernel32/ProcessSnapshot.cs, author: https://github.com/dahall
         [Flags]
         public enum PSS_CAPTURE_FLAGS : uint
         {
@@ -601,6 +606,133 @@ namespace FabricObserver.Observers.Utilities
             PSS_PROCESS_FLAGS_FROZEN = 0x00000010
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        public struct PSS_THREAD_ENTRY
+        {
+            /// <summary>
+            /// <para>The exit code of the process. If the process has not exited, this is set to <c>STILL_ACTIVE</c> (259).</para>
+            /// </summary>
+            public uint ExitStatus;
+
+            /// <summary>
+            /// <para>The address of the thread environment block (TEB). Reserved for use by the operating system.</para>
+            /// </summary>
+            public IntPtr TebBaseAddress;
+
+            /// <summary>
+            /// <para>The process ID.</para>
+            /// </summary>
+            public uint ProcessId;
+
+            /// <summary>
+            /// <para>The thread ID.</para>
+            /// </summary>
+            public uint ThreadId;
+
+            /// <summary>
+            /// <para>The affinity mask of the process.</para>
+            /// </summary>
+            public UIntPtr AffinityMask;
+
+            /// <summary>
+            /// <para>The thread’s dynamic priority level.</para>
+            /// </summary>
+            public int Priority;
+
+            /// <summary>
+            /// <para>The base priority level of the process.</para>
+            /// </summary>
+            public int BasePriority;
+
+            /// <summary>
+            /// <para>Reserved for use by the operating system.</para>
+            /// </summary>
+            public IntPtr LastSyscallFirstArgument;
+
+            /// <summary>
+            /// <para>Reserved for use by the operating system.</para>
+            /// </summary>
+            public ushort LastSyscallNumber;
+
+            /// <summary>
+            /// <para>The time the thread was created. For more information, see FILETIME.</para>
+            /// </summary>
+            public FILETIME CreateTime;
+
+            /// <summary>
+            /// <para>If the thread exited, the time of the exit. For more information, see FILETIME.</para>
+            /// </summary>
+            public FILETIME ExitTime;
+
+            /// <summary>
+            /// <para>The amount of time the thread spent executing in kernel mode. For more information, see FILETIME.</para>
+            /// </summary>
+            public FILETIME KernelTime;
+
+            /// <summary>
+            /// <para>The amount of time the thread spent executing in user mode. For more information, see FILETIME.</para>
+            /// </summary>
+            public FILETIME UserTime;
+
+            /// <summary>
+            /// <para>A pointer to the thread procedure for thread.</para>
+            /// </summary>
+            public IntPtr Win32StartAddress;
+
+            /// <summary>
+            /// <para>The capture time of this thread. For more information, see FILETIME.</para>
+            /// </summary>
+            public FILETIME CaptureTime;
+
+            /// <summary>
+            /// <para>Flags about the thread. For more information, see PSS_THREAD_FLAGS.</para>
+            /// </summary>
+            public PSS_THREAD_FLAGS Flags;
+
+            /// <summary>
+            /// <para>The count of times the thread suspended.</para>
+            /// </summary>
+            public ushort SuspendCount;
+
+            /// <summary>
+            /// <para>The size of ContextRecord, in bytes.</para>
+            /// </summary>
+            public ushort SizeOfContextRecord;
+
+            /// <summary>
+            /// <para>
+            /// A pointer to the context record if thread context information was captured. The pointer is valid for the lifetime of the walk
+            /// marker passed to PssWalkSnapshot.
+            /// </para>
+            /// </summary>
+            public IntPtr ContextRecord;         // valid for life time of walk marker
+        }
+
+        public enum PSS_WALK_INFORMATION_CLASS
+        {
+            /// <summary>
+            /// Returns a PSS_AUXILIARY_PAGE_ENTRY structure, which contains the address, page attributes and contents of an auxiliary copied page.
+            /// </summary>
+            PSS_WALK_AUXILIARY_PAGES,
+
+            /// <summary>
+            /// Returns a PSS_VA_SPACE_ENTRY structure, which contains the MEMORY_BASIC_INFORMATION structure for every distinct VA region.
+            /// </summary>
+            PSS_WALK_VA_SPACE,
+
+            /// <summary>
+            /// Returns a PSS_HANDLE_ENTRY structure, with information specifying the handle value, its type name, object name (if captured),
+            /// basic information (if captured), and type-specific information (if captured).
+            /// </summary>
+            PSS_WALK_HANDLES,
+
+            /// <summary>
+            /// Returns a PSS_THREAD_ENTRY structure, with basic information about the thread, as well as its termination state, suspend
+            /// count and Win32 start address.
+            /// </summary>
+            PSS_WALK_THREADS,
+        }
+        
         // Method Imports \\
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
@@ -667,14 +799,23 @@ namespace FabricObserver.Observers.Utilities
         public static extern int PssQuerySnapshot(IntPtr SnapshotHandle, PSS_QUERY_INFORMATION_CLASS InformationClass, IntPtr Buffer, uint BufferLength);
 
         [DllImport("kernel32.dll", SetLastError = false)]
-        public static extern int PssFreeSnapshot(IntPtr ProcessHandle, IntPtr SnapshotHandle);
+        public static extern int PssFreeSnapshot(SafeProcessHandle ProcessHandle, IntPtr SnapshotHandle);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern IntPtr GetCurrentProcess();
+        public static extern SafeProcessHandle GetCurrentProcess();
 
         [DllImport("psapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool EnumProcesses([In, Out, MarshalAs(UnmanagedType.LPArray)] uint[] lpidProcess, uint cb, out uint lpcbNeeded);
+
+        [DllImport("kernel32.dll", SetLastError = false)]
+        public static extern int PssWalkSnapshot(IntPtr SnapshotHandle, PSS_WALK_INFORMATION_CLASS InformationClass, IntPtr WalkMarkerHandle, IntPtr Buffer, uint BufferLength);
+
+        [DllImport("kernel32.dll", SetLastError = false)]
+        public static extern int PssWalkMarkerCreate([Optional] IntPtr Allocator, out IntPtr WalkMarkerHandle);
+
+        [DllImport("kernel32.dll", SetLastError = false)]
+        public static extern int PssWalkMarkerFree(IntPtr WalkMarkerHandle);
 
         private static uint[] EnumProcesses()
         {
@@ -746,6 +887,73 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
+        // Credit (MIT): https://github.com/dahall/Vanara/blob/master/PInvoke/Kernel32/ProcessSnapshot.cs, author: https://github.com/dahall
+        /// <summary>Returns information from the current walk position and advanced the walk marker to the next position.</summary>
+        /// <param name="SnapshotHandle">A handle to the snapshot.</param>
+        /// <param name="InformationClass">The type of information to return. For more information, see PSS_WALK_INFORMATION_CLASS.</param>
+        /// <param name="WalkMarkerHandle">
+        /// An optional handle to a walk marker. The walk marker indicates the walk position from which data is to be returned. <c>PssWalkSnapshot</c>
+        /// advances the walk marker to the next walk position in time order before returning to the caller.
+        /// <para>If this value is <c>NULL</c>, then a new walk marker will be temporarily created.</para>
+        /// </param>
+        /// <returns>The list of snapshot information that this function returns.</returns>
+        private static IEnumerable<T> PssWalkSnapshot<T>(IntPtr SnapshotHandle, PSS_WALK_INFORMATION_CLASS InformationClass, IntPtr WalkMarkerHandle = default) where T : struct
+        {
+            IntPtr hWalk = IntPtr.Zero;
+            IntPtr buffer = IntPtr.Zero;
+
+            try
+            {
+                if (WalkMarkerHandle == IntPtr.Zero)
+                {
+                    _ = PssWalkMarkerCreate(IntPtr.Zero, out hWalk);
+                }
+                else
+                {
+                    hWalk = WalkMarkerHandle;
+                }
+
+                int size = Marshal.SizeOf(typeof(T));
+                buffer = Marshal.AllocHGlobal(size);
+
+                do
+                {
+                    var err = PssWalkSnapshot(SnapshotHandle, InformationClass, hWalk, buffer, (uint)size);
+
+                    if (err == ERROR_NO_MORE_ITEMS)
+                    {
+                        break;
+                    }
+                    else if (err == ERROR_SUCCESS)
+                    {
+                        yield return Marshal.PtrToStructure<T>(buffer);
+                    }
+                    else
+                    {
+                        throw new Win32Exception(Marshal.GetLastWin32Error());
+                    }
+
+                } while (true);
+            }
+            finally
+            {
+                if (WalkMarkerHandle != IntPtr.Zero)
+                {
+                    _ = PssWalkMarkerFree(WalkMarkerHandle);
+                }
+
+                if (hWalk != IntPtr.Zero)
+                {
+                    Marshal.FreeHGlobal(hWalk);
+                }
+
+                if (buffer != IntPtr.Zero)
+                {
+                    Marshal.FreeHGlobal(buffer);
+                }
+            }
+        }
+
         public static MEMORYSTATUSEX GetSystemMemoryInfo()
         {
             MEMORYSTATUSEX memory = new MEMORYSTATUSEX();
@@ -783,12 +991,13 @@ namespace FabricObserver.Observers.Utilities
                     
                     if (handleToSnapshot.IsInvalid)
                     {
-                        throw new Win32Exception(
-                            $"NativeMethods.CreateToolhelp32Snapshot: Failed to get process snapshot with error code {Marshal.GetLastWin32Error()}");
+                        logger.LogWarning(
+                            $"GetChildProcesses({parentpid}): Failed to process snapshot at CreateToolhelp32Snapshot with Win32 error code {Marshal.GetLastWin32Error()}");
+                        
+                        return null;
                     }
                 }
 
-                List<(string procName, int procId)> childProcs = new List<(string procName, int procId)>();
                 PROCESSENTRY32 procEntry = new PROCESSENTRY32
                 {
                     dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32))
@@ -796,9 +1005,11 @@ namespace FabricObserver.Observers.Utilities
 
                 if (!Process32First(handleToSnapshot, ref procEntry))
                 {
-                    throw new Win32Exception(
-                        $"NativeMethods.GetChildProcesses({parentpid}): Failed to process snapshot at Process32First with Win32 error code {Marshal.GetLastWin32Error()}");
+                    logger.LogWarning($"GetChildProcesses({parentpid}): Failed to process snapshot at Process32First with Win32 error code {Marshal.GetLastWin32Error()}");
+                    return null;
                 }
+
+                List<(string procName, int procId)> childProcs = new List<(string procName, int procId)>();
 
                 do
                 {
@@ -836,9 +1047,9 @@ namespace FabricObserver.Observers.Utilities
             }
             finally
             {
-                if (isLocalSnapshot)
+                if (isLocalSnapshot && !handleToSnapshot.IsInvalid)
                 {
-                    handleToSnapshot.Dispose();
+                    handleToSnapshot?.Dispose();
                     handleToSnapshot = null;
                 }
             }
@@ -852,55 +1063,75 @@ namespace FabricObserver.Observers.Utilities
         /// <exception cref="Win32Exception">A Win32 Error Code will be present in the exception Message.</exception>
         public static int GetProcessThreadCount(int pid)
         {
-            uint threadCnt = 0;
-            IntPtr snapShot = IntPtr.Zero;
-            IntPtr threadInfoBuffer = IntPtr.Zero;
-            SafeProcessHandle hProc = null;
+            int activeThreads = 0;
+            IntPtr snap = IntPtr.Zero;
+            IntPtr buffer = IntPtr.Zero;
+            SafeProcessHandle hProc = GetProcessHandle((uint)pid);
 
             try
             {
-                hProc = OpenProcess((uint)ProcessAccessFlags.All, false, (uint)pid);
-
-                if (hProc == null || hProc.IsInvalid)
+                if (hProc.IsInvalid)
                 {
                     return 0;
                 }
 
-                if (PssCaptureSnapshot(hProc, PSS_CAPTURE_FLAGS.PSS_CAPTURE_THREADS, 0, out snapShot) != 0)
+                int err = PssCaptureSnapshot(hProc, PSS_CAPTURE_FLAGS.PSS_CAPTURE_THREADS, 0, out snap);
+
+                if (err != ERROR_SUCCESS)
                 {
-                    throw new Win32Exception(
-                       $"GetProcessThreadCount({pid}) [PssCaptureSnapshot]: Failed with Win32 error code {Marshal.GetLastWin32Error()}");
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
                 }
 
                 int size = Marshal.SizeOf(typeof(PSS_THREAD_INFORMATION));
+                buffer = Marshal.AllocHGlobal(size);
+                err = PssQuerySnapshot(snap, PSS_QUERY_INFORMATION_CLASS.PSS_QUERY_THREAD_INFORMATION, buffer, (uint)size);
 
-                // For memory pressure case (underlying machine is running out of available memory), let the OOM take FO down: Never catch OOM.
-                threadInfoBuffer = Marshal.AllocHGlobal(size);
-                
-                if (PssQuerySnapshot(snapShot, PSS_QUERY_INFORMATION_CLASS.PSS_QUERY_THREAD_INFORMATION, threadInfoBuffer, (uint)size) != 0)
+                if (err != ERROR_SUCCESS)
                 {
-                    throw new Win32Exception(
-                       $"GetProcessThreadCount({pid}) [PssQuerySnapshot]: Failed with Win32 error code {Marshal.GetLastWin32Error()}");
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
                 }
 
-                PSS_THREAD_INFORMATION threadInfo = (PSS_THREAD_INFORMATION)Marshal.PtrToStructure(threadInfoBuffer, typeof(PSS_THREAD_INFORMATION));
-                threadCnt = threadInfo.ThreadsCaptured;
+                PSS_THREAD_INFORMATION threadInfo = (PSS_THREAD_INFORMATION)Marshal.PtrToStructure(buffer, typeof(PSS_THREAD_INFORMATION));
+
+                if (threadInfo.ThreadsCaptured > 0)
+                {
+                    foreach (var entry in PssWalkSnapshot<PSS_THREAD_ENTRY>(snap, PSS_WALK_INFORMATION_CLASS.PSS_WALK_THREADS))
+                    {
+                        if (entry.ExitStatus != THREAD_STILL_ACTIVE)
+                        {
+                            continue;
+                        }
+                        activeThreads++;
+                    }
+                }
             }
-            catch (ArgumentException)
+            catch (SEHException seh)
             {
+                logger.LogWarning($"GetProcessThreadCount: Failed with SEH exception {seh.ErrorCode}: {seh.Message}");
+                return 0;
+            }
+            catch (Win32Exception we)
+            {
+                logger.LogWarning($"GetProcessThreadCount: Failed with Win32 exception {we.NativeErrorCode}: {we.Message}");
                 return 0;
             }
             finally
             {
-                Marshal.FreeHGlobal(threadInfoBuffer);
-                IntPtr currentHProc = GetCurrentProcess();
-                _ = PssFreeSnapshot(currentHProc, snapShot);
-                _ = ReleaseHandle(currentHProc);
-                hProc.Dispose();
+                if (buffer != IntPtr.Zero)
+                {
+                    Marshal.FreeHGlobal(buffer);
+                }
+
+                if (snap != IntPtr.Zero)
+                { 
+                    _ = PssFreeSnapshot(GetCurrentProcess(), snap);
+                }
+
+                hProc?.Dispose();
                 hProc = null;
             }
 
-            return (int)threadCnt;
+            return activeThreads;
         }
 
         /// <summary>
@@ -940,7 +1171,7 @@ namespace FabricObserver.Observers.Utilities
         {
             uint[] ids = EnumProcesses();
 
-            for (int i = 0; i < ids.Length; i++)
+            for (int i = 0; i < ids.Length; ++i)
             {
                 uint id = ids[i];
                 
@@ -949,15 +1180,14 @@ namespace FabricObserver.Observers.Utilities
                     continue;
                 }
 
-                string name = null;
-
+                string name;
                 try
                 {
                     name = GetProcessNameFromId(id);
                 }
                 catch (Win32Exception)
                 {
-
+                    continue;
                 }
 
                 if (string.IsNullOrWhiteSpace(name))
@@ -1092,9 +1322,12 @@ namespace FabricObserver.Observers.Utilities
             {
                 uint ret = GetExtendedTcpTable(tcpTablePtr, ref buffSize, true, ipVersion, TCP_TABLE_CLASS.TCP_TABLE_OWNER_PID_ALL);
 
-                if (ret != 0)
+                if (ret != ERROR_SUCCESS)
                 {
-                    throw new Win32Exception($"NativeMethods.GetTCPConnections: Failed to get TCP connections with Win32 error {Marshal.GetLastWin32Error()}");
+                    logger.LogWarning($"GetTCPConnections: Failed to get TCP connections with Win32 error {Marshal.GetLastWin32Error()}");
+
+                    // return an empty list to caller.
+                    return new List<IPR>();
                 }
 
                 // get the number of entries in the table
@@ -1123,17 +1356,34 @@ namespace FabricObserver.Observers.Utilities
         }
 
         // Cleanup
-        public static bool ReleaseHandle(IntPtr handle)
+        public static bool TryReleaseHandle(IntPtr handle)
         {
-            if (handle != IntPtr.Zero)
+            try
             {
-                if (!CloseHandle(handle))
+                if (handle != IntPtr.Zero)
                 {
-                    throw new Win32Exception($"NativeMethods.ReleaseHandle: Failed to release handle with Win32 error {Marshal.GetLastWin32Error()}");
-                }
+                    // Rare.
+                    if (!CloseHandle(handle))
+                    {
+                        logger.LogWarning($"ReleaseHandle: Failed to release handle with Win32 error {Marshal.GetLastWin32Error()}");
+                        throw new Win32Exception(Marshal.GetLastWin32Error());
+                    }
 
-                handle = IntPtr.Zero;
-                return true;
+                    handle = IntPtr.Zero;
+                    return true;
+                }
+            }
+            catch (Exception e) when (e is SEHException || e is Win32Exception)
+            {
+                // Rare.
+                if (e is SEHException seh)
+                {
+                    logger.LogWarning($"ReleaseHandle: Failed to release handle with SEH exception {seh.ErrorCode}: {seh.Message}");
+                }
+                else
+                {
+                    logger.LogWarning($"ReleaseHandle: Failed to release handle with Win32 error {(e as Win32Exception).NativeErrorCode}");
+                }
             }
             return false;
         }
@@ -1141,15 +1391,14 @@ namespace FabricObserver.Observers.Utilities
         // Safe object handle.
         public sealed class SafeObjectHandle : SafeHandleZeroOrMinusOneIsInvalid
         {
-            public SafeObjectHandle()
-                : base(ownsHandle: true)
+            public SafeObjectHandle() : base(ownsHandle: true)
             {
 
             }
 
             protected override bool ReleaseHandle()
             {
-                return NativeMethods.ReleaseHandle(handle);
+                return TryReleaseHandle(handle);
             }
         }
     }

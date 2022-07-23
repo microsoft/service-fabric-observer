@@ -140,7 +140,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 List<(string procName, int procId)> childProcs = NativeMethods.GetChildProcesses(processId, handleToSnapshot);
 
-                if (childProcs?.Count == 0)
+                if (childProcs == null || childProcs.Count == 0)
                 {
                     return null;
                 }
@@ -399,8 +399,8 @@ namespace FabricObserver.Observers.Utilities
             }
 #if RELEASE
             catch (InvalidOperationException)
-            { 
-#endif
+            {
+# endif
 #if DEBUG
             catch (InvalidOperationException e)
             {
