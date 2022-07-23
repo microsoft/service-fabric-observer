@@ -23,12 +23,6 @@ namespace FabricObserver.Observers.Utilities
         /// <returns>CPU percentage in use as double value</returns>
         public double GetCurrentCpuUsagePercentage(int procId, string procName)
         {
-            // Ensure this is the process we're still looking for.
-            if (NativeMethods.GetProcessNameFromId(procId) != procName)
-            {
-                return 0;
-            }
-
             SafeProcessHandle sProcHandle = NativeMethods.GetProcessHandle((uint)procId);
             
             if (sProcHandle.IsInvalid)
