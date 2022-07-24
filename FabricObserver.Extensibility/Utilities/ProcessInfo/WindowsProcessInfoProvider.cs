@@ -298,7 +298,7 @@ namespace FabricObserver.Observers.Utilities
             try
             {
                 uint handles = 0;
-                handle = NativeMethods.GetProcessHandle((uint)processId);
+                handle = NativeMethods.GetSafeProcessHandle((uint)processId);
                 
                 if (handle.IsInvalid || !NativeMethods.GetProcessHandleCount(handle, out handles))
                 {

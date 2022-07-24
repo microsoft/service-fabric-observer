@@ -1391,7 +1391,11 @@ namespace FabricObserver.Observers
                                 {
                                     if (dump)
                                     {
-                                        _ = DumpWindowsServiceProcess(childPid, childProcName, prop);
+                                        // Make sure the child process is still the one we're looking for.
+                                        if (EnsureProcess(childProcName, childPid))
+                                        {
+                                            _ = DumpWindowsServiceProcess(childPid, childProcName, prop);
+                                        }
                                     }
                                 }
                             }
@@ -1406,7 +1410,7 @@ namespace FabricObserver.Observers
                 }
                 catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
                 {
-                    ObserverLogger.LogWarning($"ProcessChildFrudsGetDataSum - Failure processing descendants:{Environment.NewLine}{e.Message}");
+                    ObserverLogger.LogWarning($"Failure processing descendant information: {e.Message}");
                     continue;
                 }
             }
@@ -1561,10 +1565,10 @@ namespace FabricObserver.Observers
                         {
                             if (exception.NativeErrorCode == 5 || exception.NativeErrorCode == 6)
                             {
-                                string message = $"{repOrInst?.ServiceName?.OriginalString} is running as Admin or System user on Windows and can't be monitored by FabricObserver, which is running as Network Service.{Environment.NewLine}" +
-                                                 $"Please configure FabricObserver to run as Admin or System user on Windows to solve this problem and/or determine if {repOrInst?.ServiceName?.OriginalString} really needs to run as Admin or System user on Windows.";
+                                string message = $"{repOrInst?.ApplicationName?.OriginalString} is running as Admin or System user on Windows and can't be monitored by FabricObserver, which is running as Network Service.{Environment.NewLine}" +
+                                                 $"Please configure FabricObserver to run as Admin or System user on Windows to solve this problem and/or determine if {repOrInst?.ApplicationName?.OriginalString} really needs to run as Admin or System user on Windows.";
 
-                                string property = $"ProcessAccess({repOrInst?.ServiceName?.OriginalString ?? parentPid.ToString()})";
+                                string property = $"ServiceProcessAccess({repOrInst?.ApplicationName?.OriginalString ?? parentPid.ToString()})";
                                 var healthReport = new Utilities.HealthReport
                                 {
                                     ServiceName = ServiceName,
