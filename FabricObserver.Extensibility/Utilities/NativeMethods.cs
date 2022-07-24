@@ -851,7 +851,7 @@ namespace FabricObserver.Observers.Utilities
             "System", "System interrupts", "Secure System", "Registry"
         };
 
-        internal static SafeProcessHandle GetProcessHandle(uint id)
+        internal static SafeProcessHandle GetSafeProcessHandle(uint id)
         {
             return OpenProcess((uint)ProcessAccessFlags.All, false, id);
         }
@@ -863,7 +863,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                hProc = GetProcessHandle(pid);
+                hProc = GetSafeProcessHandle(pid);
 
                 if (!hProc.IsInvalid)
                 {
@@ -1066,7 +1066,7 @@ namespace FabricObserver.Observers.Utilities
             int activeThreads = 0;
             IntPtr snap = IntPtr.Zero;
             IntPtr buffer = IntPtr.Zero;
-            SafeProcessHandle hProc = GetProcessHandle((uint)pid);
+            SafeProcessHandle hProc = GetSafeProcessHandle((uint)pid);
 
             try
             {
@@ -1214,7 +1214,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                procHandle = GetProcessHandle((uint)procId);
+                procHandle = GetSafeProcessHandle((uint)procId);
 
                 if (procHandle.IsInvalid)
                 {
@@ -1252,7 +1252,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                procHandle = GetProcessHandle((uint)procId);
+                procHandle = GetSafeProcessHandle((uint)procId);
 
                 if (procHandle.IsInvalid)
                 {
@@ -1365,7 +1365,6 @@ namespace FabricObserver.Observers.Utilities
                     // Rare.
                     if (!CloseHandle(handle))
                     {
-                        logger.LogWarning($"ReleaseHandle: Failed to release handle with Win32 error {Marshal.GetLastWin32Error()}");
                         throw new Win32Exception(Marshal.GetLastWin32Error());
                     }
 
@@ -1373,18 +1372,15 @@ namespace FabricObserver.Observers.Utilities
                     return true;
                 }
             }
-            catch (Exception e) when (e is SEHException || e is Win32Exception)
+            catch(SEHException seh)
             {
-                // Rare.
-                if (e is SEHException seh)
-                {
-                    logger.LogWarning($"ReleaseHandle: Failed to release handle with SEH exception {seh.ErrorCode}: {seh.Message}");
-                }
-                else
-                {
-                    logger.LogWarning($"ReleaseHandle: Failed to release handle with Win32 error {(e as Win32Exception).NativeErrorCode}");
-                }
+                logger.LogWarning($"ReleaseHandle: Failed to release handle with SEH exception {seh.ErrorCode}: {seh.Message}");
             }
+            catch (Win32Exception win32)
+            {
+                logger.LogWarning($"ReleaseHandle: Failed to release handle with Win32 error {win32.NativeErrorCode}: {win32.Message}");
+            }
+            
             return false;
         }
 

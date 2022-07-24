@@ -525,22 +525,28 @@ namespace FabricObserver.Observers
                 }
             }
 
+            if (!EnsureProcess(procName, processId))
+            {
+                ObserverLogger.LogWarning($"Exiting DumpWindowsServiceProcess as target process {processId} is longer running.");
+                return false;
+            }
+
             if (ServiceDumpCountDictionary == null)
             {
                 ServiceDumpCountDictionary = new ConcurrentDictionary<string, (int DumpCount, DateTime LastDump)>();
             }
 
             StringBuilder sb = new StringBuilder(metric);
-            string metricName = sb.Replace(" ", string.Empty)
-                                  .Replace("Total", string.Empty)
-                                  .Replace("MB", string.Empty)
-                                  .Replace("%", string.Empty)
+            string metricName = sb.Replace("Total", string.Empty)
+                                  .Replace("(MB)", string.Empty)
+                                  .Replace("(Percent)", string.Empty)
                                   .Replace("Active", string.Empty)
                                   .Replace("Allocated", string.Empty)
                                   .Replace("Length", string.Empty)
-                                  .Replace("Consumption", string.Empty)
+                                  .Replace("Usage", string.Empty)
                                   .Replace("Time", string.Empty)
-                                  .Replace("TCP", string.Empty).ToString();
+                                  .Replace("TCP", string.Empty)
+                                  .Replace(" ", string.Empty).ToString();
             sb.Clear();
             string dumpKey = $"{procName}_{metricName}";
             string dumpFileName = $"{dumpKey}_{NodeName}";
@@ -566,7 +572,7 @@ namespace FabricObserver.Observers
 
             if (!ServiceDumpCountDictionary.ContainsKey(dumpKey))
             {
-                ServiceDumpCountDictionary.TryAdd(dumpKey, (0, DateTime.UtcNow));
+                _ = ServiceDumpCountDictionary.TryAdd(dumpKey, (0, DateTime.UtcNow));
             }
             else if (DateTime.UtcNow.Subtract(ServiceDumpCountDictionary[dumpKey].LastDumpDate) >= MaxDumpsTimeWindow)
             {
@@ -621,47 +627,62 @@ namespace FabricObserver.Observers
 
             try
             {
-                using (Process process = Process.GetProcessById(processId))
+                if (dumpFileName == string.Empty)
                 {
-                    if (dumpFileName == string.Empty)
+                    dumpFileName = procName;
+                }
+
+                if (!EnsureProcess(procName, processId))
+                {
+                    ObserverLogger.LogWarning($"Exiting DumpWindowsServiceProcess as target process {processId} is longer running.");
+                    return false;
+                }
+
+                using (SafeProcessHandle processHandle = NativeMethods.GetSafeProcessHandle((uint)processId))
+                {
+                    if (processHandle.IsInvalid)
                     {
-                        dumpFileName = process.ProcessName;
+                        throw new Win32Exception($"Failed getting handle to process {processId} with Win32 error {Marshal.GetLastWin32Error()}");
                     }
 
-                    using (SafeProcessHandle processHandle = process.SafeHandle)
+                    dumpFileName += $"_{DateTime.Now:ddMMyyyyHHmmssFFF}.dmp";
+
+                    // Check disk space availability before writing dump file.
+                    string driveName = DumpsPath.Substring(0, 2);
+
+                    if (DiskUsage.GetCurrentDiskSpaceUsedPercent(driveName) > 90)
                     {
-                        dumpFileName += $"_{DateTime.Now:ddMMyyyyHHmmssFFF}.dmp";
+                        ObserverLogger.LogWarning("Not enough disk space available for dump file creation.");
+                        return false;
+                    }
 
-                        // Check disk space availability before writing dump file.
-                        string driveName = DumpsPath.Substring(0, 2);
+                    dumpFilePath = Path.Combine(DumpsPath, dumpFileName);
 
-                        if (DiskUsage.GetCurrentDiskSpaceUsedPercent(driveName) > 90)
+                    lock (lockObj)
+                    {
+                        using (FileStream file = File.Create(dumpFilePath))
                         {
-                            ObserverLogger.LogWarning("Not enough disk space available for dump file creation.");
-                            return false;
-                        }
-
-                        dumpFilePath = Path.Combine(DumpsPath, dumpFileName);
-
-                        lock (lockObj)
-                        {
-                            using (FileStream file = File.Create(dumpFilePath))
+                            if (!NativeMethods.MiniDumpWriteDump(
+                                                processHandle,
+                                                (uint)processId,
+                                                file.SafeFileHandle,
+                                                miniDumpType,
+                                                IntPtr.Zero,
+                                                IntPtr.Zero,
+                                                IntPtr.Zero))
                             {
-                                if (!NativeMethods.MiniDumpWriteDump(
-                                                    processHandle,
-                                                    (uint)processId,
-                                                    file.SafeFileHandle,
-                                                    miniDumpType,
-                                                    IntPtr.Zero,
-                                                    IntPtr.Zero,
-                                                    IntPtr.Zero))
-                                {
-                                    throw new Win32Exception(Marshal.GetLastWin32Error());
-                                }
+                                throw new Win32Exception(Marshal.GetLastWin32Error());
+                            }
 
-                                if (!string.IsNullOrWhiteSpace(metric))
+                            if (!string.IsNullOrWhiteSpace(dumpKey))
+                            {
+                                if (ServiceDumpCountDictionary.ContainsKey(dumpKey))
                                 {
                                     ServiceDumpCountDictionary[dumpKey] = (ServiceDumpCountDictionary[dumpKey].DumpCount + 1, DateTime.UtcNow);
+                                }
+                                else
+                                {
+                                    _ = ServiceDumpCountDictionary.TryAdd(dumpKey, (1, DateTime.UtcNow));
                                 }
                             }
                         }
