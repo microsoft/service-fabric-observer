@@ -302,6 +302,25 @@ namespace FabricObserver.Utilities.ServiceFabric
 
                 if (replicaInfo?.HostProcessId > 0)
                 {
+                    if (isWindows)
+                    {
+                        replicaInfo.HostProcessName = NativeMethods.GetProcessNameFromId((int)replicaInfo.HostProcessId);
+                    }
+                    else
+                    {
+                        try
+                        {
+                            using (Process p = Process.GetProcessById((int)replicaInfo.HostProcessId))
+                            {
+                                replicaInfo.HostProcessName = p.ProcessName;
+                            }
+                        }
+                        catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is NotSupportedException)
+                        {
+
+                        }
+                    }
+
                     replicaMonitoringList.Enqueue(replicaInfo);
                 }
             });

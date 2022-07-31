@@ -174,16 +174,16 @@ namespace FabricObserver.Observers.Utilities
                         FabricClientUtilities.FabricClientSingleton.HealthManager.ReportHealth(partitionHealthReport, sendOptions);
                         break;
 
-                    case EntityType.DeployedApplication when healthReport.AppName != null:
+                    case EntityType.DeployedApplication when healthReport.AppName != null && !string.IsNullOrWhiteSpace(healthReport.NodeName):
 
                         var deployedApplicationHealthReport = new DeployedApplicationHealthReport(healthReport.AppName, healthReport.NodeName, healthInformation);
                         FabricClientUtilities.FabricClientSingleton.HealthManager.ReportHealth(deployedApplicationHealthReport, sendOptions);
                         break;
-
+                    
                     case EntityType.Disk:
                     case EntityType.Machine:
-                    case EntityType.Node:
- 
+                    case EntityType.Node when !string.IsNullOrWhiteSpace(healthReport.NodeName):
+                         
                         var nodeHealthReport = new NodeHealthReport(healthReport.NodeName, healthInformation);
                         FabricClientUtilities.FabricClientSingleton.HealthManager.ReportHealth(nodeHealthReport, sendOptions);
                         break;

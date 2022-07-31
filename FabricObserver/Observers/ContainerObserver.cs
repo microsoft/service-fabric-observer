@@ -69,7 +69,7 @@ namespace FabricObserver.Observers
 
             runDurationTimer = Stopwatch.StartNew();
 
-            if (!await InitializeAsync(token).ConfigureAwait(false))
+            if (!await InitializeAsync(token))
             {
                 return;
             }
