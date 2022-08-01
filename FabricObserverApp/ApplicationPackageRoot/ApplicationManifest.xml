@@ -14,6 +14,9 @@
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
     <!-- We would really appreciate it if you kept this set to true. The information we collect contains no PII and helps us understand how FO is doing in the wild. -->
     <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="true" />
+    <!-- If an observer run fails due to timeout (ObserverExecutionTimeout is exceeded) or AppObserver can't monitor a service that runs at higher privilege, 
+         for example, then this setting will put FO into Warning or Error state or just create a an Ok (info) health message.
+         Supported values are Error, Warning, Ok or None (which means don't put FO into Warning or Error state or create an Ok health event (info)). -->
     <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
     <Parameter Name="ObserverLogPath" DefaultValue="fabric_observer_logs" />
     <!-- Observer Configuration Settings.
@@ -127,9 +130,8 @@
     <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
     <!-- Process Working set type for AppObserver to monitor. 
          Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). 
-         NOTE: If you have *several* service processes of the **same name**, this feature will add *significant* time-to-completion and increased CPU usage (small, but more than necessary) to AppObserver. 
-         In the case where you are monitoring 100s of **same-named** service processes, you should set this to false and monitor Full Working set (Private + Shared), 
-         which will be computed using NativeMethods.GetProcessMemoryInfo function (very fast). -->
+         NOTE: If you have *several* service processes of the **same name**, setting this to true will add *significant* time-to-completion and increased CPU usage (small, but more than necessary) to AppObserver. 
+         FO will automatically compute Shared + Private memory usage if it detects 50 or more same-named service processes, regardless of this setting.-->
     <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
@@ -147,9 +149,9 @@
     <Parameter Name="DiskObserverDiskSpacePercentUsageWarningThreshold" DefaultValue="90" />
     <Parameter Name="DiskObserverDiskSpacePercentUsageErrorThreshold" DefaultValue="" />
     <Parameter Name="DiskObserverAverageQueueLengthErrorThreshold" DefaultValue="" />
-    <Parameter Name="DiskObserverAverageQueueLengthWarningThreshold" DefaultValue="15" />
+    <Parameter Name="DiskObserverAverageQueueLengthWarningThreshold" DefaultValue="" />
     <!-- Folder size monitoring. If you want to monitor folder sizes, then enable this feature and provide full paths (and/or path env vars) as shown below. -->
-    <Parameter Name="DiskObserverEnableFolderSizeMonitoring" DefaultValue="true" />
+    <Parameter Name="DiskObserverEnableFolderSizeMonitoring" DefaultValue="false" />
     <!-- Supply full path/threshold(in MB) pairs for Warning/Error level monitoring here. Format is "fullpath0, size0 | fullpath1, size1 | fullpath2, size2 ..." -->
     <Parameter Name="DiskObserverFolderPathsErrorThresholdsMb" DefaultValue="" />
     <Parameter Name="DiskObserverFolderPathsWarningThresholdsMb" DefaultValue="C:\fabric_observer_logs, 250 | D:\SomeFolder, 1024 | %SOMEFULLPATH%, 4096 | %SOMEPATH%\SubFolder, 1024" />
@@ -160,7 +162,7 @@
     <!-- KVS LVID Usage Monitoring - Windows-only.
          This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
     <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="false" />
-    <Parameter Name="FabricSystemObserverMonitorPrivateWorkingSet" DefaultValue="true" />
+    <Parameter Name="FabricSystemObserverMonitorPrivateWorkingSet" DefaultValue="false" />
     <!-- FabricSystemObserver Warning/Error Thresholds -->
     <Parameter Name="FabricSystemObserverCpuErrorLimitPercent" DefaultValue="" />
     <Parameter Name="FabricSystemObserverCpuWarningLimitPercent" DefaultValue="" />

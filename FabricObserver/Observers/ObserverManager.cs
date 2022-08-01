@@ -49,7 +49,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.2.1.831";
+        private const string InternalVersionNumber = "3.2.1.960";
 
         private bool RuntimeTokenCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;
@@ -265,9 +265,9 @@ namespace FabricObserver.Observers
                         await Task.Delay(TimeSpan.FromSeconds(15), token);
                     }
 
-                    // All observers have run at this point and threads are completed. Empty the trash now.
+                    // All observers have run at this point. Try and empty the trash now.
                     GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-                    GC.Collect(2, GCCollectionMode.Forced, true, true);
+                    GC.Collect(2, GCCollectionMode.Default, true, true);
                     await Task.Delay(TimeSpan.FromSeconds(15), token);
                 }
             }
@@ -275,7 +275,7 @@ namespace FabricObserver.Observers
             {
                 if (!isConfigurationUpdateInProgress && (shutdownSignaled || token.IsCancellationRequested))
                 {
-                    await ShutDownAsync().ConfigureAwait(false);
+                    await ShutDownAsync();
                 }
             }
             catch (Exception e)
@@ -288,7 +288,7 @@ namespace FabricObserver.Observers
                     $"Error info:{Environment.NewLine}{e}";
 
                 Logger.LogError(message);
-                await ShutDownAsync().ConfigureAwait(false);
+                await ShutDownAsync();
 
                 // Telemetry.
                 if (TelemetryEnabled)
@@ -365,6 +365,8 @@ namespace FabricObserver.Observers
         // Clear all existing FO health events during shutdown or update event.
         public async Task StopObserversAsync(bool isShutdownSignaled = true, bool isConfigurationUpdateLinux = false)
         {
+            await SignalAbortToRunningObserverAsync(3);
+
             string configUpdateLinux = string.Empty;
 
             if (isConfigurationUpdateLinux)
@@ -397,19 +399,11 @@ namespace FabricObserver.Observers
                             if (obs.ObserverName == ObserverConstants.NetworkObserverName)
                             {
                                 Uri appName = new Uri(service);
-                                var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(appName).ConfigureAwait(false);
+                                var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(appName);
                                 var fabricObserverAppHealthEvents = appHealth?.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
                                 if (fabricObserverAppHealthEvents != null && fabricObserverAppHealthEvents.Any())
                                 {
-                                    if (isConfigurationUpdateInProgress)
-                                    {
-                                        fabricObserverAppHealthEvents =
-                                            appHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
-                                                                            && s.HealthInformation.HealthState == HealthState.Warning
-                                                                            || s.HealthInformation.HealthState == HealthState.Error);
-                                    }
-
                                     foreach (var evt in fabricObserverAppHealthEvents)
                                     {
                                         try
@@ -422,7 +416,7 @@ namespace FabricObserver.Observers
                                             var healthReporter = new ObserverHealthReporter(Logger);
                                             healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                                            await Task.Delay(150).ConfigureAwait(false);
+                                            await Task.Delay(150);
                                         }
                                         catch (FabricException)
                                         {
@@ -440,14 +434,6 @@ namespace FabricObserver.Observers
 
                                 if (fabricObserverServiceHealthEvents != null && fabricObserverServiceHealthEvents.Any())
                                 {
-                                    if (isConfigurationUpdateInProgress)
-                                    {
-                                        fabricObserverServiceHealthEvents =
-                                            serviceHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
-                                                                                && s.HealthInformation.HealthState == HealthState.Warning
-                                                                                || s.HealthInformation.HealthState == HealthState.Error);
-                                    }
-
                                     foreach (var evt in fabricObserverServiceHealthEvents)
                                     {
                                         try
@@ -488,14 +474,6 @@ namespace FabricObserver.Observers
 
                         if (sysAppHealthEvents != null && sysAppHealthEvents.Any())
                         {
-                            if (isConfigurationUpdateInProgress)
-                            {
-                                sysAppHealthEvents =
-                                    sysAppHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
-                                                                       && s.HealthInformation.HealthState == HealthState.Warning
-                                                                       || s.HealthInformation.HealthState == HealthState.Error);
-                            }
-
                             foreach (var evt in sysAppHealthEvents)
                             {
                                 try
@@ -532,13 +510,6 @@ namespace FabricObserver.Observers
 
                     if (fabricObserverNodeHealthEvents != null && fabricObserverNodeHealthEvents.Any())
                     {
-                        if (isConfigurationUpdateInProgress)
-                        {
-                            fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName)
-                                                                                                && s.HealthInformation.HealthState == HealthState.Warning
-                                                                                                || s.HealthInformation.HealthState == HealthState.Error);
-                        }
-
                         healthReport.EntityType = EntityType.Machine;
 
                         foreach (var evt in fabricObserverNodeHealthEvents)
@@ -572,8 +543,6 @@ namespace FabricObserver.Observers
 
             if (!isConfigurationUpdateInProgress)
             {
-                await SignalAbortToRunningObserverAsync();
-
                 // Clear any ObserverManager warnings/errors.
                 await RemoveObserverManagerHealthReportsAsync();
             }
@@ -614,7 +583,7 @@ namespace FabricObserver.Observers
             try
             {
                 // FO
-                ServiceHealth serviceHealth = await FabricClientInstance.HealthManager.GetServiceHealthAsync(FabricServiceContext.ServiceName).ConfigureAwait(false);
+                ServiceHealth serviceHealth = await FabricClientInstance.HealthManager.GetServiceHealthAsync(FabricServiceContext.ServiceName);
                 var obsMgrServiceHealthEvents = serviceHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(ObserverConstants.ObserverManagerName));
                 
                 if (obsMgrServiceHealthEvents != null && obsMgrServiceHealthEvents.Any())
@@ -632,7 +601,7 @@ namespace FabricObserver.Observers
                             var healthReporter = new ObserverHealthReporter(Logger);
                             healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                            await Task.Delay(150).ConfigureAwait(false);
+                            await Task.Delay(150);
                         }
                         catch (FabricException)
                         {
@@ -642,7 +611,7 @@ namespace FabricObserver.Observers
                 }
 
                 // Node Level
-                var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(FabricServiceContext.NodeContext.NodeName).ConfigureAwait(false);
+                var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(FabricServiceContext.NodeContext.NodeName);
                 var obsMgrNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(ObserverConstants.ObserverManagerName));
 
                 if (obsMgrNodeHealthEvents != null && obsMgrNodeHealthEvents.Any())
@@ -660,7 +629,7 @@ namespace FabricObserver.Observers
                             var healthReporter = new ObserverHealthReporter(Logger);
                             healthReporter.ReportHealthToServiceFabric(healthReport);
 
-                            await Task.Delay(150).ConfigureAwait(false);
+                            await Task.Delay(150);
                         }
                         catch (FabricException)
                         {
@@ -717,7 +686,6 @@ namespace FabricObserver.Observers
                 }
 
                 var section = configSettings?.Sections[sectionName];
-                
                 var parameter = section?.Parameters[parameterName];
 
                 return parameter?.Value;
@@ -732,7 +700,7 @@ namespace FabricObserver.Observers
 
         private async Task ShutDownAsync()
         {
-            await StopObserversAsync().ConfigureAwait(false);
+            await StopObserversAsync();
 
             if (cts != null)
             {
@@ -907,17 +875,17 @@ namespace FabricObserver.Observers
             {
                 // For Linux, we need to restart the FO process due to the Linux Capabilities impl that enables us to run docker and netstat commands as elevated user (FO Linux should always be run as standard user on Linux).
                 // During an upgrade event, SF touches the cap binaries which removes the cap settings so we need to run the FO app setup script again to reset them.
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                if (!isWindows)
                 {
                     // Graceful stop.
-                    await StopObserversAsync(true, true).ConfigureAwait(false);
+                    await StopObserversAsync(true, true);
 
                     // Bye.
                     Environment.Exit(42);
                 }
 
                 isConfigurationUpdateInProgress = true;
-                await StopObserversAsync(false).ConfigureAwait(false);
+                await StopObserversAsync(false);
 
                 // Observer settings.
                 foreach (var observer in observers)
@@ -927,28 +895,23 @@ namespace FabricObserver.Observers
                         return;
                     }
 
-                    observer.ConfigurationSettings = new ConfigSettings(e.NewPackage.Settings, $"{observer.ObserverName}Configuration");
+                    var newParams = e.NewPackage.Settings.Sections[$"{observer.ObserverName}Configuration"].Parameters;
+                    observer.ConfigurationSettings.UpdateConfigSettings(newParams.ToArray());
 
                     // The ObserverLogger instance (member of each observer type) checks its EnableVerboseLogging setting before writing Info events (it won't write if this setting is false, thus non-verbose).
                     // So, we set it here in case the parameter update includes a change to this config setting. 
-                    if (e.NewPackage.Settings.Sections[$"{observer.ObserverName}Configuration"].Parameters.Contains(ObserverConstants.EnableVerboseLoggingParameter)
-                        && e.OldPackage.Settings.Sections[$"{observer.ObserverName}Configuration"].Parameters.Contains(ObserverConstants.EnableVerboseLoggingParameter))
+                    if (newParams.Any(u => u.Name == ObserverConstants.EnableVerboseLoggingParameter))
                     {
-                        string newLoggingSetting = e.NewPackage.Settings.Sections[$"{observer.ObserverName}Configuration"].Parameters[ObserverConstants.EnableVerboseLoggingParameter].Value.ToLower();
-                        string oldLoggingSetting = e.OldPackage.Settings.Sections[$"{observer.ObserverName}Configuration"].Parameters[ObserverConstants.EnableVerboseLoggingParameter].Value.ToLower();
-
-                        if (newLoggingSetting != oldLoggingSetting)
-                        {
-                            observer.ObserverLogger.EnableVerboseLogging = observer.ConfigurationSettings.EnableVerboseLogging;
-                        }
+                        var setting = newParams.FirstOrDefault(u => u.Name == ObserverConstants.EnableVerboseLoggingParameter);
+                        observer.ObserverLogger.EnableVerboseLogging = bool.TryParse(setting.Value, out bool enableVerboseLogging) && enableVerboseLogging;
                     }
+
+                    // Reset last run time so the observer restarts (if enabled) after the app parameter update completes.
+                    observer.LastRunDateTime = DateTime.MinValue;
                 }
 
                 // ObserverManager settings. This happens after observer settings are set since obsmgr LVID code depends on specific observer config. See IsLvidCounterEnabled().
                 SetPropertiesFromConfigurationParameters(e.NewPackage.Settings);
-
-                cts ??= new CancellationTokenSource();
-                linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, token);
             }
             catch (Exception err)
             {
@@ -968,6 +931,12 @@ namespace FabricObserver.Observers
             }
 
             isConfigurationUpdateInProgress = false;
+
+            // Refresh FO CancellationTokenSources.
+            cts?.Dispose();
+            linkedSFRuntimeObserverTokenSource?.Dispose();
+            cts = new CancellationTokenSource();
+            linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, token);
             Logger.LogWarning("Application Parameter upgrade completed...");
         }
 
@@ -1174,7 +1143,7 @@ namespace FabricObserver.Observers
                                 (int)ObserverExecutionTimeout.TotalMilliseconds, linkedSFRuntimeObserverTokenSource?.Token ?? token);
 
                     // The observer is taking too long. Abort the run. Move on to next observer.
-                    if (!isCompleted && !(RuntimeTokenCancelled || shutdownSignaled))
+                    if (!isCompleted && !(RuntimeTokenCancelled || shutdownSignaled || isConfigurationUpdateInProgress))
                     {
                         string observerHealthWarning = $"{observer.ObserverName} on node {nodeName} did not complete successfully within the allotted time. Aborting run.";
                         Logger.LogWarning(observerHealthWarning);
@@ -1300,7 +1269,8 @@ namespace FabricObserver.Observers
                         }
                         else if (e is FabricException || e is TimeoutException || e is Win32Exception)
                         {
-                            // These are transient and will have been logged by related observer when they happened. Ignore. If critical (Win32Exception), FO will die soon enough.
+                            // These are transient and will have been logged by related observer when they happened.
+                            Logger.LogWarning($"Handled error from {observer.ObserverName}{Environment.NewLine}{e}");
                         }
                     }
                 }
@@ -1324,6 +1294,7 @@ namespace FabricObserver.Observers
                 catch (Exception e) when (e is FabricException || e is TimeoutException || e is Win32Exception)
                 {
                     // Transient.
+                    Logger.LogWarning($"Handled error from {observer.ObserverName}{Environment.NewLine}{e}");
                 }
                 catch (Exception e) when (!(e is LinuxPermissionException))
                 {
@@ -1481,6 +1452,39 @@ namespace FabricObserver.Observers
             }
 
             return false;
+        }
+    }
+
+    // Custom comparer for ConfigurationProperty
+    class ConfigComparer : IEqualityComparer<ConfigurationProperty>
+    {
+        // ConfigurationProperty instances are equal if their Names and Values are equal.
+        public bool Equals(ConfigurationProperty x, ConfigurationProperty y)
+        {
+            if (ReferenceEquals(x, y))
+            {
+                return true;
+            }
+
+            if (x is null || ReferenceEquals(y, null))
+            {
+                return false;
+            }
+
+            return x.Name == y.Name && x.Value == y.Value;
+        }
+
+        public int GetHashCode(ConfigurationProperty config)
+        {
+            if (ReferenceEquals(config, null))
+            {
+                return 0;
+            }
+
+            int hashProductName = config.Name == null ? 0 : config.Name.GetHashCode();
+            int hashProductCode = config.Value.GetHashCode();
+
+            return hashProductName ^ hashProductCode;
         }
     }
 }

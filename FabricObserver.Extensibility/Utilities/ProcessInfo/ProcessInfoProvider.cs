@@ -40,6 +40,10 @@ namespace FabricObserver.Observers.Utilities
 
                 return instance;
             }
+            set
+            {
+                instance = value;
+            }
         }
 
         protected Logger Logger 
@@ -75,5 +79,7 @@ namespace FabricObserver.Observers.Utilities
                 return 0;
             }
         }
+
+        public abstract void Dispose();
     }
 }

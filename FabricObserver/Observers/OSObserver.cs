@@ -290,7 +290,7 @@ namespace FabricObserver.Observers
                                                 null,
                                                 AsyncClusterOperationTimeoutSeconds,
                                                 Token), 
-                                    Token).ConfigureAwait(false);
+                                    Token);
 
                 return allSystemServices.Count > 0 && allSystemServices.Count(
                                 service => service.ServiceTypeName.Equals(
@@ -428,7 +428,7 @@ namespace FabricObserver.Observers
                 string clusterManifestXml =
                     !string.IsNullOrWhiteSpace(ClusterManifestPath) ? await File.ReadAllTextAsync(ClusterManifestPath, token)
                                                                     : await FabricClientInstance.ClusterManager.GetClusterManifestAsync(
-                                                                                  AsyncClusterOperationTimeoutSeconds, Token).ConfigureAwait(false);
+                                                                                  AsyncClusterOperationTimeoutSeconds, Token);
 
                 (int lowPortApp, int highPortApp) =
                     NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(NodeType, clusterManifestXml);

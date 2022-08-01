@@ -228,7 +228,7 @@ namespace FabricObserver.Observers
                 throw;
             }
 
-            await ReportAsync(token).ConfigureAwait(false);
+            await ReportAsync(token);
 
             // The time it took to run this observer.
             stopWatch.Stop();

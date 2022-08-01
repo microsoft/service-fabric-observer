@@ -84,7 +84,7 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            if (!await InitializeAsync().ConfigureAwait(false) || token.IsCancellationRequested)
+            if (!await InitializeAsync() || token.IsCancellationRequested)
             {
                 stopwatch.Stop();
                 stopwatch.Reset();

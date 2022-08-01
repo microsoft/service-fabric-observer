@@ -175,7 +175,7 @@ namespace FabricObserver.TelemetryLib
                     }
 
                     // Concurrency
-                    if (obData.Key == appobs || obData.Key == fsobs || obData.Key == contobs)
+                    if (obData.Key == appobs || obData.Key == contobs)
                     {
                         data = obData.Value.ServiceData.ConcurrencyEnabled ? 1 : 0;
                         key = $"{obData.Key}{parallel}";
@@ -206,9 +206,10 @@ namespace FabricObserver.TelemetryLib
                 telemetryClient.TrackEvent($"{FOTaskName}.{OperationalEventName}", eventProperties, metrics);
                 telemetryClient.Flush();
 
-                // allow time for flushing
+                // Allow time for flushing
                 Thread.Sleep(1000);
 
+                // Audit log.
                 _ = TryWriteLogFile(logFilePath, JsonConvert.SerializeObject(foData));
                 
                 eventProperties.Clear();

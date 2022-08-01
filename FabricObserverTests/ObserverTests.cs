@@ -216,8 +216,8 @@ namespace FabricObserverTests
         {
             try
             {
-                var ps = Process.GetProcessesByName("Fabric");
-                return ps.Length != 0;
+                int count = Process.GetProcessesByName("Fabric").Length;
+                return count > 0;
             }
             catch (InvalidOperationException)
             {
@@ -363,10 +363,7 @@ namespace FabricObserverTests
         [ClassCleanup]
         public static async Task TestClassCleanupAsync()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             // Remove any files generated.
             try
@@ -597,10 +594,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_MalformedTargetAppValue_GeneratesWarning()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
@@ -622,10 +616,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_InvalidJson_GeneratesWarning()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
@@ -647,10 +638,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_NoConfigFound_GeneratesWarning()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
@@ -674,10 +662,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetAppType_ServiceExcludeList_EnsureExcluded()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             if (!await EnsureTestServicesExistAsync())
             {
@@ -704,10 +689,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetApp_ServiceExcludeList_EnsureExcluded()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             if (!await EnsureTestServicesExistAsync())
             {
@@ -734,10 +716,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetAppType_ServiceIncludeList_EnsureIncluded()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             if (!await EnsureTestServicesExistAsync())
             {
@@ -764,10 +743,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetApp_ServiceIncludeList_EnsureIncluded()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             if (!await EnsureTestServicesExistAsync())
             {
@@ -796,10 +772,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetAppType_MultiServiceExcludeList_EnsureNotExcluded()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             if (!await EnsureTestServicesExistAsync())
             {
@@ -831,10 +804,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetApp_MultiServiceExcludeList_EnsureNotExcluded()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             if (!await EnsureTestServicesExistAsync())
             {
@@ -866,10 +836,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetAppType_MultiServiceIncludeList_EnsureIncluded()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             if (!await EnsureTestServicesExistAsync())
             {
@@ -896,10 +863,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetApp_MultiServiceIncludeList_EnsureIncluded()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             if (!await EnsureTestServicesExistAsync())
             {
@@ -934,10 +898,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ObserveAsync_Successful_Observer_IsHealthy()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             var startDateTime = DateTime.Now;
 
@@ -967,10 +928,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ObserveAsync_Successful_Observer_WarningsGenerated()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             var startDateTime = DateTime.Now;
 
@@ -1001,10 +959,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ObserveAsync_OldConfigStyle_Successful_Observer_WarningsGenerated()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             var startDateTime = DateTime.Now;
 
@@ -1034,10 +989,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ObserveAsync_OldConfigStyle_Successful_Observer_NoWarningsGenerated()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             var startDateTime = DateTime.Now;
 
@@ -1067,10 +1019,8 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task ContainerObserver_ObserveAsync_Successful_Observer_IsHealthy()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -1098,10 +1048,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task ClusterObserver_ObserveAsync_Successful_Observer_IsHealthy()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             var startDateTime = DateTime.Now;
 
@@ -1125,10 +1072,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task CertificateObserver_validCerts()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             if (!InstallCerts())
             {
@@ -1186,10 +1130,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task CertificateObserver_expiredAndexpiringCerts()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             var startDateTime = DateTime.Now;
 
@@ -1247,10 +1188,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NodeObserver_Integer_Greater_Than_100_CPU_Warn_Threshold_No_Fail()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             var startDateTime = DateTime.Now;
 
@@ -1280,10 +1218,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NodeObserver_Negative_Integer_CPU_Mem_Ports_Firewalls_Values_No_Exceptions_In_Intialize()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             var startDateTime = DateTime.Now;
 
@@ -1314,10 +1249,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NodeObserver_Negative_Integer_Thresholds_CPU_Mem_Ports_Firewalls_All_Data_Containers_Are_Null()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             var startDateTime = DateTime.Now;
 
@@ -1355,10 +1287,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task OSObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             var startDateTime = DateTime.Now;
 
@@ -1399,10 +1328,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task DiskObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             var startDateTime = DateTime.Now;
 
@@ -1450,10 +1376,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task DiskObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrors()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             var startDateTime = DateTime.Now;
 
@@ -1526,10 +1449,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NetworkObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             var startDateTime = DateTime.Now;
 
@@ -1555,10 +1475,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NetworkObserver_ObserveAsync_Successful_Observer_WritesLocalFile_ObsWebDeployed()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             var startDateTime = DateTime.Now;
 
@@ -1599,10 +1516,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NodeObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrorsDetected()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             var startDateTime = DateTime.Now;
 
@@ -1642,10 +1556,8 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task SFConfigurationObserver_ObserveAsync_Successful_Observer_IsHealthy()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -1686,10 +1598,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             using var client = new FabricClient();
             var nodeList = await client.QueryManager.GetNodeListAsync();
@@ -1730,10 +1639,8 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_MemoryWarningsOrErrorsDetected()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -1762,10 +1669,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_ActiveTcpPortsWarningsOrErrorsDetected()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
@@ -1803,10 +1707,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_EphemeralPortsWarningsOrErrorsDetected()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
@@ -1844,10 +1745,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_HandlesWarningsOrErrorsDetected()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
@@ -1885,10 +1783,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_Negative_Integer_CPU_Warn_Threshold_No_Unhandled_Exception()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             using var client = new FabricClient();
             var nodeList = await client.QueryManager.GetNodeListAsync();
@@ -1927,10 +1822,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_Integer_Greater_Than_100_CPU_Warn_Threshold_No_Unhandled_Exception()
         {
-            if (!IsSFRuntimePresentOnTestMachine)
-            {
-                return;
-            }
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 

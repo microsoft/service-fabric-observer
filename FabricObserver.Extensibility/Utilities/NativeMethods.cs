@@ -5,7 +5,7 @@
 
 using Microsoft.Win32.SafeHandles;
 using System;
-using System.CodeDom;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -732,7 +732,7 @@ namespace FabricObserver.Observers.Utilities
             /// </summary>
             PSS_WALK_THREADS,
         }
-        
+
         // Method Imports \\
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
@@ -765,58 +765,59 @@ namespace FabricObserver.Observers.Utilities
 
         [DllImport("psapi.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool GetProcessMemoryInfo(SafeProcessHandle hProcess, [Out] out PROCESS_MEMORY_COUNTERS_EX counters, [In] uint size);
+        internal static extern bool GetProcessMemoryInfo(SafeProcessHandle hProcess, [Out] out PROCESS_MEMORY_COUNTERS_EX counters, [In] uint size);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool GetProcessHandleCount(SafeProcessHandle hProcess, out uint pdwHandleCount);
+        internal static extern bool GetProcessHandleCount(SafeProcessHandle hProcess, out uint pdwHandleCount);
 
         // Process dump support.
         [DllImport("dbghelp.dll", EntryPoint = "MiniDumpWriteDump", CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode, ExactSpelling = true, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool MiniDumpWriteDump(SafeProcessHandle hProcess, uint processId, SafeHandle hFile, MINIDUMP_TYPE dumpType, IntPtr expParam, IntPtr userStreamParam, IntPtr callbackParam);
+        internal static extern bool MiniDumpWriteDump(SafeProcessHandle hProcess, uint processId, SafeHandle hFile, MINIDUMP_TYPE dumpType, IntPtr expParam, IntPtr userStreamParam, IntPtr callbackParam);
 
         [DllImport("iphlpapi.dll", SetLastError = true)]
         static extern uint GetExtendedTcpTable(IntPtr pTcpTable, ref int dwOutBufLen, bool sort, int ipVersion, TCP_TABLE_CLASS tblClass, uint reserved = 0);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern SafeProcessHandle OpenProcess(uint processAccess, bool bInheritHandle,uint processId);
+        internal static extern SafeProcessHandle OpenProcess(uint processAccess, bool bInheritHandle,uint processId);
 
         [DllImport("psapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        public static extern uint GetModuleBaseName(SafeProcessHandle hProcess, [Optional] IntPtr hModule, [MarshalAs(UnmanagedType.LPTStr)] StringBuilder lpBaseName, uint nSize);
+        internal static extern uint GetModuleBaseName(SafeProcessHandle hProcess, [Optional] IntPtr hModule, [MarshalAs(UnmanagedType.LPTStr)] StringBuilder lpBaseName, uint nSize);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool GetProcessTimes(SafeProcessHandle ProcessHandle, out FILETIME CreationTime, out FILETIME ExitTime, out FILETIME KernelTime, out FILETIME UserTime);
+        internal static extern bool GetProcessTimes(SafeProcessHandle ProcessHandle, out FILETIME CreationTime, out FILETIME ExitTime, out FILETIME KernelTime, out FILETIME UserTime);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern bool GetSystemTimes(out FILETIME lpIdleTime, out FILETIME lpKernelTime, out FILETIME lpUserTime);
+        internal static extern bool GetSystemTimes(out FILETIME lpIdleTime, out FILETIME lpKernelTime, out FILETIME lpUserTime);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        internal static extern int PssCaptureSnapshot(SafeProcessHandle ProcessHandle, PSS_CAPTURE_FLAGS CaptureFlags, uint ContextFlags, out IntPtr SnapshotHandle);
+        static extern int PssCaptureSnapshot(SafeProcessHandle ProcessHandle, PSS_CAPTURE_FLAGS CaptureFlags, uint ContextFlags, out IntPtr SnapshotHandle);
 
         [DllImport("kernel32.dll", SetLastError = false)]
-        public static extern int PssQuerySnapshot(IntPtr SnapshotHandle, PSS_QUERY_INFORMATION_CLASS InformationClass, IntPtr Buffer, uint BufferLength);
+        static extern int PssQuerySnapshot(IntPtr SnapshotHandle, PSS_QUERY_INFORMATION_CLASS InformationClass, IntPtr Buffer, uint BufferLength);
 
         [DllImport("kernel32.dll", SetLastError = false)]
-        public static extern int PssFreeSnapshot(SafeProcessHandle ProcessHandle, IntPtr SnapshotHandle);
+        static extern int PssFreeSnapshot(SafeProcessHandle ProcessHandle, IntPtr SnapshotHandle);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern SafeProcessHandle GetCurrentProcess();
+        static extern SafeProcessHandle GetCurrentProcess();
 
         [DllImport("psapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool EnumProcesses([In, Out, MarshalAs(UnmanagedType.LPArray)] uint[] lpidProcess, uint cb, out uint lpcbNeeded);
+        static extern bool EnumProcesses([In, Out, MarshalAs(UnmanagedType.LPArray)] uint[] lpidProcess, uint cb, out uint lpcbNeeded);
 
         [DllImport("kernel32.dll", SetLastError = false)]
-        public static extern int PssWalkSnapshot(IntPtr SnapshotHandle, PSS_WALK_INFORMATION_CLASS InformationClass, IntPtr WalkMarkerHandle, IntPtr Buffer, uint BufferLength);
+        static extern int PssWalkSnapshot(IntPtr SnapshotHandle, PSS_WALK_INFORMATION_CLASS InformationClass, IntPtr WalkMarkerHandle, IntPtr Buffer, uint BufferLength);
 
         [DllImport("kernel32.dll", SetLastError = false)]
-        public static extern int PssWalkMarkerCreate([Optional] IntPtr Allocator, out IntPtr WalkMarkerHandle);
+        static extern int PssWalkMarkerCreate([Optional] IntPtr Allocator, out IntPtr WalkMarkerHandle);
 
         [DllImport("kernel32.dll", SetLastError = false)]
-        public static extern int PssWalkMarkerFree(IntPtr WalkMarkerHandle);
+        static extern int PssWalkMarkerFree(IntPtr WalkMarkerHandle);
 
+        // Credit: https://github.com/dahall/Vanara/blob/5b22a156f0ba1301b48229f30b6ff4758f60a4ee/PInvoke/Kernel32/PsApi.cs#L258
         private static uint[] EnumProcesses()
         {
             uint rsz = 1024, sz;
@@ -829,7 +830,7 @@ namespace FabricObserver.Observers.Utilities
 
                 if (!EnumProcesses(ids, sz, out rsz))
                 {
-                    throw new Win32Exception($"Failure enumerating processes with Win32 Error code {Marshal.GetLastWin32Error()}");
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
                 }
 
             } while (sz == rsz);
@@ -845,10 +846,14 @@ namespace FabricObserver.Observers.Utilities
             "LsaIso.exe", "services.exe", "smss.exe", "svchost.exe", "taskhostw.exe",
             "wininit.exe", "winlogon.exe", "WUDFHost.exe", "WmiPrvSE.exe",
             "TextInputHost.exe", "vmcompute.exe", "vmms.exe", "vmwp.exe", "vmmem",
-            "Fabric.exe", "FabricHost.exe", "FabricApplicationGateway.exe", "FabricCAS.exe", 
-            "FabricDCA.exe", "FabricDnsService.exe", "FabricFAS.exe", "FabricGateway.exe", 
-            "FabricHost.exe", "FabricIS.exe", "FabricRM.exe", "FabricUS.exe",
             "System", "System interrupts", "Secure System", "Registry"
+        };
+
+        private static readonly string[] ignoreFabricSystemServicesList = new string[]
+        {
+            "Fabric.exe", "FabricHost.exe", "FabricApplicationGateway.exe", "FabricCAS.exe",
+            "FabricDCA.exe", "FabricDnsService.exe", "FabricFAS.exe", "FabricGateway.exe",
+            "FabricHost.exe", "FabricIS.exe", "FabricRM.exe", "FabricUS.exe",
         };
 
         internal static SafeProcessHandle GetSafeProcessHandle(uint id)
@@ -872,7 +877,7 @@ namespace FabricObserver.Observers.Utilities
                     // If GetModuleBaseName fails, the return value is 0.
                     if (GetModuleBaseName(hProc, IntPtr.Zero, sbProcName, (uint)sbProcName.Capacity) == 0)
                     {
-                        throw new Win32Exception(Marshal.GetLastWin32Error());
+                        return string.Empty;
                     }
                 }
 
@@ -1015,7 +1020,7 @@ namespace FabricObserver.Observers.Utilities
                 {
                     try
                     {
-                        if (procEntry.th32ProcessID == 0 || ignoreProcessList.Any(f => f == procEntry.szExeFile))
+                        if (procEntry.th32ProcessID == 0 || ignoreProcessList.Any(f => f == procEntry.szExeFile) || ignoreFabricSystemServicesList.Any(f => f == procEntry.szExeFile))
                         {
                             continue;
                         }
@@ -1139,6 +1144,7 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         /// <param name="pid">The process id.</param>
         /// <returns>Process name string, if successful. Else, null.</returns>
+        /// <exception cref="Win32Exception">A Win32Exception exception will be thrown if this specified process id is not found or if it is non-accessible due to its access control level.</exception>
         public static string GetProcessNameFromId(int pid)
         {
             try
@@ -1167,6 +1173,11 @@ namespace FabricObserver.Observers.Utilities
             return null;
         }
 
+        /// <summary>
+        /// Gets the process id for the specified process name. Note that this is only useful if there is one process of the specified name.
+        /// </summary>
+        /// <param name="procName">The name of the process.</param>
+        /// <returns>Process id as int. If this fails for any reason, it will return -1.</returns>
         public static int GetProcessIdFromName(string procName)
         {
             uint[] ids = EnumProcesses();
@@ -1195,6 +1206,11 @@ namespace FabricObserver.Observers.Utilities
                     continue;
                 }
 
+                if (ignoreProcessList.Any(n => n == name))
+                {
+                    continue;
+                }
+
                 name = name.Replace(".exe", string.Empty);
 
                 if (name != procName)
@@ -1208,6 +1224,12 @@ namespace FabricObserver.Observers.Utilities
             return -1;
         }
 
+        /// <summary>
+        /// Gets the start time of the process with the specified identifier.
+        /// </summary>
+        /// <param name="procId">The id of the process.</param>
+        /// <returns>The start time of the process.</returns>
+        /// <exception cref="Win32Exception">A Win32Exception exception will be thrown if this specified process id is not found or if it is non-accessible due to its access control level.</exception>
         public static DateTime GetProcessStartTime(int procId)
         {
             SafeProcessHandle procHandle = null;
@@ -1246,6 +1268,12 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
+        /// <summary>
+        /// Gets the exit time of the process with the specified identifier.
+        /// </summary>
+        /// <param name="procId">The id of the process.</param>
+        /// <returns>The exit time of the process.</returns>
+        /// <exception cref="Win32Exception">A Win32Exception exception will be thrown if this specified process id is not found or if it is non-accessible due to its access control level.</exception>
         public static DateTime GetProcessExitTime(int procId)
         {
             SafeProcessHandle procHandle = null;
@@ -1354,6 +1382,7 @@ namespace FabricObserver.Observers.Utilities
 
             return tableRows != null ? tableRows.ToList() : new List<IPR>();
         }
+
 
         // Cleanup
         public static bool TryReleaseHandle(IntPtr handle)

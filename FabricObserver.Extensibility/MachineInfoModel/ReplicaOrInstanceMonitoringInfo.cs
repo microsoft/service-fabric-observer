@@ -36,6 +36,11 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
+        public string HostProcessName
+        {
+            get; set;
+        }
+
         public Guid? PartitionId
         {
             get; set;

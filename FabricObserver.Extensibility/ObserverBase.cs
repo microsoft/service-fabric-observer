@@ -367,6 +367,7 @@ namespace FabricObserver.Observers
         {
             ObserverName = GetType().Name;
             ConfigurationSectionName = ObserverName + "Configuration";
+            IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
             ApplicationName = new Uri(serviceContext.CodePackageActivationContext.ApplicationName);
             NodeName = serviceContext.NodeContext.NodeName;
             NodeType = serviceContext.NodeContext.NodeType;
@@ -412,8 +413,6 @@ namespace FabricObserver.Observers
                     GetSettingParameterValue(
                         ObserverConstants.ObserverManagerConfigurationSectionName,
                         ObserverConstants.ObserverWebApiEnabled), out bool obsWeb) && obsWeb && IsObserverWebApiAppInstalled();
-
-            IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
 
         /// <summary>
@@ -767,7 +766,7 @@ namespace FabricObserver.Observers
                     procId = (int)replicaOrInstance.HostProcessId;
 
                     // This doesn't apply to ContainerObserver.
-                    if (string.IsNullOrWhiteSpace(replicaOrInstance.ContainerId))
+                    if (ObserverName != ObserverConstants.ContainerObserverName)
                     {
                         if (string.IsNullOrWhiteSpace(processName))
                         {
@@ -887,7 +886,7 @@ namespace FabricObserver.Observers
                 // Enable this for your observer if you want to send data to ApplicationInsights or LogAnalytics for each resource usage observation it makes per specified metric.
                 if (IsTelemetryEnabled && replicaOrInstance?.ChildProcesses == null)
                 {
-                     _ = TelemetryClient?.ReportMetricAsync(telemetryData, Token).ConfigureAwait(false);
+                     _ = TelemetryClient?.ReportMetricAsync(telemetryData, Token);
                 }
 
                 // ETW - This is informational, per reading EventSource tracing, healthstate is irrelevant here. If the process has children, then don't emit this raw data since it will already
@@ -924,7 +923,7 @@ namespace FabricObserver.Observers
 
                 if (IsTelemetryEnabled)
                 {
-                    _ = TelemetryClient?.ReportMetricAsync(telemetryData, Token).ConfigureAwait(false);
+                    _ = TelemetryClient?.ReportMetricAsync(telemetryData, Token);
                 }
 
                 if (IsEtwEnabled)
@@ -1162,7 +1161,7 @@ namespace FabricObserver.Observers
                 // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                 if (IsTelemetryEnabled)
                 {
-                    _ = TelemetryClient?.ReportHealthAsync(telemetryData, Token).ConfigureAwait(false);
+                    _ = TelemetryClient?.ReportHealthAsync(telemetryData, Token);
                 }
 
                 // ETW.

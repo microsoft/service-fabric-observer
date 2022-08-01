@@ -148,8 +148,8 @@ namespace FabricObserver.Observers
             stopwatch.Start();
 
             Initialize();
-            await GetSystemCpuMemoryValuesAsync(token).ConfigureAwait(false);
-            await ReportAsync(token).ConfigureAwait(false);
+            await GetSystemCpuMemoryValuesAsync(token);
+            await ReportAsync(token);
 
             // The time it took to run this observer.
             stopwatch.Stop();
@@ -662,9 +662,9 @@ namespace FabricObserver.Observers
                     FirewallData.AddData(firewalls);
                 }
 
-                TimeSpan duration = TimeSpan.FromSeconds(5);
+                TimeSpan duration = TimeSpan.FromSeconds(10);
 
-                if (MonitorDuration > TimeSpan.MinValue)
+                if (MonitorDuration > TimeSpan.MinValue && MonitorDuration > TimeSpan.FromSeconds(10))
                 {
                     duration = MonitorDuration;
                 }
@@ -762,7 +762,7 @@ namespace FabricObserver.Observers
                     // CPU
                     if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
                     {
-                        CpuTimeData.AddData(CpuUtilizationProvider.Instance.GetProcessorTimePercentage());
+                         CpuTimeData.AddData(CpuUtilizationProvider.Instance.GetProcessorTimePercentage());
                     }
 
                     // Memory
@@ -781,7 +781,7 @@ namespace FabricObserver.Observers
                         }
                     }
 
-                    await Task.Delay(250, Token).ConfigureAwait(false);
+                    await Task.Delay(1000, Token);
                 }
 
                 timer.Stop();
@@ -794,14 +794,17 @@ namespace FabricObserver.Observers
                 // Fix the bug..
                 throw;
             }
-            finally
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (IsWindows)
             {
-                if (IsWindows)
-                {
-                    CpuUtilizationProvider.Instance?.Dispose();
-                    CpuUtilizationProvider.Instance = null;
-                }
+                CpuUtilizationProvider.Instance?.Dispose();
+                CpuUtilizationProvider.Instance = null;
             }
+
+            base.Dispose(disposing);
         }
     }
 }

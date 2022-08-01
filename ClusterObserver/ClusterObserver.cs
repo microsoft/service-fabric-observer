@@ -101,14 +101,14 @@ namespace ClusterObserver
                 return;
             }
 
-            await ReportAsync(token).ConfigureAwait(false);
+            await ReportAsync(token);
 
             LastRunDateTime = DateTime.Now;
         }
 
         public override async Task ReportAsync(CancellationToken token)
         {
-            await ReportClusterHealthAsync(token).ConfigureAwait(false);
+            await ReportClusterHealthAsync(token);
         }
 
         /// <summary>
@@ -146,12 +146,12 @@ namespace ClusterObserver
             try
             {
                 // Monitor node status.
-                await MonitorNodeStatusAsync(token, ignoreDefaultQueryTimeout).ConfigureAwait(false);
+                await MonitorNodeStatusAsync(token, ignoreDefaultQueryTimeout);
 
                 // Check for active repairs in the cluster.
                 if (MonitorRepairJobStatus)
                 {
-                    var repairsInProgress = await GetRepairTasksCurrentlyProcessingAsync(token).ConfigureAwait(false);
+                    var repairsInProgress = await GetRepairTasksCurrentlyProcessingAsync(token);
                     string repairState = string.Empty;
 
                     if (repairsInProgress?.Count > 0)
@@ -262,7 +262,7 @@ namespace ClusterObserver
                         case HealthEvaluationKind.Nodes:
                             try
                             {
-                                await ProcessNodeHealthAsync(clusterHealth.NodeHealthStates, token).ConfigureAwait(false);
+                                await ProcessNodeHealthAsync(clusterHealth.NodeHealthStates, token);
                             }
                             catch (Exception e) when (e is FabricException || e is TimeoutException)
                             {
@@ -320,7 +320,7 @@ namespace ClusterObserver
 
                             try
                             {
-                                await ProcessGenericEntityHealthAsync(evaluation, token).ConfigureAwait(false);
+                                await ProcessGenericEntityHealthAsync(evaluation, token);
                             }
                             catch (Exception e) when (e is FabricException || e is TimeoutException)
                             {
@@ -812,7 +812,7 @@ namespace ClusterObserver
                                                 null,
                                                 isTest ? TimeSpan.FromSeconds(1) : ConfigurationSettings.AsyncTimeout,
                                                 token),
-                                     token).ConfigureAwait(false);
+                                     token);
 
             // Are any of the nodes that were previously in non-Up status, now Up?
             if (NodeStatusDictionary.Count > 0)
@@ -949,7 +949,7 @@ namespace ClusterObserver
                                                     repairManagerServiceUri,
                                                     ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigurationSettings.AsyncTimeout,
                                                     cancellationToken),
-                                            cancellationToken).ConfigureAwait(false);  
+                                            cancellationToken);  
 
                 return serviceList?.Count > 0;
             }
@@ -986,7 +986,7 @@ namespace ClusterObserver
                                                         null,
                                                         ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigurationSettings.AsyncTimeout,
                                                         cancellationToken),
-                                               cancellationToken).ConfigureAwait(false);  
+                                               cancellationToken);  
 
                 return repairTasks;
             }

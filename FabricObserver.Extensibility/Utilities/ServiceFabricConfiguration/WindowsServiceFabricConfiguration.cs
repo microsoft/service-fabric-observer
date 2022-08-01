@@ -13,7 +13,6 @@ namespace FabricObserver.Observers.Utilities
     public class WindowsServiceFabricConfiguration : ServiceFabricConfiguration
     {
         private const string ServiceFabricWindowsRegistryPath = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Service Fabric";
-        private readonly Logger _logger = new Logger("ServiceFabricConfiguration");
 
         public override string FabricVersion => GetString(nameof(FabricVersion));
 
@@ -27,7 +26,6 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (Exception e) when (e is ArgumentException || e is IOException || e is SecurityException)
             {
-                _logger.LogWarning($"GetString: {e.Message}");
                 return "Unknown";
             }
         }
@@ -40,7 +38,6 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (Exception e) when (e is ArgumentException || e is IOException || e is SecurityException)
             {
-                _logger.LogWarning($"GetInt32: {e.Message}");
                 return 0;
             }
         }
