@@ -84,7 +84,7 @@ namespace FabricObserver.Observers.Utilities
             }
 
             // Full Working Set (Private + Shared) from psapi.dll. Very fast.
-            return GetProcessWorkingSetMbWin32(processId); 
+            return GetProcessWorkingSetMbWin32(processId);
         }
 
         public override float GetProcessAllocatedHandles(int processId, string configPath = null)
@@ -185,7 +185,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 return -1;
             }
-            
+
             const string categoryName = "Windows Fabric Database";
             const string counterName = "Long-Value Maximum LID";
             string internalProcName = procName;
@@ -253,7 +253,7 @@ namespace FabricObserver.Observers.Utilities
                                             counterName,
                                             instanceName: internalProcName,
                                             readOnly: true);
-                
+
                 float result = performanceCounter.NextValue();
                 double usedPct = (double)(result * 100) / int.MaxValue;
 
@@ -314,7 +314,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 uint handles = 0;
                 handle = NativeMethods.GetSafeProcessHandle((uint)processId);
-                
+
                 if (handle.IsInvalid || !NativeMethods.GetProcessHandleCount(handle, out handles))
                 {
                     // The related Observer will have logged any privilege related failure.
@@ -323,8 +323,8 @@ namespace FabricObserver.Observers.Utilities
                         Logger.LogWarning($"GetProcessHandleCount for process id {processId}: Failed with Win32 error code {Marshal.GetLastWin32Error()}.");
                     }
                 }
-       
-                return (int)handles;  
+
+                return (int)handles;
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
             {
@@ -394,7 +394,7 @@ namespace FabricObserver.Observers.Utilities
                     Logger.LogWarning($"GetPrivateWorkingSetMbPerfCounter: The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for. " +
                                       $"Error Code: {Marshal.GetLastWin32Error()}");
                 }
-                
+
                 return 0F;
             }
 
@@ -447,7 +447,7 @@ namespace FabricObserver.Observers.Utilities
 #endif
                 return 0F;
             }
-  
+
             try
             {
                 ProcessMemoryCounter.InstanceName = internalProcName;
@@ -495,7 +495,7 @@ namespace FabricObserver.Observers.Utilities
                 {
                     return GetInternalProcNameFromId(procName, pid, token);
                 }
-                
+
                 if (_procCache.ContainsKey(procName) && _procCache[procName].Any(inst => inst.Pid == pid))
                 {
                     return _procCache[procName].First(inst => inst.Pid == pid).InternalName;
@@ -570,7 +570,7 @@ namespace FabricObserver.Observers.Utilities
         private void RefreshSameNamedProcCache(string procName, CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
-            
+
             PerformanceCounter cnt = null;
 
             try
@@ -615,6 +615,15 @@ namespace FabricObserver.Observers.Utilities
                 cnt?.Dispose();
                 cnt = null;
             }
+        }
+
+        public override void Dispose()
+        {
+            memoryCounterInstance?.Dispose();
+            memoryCounterInstance = null;
+
+            cpuCounterInstance?.Dispose();
+            cpuCounterInstance = null;
         }
     }
 }
