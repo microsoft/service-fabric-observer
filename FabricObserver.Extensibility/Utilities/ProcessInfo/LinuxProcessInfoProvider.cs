@@ -212,10 +212,5 @@ namespace FabricObserver.Observers.Utilities
 
             return childProcesses;
         }
-
-        public override void Dispose()
-        {
-            // nothing to do here.
-        }
     }
 }

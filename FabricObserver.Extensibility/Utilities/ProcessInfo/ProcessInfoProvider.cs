@@ -79,7 +79,5 @@ namespace FabricObserver.Observers.Utilities
                 return 0;
             }
         }
-
-        public abstract void Dispose();
     }
 }

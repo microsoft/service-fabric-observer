@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using Newtonsoft.Json;
 using System;
 using System.Diagnostics.Tracing;
 using System.Fabric;
@@ -66,7 +67,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         [NonEvent]
-        public void DataTypeWriteInfo<T>(string eventName, T data)
+        internal void WriteInfo<T>(string eventName, T data)
         {
             var options = new EventSourceOptions
             {
@@ -80,7 +81,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         [NonEvent]
-        public void DataTypeWriteWarning<T>(string eventName, T data)
+        internal void WriteWarning<T>(string eventName, T data)
         {
             var options = new EventSourceOptions
             {
@@ -94,7 +95,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         [NonEvent]
-        public void DataTypeWriteError<T>(string eventName, T data)
+        internal void WriteError<T>(string eventName, T data)
         {
             var options = new EventSourceOptions
             {

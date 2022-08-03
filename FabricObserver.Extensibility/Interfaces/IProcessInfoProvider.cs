@@ -44,7 +44,5 @@ namespace FabricObserver.Observers.Utilities
         /// then also supply this value to ensure the correct process is measured.</param>
         /// <returns>double representing the current percentage of LVIDs in use out of a possible int.MaxValue total.</returns>
         double GetProcessKvsLvidsUsagePercentage(string procName, CancellationToken token, int procId = -1);
-
-        void Dispose();
     }
 }
