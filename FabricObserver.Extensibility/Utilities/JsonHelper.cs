@@ -3,8 +3,6 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using System;
-using System.CodeDom;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http.Formatting;

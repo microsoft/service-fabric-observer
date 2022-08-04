@@ -9,7 +9,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using FabricObserver.Observers.Interfaces;
 using FabricObserver.Observers.Utilities.Telemetry;
-using Newtonsoft.Json;
 using NLog;
 using NLog.Config;
 using NLog.Targets;

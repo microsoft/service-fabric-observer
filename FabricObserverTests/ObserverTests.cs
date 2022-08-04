@@ -26,7 +26,6 @@ using System.Fabric.Description;
 using System.Xml;
 using FabricObserver.Observers.Utilities.Telemetry;
 using FabricObserver.Utilities.ServiceFabric;
-using Microsoft.VisualStudio.TestPlatform.ObjectModel;
 using Microsoft.Extensions.DependencyInjection;
 
 /***PLEASE RUN ALL OF THESE TESTS ON YOUR LOCAL DEV MACHINE WITH A RUNNING SF CLUSTER BEFORE SUBMITTING A PULL REQUEST***/
