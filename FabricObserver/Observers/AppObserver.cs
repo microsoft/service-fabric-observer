@@ -534,12 +534,12 @@ namespace FabricObserver.Observers
                 {
                     if (IsEtwEnabled)
                     {
-                        var data = new
+                        /*var data = new
                         {
                             ChildProcessTelemetryData = JsonConvert.SerializeObject(childProcessTelemetryDataList.ToList())
-                        };
+                        };*/
 
-                        ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, data);
+                        ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, childProcessTelemetryDataList.ToList());
                     }
 
                     if (IsTelemetryEnabled)
@@ -1310,6 +1310,36 @@ namespace FabricObserver.Observers
 
             double sumValues = 0;
             string metric = string.Empty;
+            string procStartTime = string.Empty;
+
+            if (IsWindows)
+            {
+                try
+                {
+                    procStartTime = NativeMethods.GetProcessStartTime((int)repOrInst.HostProcessId).ToString("o");
+                }
+                catch (Exception e) when (e is ArgumentException || e is FormatException || e is Win32Exception)
+                {
+                    ObserverLogger.LogInfo($"Can't get process start time for {repOrInst.HostProcessId}: {e.Message}");
+                    // Just don't set the ChildProcessTelemetryData.ProcessStartTime field. Don't exit the function.
+                }
+            }
+            else
+            {
+                try
+                {
+                    using (Process proc = Process.GetProcessById((int)repOrInst.HostProcessId))
+                    {
+                        procStartTime = proc.StartTime.ToString("o");
+                    }
+                }
+                catch (Exception e) when (e is ArgumentException || e is FormatException || e is InvalidOperationException || e is NotSupportedException || e is Win32Exception)
+                {
+                    ObserverLogger.LogInfo($"Can't get process start time for {repOrInst.HostProcessId}: {e.Message}");
+                    // Just don't set the ChildProcessTelemetryData.ProcessStartTime field. Don't exit the function.
+                }
+            }
+
             var childProcessInfoData = new ChildProcessTelemetryData
             {
                 ApplicationName = repOrInst.ApplicationName.OriginalString,
@@ -1317,6 +1347,7 @@ namespace FabricObserver.Observers
                 NodeName = NodeName,
                 ProcessId = (int)repOrInst.HostProcessId,
                 ProcessName = IsWindows ? NativeMethods.GetProcessNameFromId((int)repOrInst.HostProcessId) : Process.GetProcessById((int)repOrInst.HostProcessId)?.ProcessName,
+                ProcessStartTime = procStartTime,
                 PartitionId = repOrInst.PartitionId.ToString(),
                 ReplicaId = repOrInst.ReplicaOrInstanceId.ToString(),
                 ChildProcessCount = childProcs.Count,
@@ -1615,7 +1646,7 @@ namespace FabricObserver.Observers
                             if (exception.NativeErrorCode == 5 || exception.NativeErrorCode == 6)
                             {
                                 string serviceName = repOrInst?.ServiceName?.OriginalString;
-                                string message = $"{serviceName} is running as Admin or System user on Windows and can't be monitored by FabricObserver, which is running as Network Service.{Environment.NewLine}" +
+                                string message = $"{serviceName} is running as Admin or System user on Windows and can't be monitored by FabricObserver, which is running as Network Service. " +
                                                  $"Please configure FabricObserver to run as Admin or System user on Windows to solve this problem and/or determine if {serviceName} really needs to run as Admin or System user on Windows.";
 
                                 string property = $"RestrictedAccess({serviceName})";
@@ -2025,16 +2056,26 @@ namespace FabricObserver.Observers
 
                 if (checkMemMb)
                 {
-                    float processMemMb = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, checkPrivateWS);
-
                     if (procId == parentPid)
                     {
-                        AllAppMemDataMb[id].AddData(processMemMb);
+                        _ = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, checkPrivateWS);
+                        Thread.Sleep(100);
+                        AllAppMemDataMb[id].AddData(ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, checkPrivateWS));
                     }
                     else
                     {
-                        _ = AllAppMemDataMb.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<float>(ErrorWarningProperty.MemoryConsumptionMb, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
-                        AllAppMemDataMb[$"{id}:{procName}{procId}"].AddData(processMemMb);
+                        _ = AllAppMemDataMb.TryAdd(
+                                $"{id}:{procName}{procId}",
+                                new FabricResourceUsageData<float>(
+                                    ErrorWarningProperty.MemoryConsumptionMb,
+                                    $"{id}:{procName}{procId}",
+                                    capacity,
+                                    UseCircularBuffer,
+                                    EnableConcurrentMonitoring));
+
+                        _ = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, checkPrivateWS);
+                        Thread.Sleep(100);
+                        AllAppMemDataMb[$"{id}:{procName}{procId}"].AddData(ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, checkPrivateWS));
                     }
                 }
 
@@ -2089,17 +2130,20 @@ namespace FabricObserver.Observers
                         double cpu = 0;
                         cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, IsWindows ? procName : null);
 
-                        if (cpu >= 0.0001)
+                        if (procId == parentPid)
                         {
-                            if (procId == parentPid)
-                            {
-                                AllAppCpuData[id].AddData(cpu);
-                            }
-                            else
-                            {
-                                _ = AllAppCpuData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.CpuTime, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
-                                AllAppCpuData[$"{id}:{procName}{procId}"].AddData(cpu);
-                            }
+                            AllAppCpuData[id].AddData(cpu);
+                        }
+                        else
+                        {
+                            _ = AllAppCpuData.TryAdd(
+                                    $"{id}:{procName}{procId}",
+                                    new FabricResourceUsageData<double>(ErrorWarningProperty.CpuTime, $"{id}:{procName}{procId}",
+                                    capacity,
+                                    UseCircularBuffer,
+                                    EnableConcurrentMonitoring));
+
+                            AllAppCpuData[$"{id}:{procName}{procId}"].AddData(cpu);
                         }
                     }
 
@@ -2345,7 +2389,7 @@ namespace FabricObserver.Observers
                         replicaInfo = new ReplicaOrInstanceMonitoringInfo
                         {
                             ApplicationName = appName,
-                            ApplicationTypeName = appTypeName,
+                            ApplicationTypeName = appTypeName ?? _deployedApps.First(app => app.ApplicationName == appName).ApplicationTypeName,
                             HostProcessId = statelessInstance.HostProcessId,
                             ReplicaOrInstanceId = statelessInstance.InstanceId,
                             PartitionId = statelessInstance.Partitionid,

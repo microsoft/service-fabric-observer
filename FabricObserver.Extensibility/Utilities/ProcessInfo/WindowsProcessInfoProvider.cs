@@ -22,8 +22,6 @@ namespace FabricObserver.Observers.Utilities
         private const int MaxDescendants = 50;
         private const int MaxSameNamedProcesses = 50;
         private const int MaxInstanceNameLengthTruncated = 64;
-        private static PerformanceCounter memoryCounterInstance = null;
-        private static PerformanceCounter cpuCounterInstance = null;
         private static readonly object _lock = new object();
         private readonly object _lockUpdate = new object();
         private volatile bool hasWarnedProcessNameLength = false;
@@ -31,44 +29,6 @@ namespace FabricObserver.Observers.Utilities
         private TimeSpan maxLifetimeForProcCache = TimeSpan.FromMinutes(3);
         private readonly ConcurrentDictionary<string, List<(string InternalName, int Pid)>> _procCache =
             new ConcurrentDictionary<string, List<(string InternalName, int Pid)>>();
-
-        public static PerformanceCounter ProcessMemoryCounter
-        {
-            get
-            {
-                if (memoryCounterInstance == null)
-                {
-                    lock (_lock)
-                    {
-                        if (memoryCounterInstance == null)
-                        {
-                            memoryCounterInstance = new PerformanceCounter("Process", "Working Set - Private", true);
-                        }
-                    }
-                }
-
-                return memoryCounterInstance;
-            }
-        }
-
-        public static PerformanceCounter ProcessCpuCounter
-        {
-            get
-            {
-                if (cpuCounterInstance == null)
-                {
-                    lock (_lock)
-                    {
-                        if (cpuCounterInstance == null)
-                        {
-                            cpuCounterInstance = new PerformanceCounter("Process", "% Processor Time", true);
-                        }
-                    }
-                }
-
-                return cpuCounterInstance;
-            }
-        }
 
         public override float GetProcessWorkingSetMb(int processId, string procName, CancellationToken token, bool getPrivateWorkingSet = false)
         {
@@ -450,8 +410,10 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                ProcessMemoryCounter.InstanceName = internalProcName;
-                return ProcessMemoryCounter.NextValue() / 1024 / 1024;
+                using (PerformanceCounter perfCounter = new PerformanceCounter("Process", "Working Set - Private", internalProcName, true))
+                {
+                    return perfCounter.NextValue() / 1024 / 1024;
+                }
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is UnauthorizedAccessException || e is Win32Exception)
             {
@@ -615,15 +577,6 @@ namespace FabricObserver.Observers.Utilities
                 cnt?.Dispose();
                 cnt = null;
             }
-        }
-
-        public override void Dispose()
-        {
-            memoryCounterInstance?.Dispose();
-            memoryCounterInstance = null;
-
-            cpuCounterInstance?.Dispose();
-            cpuCounterInstance = null;
         }
     }
 }
