@@ -24,7 +24,6 @@ using System.Diagnostics;
 using System.ComponentModel;
 using System.Runtime;
 using FabricObserver.Utilities.ServiceFabric;
-using Microsoft.Extensions.Azure;
 
 namespace FabricObserver.Observers
 {
@@ -50,7 +49,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.2.1.831";
+        private const string InternalVersionNumber = "3.2.1.960";
 
         private bool RuntimeTokenCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;
@@ -888,30 +887,7 @@ namespace FabricObserver.Observers
                 isConfigurationUpdateInProgress = true;
                 await StopObserversAsync(false);
 
-                // Observer settings.
-                foreach (var observer in observers)
-                {
-                    if (token.IsCancellationRequested)
-                    {
-                        return;
-                    }
-
-                    var newParams = e.NewPackage.Settings.Sections[$"{observer.ObserverName}Configuration"].Parameters;
-                    observer.ConfigurationSettings.UpdateConfigSettings(newParams.ToArray());
-
-                    // The ObserverLogger instance (member of each observer type) checks its EnableVerboseLogging setting before writing Info events (it won't write if this setting is false, thus non-verbose).
-                    // So, we set it here in case the parameter update includes a change to this config setting. 
-                    if (newParams.Any(u => u.Name == ObserverConstants.EnableVerboseLoggingParameter))
-                    {
-                        var setting = newParams.FirstOrDefault(u => u.Name == ObserverConstants.EnableVerboseLoggingParameter);
-                        observer.ObserverLogger.EnableVerboseLogging = bool.TryParse(setting.Value, out bool enableVerboseLogging) && enableVerboseLogging;
-                    }
-
-                    // Reset last run time so the observer restarts (if enabled) after the app parameter update completes.
-                    observer.LastRunDateTime = DateTime.MinValue;
-                }
-
-                // ObserverManager settings. This happens after observer settings are set since obsmgr LVID code depends on specific observer config. See IsLvidCounterEnabled().
+                // ObserverManager settings.
                 SetPropertiesFromConfigurationParameters(e.NewPackage.Settings);
             }
             catch (Exception err)
@@ -948,6 +924,12 @@ namespace FabricObserver.Observers
         private void SetPropertiesFromConfigurationParameters(ConfigurationSettings settings = null)
         {
             ApplicationName = FabricServiceContext.CodePackageActivationContext.ApplicationName;
+
+            // LVID monitoring.
+            if (isWindows)
+            {
+                IsLvidCounterEnabled = IsLVIDPerfCounterEnabled(settings);
+            }
 
             // ETW - Overridable
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProvider, settings), out bool etwEnabled))
@@ -1009,12 +991,6 @@ namespace FabricObserver.Observers
             else if (Enum.TryParse(state, out HealthState healthState))
             {
                 ObserverFailureHealthStateLevel = healthState;
-            }
-
-            // LVID monitoring.
-            if (isWindows)
-            {
-                IsLvidCounterEnabled = IsLVIDPerfCounterEnabled(settings);
             }
 
             // Telemetry (AppInsights, LogAnalytics, etc) - Override

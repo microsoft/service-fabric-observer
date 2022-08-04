@@ -4,10 +4,13 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
+using System.Fabric.Description;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
@@ -375,7 +378,13 @@ namespace FabricObserver.Observers
             ConfigPackage = serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
             CodePackage = serviceContext.CodePackageActivationContext.GetCodePackageObject("Code");
             FabricServiceContext = serviceContext;
-            SetObserverConfiguration();
+
+            if (IsWindows)
+            {
+                FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
+            }
+
+            SetObserverStaticConfiguration();
 
             if (ObserverName == ObserverConstants.AppObserverName)
             {
@@ -413,6 +422,16 @@ namespace FabricObserver.Observers
                     GetSettingParameterValue(
                         ObserverConstants.ObserverManagerConfigurationSectionName,
                         ObserverConstants.ObserverWebApiEnabled), out bool obsWeb) && obsWeb && IsObserverWebApiAppInstalled();
+        }
+
+        private void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
+        {
+            ConfigPackage = e.NewPackage;
+            ConfigurationSettings = new ConfigSettings(ConfigPackage.Settings, ConfigurationSectionName);
+            ObserverLogger.EnableVerboseLogging = ConfigurationSettings.EnableVerboseLogging;
+
+            // Reset last run time so the observer restarts (if enabled) after the app parameter update completes.
+            LastRunDateTime = DateTime.MinValue;
         }
 
         /// <summary>
@@ -1376,11 +1395,17 @@ namespace FabricObserver.Observers
 
             if (disposing)
             {
+                if (IsWindows)
+                {
+                    FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent -= CodePackageActivationContext_ConfigurationPackageModifiedEvent;
+                }
+
                 disposed = true;
             }
         }
 
-        private void SetObserverConfiguration()
+        // Non-App parameters settings (set in Settings.xml only).
+        private void SetObserverStaticConfiguration()
         {
             // Archive file lifetime - ObserverLogger files.
             if (int.TryParse(
