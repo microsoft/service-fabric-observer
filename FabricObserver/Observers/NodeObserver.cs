@@ -664,7 +664,7 @@ namespace FabricObserver.Observers
 
                 TimeSpan duration = TimeSpan.FromSeconds(10);
 
-                if (MonitorDuration > TimeSpan.MinValue && MonitorDuration > TimeSpan.FromSeconds(10))
+                if (MonitorDuration > TimeSpan.MinValue)
                 {
                     duration = MonitorDuration;
                 }
