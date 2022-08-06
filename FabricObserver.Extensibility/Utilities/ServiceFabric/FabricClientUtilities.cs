@@ -178,24 +178,31 @@ namespace FabricObserver.Utilities.ServiceFabric
             {
                 foreach (DeployedApplication app in appList)
                 {
-                    token.ThrowIfCancellationRequested();
+                    try
+                    {
+                        token.ThrowIfCancellationRequested();
 
-                    var deployedReplicaList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                       () => FabricClientSingleton.QueryManager.GetDeployedReplicaListAsync(
-                                                                !string.IsNullOrWhiteSpace(nodeName) ? nodeName : this.nodeName, app.ApplicationName),
-                                                       token);
+                        var deployedReplicaList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                                           () => FabricClientSingleton.QueryManager.GetDeployedReplicaListAsync(
+                                                                    !string.IsNullOrWhiteSpace(nodeName) ? nodeName : this.nodeName, app.ApplicationName),
+                                                           token);
 
-                    repList.AddRange(
-                            GetInstanceOrReplicaMonitoringList(
-                                app.ApplicationName, 
-                                app.ApplicationTypeName, 
-                                deployedReplicaList,
-                                includeChildProcesses,
-                                handleToSnapshot, 
-                                token));
+                        repList.AddRange(
+                                GetInstanceOrReplicaMonitoringList(
+                                    app.ApplicationName,
+                                    app.ApplicationTypeName ?? appList.First(a => a.ApplicationName == app.ApplicationName).ApplicationTypeName,
+                                    deployedReplicaList,
+                                    includeChildProcesses,
+                                    handleToSnapshot,
+                                    token));   
+                    }
+                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                    {
+
+                    }
                 }
 
-                return repList.Distinct().ToList();
+                return repList.Count > 0 ? repList.Distinct().ToList() : repList;
             }
             finally
             {
@@ -341,9 +348,17 @@ namespace FabricObserver.Utilities.ServiceFabric
             {
                 try
                 {
-                    using (var proc = Process.GetProcessById((int)repOrInst.HostProcessId))
+                    if (isWindows)
                     {
-                        pids.Add((repOrInst.ServiceName.OriginalString, proc.ProcessName, (int)repOrInst.HostProcessId));
+                        string procName = NativeMethods.GetProcessNameFromId((int)repOrInst.HostProcessId);
+                        pids.Add((repOrInst.ServiceName.OriginalString, procName, (int)repOrInst.HostProcessId));
+                    }
+                    else
+                    {
+                        using (var proc = Process.GetProcessById((int)repOrInst.HostProcessId))
+                        {
+                            pids.Add((repOrInst.ServiceName.OriginalString, proc.ProcessName, (int)repOrInst.HostProcessId));
+                        }
                     }
 
                     // Child processes?
