@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using FabricObserver.Observers.Interfaces;
 using FabricObserver.Observers.Utilities.Telemetry;
+using Newtonsoft.Json;
 using NLog;
 using NLog.Config;
 using NLog.Targets;
@@ -139,14 +140,14 @@ namespace FabricObserver.Observers.Utilities
                 return;
             }
 
-            if (!JsonHelper.TrySerializeObject(data, out string json))
+            if (!JsonHelper.TrySerializeObject(data, out string telemetryData))
             {
                 return;
             }
 
             var anonType = new
             {
-                json
+                telemetryData
             };
 
             // TelemetryData?
@@ -200,13 +201,13 @@ namespace FabricObserver.Observers.Utilities
             // Some FO ETW events are written as anonymous .NET types (anonymous object intances with fields/properties).
             // This means they are JSON-serializable for use in content inspection.
 
-            if (json.Contains("Warning"))
+            if (telemetryData.Contains("Warning"))
             {
                 ServiceEventSource.Current.WriteWarning(eventName, anonType);
                 return;
             }
 
-            if (json.Contains("Error"))
+            if (telemetryData.Contains("Error"))
             {
                 ServiceEventSource.Current.WriteError(eventName, anonType);
                 return;

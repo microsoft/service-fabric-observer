@@ -96,6 +96,8 @@ Your ARM template or PowerShell script will contain all the information necessar
 
 After you adjust configuration settings to meet to your needs (this means changing settings in Settings.xml for ObserverManager (ObserverManagerConfiguration section) and in ApplicationManifest.xml for observers).
 
+**NOTE: In version 3.2.0 and higher and you must create a service instance after you create the application.**
+
 ```PowerShell
 
 #cd to the top level repo directory where you cloned FO sources.

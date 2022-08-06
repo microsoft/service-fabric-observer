@@ -21,6 +21,7 @@ using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 using FabricObserver.Utilities.ServiceFabric;
+using Newtonsoft.Json;
 
 namespace FabricObserver.Observers
 {
@@ -529,15 +530,10 @@ namespace FabricObserver.Observers
                 }           
 
                 // Child proc info telemetry.
-                if (hasChildProcs && MaxChildProcTelemetryDataCount > 0)
+                if (hasChildProcs && MaxChildProcTelemetryDataCount > 0 && childProcessTelemetryDataList.Count > 0)
                 {
                     if (IsEtwEnabled)
                     {
-                        /*var data = new
-                        {
-                            ChildProcessTelemetryData = JsonConvert.SerializeObject(childProcessTelemetryDataList.ToList())
-                        };*/
-
                         ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, childProcessTelemetryDataList.ToList());
                     }
 
@@ -2278,14 +2274,20 @@ namespace FabricObserver.Observers
             //ObserverLogger.LogInfo($"QueryManager.GetDeployedReplicaListAsync for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
             var replicaMonitoringList = new ConcurrentQueue<ReplicaOrInstanceMonitoringInfo>();
 
-            SetInstanceOrReplicaMonitoringList(
-               appName,
-               serviceFilterList,
-               filterType,
-               appTypeName,
-               deployedReplicaList,
-               replicaMonitoringList);
+            try
+            {
+                SetInstanceOrReplicaMonitoringList(
+                   appName,
+                   appTypeName ?? _deployedApps.First(app => app.ApplicationName == appName).ApplicationTypeName,
+                   serviceFilterList,
+                   filterType,
+                   deployedReplicaList,
+                   replicaMonitoringList);
+            }
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+            {
 
+            }
             ObserverLogger.LogInfo("Completed GetDeployedPrimaryReplicaAsync...");
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"GetDeployedPrimaryReplicaAsync for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
@@ -2294,9 +2296,9 @@ namespace FabricObserver.Observers
 
         private void SetInstanceOrReplicaMonitoringList(
                         Uri appName,
+                        string appTypeName,
                         string[] filterList,
                         ServiceFilterType filterType,
-                        string appTypeName,
                         DeployedServiceReplicaList deployedReplicaList,
                         ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList)
         {
@@ -2313,112 +2315,113 @@ namespace FabricObserver.Observers
                 switch (deployedReplica)
                 {
                     case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole == ReplicaRole.Primary || statefulReplica.ReplicaRole == ReplicaRole.ActiveSecondary:
-                    {
-                        if (filterList != null && filterType != ServiceFilterType.None)
                         {
-                            bool isInFilterList = filterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
-
-                            switch (filterType)
+                            if (filterList != null && filterType != ServiceFilterType.None)
                             {
-                                case ServiceFilterType.Include when !isInFilterList:
-                                case ServiceFilterType.Exclude when isInFilterList:
-                                    return;
+                                bool isInFilterList = filterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+
+                                switch (filterType)
+                                {
+                                    case ServiceFilterType.Include when !isInFilterList:
+                                    case ServiceFilterType.Exclude when isInFilterList:
+                                        return;
+                                }
                             }
+
+                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
+                            {
+                                ApplicationName = appName,
+                                ApplicationTypeName = appTypeName,
+                                HostProcessId = statefulReplica.HostProcessId,
+                                ReplicaOrInstanceId = statefulReplica.ReplicaId,
+                                PartitionId = statefulReplica.Partitionid,
+                                ReplicaRole = statefulReplica.ReplicaRole,
+                                ServiceKind = statefulReplica.ServiceKind,
+                                ServiceName = statefulReplica.ServiceName,
+                                ServiceTypeName = statefulReplica.ServiceTypeName,
+                                ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
+                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(statefulReplica.ServicePackageActivationId) ?
+                                    System.Fabric.Description.ServicePackageActivationMode.SharedProcess : System.Fabric.Description.ServicePackageActivationMode.ExclusiveProcess,
+                                ReplicaStatus = statefulReplica.ReplicaStatus
+                            };
+
+                            /* In order to provide accurate resource usage of an SF service process we need to also account for
+                            any processes (children) that the service process (parent) created/spawned. */
+
+                            if (EnableChildProcessMonitoring && replicaInfo?.HostProcessId > 0)
+                            {
+                                // DEBUG
+                                //var sw = Stopwatch.StartNew();
+                                List<(string ProcName, int Pid)> childPids;
+
+                                if (IsWindows)
+                                {
+                                    childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, Win32HandleToProcessSnapshot);
+                                }
+                                else
+                                {
+                                    childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId);
+                                }
+
+                                if (childPids != null && childPids.Count > 0)
+                                {
+                                    replicaInfo.ChildProcesses = childPids;
+                                    ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
+                                }
+                                //sw.Stop();
+                                //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
+                            }
+                            break;
                         }
-
-                        replicaInfo = new ReplicaOrInstanceMonitoringInfo
-                        {
-                            ApplicationName = appName,
-                            ApplicationTypeName = appTypeName ?? _deployedApps.First(app => app.ApplicationName == appName).ApplicationTypeName,
-                            HostProcessId = statefulReplica.HostProcessId,
-                            ReplicaOrInstanceId = statefulReplica.ReplicaId,
-                            PartitionId = statefulReplica.Partitionid,
-                            ReplicaRole = statefulReplica.ReplicaRole,
-                            ServiceKind = statefulReplica.ServiceKind,
-                            ServiceName = statefulReplica.ServiceName,
-                            ServiceTypeName = statefulReplica.ServiceTypeName,
-                            ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
-                            ServicePackageActivationMode = string.IsNullOrWhiteSpace(statefulReplica.ServicePackageActivationId) ? 
-                                System.Fabric.Description.ServicePackageActivationMode.SharedProcess : System.Fabric.Description.ServicePackageActivationMode.ExclusiveProcess,
-                            ReplicaStatus = statefulReplica.ReplicaStatus
-                        };
-
-                        /* In order to provide accurate resource usage of an SF service process we need to also account for
-                        any processes (children) that the service process (parent) created/spawned. */
-
-                        if (EnableChildProcessMonitoring && replicaInfo?.HostProcessId > 0)
-                        {
-                            // DEBUG
-                            //var sw = Stopwatch.StartNew();
-                            List<(string ProcName, int Pid)> childPids;
-
-                            if (IsWindows)
-                            {
-                                childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, Win32HandleToProcessSnapshot);
-                            }
-                            else
-                            {
-                                childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId);
-                            }
-
-                            if (childPids != null && childPids.Count > 0)
-                            {
-                                replicaInfo.ChildProcesses = childPids;
-                                ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
-                            }
-                           //sw.Stop();
-                           //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
-                        }
-                        break;
-                    }
                     case DeployedStatelessServiceInstance statelessInstance:
-                    {
-                        if (filterList != null && filterType != ServiceFilterType.None)
                         {
-                            bool isInFilterList = filterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
-
-                            switch (filterType)
+                            if (filterList != null && filterType != ServiceFilterType.None)
                             {
-                                case ServiceFilterType.Include when !isInFilterList:
-                                case ServiceFilterType.Exclude when isInFilterList:
-                                    return;
+                                bool isInFilterList = filterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+
+                                switch (filterType)
+                                {
+                                    case ServiceFilterType.Include when !isInFilterList:
+                                    case ServiceFilterType.Exclude when isInFilterList:
+                                        return;
+                                }
                             }
-                        }
 
-                        replicaInfo = new ReplicaOrInstanceMonitoringInfo
-                        {
-                            ApplicationName = appName,
-                            ApplicationTypeName = appTypeName ?? _deployedApps.First(app => app.ApplicationName == appName).ApplicationTypeName,
-                            HostProcessId = statelessInstance.HostProcessId,
-                            ReplicaOrInstanceId = statelessInstance.InstanceId,
-                            PartitionId = statelessInstance.Partitionid,
-                            ReplicaRole = ReplicaRole.None,
-                            ServiceKind = statelessInstance.ServiceKind,
-                            ServiceName = statelessInstance.ServiceName,
-                            ServiceTypeName = statelessInstance.ServiceTypeName,
-                            ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
-                            ServicePackageActivationMode = string.IsNullOrWhiteSpace(statelessInstance.ServicePackageActivationId) ?
-                                System.Fabric.Description.ServicePackageActivationMode.SharedProcess : System.Fabric.Description.ServicePackageActivationMode.ExclusiveProcess,
-                            ReplicaStatus = statelessInstance.ReplicaStatus
-                        };
-
-                        if (EnableChildProcessMonitoring && replicaInfo?.HostProcessId > 0)
-                        {
-                            // DEBUG
-                            //var sw = Stopwatch.StartNew();
-                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, Win32HandleToProcessSnapshot);
-
-                            if (childPids != null && childPids.Count > 0)
+                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
                             {
-                                replicaInfo.ChildProcesses = childPids;
-                                ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
+                                ApplicationName = appName,
+                                ApplicationTypeName = appTypeName,
+                                HostProcessId = statelessInstance.HostProcessId,
+                                ReplicaOrInstanceId = statelessInstance.InstanceId,
+                                PartitionId = statelessInstance.Partitionid,
+                                ReplicaRole = ReplicaRole.None,
+                                ServiceKind = statelessInstance.ServiceKind,
+                                ServiceName = statelessInstance.ServiceName,
+                                ServiceTypeName = statelessInstance.ServiceTypeName,
+                                ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
+                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(statelessInstance.ServicePackageActivationId) ?
+                                    System.Fabric.Description.ServicePackageActivationMode.SharedProcess : System.Fabric.Description.ServicePackageActivationMode.ExclusiveProcess,
+                                ReplicaStatus = statelessInstance.ReplicaStatus
+                            };
+
+                            if (EnableChildProcessMonitoring && replicaInfo?.HostProcessId > 0)
+                            {
+                                // DEBUG
+                                //var sw = Stopwatch.StartNew();
+                                List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, Win32HandleToProcessSnapshot);
+
+                                if (childPids != null && childPids.Count > 0)
+                                {
+                                    replicaInfo.ChildProcesses = childPids;
+                                    ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
+                                }
+                                //sw.Stop();
+                                //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
                             }
-                            //sw.Stop();
-                            //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
+                            break;
                         }
-                        break;
-                    }
                 }
+                
 
                 if (replicaInfo?.HostProcessId > 0 && !ReplicaOrInstanceList.Any(r => r.ServiceName == replicaInfo.ServiceName))
                 {
