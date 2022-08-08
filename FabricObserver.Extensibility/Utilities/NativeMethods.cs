@@ -1129,7 +1129,7 @@ namespace FabricObserver.Observers.Utilities
 
                 if (snap != IntPtr.Zero)
                 { 
-                    _ = PssFreeSnapshot(GetCurrentProcess(), snap);
+                    _ = PssFreeSnapshot(hProc, snap);
                 }
 
                 hProc?.Dispose();
