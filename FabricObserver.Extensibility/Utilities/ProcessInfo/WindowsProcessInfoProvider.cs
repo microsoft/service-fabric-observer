@@ -5,6 +5,7 @@
 
 using Microsoft.Win32.SafeHandles;
 using System;
+using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -316,14 +317,14 @@ namespace FabricObserver.Observers.Utilities
             {
                 NativeMethods.PROCESS_MEMORY_COUNTERS_EX memoryCounters;
                 memoryCounters.cb = (uint)Marshal.SizeOf(typeof(NativeMethods.PROCESS_MEMORY_COUNTERS_EX));
-                handle = NativeMethods.OpenProcess((uint)NativeMethods.ProcessAccessFlags.All, false, (uint)processId);
+                handle = NativeMethods.GetSafeProcessHandle((uint)processId);
 
                 if (handle.IsInvalid || !NativeMethods.GetProcessMemoryInfo(handle, out memoryCounters, memoryCounters.cb))
                 {
                     throw new Win32Exception($"GetProcessMemoryInfo failed with Win32 error {Marshal.GetLastWin32Error()}");
                 }
 
-                return memoryCounters.WorkingSetSize.ToInt64() / 1024 / 1024;
+                return memoryCounters.WorkingSetSize.ToUInt64() / 1024 / 1024;
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
             {
