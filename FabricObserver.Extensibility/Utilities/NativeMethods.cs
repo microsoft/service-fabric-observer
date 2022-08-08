@@ -64,15 +64,15 @@ namespace FabricObserver.Observers.Utilities
         {
             public uint cb;
             public uint PageFaultCount;
-            public IntPtr PeakWorkingSetSize;
-            public IntPtr WorkingSetSize;
-            public IntPtr QuotaPeakPagedPoolUsage;
-            public IntPtr QuotaPagedPoolUsage;
-            public IntPtr QuotaPeakNonPagedPoolUsage;
-            public IntPtr QuotaNonPagedPoolUsage;
-            public IntPtr PagefileUsage;
-            public IntPtr PeakPagefileUsage;
-            public IntPtr PrivateUsage;
+            public UIntPtr PeakWorkingSetSize;
+            public UIntPtr WorkingSetSize;
+            public UIntPtr QuotaPeakPagedPoolUsage;
+            public UIntPtr QuotaPagedPoolUsage;
+            public UIntPtr QuotaPeakNonPagedPoolUsage;
+            public UIntPtr QuotaNonPagedPoolUsage;
+            public UIntPtr PagefileUsage;
+            public UIntPtr PeakPagefileUsage;
+            public UIntPtr PrivateUsage;
         }
 
         [Flags]
@@ -799,10 +799,10 @@ namespace FabricObserver.Observers.Utilities
         static extern int PssQuerySnapshot(IntPtr SnapshotHandle, PSS_QUERY_INFORMATION_CLASS InformationClass, IntPtr Buffer, uint BufferLength);
 
         [DllImport("kernel32.dll", SetLastError = false)]
-        static extern int PssFreeSnapshot(SafeProcessHandle ProcessHandle, IntPtr SnapshotHandle);
+        static extern int PssFreeSnapshot(IntPtr ProcessHandle, IntPtr SnapshotHandle);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        static extern SafeProcessHandle GetCurrentProcess();
+        static extern IntPtr GetCurrentProcess();
 
         [DllImport("psapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -1128,8 +1128,16 @@ namespace FabricObserver.Observers.Utilities
                 }
 
                 if (snap != IntPtr.Zero)
-                { 
-                    _ = PssFreeSnapshot(hProc, snap);
+                {
+                    // This is a pseudo handle.
+                    IntPtr thisHandle = GetCurrentProcess();
+                    int success = PssFreeSnapshot(thisHandle, snap);
+
+                    // Try and relase snap handle manually if PssFreeSnapshot fails.
+                    if (success != ERROR_SUCCESS)
+                    {
+                        TryReleaseHandle(snap);
+                    }
                 }
 
                 hProc?.Dispose();

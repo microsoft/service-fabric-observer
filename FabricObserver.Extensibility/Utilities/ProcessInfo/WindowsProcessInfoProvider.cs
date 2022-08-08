@@ -324,7 +324,7 @@ namespace FabricObserver.Observers.Utilities
                     throw new Win32Exception($"GetProcessMemoryInfo failed with Win32 error {Marshal.GetLastWin32Error()}");
                 }
 
-                return memoryCounters.WorkingSetSize.ToInt64() / 1024 / 1024;
+                return memoryCounters.WorkingSetSize.ToUInt64() / 1024 / 1024;
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
             {
