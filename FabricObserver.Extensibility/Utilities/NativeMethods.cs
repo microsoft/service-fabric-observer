@@ -793,7 +793,7 @@ namespace FabricObserver.Observers.Utilities
         internal static extern bool GetSystemTimes(out FILETIME lpIdleTime, out FILETIME lpKernelTime, out FILETIME lpUserTime);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        static extern int PssCaptureSnapshot(SafeProcessHandle ProcessHandle, PSS_CAPTURE_FLAGS CaptureFlags, uint ContextFlags, out IntPtr SnapshotHandle);
+        static extern int PssCaptureSnapshot(SafeProcessHandle ProcessHandle, PSS_CAPTURE_FLAGS CaptureFlags, uint ContextFlags, ref IntPtr SnapshotHandle);
 
         [DllImport("kernel32.dll", SetLastError = false)]
         static extern int PssQuerySnapshot(IntPtr SnapshotHandle, PSS_QUERY_INFORMATION_CLASS InformationClass, IntPtr Buffer, uint BufferLength);
@@ -812,7 +812,7 @@ namespace FabricObserver.Observers.Utilities
         static extern int PssWalkSnapshot(IntPtr SnapshotHandle, PSS_WALK_INFORMATION_CLASS InformationClass, IntPtr WalkMarkerHandle, IntPtr Buffer, uint BufferLength);
 
         [DllImport("kernel32.dll", SetLastError = false)]
-        static extern int PssWalkMarkerCreate([Optional] IntPtr Allocator, out IntPtr WalkMarkerHandle);
+        static extern int PssWalkMarkerCreate([Optional] IntPtr Allocator, ref IntPtr WalkMarkerHandle);
 
         [DllImport("kernel32.dll", SetLastError = false)]
         static extern int PssWalkMarkerFree(IntPtr WalkMarkerHandle);
@@ -896,26 +896,19 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>Returns information from the current walk position and advanced the walk marker to the next position.</summary>
         /// <param name="SnapshotHandle">A handle to the snapshot.</param>
         /// <param name="InformationClass">The type of information to return. For more information, see PSS_WALK_INFORMATION_CLASS.</param>
-        /// <param name="WalkMarkerHandle">
-        /// An optional handle to a walk marker. The walk marker indicates the walk position from which data is to be returned. <c>PssWalkSnapshot</c>
-        /// advances the walk marker to the next walk position in time order before returning to the caller.
-        /// <para>If this value is <c>NULL</c>, then a new walk marker will be temporarily created.</para>
-        /// </param>
         /// <returns>The list of snapshot information that this function returns.</returns>
-        private static IEnumerable<T> PssWalkSnapshot<T>(IntPtr SnapshotHandle, PSS_WALK_INFORMATION_CLASS InformationClass, IntPtr WalkMarkerHandle = default) where T : struct
+        private static IEnumerable<T> PssWalkSnapshot<T>(IntPtr SnapshotHandle, PSS_WALK_INFORMATION_CLASS InformationClass) where T : struct
         {
             IntPtr hWalk = IntPtr.Zero;
             IntPtr buffer = IntPtr.Zero;
 
             try
             {
-                if (WalkMarkerHandle == IntPtr.Zero)
+                int ret = PssWalkMarkerCreate(IntPtr.Zero, ref hWalk);
+
+                if (ret != ERROR_SUCCESS)
                 {
-                    _ = PssWalkMarkerCreate(IntPtr.Zero, out hWalk);
-                }
-                else
-                {
-                    hWalk = WalkMarkerHandle;
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
                 }
 
                 int size = Marshal.SizeOf(typeof(T));
@@ -942,19 +935,20 @@ namespace FabricObserver.Observers.Utilities
             }
             finally
             {
-                if (WalkMarkerHandle != IntPtr.Zero)
+                if (buffer != IntPtr.Zero)
                 {
-                    _ = PssWalkMarkerFree(WalkMarkerHandle);
+                    Marshal.FreeHGlobal(buffer);
                 }
 
                 if (hWalk != IntPtr.Zero)
                 {
-                    Marshal.FreeHGlobal(hWalk);
-                }
+                    int success = PssWalkMarkerFree(hWalk);
 
-                if (buffer != IntPtr.Zero)
-                {
-                    Marshal.FreeHGlobal(buffer);
+                    // Try and relase walk marker handle manually if PssFreeSnapshot fails?
+                    if (success != ERROR_SUCCESS)
+                    {
+                        //...
+                    }
                 }
             }
         }
@@ -1080,7 +1074,7 @@ namespace FabricObserver.Observers.Utilities
                     return 0;
                 }
 
-                int err = PssCaptureSnapshot(hProc, PSS_CAPTURE_FLAGS.PSS_CAPTURE_THREADS, 0, out snap);
+                int err = PssCaptureSnapshot(hProc, PSS_CAPTURE_FLAGS.PSS_CAPTURE_THREADS, 0, ref snap);
 
                 if (err != ERROR_SUCCESS)
                 {
@@ -1129,14 +1123,12 @@ namespace FabricObserver.Observers.Utilities
 
                 if (snap != IntPtr.Zero)
                 {
-                    // This is a pseudo handle.
-                    IntPtr thisHandle = GetCurrentProcess();
-                    int success = PssFreeSnapshot(thisHandle, snap);
+                    int success = PssFreeSnapshot(GetCurrentProcess(), snap);
 
-                    // Try and relase snap handle manually if PssFreeSnapshot fails.
+                    // Try and relase snap handle manually if PssFreeSnapshot fails?
                     if (success != ERROR_SUCCESS)
                     {
-                        TryReleaseHandle(snap);
+                        //TryReleaseHandle(snap);
                     }
                 }
 
