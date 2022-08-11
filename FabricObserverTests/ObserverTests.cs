@@ -1934,7 +1934,6 @@ namespace FabricObserverTests
                 Assert.IsTrue(t.ProcessId > 0);
                 Assert.IsTrue(t.ObserverName == ObserverConstants.AppObserverName);
                 Assert.IsTrue(t.Code == null);
-                Assert.IsTrue(t.ContainerId == null);
                 Assert.IsTrue(t.Description == null);
                 Assert.IsTrue(t.Property == null);
                 Assert.IsTrue(t.Source == ObserverConstants.AppObserverName);
@@ -1953,10 +1952,16 @@ namespace FabricObserverTests
             List<TelemetryData> telemData = FabricObserverMetrics.TelemetryData;
             Assert.IsNotNull(telemData);
 
-            foreach (var t in telemData)
+            var warningEvents = telemData.Where(t => t.HealthState == HealthState.Warning);
+            Assert.IsTrue(warningEvents.Any());
+
+            foreach (var t in warningEvents)
             {
                 Assert.IsFalse(string.IsNullOrWhiteSpace(t.ApplicationName));
                 Assert.IsFalse(string.IsNullOrWhiteSpace(t.ApplicationType));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Code));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Description));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Property));
                 Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeName));
                 Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeType));
                 Assert.IsFalse(string.IsNullOrWhiteSpace(t.ClusterId));
@@ -1979,15 +1984,11 @@ namespace FabricObserverTests
                 Assert.IsTrue(t.ServiceKind != System.Fabric.Query.ServiceKind.Invalid);
                 Assert.IsTrue(t.ServicePackageActivationMode == ServicePackageActivationMode.ExclusiveProcess
                               || t.ServicePackageActivationMode == ServicePackageActivationMode.SharedProcess);
-                Assert.IsTrue(t.HealthState == HealthState.Invalid || t.HealthState == HealthState.Warning);
+                Assert.IsTrue(t.HealthState == HealthState.Warning);
                 Assert.IsTrue(t.ReplicaId > 0);
                 Assert.IsTrue(t.ProcessId > 0);
                 Assert.IsTrue(t.ObserverName == ObserverConstants.AppObserverName);
-                Assert.IsTrue(t.HealthState == HealthState.Warning ? t.Code != null : t.Code == null);
-                Assert.IsTrue(t.ContainerId == null);
-                Assert.IsTrue(t.HealthState == HealthState.Warning ? t.Description != null : t.Description == null);
-                Assert.IsTrue(t.HealthState == HealthState.Warning ? t.Property != null : t.Property == null);
-                Assert.IsTrue(t.Source.Contains(ObserverConstants.AppObserverName));
+                Assert.IsTrue(t.Source == $"{t.ObserverName}({t.Code})");
                 Assert.IsTrue(t.Value >= 0.0);
             }
         }
