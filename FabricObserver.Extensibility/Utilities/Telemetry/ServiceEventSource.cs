@@ -12,7 +12,33 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 {
     public sealed class ServiceEventSource : EventSource
     {
-        public static readonly ServiceEventSource Current = new ServiceEventSource();
+        private static ServiceEventSource _current = null;
+        private static readonly object _lock = new object();
+
+        public static ServiceEventSource Current
+        {
+            get
+            {
+                if (_current == null)
+                {
+                    lock (_lock)
+                    {
+                        if (_current == null)
+                        {
+                            _current = new ServiceEventSource();
+                        }
+                    }
+                }
+                return _current;
+            }
+            set // This is used by unit tests.
+            {
+                lock (_lock)
+                {
+                    _current = value;
+                }
+            }
+        }
 
         private static string GetProviderName()
         {
@@ -20,13 +46,15 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             {
                 var config = FabricRuntime.GetActivationContext().GetConfigurationPackageObject("Config");
                 string providerName =
-                    config.Settings?.Sections[ObserverConstants.ObserverManagerConfigurationSectionName]?.Parameters[ObserverConstants.ETWProviderName]?.Value;
+                    config?.Settings?.Sections[ObserverConstants.ObserverManagerConfigurationSectionName]?.Parameters[ObserverConstants.ETWProviderName]?.Value;
 
                 return !string.IsNullOrWhiteSpace(providerName) ? providerName : ObserverConstants.DefaultEventSourceProviderName;
             }
-            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException || e is InvalidOperationException || e is TimeoutException)
             {
-
+                // The handled exception types are expected and benign.
+                // InvalidOperationException will always happen when this code is run from a unit test, for example,
+                // as there is no FabricRuntime static available.
             }
 
             return ObserverConstants.DefaultEventSourceProviderName;
@@ -39,9 +67,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             _ = Task.Run(() => { });
         }
 
-        // Instance constructor is private to enforce singleton semantics.
-        // FabricObserver ETW provider name is passed to base.ctor here instead of decorating this class.
-        private ServiceEventSource() : base(GetProviderName())
+        public ServiceEventSource() : base(GetProviderName())
         {
             
         }

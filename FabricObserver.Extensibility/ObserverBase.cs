@@ -342,7 +342,7 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        protected bool IsEtwProviderEnabled
+        public bool IsEtwProviderEnabled
         {
             get; set;
         }
