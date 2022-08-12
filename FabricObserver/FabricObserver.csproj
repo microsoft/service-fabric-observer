@@ -5,7 +5,6 @@
 		<RootNamespace>FabricObserver</RootNamespace>
 		<AssemblyName>FabricObserver</AssemblyName>
 		<TargetFramework>netcoreapp3.1</TargetFramework>
-		<PlatformTarget>x64</PlatformTarget>
 		<!-- ***NOTE***: If deploying to SF cluster directly from Visual Studio, you must use single target RID:
          For Windows, use win-x64. For Linux, use linux-x64.
         <RuntimeIdentifier>win-x64</RuntimeIdentifier> -->
@@ -21,7 +20,7 @@
 		<StartupObject>FabricObserver.Program</StartupObject>
 		<NoWarn>CA1822;$(NoWarn)</NoWarn>
 		<ResolveComReferenceSilent>true</ResolveComReferenceSilent>
-		<Platforms>AnyCPU;x64</Platforms>
+		<Platforms>x64</Platforms>
 	</PropertyGroup>
 	<ItemGroup>
 		<None Remove="ApplicationInsights.config" />

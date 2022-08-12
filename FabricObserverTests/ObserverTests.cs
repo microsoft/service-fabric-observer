@@ -148,18 +148,6 @@ namespace FabricObserverTests
         private static async Task DeployHealthMetricsAppAsync()
         {
             string appName = "fabric:/HealthMetrics";
-            string appType = "HealthMetricsType";
-            string appVersion = "1.0.0.0";
-            string serviceName1 = "fabric:/HealthMetrics/BandActorService";
-            string serviceName2 = "fabric:/HealthMetrics/DoctorActorService";
-
-            // Change this to suit your configuration (so, if you are on Windows and you installed SF on a different drive, for example).
-            string imageStoreConnectionString = @"file:C:\SfDevCluster\Data\ImageStoreShare";
-            string packagePathInImageStore = "HealthMetrics";
-            string packagePathZip = Path.Combine(Environment.CurrentDirectory, "HealthMetrics.zip");
-            string serviceType1 = "BandActorServiceType";
-            string serviceType2 = "DoctorActorServiceType";
-            string packagePath = Path.Combine(Environment.CurrentDirectory, "HealthMetricsApp", "pkg", "Debug");
 
             // If fabric:/HealthMetrics is already installed, exit.
             var deployedTestApp =
@@ -173,6 +161,19 @@ namespace FabricObserverTests
             {
                 return;
             }
+
+            string appType = "HealthMetricsType";
+            string appVersion = "1.0.0.0";
+            string serviceName1 = "fabric:/HealthMetrics/BandActorService";
+            string serviceName2 = "fabric:/HealthMetrics/DoctorActorService";
+
+            // Change this to suit your configuration (so, if you are on Windows and you installed SF on a different drive, for example).
+            string imageStoreConnectionString = @"file:C:\SfDevCluster\Data\ImageStoreShare";
+            string packagePathInImageStore = "HealthMetrics";
+            string packagePathZip = Path.Combine(Environment.CurrentDirectory, "HealthMetrics.zip");
+            string serviceType1 = "BandActorServiceType";
+            string serviceType2 = "DoctorActorServiceType";
+            string packagePath = Path.Combine(Environment.CurrentDirectory, "HealthMetricsApp", "pkg", "Debug");
 
             // Unzip the compressed HealthMetrics app package.
             System.IO.Compression.ZipFile.ExtractToDirectory(packagePathZip, "HealthMetricsApp", true);
@@ -214,6 +215,50 @@ namespace FabricObserverTests
             // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
             // You may need to increase this value depending upon your dev machine? You'll find out..
             await Task.Delay(TimeSpan.FromSeconds(10));
+        }
+
+        private static async Task DeployTestApp42Async()
+        {
+            string appName = "fabric:/TestApp42";
+
+            // If fabric:/TestApp42 is already installed, exit.
+            var deployedTestApp =
+                    await FabricClient.QueryManager.GetDeployedApplicationListAsync(
+                            NodeName,
+                            new Uri(appName),
+                            TimeSpan.FromSeconds(30),
+                            Token);
+
+            if (deployedTestApp?.Count > 0)
+            {
+                return;
+            }
+
+            string appType = "TestApp42Type";
+            string appVersion = "1.0.0";
+
+            // Change this to suit your configuration (so, if you are on Windows and you installed SF on a different drive, for example).
+            string imageStoreConnectionString = @"file:C:\SfDevCluster\Data\ImageStoreShare";
+            string packagePathInImageStore = "TestApp42";
+            string packagePathZip = Path.Combine(Environment.CurrentDirectory, "TestApp42.zip");
+            string packagePath = Path.Combine(Environment.CurrentDirectory, "TestApp42", "Release");
+
+            // Unzip the compressed HealthMetrics app package.
+            System.IO.Compression.ZipFile.ExtractToDirectory(packagePathZip, "TestApp42", true);
+
+            // Copy the HealthMetrics app package to a location in the image store.
+            FabricClient.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
+
+            // Provision the HealthMetrics application.          
+            await FabricClient.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
+
+            // Create HealthMetrics app instance.
+            ApplicationDescription appDesc = new ApplicationDescription(new Uri(appName), appType, appVersion);
+            await FabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
+
+            // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
+            // You may need to increase this value depending upon your dev machine? You'll find out..
+            await Task.Delay(TimeSpan.FromSeconds(15));
         }
 
         private static bool IsLocalSFRuntimePresent()
@@ -385,45 +430,80 @@ namespace FabricObserverTests
             }
 
             await CleanupTestHealthReportsAsync();
-            await RemoveTestApplicationAsync();
+            await RemoveTestApplicationsAsync();
             etwEnabled = false;
         }
 
-        private static async Task RemoveTestApplicationAsync()
+        private static async Task RemoveTestApplicationsAsync()
         {
-            string appName = "fabric:/HealthMetrics";
-            string appType = "HealthMetricsType";
-            string appVersion = "1.0.0.0";
-            string serviceName1 = "fabric:/HealthMetrics/BandActorService";
-            string serviceName2 = "fabric:/HealthMetrics/DoctorActorService";
-            string imageStoreConnectionString = @"file:C:\SfDevCluster\Data\ImageStoreShare";
-            string packagePathInImageStore = "HealthMetrics";
-
+            // HealthMetrics \\
             var fabricClient = new FabricClient();
+            string imageStoreConnectionString = @"file:C:\SfDevCluster\Data\ImageStoreShare";
 
-            // Clean up the unzipped directory.
-            fabricClient.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
+            if (await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
+            {
+                string appName = "fabric:/HealthMetrics";
+                string appType = "HealthMetricsType";
+                string appVersion = "1.0.0.0";
+                string serviceName1 = "fabric:/HealthMetrics/BandActorService";
+                string serviceName2 = "fabric:/HealthMetrics/DoctorActorService";
+                string packagePathInImageStore = "HealthMetrics";
 
-            // Delete services.
-            DeleteServiceDescription deleteServiceDescription1 = new DeleteServiceDescription(new Uri(serviceName1));
-            DeleteServiceDescription deleteServiceDescription2 = new DeleteServiceDescription(new Uri(serviceName2));
-            await fabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription1);
-            await fabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription2);
+                // Clean up the unzipped directory.
+                fabricClient.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
 
-            // Delete an application instance from the application type.
-            DeleteApplicationDescription deleteApplicationDescription = new DeleteApplicationDescription(new Uri(appName));
-            await fabricClient.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
+                // Delete services.
+                DeleteServiceDescription deleteServiceDescription1 = new DeleteServiceDescription(new Uri(serviceName1));
+                DeleteServiceDescription deleteServiceDescription2 = new DeleteServiceDescription(new Uri(serviceName2));
+                await fabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription1);
+                await fabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription2);
 
-            // Un-provision the application type.
-            await fabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+                // Delete an application instance from the application type.
+                DeleteApplicationDescription deleteApplicationDescription = new DeleteApplicationDescription(new Uri(appName));
+                await fabricClient.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
+
+                // Un-provision the application type.
+                await fabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+            }
+
+            if (await EnsureTestServicesExistAsync("fabric:/TestApp42"))
+            {
+                // TestApp42 \\
+
+                string appName = "fabric:/TestApp42";
+                string appType = "TestApp42Type";
+                string appVersion = "1.0.0";
+                string serviceName1 = "fabric:/TestApp42/ChildProcessCreator";
+                string packagePathInImageStore = "TestApp42";
+
+                // Clean up the unzipped directory.
+                fabricClient.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
+
+                // Delete services.
+                var deleteServiceDescription1 = new DeleteServiceDescription(new Uri(serviceName1));
+                await fabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription1);
+
+                // Delete an application instance from the application type.
+                var deleteApplicationDescription = new DeleteApplicationDescription(new Uri(appName));
+                await fabricClient.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
+
+                // Un-provision the application type.
+                await fabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+            }
         }
 
-        private static async Task<bool> EnsureTestServicesExistAsync()
+        private static async Task<bool> EnsureTestServicesExistAsync(string appName)
         {
             try
             {
-                var services = await FabricClient.QueryManager.GetServiceListAsync(new Uri("fabric:/HealthMetrics"));
-                return services?.Count == 2;
+                var services = await FabricClient.QueryManager.GetServiceListAsync(new Uri(appName));
+
+                if (appName == "fabric:/HealthMetrics")
+                {
+                    return services?.Count == 2;
+                }
+
+                return services?.Count == 1;
             }
             catch (FabricElementNotFoundException)
             {
@@ -437,12 +517,13 @@ namespace FabricObserverTests
 
         /* Simple Tests */
 
-        // It is unclear to me why TestInitialize does not work. A bug in the VS Test tool?. So, this hack.
         [TestMethod]
         public void AAAInitializeTestInfra()
         {
             Assert.IsTrue(IsLocalSFRuntimePresent());
+
             DeployHealthMetricsAppAsync().Wait();
+            DeployTestApp42Async().Wait();
         }
 
         [TestMethod]
@@ -631,7 +712,8 @@ namespace FabricObserverTests
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.invalid.json"),
-                EnableConcurrentMonitoring = true
+                EnableConcurrentMonitoring = true,
+                EnableChildProcessMonitoring = true
             };
 
             await obs.InitializeAsync();
@@ -653,7 +735,8 @@ namespace FabricObserverTests
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.empty.json"),
-                EnableConcurrentMonitoring = true
+                EnableConcurrentMonitoring = true,
+                EnableChildProcessMonitoring = true
             };
 
             await obs.InitializeAsync();
@@ -669,9 +752,9 @@ namespace FabricObserverTests
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
-            if (!await EnsureTestServicesExistAsync())
+            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
             {
-                AAAInitializeTestInfra();
+                await DeployHealthMetricsAppAsync();
             }
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -696,9 +779,9 @@ namespace FabricObserverTests
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
-            if (!await EnsureTestServicesExistAsync())
+            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
             {
-                AAAInitializeTestInfra();
+                await DeployHealthMetricsAppAsync();
             }
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -723,9 +806,9 @@ namespace FabricObserverTests
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
-            if (!await EnsureTestServicesExistAsync())
+            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
             {
-                AAAInitializeTestInfra();
+                await DeployHealthMetricsAppAsync();
             }
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -750,9 +833,9 @@ namespace FabricObserverTests
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
-            if (!await EnsureTestServicesExistAsync())
+            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
             {
-                AAAInitializeTestInfra();
+                await DeployHealthMetricsAppAsync();
             }
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -779,9 +862,9 @@ namespace FabricObserverTests
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
-            if (!await EnsureTestServicesExistAsync())
+            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
             {
-                AAAInitializeTestInfra();
+                await DeployHealthMetricsAppAsync();
             }
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -811,9 +894,9 @@ namespace FabricObserverTests
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
-            if (!await EnsureTestServicesExistAsync())
+            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
             {
-                AAAInitializeTestInfra();
+                await DeployHealthMetricsAppAsync();
             }
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -843,9 +926,9 @@ namespace FabricObserverTests
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
-            if (!await EnsureTestServicesExistAsync())
+            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
             {
-                AAAInitializeTestInfra();
+                await DeployHealthMetricsAppAsync();
             }
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -870,9 +953,9 @@ namespace FabricObserverTests
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
-            if (!await EnsureTestServicesExistAsync())
+            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
             {
-                AAAInitializeTestInfra();
+                await DeployHealthMetricsAppAsync();
             }
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -916,7 +999,9 @@ namespace FabricObserverTests
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
                 EnableConcurrentMonitoring = true,
-                IsEtwProviderEnabled = etwEnabled
+                IsEtwProviderEnabled = etwEnabled,
+                EnableChildProcessMonitoring = true,
+                MaxChildProcTelemetryDataCount = 25
             };
 
             await obs.ObserveAsync(Token);
@@ -1891,6 +1976,60 @@ namespace FabricObserverTests
         }
 
         // ETW Tests \\
+
+        // ChildProcessTelemetryData \\
+
+        [TestMethod]
+        public async Task AppObserver_ETW_EventData_IsChildProcessTelemetryData()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            if (!await EnsureTestServicesExistAsync("fabric:/TestApp42"))
+            {
+                await DeployTestApp42Async();
+
+                // Ensure enough time for child process creation by the test service parent process.
+                await Task.Delay(TimeSpan.FromSeconds(10));
+            }
+
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+            var foMetrics = new FabricObserverMetrics(_logger);
+            etwEnabled = true;
+            await AppObserver_ObserveAsync_Successful_Observer_IsHealthy();
+
+            List<List<ChildProcessTelemetryData>> childTelemData = FabricObserverMetrics.ChildProcessTelemetry;
+            Assert.IsNotNull(childTelemData);
+
+            foreach (var t in childTelemData)
+            {
+                foreach (var x in t)
+                {
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(x.ApplicationName));
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(x.ServiceName));
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(x.Metric));
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(x.ProcessName));
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(x.ProcessStartTime));
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(x.PartitionId));
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(x.NodeName));
+                    Assert.IsFalse(x.ReplicaId == 0);
+                    Assert.IsFalse(x.ChildProcessCount == 0);
+
+                    Assert.IsTrue(x.ChildProcessInfo != null && x.ChildProcessInfo.Count > 0);
+
+                    foreach (var c in x.ChildProcessInfo)
+                    {
+                        Assert.IsFalse(string.IsNullOrWhiteSpace(c.ProcessName));
+                    
+                        Assert.IsTrue(!string.IsNullOrWhiteSpace(
+                            c.ProcessStartTime) && DateTime.TryParse(c.ProcessStartTime, out DateTime startTime) && startTime > DateTime.MinValue);
+                        Assert.IsTrue(c.Value > -1);
+                        Assert.IsTrue(c.ProcessId > 0);
+                    }
+                }
+            }
+        }
+
+        // TelemetryData \\
 
         [TestMethod]
         public async Task AppObserver_ETW_EventData_IsTelemetryData()

@@ -1344,7 +1344,7 @@ namespace FabricObserver.Observers
                 ProcessName = IsWindows ? NativeMethods.GetProcessNameFromId((int)repOrInst.HostProcessId) : Process.GetProcessById((int)repOrInst.HostProcessId)?.ProcessName,
                 ProcessStartTime = procStartTime,
                 PartitionId = repOrInst.PartitionId.ToString(),
-                ReplicaId = repOrInst.ReplicaOrInstanceId.ToString(),
+                ReplicaId = repOrInst.ReplicaOrInstanceId,
                 ChildProcessCount = childProcs.Count,
                 ChildProcessInfo = new List<ChildProcessInfo>()
             };

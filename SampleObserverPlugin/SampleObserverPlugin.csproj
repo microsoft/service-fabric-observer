@@ -2,10 +2,9 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
-    <PlatformTarget>x64</PlatformTarget>
     <RootNamespace>FabricObserver.Observers</RootNamespace>
     <AssemblyName>SampleNewObserver</AssemblyName>
-    <Platforms>AnyCPU;x64</Platforms>
+    <Platforms>x64</Platforms>
     <UserSecretsId>eb82b47d-80c3-4f06-8177-861fe0ea33c3</UserSecretsId>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">

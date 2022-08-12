@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -140,80 +141,111 @@ namespace FabricObserver.Observers.Utilities
                 return;
             }
 
-            if (!JsonHelper.TrySerializeObject(data, out string telemetryData))
+            if (data is List<ChildProcessTelemetryData> childProcTelemetryData)
             {
-                return;
-            }
-
-            var anonType = new
-            {
-                telemetryData
-            };
-
-            // TelemetryData?
-            if (data is TelemetryData telemData)
-            {
-                if (telemData.HealthState == System.Fabric.Health.HealthState.Warning)
+                string childProcessTelemetryData = JsonConvert.SerializeObject(childProcTelemetryData);
+                var anonType = new
                 {
-                    ServiceEventSource.Current.WriteWarning(eventName, anonType);
-                    return;
-                }
-
-                if (telemData.HealthState == System.Fabric.Health.HealthState.Error)
-                {
-                    ServiceEventSource.Current.WriteError(eventName, anonType);
-                    return;
-                }
+                    childProcessTelemetryData
+                };
 
                 // Info event.
                 ServiceEventSource.Current.WriteInfo(eventName, anonType);
                 return;
             }
 
+            // TelemetryData?
+            if (data is TelemetryData telemData)
+            {
+                string telemetryData = JsonConvert.SerializeObject(telemData);
+                var anonType1 = new
+                {
+                    telemetryData
+                };
+
+                if (telemData.HealthState == System.Fabric.Health.HealthState.Warning)
+                {
+                    ServiceEventSource.Current.WriteWarning(eventName, anonType1);
+                    return;
+                }
+
+                if (telemData.HealthState == System.Fabric.Health.HealthState.Error)
+                {
+                    ServiceEventSource.Current.WriteError(eventName, anonType1);
+                    return;
+                }
+
+                // Info event.
+                ServiceEventSource.Current.WriteInfo(eventName, anonType1);
+                return;
+            }
+
             if (data is ServiceFabricUpgradeEventData upgradeEventData)
             {
+                string upgradeData = JsonConvert.SerializeObject(upgradeEventData);
+                var anonType2 = new
+                {
+                    upgradeData
+                };
+
                 if (upgradeEventData.FabricUpgradeProgress?.UpgradeState == System.Fabric.FabricUpgradeState.Failed 
                     || upgradeEventData.FabricUpgradeProgress?.UpgradeState == System.Fabric.FabricUpgradeState.RollingBackInProgress)
                 {
-                    ServiceEventSource.Current.WriteWarning(eventName, anonType);
+                    ServiceEventSource.Current.WriteWarning(eventName, anonType2);
                     return;
                 }
 
                 if (upgradeEventData.ApplicationUpgradeProgress?.UpgradeState == System.Fabric.ApplicationUpgradeState.Failed
                     || upgradeEventData.ApplicationUpgradeProgress?.UpgradeState == System.Fabric.ApplicationUpgradeState.RollingBackInProgress)
                 {
-                    ServiceEventSource.Current.WriteWarning(eventName, anonType);
+                    ServiceEventSource.Current.WriteWarning(eventName, anonType2);
                     return;
                 }
 
                 // Info event.
-                ServiceEventSource.Current.WriteInfo(eventName, anonType);
+                ServiceEventSource.Current.WriteInfo(eventName, anonType2);
                 return;
             }
 
-            if (data is MachineTelemetryData)
+            if (data is MachineTelemetryData mTelemetryData)
             {
+                string machineTelemetryData = JsonConvert.SerializeObject(mTelemetryData);
+                var anonType3 = new
+                {
+                    machineTelemetryData
+                };
+
                 // Info event.
-                ServiceEventSource.Current.WriteInfo(eventName, anonType);
+                ServiceEventSource.Current.WriteInfo(eventName, anonType3);
                 return;
             }
 
             // Some FO ETW events are written as anonymous .NET types (anonymous object intances with fields/properties).
             // This means they are JSON-serializable for use in content inspection.
 
-            if (telemetryData.Contains("Warning"))
+            if (!JsonHelper.TrySerializeObject(data, out string aData))
             {
-                ServiceEventSource.Current.WriteWarning(eventName, anonType);
                 return;
             }
 
-            if (telemetryData.Contains("Error"))
+            var anonType4 = new
             {
-                ServiceEventSource.Current.WriteError(eventName, anonType);
+                aData
+            };
+
+            if (aData.Contains("Warning"))
+            {
+                ServiceEventSource.Current.WriteWarning(eventName, anonType4);
                 return;
             }
 
-            ServiceEventSource.Current.WriteInfo(eventName, anonType);
+            if (aData.Contains("Error"))
+            {
+                ServiceEventSource.Current.WriteError(eventName, anonType4);
+                return;
+            }
+
+            ServiceEventSource.Current.WriteInfo(eventName, anonType4);
         }
 
         public bool TryWriteLogFile(string path, string content)

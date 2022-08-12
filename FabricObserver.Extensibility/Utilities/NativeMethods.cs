@@ -1252,7 +1252,7 @@ namespace FabricObserver.Observers.Utilities
 
         private static readonly string[] ignoreProcessList = new string[]
         {
-            "cmd.exe", "conhost.exe", "csrss.exe","fontdrvhost.exe", "lsass.exe", "backgroundTaskHost.exe",
+            "conhost.exe", "csrss.exe","fontdrvhost.exe", "lsass.exe", "backgroundTaskHost.exe",
             "LsaIso.exe", "services.exe", "smss.exe", "svchost.exe", "taskhostw.exe",
             "wininit.exe", "winlogon.exe", "WUDFHost.exe", "WmiPrvSE.exe",
             "TextInputHost.exe", "vmcompute.exe", "vmms.exe", "vmwp.exe", "vmmem",

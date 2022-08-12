@@ -318,7 +318,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                         { "ProcessName", telemData.ProcessName },
                         { "ChildProcessInfo", JsonConvert.SerializeObject(telemData.ChildProcessInfo) },
                         { "PartitionId", telemData.PartitionId },
-                        { "ReplicaId", telemData.ReplicaId },
+                        { "ReplicaId", telemData.ReplicaId.ToString() },
                         { "Source", ObserverConstants.AppObserverName },
                         { "NodeName", telemData.NodeName },
                         { "OS", OS }
