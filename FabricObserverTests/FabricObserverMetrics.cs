@@ -4,6 +4,7 @@
 // </copyright>
 // -----------------------------------------------------------------------
 
+using FabricObserver.Observers.Interfaces;
 using FabricObserver.Observers.Utilities.Telemetry;
 using Microsoft.Extensions.Azure;
 using Newtonsoft.Json;
@@ -31,7 +32,7 @@ namespace FabricObserver.Observers
             get; private set;
         }
 
-        internal List<ChildProcessTelemetryData> ChildProcessTelemetry
+        internal static List<List<ChildProcessTelemetryData>> ChildProcessTelemetry
         {
             get; private set;
         }
@@ -67,7 +68,14 @@ namespace FabricObserver.Observers
                 {
                     Logger.LogInfo($"FabricObserverMetricsInfo: JSON-serialized List<ChildProcessTelemetryData> {json}");
                     var childProcTelemData = JsonConvert.DeserializeObject<List<ChildProcessTelemetryData>>(json);
-                    ChildProcessTelemetry = childProcTelemData;
+                    if (childProcTelemData == null)
+                    {
+                        Logger.LogError($"FabricObserverMetricsError: No child telemetry data");
+                        return Task.FromResult(true);
+                    }
+
+                    ChildProcessTelemetry ??= new List<List<ChildProcessTelemetryData>>();
+                    ChildProcessTelemetry.Add(childProcTelemData);
                 }
                 else if (IsJson<TelemetryData>(json))
                 {
@@ -81,11 +89,7 @@ namespace FabricObserver.Observers
                     }
                     else
                     {
-                        if (TelemetryData == null)
-                        {
-                            TelemetryData = new List<TelemetryData>();
-                        }
-
+                        TelemetryData ??= new List<TelemetryData>();
                         TelemetryData.Add(foTelemetryData);
                     }
                 }

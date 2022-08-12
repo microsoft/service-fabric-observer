@@ -7,7 +7,7 @@
 	<Nullable>disable</Nullable>
 	<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
 	<ServerGarbageCollection>False</ServerGarbageCollection>
-	<RuntimeIdentifiers>win7-x64</RuntimeIdentifiers>
+	<RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
 	<TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
     <NoWarn>CS0414</NoWarn>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
@@ -15,7 +15,7 @@
     <Copyright>Copyright ©  2022</Copyright>
     <Product>FabricObserverTests</Product>
     <AssemblyTitle>FabricObserverTests</AssemblyTitle>
-    <Platforms>AnyCPU;x64</Platforms>
+    <Platforms>x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
     <None Include="MyExpiredCert.p12">
@@ -105,6 +105,9 @@
     </None>
     <None Update="PackageRoot\Config\ContainerObserver.config.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="TestApp42.zip">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
 </Project>

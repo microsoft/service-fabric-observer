@@ -39,8 +39,8 @@
 		<Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
 		<Parameter Name="UseCircularBuffer" Value="false" />
 		<Parameter Name="ResourceUsageDataCapacity" Value="" />
-		<Parameter Name="EnableChildProcessMonitoring" Value="false" />
-		<Parameter Name="MaxChildProcTelemetryDataCount" Value="" />
+		<Parameter Name="EnableChildProcessMonitoring" Value="true" />
+		<Parameter Name="MaxChildProcTelemetryDataCount" Value="25" />
 		<Parameter Name="EnableProcessDumps" Value="false" />
 		<Parameter Name="DumpType" Value="MiniPlus" />
 		<Parameter Name="MaxDumps" Value="4" />
