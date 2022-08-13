@@ -41,9 +41,10 @@ namespace FabricObserverTests
         private static readonly CancellationToken Token = new CancellationToken();
         private static readonly ICodePackageActivationContext CodePackageContext = null;
         private static readonly StatelessServiceContext TestServiceContext = null;
-        private static readonly Logger _logger = new Logger("TestLogger", @"C:\temp\FOTests", 3)
+        private static readonly Logger _logger = new Logger("TestLogger", @"C:\temp\FOTests", 1)
         {
-            EnableETWLogging = true
+            EnableETWLogging = true,
+            EnableVerboseLogging = true,
         };
 
         private static FabricClient FabricClient => FabricClientUtilities.FabricClientSingleton;
@@ -992,14 +993,14 @@ namespace FabricObserverTests
 
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = etwEnabled;
+            ObserverManager.EtwEnabled = true;
 
             using var obs = new AppObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
                 EnableConcurrentMonitoring = true,
-                IsEtwProviderEnabled = etwEnabled,
+                IsEtwProviderEnabled = true,
                 EnableChildProcessMonitoring = true,
                 MaxChildProcTelemetryDataCount = 25
             };
@@ -1385,12 +1386,13 @@ namespace FabricObserverTests
 
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
+            ObserverManager.EtwEnabled = etwEnabled;
 
             using var obs = new OSObserver(TestServiceContext)
             {
                 ClusterManifestPath = Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml"),
-                IsObserverWebApiAppDeployed = true
+                IsObserverWebApiAppDeployed = true,
+                IsEtwProviderEnabled = etwEnabled
             };
 
             // This is required since output files are only created if fo api app is also deployed to cluster..
@@ -1426,7 +1428,7 @@ namespace FabricObserverTests
 
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
+            ObserverManager.EtwEnabled = true;
 
             var warningDictionary = new Dictionary<string, double>
             {
@@ -1439,9 +1441,9 @@ namespace FabricObserverTests
                 IsObserverWebApiAppDeployed = true,
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 FolderSizeMonitoringEnabled = true,
-                FolderSizeConfigDataWarning = warningDictionary
+                FolderSizeConfigDataWarning = warningDictionary,
+                IsEtwProviderEnabled = true
             };
-
 
             await obs.ObserveAsync(Token);
 
@@ -1474,7 +1476,7 @@ namespace FabricObserverTests
 
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
+            ObserverManager.EtwEnabled = true;
 
             var warningDictionary = new Dictionary<string, double>
             {
@@ -1497,7 +1499,8 @@ namespace FabricObserverTests
 
                 // This is required since output files are only created if fo api app is also deployed to cluster..
                 IsObserverWebApiAppDeployed = true,
-                MonitorDuration = TimeSpan.FromSeconds(5)
+                MonitorDuration = TimeSpan.FromSeconds(5),
+                IsEtwProviderEnabled = true,
             };
 
             IServiceCollection services = new ServiceCollection();
@@ -1606,6 +1609,40 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
+        public async Task NodeObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrorsDetected()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            var startDateTime = DateTime.Now;
+
+            ObserverManager.FabricServiceContext = TestServiceContext;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = true;
+
+            using var obs = new NodeObserver(TestServiceContext)
+            {
+                IsEnabled = true,
+                MonitorDuration = TimeSpan.FromSeconds(5),
+                CpuWarningUsageThresholdPct = 90, // This will generate Warning for sure.
+                ActivePortsWarningThreshold = 10000,
+                MemoryWarningLimitPercent = 90,
+                EphemeralPortsPercentWarningThreshold = 30,
+                FirewallRulesWarningThreshold = 3000,
+                IsEtwProviderEnabled = true
+            };
+
+            await obs.ObserveAsync(Token);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+        }
+
+        [TestMethod]
         public async Task NodeObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrorsDetected()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
@@ -1614,23 +1651,20 @@ namespace FabricObserverTests
 
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
+            ObserverManager.EtwEnabled = true;
 
             using var obs = new NodeObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 DataCapacity = 5,
                 UseCircularBuffer = false,
+                IsEtwProviderEnabled = true,
                 CpuWarningUsageThresholdPct = 0.01F, // This will generate Warning for sure.
                 MemWarningUsageThresholdMb = 1, // This will generate Warning for sure.
                 ActivePortsWarningThreshold = 100, // This will generate Warning for sure.
                 EphemeralPortsPercentWarningThreshold = 0.01 // This will generate Warning for sure.
             };
 
-            IServiceCollection services = new ServiceCollection();
-            services.AddScoped(typeof(ObserverBase), s => obs);
-            await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-            using var obsMgr = new ObserverManager(serviceProvider, Token);
             await obs.ObserveAsync(Token);
 
             // observer ran to completion with no errors.
@@ -1639,10 +1673,6 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-
-            // Stop clears health warning
-            await obsMgr.StopObserversAsync();
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
         }
 
         [TestMethod]
@@ -1705,13 +1735,17 @@ namespace FabricObserverTests
 
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
+            ObserverManager.EtwEnabled = true;
 
             using var obs = new FabricSystemObserver(TestServiceContext)
             {
                 IsEnabled = true,
                 DataCapacity = 5,
-                MonitorDuration = TimeSpan.FromSeconds(1)
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                IsEtwProviderEnabled = true,
+                MemWarnUsageThresholdMb = 10000,
+                CpuWarnUsageThresholdPct = 90,
+                ActiveEphemeralPortCountWarning = 20000
             };
 
             await obs.ObserveAsync(Token);
@@ -1737,13 +1771,14 @@ namespace FabricObserverTests
 
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
+            ObserverManager.EtwEnabled = true;
 
             using var obs = new FabricSystemObserver(TestServiceContext)
             {
                 IsEnabled = true,
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                MemWarnUsageThresholdMb = 5
+                MemWarnUsageThresholdMb = 5,
+                IsEtwProviderEnabled = true
             };
 
             await obs.ObserveAsync(Token);
@@ -1976,7 +2011,7 @@ namespace FabricObserverTests
 
         // ETW Tests \\
 
-        // ChildProcessTelemetryData \\
+        // AppObserver: ChildProcessTelemetryData \\
 
         [TestMethod]
         public async Task AppObserver_ETW_EventData_IsChildProcessTelemetryData()
@@ -1996,7 +2031,7 @@ namespace FabricObserverTests
 
             await AppObserver_ObserveAsync_Successful_Observer_IsHealthy();
 
-            List<List<ChildProcessTelemetryData>> childTelemData = EtwEventConverter.ChildProcessTelemetry;
+            List<List<ChildProcessTelemetryData>> childTelemData = foEtwListener.foEtwConverter.ChildProcessTelemetry;
             Assert.IsNotNull(childTelemData);
 
             foreach (var t in childTelemData)
@@ -2030,11 +2065,13 @@ namespace FabricObserverTests
             etwEnabled = false;
         }
 
-        // TelemetryData \\
+        // AppObserver: TelemetryData \\
 
         [TestMethod]
         public async Task AppObserver_ETW_EventData_IsTelemetryData()
         {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
             etwEnabled = true;
 
             if (!await EnsureTestServicesExistAsync("fabric:/TestApp42"))
@@ -2049,7 +2086,7 @@ namespace FabricObserverTests
 
             await AppObserver_ObserveAsync_Successful_Observer_IsHealthy();
 
-            List<TelemetryData> telemData = EtwEventConverter.TelemetryData;
+            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
             Assert.IsNotNull(telemData);
 
             foreach (var t in telemData)
@@ -2094,6 +2131,8 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ETW_EventData_IsTelemetryData_HealthWarnings()
         {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
             etwEnabled = true;
 
             if (!await EnsureTestServicesExistAsync("fabric:/TestApp42"))
@@ -2108,7 +2147,7 @@ namespace FabricObserverTests
 
             await AppObserver_ObserveAsync_Successful_Observer_WarningsGenerated();
 
-            List<TelemetryData> telemData = EtwEventConverter.TelemetryData;
+            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
             Assert.IsNotNull(telemData);
 
             var warningEvents = telemData.Where(t => t.HealthState == HealthState.Warning);
@@ -2151,6 +2190,256 @@ namespace FabricObserverTests
                 Assert.IsTrue(t.Source == $"{t.ObserverName}({t.Code})");
             }
             etwEnabled = false;
+        }
+
+        // DiskObserver: TelemetryData \\
+
+        [TestMethod]
+        public async Task DiskObserver_ETW_EventData_IsTelemetryData()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+
+            await DiskObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors();
+
+            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            Assert.IsNotNull(telemData);
+
+            foreach (var t in telemData)
+            {
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeType));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ClusterId));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Metric));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ObserverName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.OS));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Property));
+
+                Assert.IsTrue(t.EntityType == EntityType.Disk);
+
+                Assert.IsTrue(t.HealthState == HealthState.Invalid);
+                Assert.IsTrue(t.ObserverName == ObserverConstants.DiskObserverName);
+                Assert.IsTrue(t.Code == null);
+                Assert.IsTrue(t.Description == null);
+                Assert.IsTrue(t.Value > 0.0);
+            }
+        }
+
+        [TestMethod]
+        public async Task DiskObserver_ETW_EventData_IsTelemetryData_Warnings()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+
+            await DiskObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrors();
+
+            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            Assert.IsNotNull(telemData);
+
+            telemData = telemData.Where(d => d.HealthState == HealthState.Warning).ToList();
+            Assert.IsTrue(telemData.Any());
+
+            foreach (var t in telemData)
+            {
+                Assert.IsTrue(t.EntityType == EntityType.Disk);
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeType));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ClusterId));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Code));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Description));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Metric));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ObserverName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.OS));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Property));
+
+                Assert.IsTrue(t.HealthState == HealthState.Warning);
+                Assert.IsTrue(t.ObserverName == ObserverConstants.DiskObserverName);
+                Assert.IsTrue(t.Value > 0.0);
+                Assert.IsTrue(t.Source == $"{t.ObserverName}({t.Code})");
+            }
+        }
+
+        // FabricSystemObserver: TelemetryData \\
+
+        [TestMethod]
+        public async Task FabricSystemObserver_ETW_EventData_IsTelemetryData()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+
+            await FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors();
+
+            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            Assert.IsNotNull(telemData);
+
+            foreach (var t in telemData)
+            {
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ApplicationName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeType));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ClusterId));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Metric));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ObserverName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ProcessName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.OS));
+
+                Assert.IsFalse(
+                    string.IsNullOrWhiteSpace(t.ProcessStartTime)
+                    && DateTime.TryParse(t.ProcessStartTime, out DateTime startDate)
+                    && startDate > DateTime.MinValue);
+
+                Assert.IsTrue(t.EntityType == EntityType.Application);
+                Assert.IsTrue(t.HealthState == HealthState.Invalid);
+                Assert.IsTrue(t.ProcessId > 0);
+                Assert.IsTrue(t.ObserverName == ObserverConstants.FabricSystemObserverName);
+                Assert.IsTrue(t.Code == null);
+                Assert.IsTrue(t.Description == null);
+                Assert.IsTrue(t.Property == null);
+                Assert.IsTrue(t.Source == ObserverConstants.FabricSystemObserverName);
+                Assert.IsTrue(t.Value >= 0.0);
+            }
+        }
+
+        [TestMethod]
+        public async Task FabricSystemObserver_ETW_EventData_IsTelemetryData_Warnings()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+
+            await FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_MemoryWarningsOrErrorsDetected();
+
+            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            Assert.IsNotNull(telemData);
+
+            telemData = telemData.Where(d => d.HealthState == HealthState.Warning).ToList();
+            Assert.IsTrue(telemData.Any());
+
+            foreach (var t in telemData)
+            {
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ApplicationName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeType));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ClusterId));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Metric));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ObserverName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ProcessName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.OS));
+
+                Assert.IsFalse(
+                    string.IsNullOrWhiteSpace(t.ProcessStartTime)
+                    && DateTime.TryParse(t.ProcessStartTime, out DateTime startDate)
+                    && startDate > DateTime.MinValue);
+
+                Assert.IsTrue(t.EntityType == EntityType.Application);
+                Assert.IsTrue(t.HealthState == HealthState.Warning);
+                Assert.IsTrue(t.ProcessId > 0);
+                Assert.IsTrue(t.ObserverName == ObserverConstants.FabricSystemObserverName);
+                Assert.IsTrue(t.Code != null);
+                Assert.IsTrue(t.Description != null);
+                Assert.IsTrue(t.Property != null);
+                Assert.IsTrue(t.Source == $"{t.ObserverName}({t.Code})");
+                Assert.IsTrue(t.Value > 0.0);
+            }
+        }
+
+        // NodeObserver: TelemetryData \\
+
+        [TestMethod]
+        public async Task NodeObserver_ETW_EventData_IsTelemetryData()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+
+            await NodeObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrorsDetected();
+
+            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            Assert.IsNotNull(telemData);
+
+            foreach (var t in telemData)
+            {
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeType));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ClusterId));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Metric));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ObserverName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.OS));
+
+                Assert.IsTrue(t.EntityType == EntityType.Machine || t.EntityType == EntityType.Machine);
+                Assert.IsTrue(t.HealthState == HealthState.Invalid);
+                Assert.IsTrue(t.ObserverName == ObserverConstants.NodeObserverName);
+                Assert.IsTrue(t.Code == null);
+                Assert.IsTrue(t.Description == null);
+                Assert.IsTrue(t.Property == null);
+                Assert.IsTrue(t.Source == ObserverConstants.NodeObserverName);
+                Assert.IsTrue(t.Value >= 0.0);
+            }
+        }
+
+        [TestMethod]
+        public async Task NodeObserver_ETW_EventData_IsTelemetryData_Warnings()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+
+            await NodeObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrorsDetected();
+
+            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            Assert.IsNotNull(telemData);
+
+            telemData = telemData.Where(d => d.HealthState == HealthState.Warning).ToList();
+            Assert.IsTrue(telemData.Any());
+
+            foreach (var t in telemData)
+            {
+                Assert.IsTrue(t.ObserverName == ObserverConstants.NodeObserverName);
+                Assert.IsTrue(t.EntityType == EntityType.Node || t.EntityType == EntityType.Machine);
+
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeType));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ClusterId));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Metric));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ObserverName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.OS));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Code));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Property));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Description));
+
+                Assert.IsTrue(t.HealthState == HealthState.Warning);
+                Assert.IsTrue(t.Source == $"{t.ObserverName}({t.Code})");
+                Assert.IsTrue(t.Value > 0.0);
+            }
+        }
+
+        // OSObserver: MachineTelemetryData \\
+
+        [TestMethod]
+        public async Task OSObserver_ETW_EventData_IsMachineTelemetryData()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+
+            await OSObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors();
+
+            MachineTelemetryData telemData = foEtwListener.foEtwConverter.MachineTelemetryData;
+            Assert.IsNotNull(telemData);
+
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.DriveInfo));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.EphemeralTcpPortRange));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.FabricApplicationTcpPortRange));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.HotFixes));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.LastBootUpTime));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.NodeName));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.ObserverName));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.OSName));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.OSVersion));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.OSInstallDate));
         }
     }
 }

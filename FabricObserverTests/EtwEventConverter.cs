@@ -23,12 +23,17 @@ namespace FabricObserverTests
             get; set;
         }
 
-        internal static List<TelemetryData> TelemetryData
+        internal List<TelemetryData> TelemetryData
         {
             get; private set;
         }
 
-        internal static List<List<ChildProcessTelemetryData>> ChildProcessTelemetry
+        internal MachineTelemetryData MachineTelemetryData
+        {
+            get; private set;
+        }
+
+        internal List<List<ChildProcessTelemetryData>> ChildProcessTelemetry
         {
             get; private set;
         }
@@ -61,28 +66,34 @@ namespace FabricObserverTests
                 // available in the payload. These will always be FabricObserverDataEvent events.
                 string json = eventData.Payload[0].ToString();
 
-                // Child procs - ChildProcessTelemetryData type, which will always contain a ChildProcessInfo member. 
+                // Child procs - ChildProcessTelemetryData type, which will always contain a ChildProcessInfo member (and only be emitted by AppObserver).
                 if (json.Contains("ChildProcessInfo") && JsonHelper.TryDerializeObject(json, out List<ChildProcessTelemetryData> childProcTelemData))
                 {
-                    Logger.LogInfo($"FabricObserverMetricsInfo: JSON-serialized List<ChildProcessTelemetryData> {json}");
+                    Logger.LogInfo($"JSON-serialized List<ChildProcessTelemetryData>{Environment.NewLine}{json}");
                     ChildProcessTelemetry ??= new List<List<ChildProcessTelemetryData>>();
                     ChildProcessTelemetry.Add(childProcTelemData);
                 }
-                // TelemetryData, which will always contain a ParitionId when AppObserver is the source, which is all we care about here.
-                else if (json.Contains("PartitionId") && JsonHelper.TryDerializeObject(json, out TelemetryData telemetryData))
+                // TelemetryData, which will be emitted by any observer that is enabled to generate ETW events (OSObserver emits MachineTelemetryData).
+                else if (JsonHelper.TryDerializeObject(json, out TelemetryData telemetryData))
                 {
-                    Logger.LogInfo($"FabricObserverMetricsInfo: JSON-serialized TelemetryData {json}");
+                    Logger.LogInfo($"JSON-serialized TelemetryData{Environment.NewLine}{json}");
                     TelemetryData ??= new List<TelemetryData>();
                     TelemetryData.Add(telemetryData); 
                 }
+                // OSObserver
+                else if (json.Contains(ObserverConstants.OSObserverName) && JsonHelper.TryDerializeObject(json, out MachineTelemetryData machineTelemetryData))
+                {
+                    Logger.LogInfo($"JSON-serialized MachineTelemetryData{Environment.NewLine}{json}");
+                    MachineTelemetryData = machineTelemetryData;
+                }
                 else
                 {
-                    Logger.LogInfo($"EventDataToTelemetryData: Not the droid we're looking for.{Environment.NewLine}{json}");
+                    Logger.LogInfo($"Not the droid we're looking for.{Environment.NewLine}{json}");
                 }
             }
             catch (Exception e) when (e is ArgumentException || e is JsonReaderException || e is JsonSerializationException || e is InvalidOperationException)
             {
-                Logger.LogError($"FabricObserverMetricsError: Unable to deserialize ETW event data to TelemetryData: {Environment.NewLine}{e}");
+                Logger.LogError($"Unable to deserialize ETW event data to supported type:{Environment.NewLine}{e}");
 
                 // For unit tests, re-throw.
                 throw;
