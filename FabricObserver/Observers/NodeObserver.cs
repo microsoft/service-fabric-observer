@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
+using FabricObserver.TelemetryLib;
 
 namespace FabricObserver.Observers
 {
@@ -740,16 +741,19 @@ namespace FabricObserver.Observers
                         (int LowPort, int HighPort) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
                         int totalEphemeralPorts = HighPort - LowPort;
 
-                        ObserverLogger.LogEtw(
-                            ObserverConstants.FabricObserverETWEventName,
-                            new
-                            {
-                                NodeName,
-                                ObserverName,
-                                Metric = ErrorWarningProperty.TotalEphemeralPorts,
-                                Source = ObserverConstants.FabricObserverName,
-                                Value = totalEphemeralPorts
-                            });
+                        var telemData = new TelemetryData()
+                        {
+                            ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
+                            EntityType = EntityType.Machine,
+                            Metric = ErrorWarningProperty.TotalEphemeralPorts,
+                            NodeName = NodeName,
+                            NodeType = NodeType,
+                            ObserverName = ObserverName,
+                            Source = ObserverName,
+                            Value = totalEphemeralPorts
+                        };
+
+                        ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, telemData);
                     }
                 }
 

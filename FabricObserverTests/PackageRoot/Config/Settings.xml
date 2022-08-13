@@ -61,8 +61,8 @@
 	<Section Name="DiskObserverConfiguration">
 		<Parameter Name="Enabled" Value="true" />
 		<Parameter Name="EnableTelemetry" Value="" />
-		<Parameter Name="EnableEtw" Value="" />
-		<Parameter Name="EnableVerboseLogging" Value="" />
+		<Parameter Name="EnableEtw" Value="true" />
+		<Parameter Name="EnableVerboseLogging" Value="false" />
 		<Parameter Name="RunInterval" Value="" />
 		<Parameter Name="DiskSpacePercentUsageWarningThreshold" Value="" />
 		<Parameter Name="DiskSpacePercentUsageErrorThreshold" Value="" />
@@ -76,7 +76,7 @@
 		<Parameter Name="Enabled" Value="true" />
 		<Parameter Name="EnableKvsLvidMonitoring" Value="" />
 		<Parameter Name="EnableTelemetry" Value="" />
-		<Parameter Name="EnableEtw" Value="" />
+		<Parameter Name="EnableEtw" Value="true" />
 		<Parameter Name="EnableCSVDataLogging" Value="" />
 		<Parameter Name="EnableVerboseLogging" Value="" />
 		<Parameter Name="MonitorDuration" Value="" />
@@ -86,7 +86,7 @@
 		<Parameter Name="ResourceUsageDataCapacity" Value=""/>
 		<Parameter Name="MonitorWindowsEventLog" Value="" />
 		<Parameter Name="CpuErrorLimitPercent" Value="" />
-		<Parameter Name="CpuWarningLimitPercent" Value="" />
+		<Parameter Name="CpuWarningLimitPercent" Value="90" />
 		<Parameter Name="MemoryErrorLimitMb" Value="" />
 		<Parameter Name="MemoryWarningLimitMb" Value="" />
 		<Parameter Name="NetworkErrorActivePorts" Value=""  />
@@ -110,7 +110,7 @@
 	<Section Name="NodeObserverConfiguration">
 		<Parameter Name="Enabled" Value="true" />
 		<Parameter Name="EnableTelemetry" Value="" />
-		<Parameter Name="EnableEtw" Value="" />
+		<Parameter Name="EnableEtw" Value="true" />
 		<Parameter Name="EnableCSVDataLogging" Value="" />
 		<Parameter Name="EnableVerboseLogging" Value="" />
 		<Parameter Name="MonitorDuration" Value="" />
@@ -139,7 +139,7 @@
 	<Section Name="OSObserverConfiguration">
 		<Parameter Name="Enabled" Value="true" />
 		<Parameter Name="EnableTelemetry" Value="" />
-		<Parameter Name="EnableEtw" Value="" />
+		<Parameter Name="EnableEtw" Value="true" />
 		<Parameter Name="EnableVerboseLogging" Value="" />
 		<Parameter Name="EnableWindowsAutoUpdateCheck" Value="" />
 		<Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />

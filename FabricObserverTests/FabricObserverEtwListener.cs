@@ -15,7 +15,7 @@ namespace FabricObserverTests
     public class FabricObserverEtwListener : EventListener
     {
         private readonly object lockObj = new object();
-        private readonly EtwEventConverter foEtwConverter;
+        public readonly EtwEventConverter foEtwConverter;
 
         /// <summary>
         /// Gets or sets set up a local logger.

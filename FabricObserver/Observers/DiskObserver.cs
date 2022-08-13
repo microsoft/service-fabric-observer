@@ -391,7 +391,7 @@ namespace FabricObserver.Observers
                 if (IsTelemetryEnabled)
                 {
                     _ = TelemetryClient?.ReportHealthAsync(
-                            $"InvalidConfigFormat",
+                            "InvalidConfigFormat",
                             ObserverManager.ObserverFailureHealthStateLevel,
                             message,
                             ObserverName,
@@ -405,9 +405,10 @@ namespace FabricObserver.Observers
                         ObserverConstants.FabricObserverETWEventName,
                         new
                         {
-                            Property = $"InvalidConfigFormat",
+                            Property = "InvalidConfigFormat",
                             Level = ObserverManager.ObserverFailureHealthStateLevel,
                             Message = message,
+                            NodeName,
                             ObserverName
                         });
                 }

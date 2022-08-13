@@ -922,11 +922,6 @@ namespace FabricObserver.Observers
                 drive = string.Empty;
                 id = data.Id;
 
-                if (entityType == EntityType.Disk)
-                {
-                    drive = $"{id} ";
-                }
-
                 // Report raw data.
                 telemetryData = new TelemetryData()
                 {
@@ -935,7 +930,8 @@ namespace FabricObserver.Observers
                     NodeName = NodeName,
                     NodeType = NodeType,
                     ObserverName = ObserverName,
-                    Metric = $"{drive}{data.Property}",
+                    Property = entityType == EntityType.Disk ? id : null,
+                    Metric = data.Property,
                     Source = ObserverName,
                     Value = data.AverageDataValue
                 };
