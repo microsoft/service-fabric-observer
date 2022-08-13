@@ -1374,9 +1374,9 @@ namespace FabricObserver.Observers
                         startTime = p.StartTime.ToString("o");
                     }
 
-                    if (fruds.Any(x => x.Key.Contains(childProcName)))
+                    if (fruds.Any(x => x.Key.Contains(childPid.ToString())))
                     {
-                        var childFruds = fruds.Where(x => x.Key.Contains(childProcName)).ToList();
+                        var childFruds = fruds.Where(x => x.Key.Contains(childPid.ToString())).ToList();
                         metric = childFruds[0].Value.Property;
 
                         for (int j = 0; j < childFruds.Count; ++j)
@@ -1583,7 +1583,7 @@ namespace FabricObserver.Observers
                                     !string.IsNullOrWhiteSpace(app?.TargetAppType) &&
                                     app.TargetAppType?.ToLower() == repOrInst.ApplicationTypeName?.ToLower());
                 
-                ConcurrentDictionary<string, int> procs;
+                ConcurrentDictionary<int, string> procs;
 
                 if (application?.TargetApp == null && application?.TargetAppType == null)
                 {
@@ -1696,11 +1696,11 @@ namespace FabricObserver.Observers
                     /* In order to provide accurate resource usage of an SF service process we need to also account for
                        any processes that the service process (parent) created/spawned (children). */
 
-                    procs = new ConcurrentDictionary<string, int>();
+                    procs = new ConcurrentDictionary<int, string>();
 
                     // Add parent to the process tree list since we want to monitor all processes in the family. If there are no child processes,
                     // then only the parent process will be in this dictionary..
-                    _ = procs.TryAdd(parentProcName, parentPid);
+                    _ = procs.TryAdd(parentPid, parentProcName);
 
                     if (repOrInst.ChildProcesses != null && repOrInst.ChildProcesses.Count > 0)
                     {
@@ -1717,7 +1717,7 @@ namespace FabricObserver.Observers
                                 continue;
                             }
 
-                            _ = procs.TryAdd(repOrInst.ChildProcesses[k].procName, repOrInst.ChildProcesses[k].Pid);
+                            _ = procs.TryAdd(repOrInst.ChildProcesses[k].Pid, repOrInst.ChildProcesses[k].procName);
                         }
                     }
 
@@ -1728,7 +1728,7 @@ namespace FabricObserver.Observers
                             state.Stop();
                         }
 
-                        _ = _processInfoDictionary.TryAdd(proc.Value, proc.Key);
+                        _ = _processInfoDictionary.TryAdd(proc.Key, proc.Value);
                     }
 
                     string appNameOrType = GetAppNameOrType(repOrInst);
@@ -1896,7 +1896,7 @@ namespace FabricObserver.Observers
                             bool checkHandles,
                             bool checkThreads,
                             bool checkLvids,
-                            ConcurrentDictionary<string, int> processDictionary,
+                            ConcurrentDictionary<int, string> processDictionary,
                             string id,
                             ReplicaOrInstanceMonitoringInfo repOrInst,
                             bool checkPrivateWS,
@@ -1910,8 +1910,8 @@ namespace FabricObserver.Observers
                 }
 
                 var index = processDictionary.ElementAt(i);
-                string procName = index.Key;
-                int procId = index.Value;
+                string procName = index.Value;
+                int procId = index.Key;
                 
                 // Make sure this is still the process we're looking for.
                 if (!EnsureProcess(procName, procId))

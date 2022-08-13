@@ -1930,7 +1930,6 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-
             using var obs = new FabricSystemObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
@@ -1983,6 +1982,7 @@ namespace FabricObserverTests
         public async Task AppObserver_ETW_EventData_IsChildProcessTelemetryData()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+            etwEnabled = true;
 
             if (!await EnsureTestServicesExistAsync("fabric:/TestApp42"))
             {
@@ -1993,11 +1993,10 @@ namespace FabricObserverTests
             }
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
-            var foMetrics = new FabricObserverMetrics(_logger);
-            etwEnabled = true;
+
             await AppObserver_ObserveAsync_Successful_Observer_IsHealthy();
 
-            List<List<ChildProcessTelemetryData>> childTelemData = FabricObserverMetrics.ChildProcessTelemetry;
+            List<List<ChildProcessTelemetryData>> childTelemData = EtwEventConverter.ChildProcessTelemetry;
             Assert.IsNotNull(childTelemData);
 
             foreach (var t in childTelemData)
@@ -2014,19 +2013,21 @@ namespace FabricObserverTests
                     Assert.IsFalse(x.ReplicaId == 0);
                     Assert.IsFalse(x.ChildProcessCount == 0);
 
-                    Assert.IsTrue(x.ChildProcessInfo != null && x.ChildProcessInfo.Count > 0);
+                    Assert.IsTrue(x.ChildProcessInfo != null && x.ChildProcessInfo.Count == x.ChildProcessCount);
 
                     foreach (var c in x.ChildProcessInfo)
                     {
                         Assert.IsFalse(string.IsNullOrWhiteSpace(c.ProcessName));
                     
-                        Assert.IsTrue(!string.IsNullOrWhiteSpace(
-                            c.ProcessStartTime) && DateTime.TryParse(c.ProcessStartTime, out DateTime startTime) && startTime > DateTime.MinValue);
+                        Assert.IsTrue(
+                            !string.IsNullOrWhiteSpace(c.ProcessStartTime) 
+                            && DateTime.TryParse(c.ProcessStartTime, out DateTime startTime) && startTime > DateTime.MinValue);
                         Assert.IsTrue(c.Value > -1);
                         Assert.IsTrue(c.ProcessId > 0);
                     }
                 }
             }
+            etwEnabled = false;
         }
 
         // TelemetryData \\
@@ -2034,12 +2035,21 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ETW_EventData_IsTelemetryData()
         {
-            using var foEtwListener = new FabricObserverEtwListener(_logger);
-            var foMetrics = new FabricObserverMetrics(_logger);
             etwEnabled = true;
+
+            if (!await EnsureTestServicesExistAsync("fabric:/TestApp42"))
+            {
+                await DeployTestApp42Async();
+
+                // Ensure enough time for child process creation by the test service parent process.
+                await Task.Delay(TimeSpan.FromSeconds(10));
+            }
+
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+
             await AppObserver_ObserveAsync_Successful_Observer_IsHealthy();
 
-            List<TelemetryData> telemData = FabricObserverMetrics.TelemetryData;
+            List<TelemetryData> telemData = EtwEventConverter.TelemetryData;
             Assert.IsNotNull(telemData);
 
             foreach (var t in telemData)
@@ -2078,17 +2088,27 @@ namespace FabricObserverTests
                 Assert.IsTrue(t.Source == ObserverConstants.AppObserverName);
                 Assert.IsTrue(t.Value >= 0.0);
             }
+            etwEnabled = false;
         }
 
         [TestMethod]
         public async Task AppObserver_ETW_EventData_IsTelemetryData_HealthWarnings()
         {
-            using var foEtwListener = new FabricObserverEtwListener(_logger);
-            var foMetrics = new FabricObserverMetrics(_logger);
             etwEnabled = true;
+
+            if (!await EnsureTestServicesExistAsync("fabric:/TestApp42"))
+            {
+                await DeployTestApp42Async();
+
+                // Ensure enough time for child process creation by the test service parent process.
+                await Task.Delay(TimeSpan.FromSeconds(10));
+            }
+
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+
             await AppObserver_ObserveAsync_Successful_Observer_WarningsGenerated();
 
-            List<TelemetryData> telemData = FabricObserverMetrics.TelemetryData;
+            List<TelemetryData> telemData = EtwEventConverter.TelemetryData;
             Assert.IsNotNull(telemData);
 
             var warningEvents = telemData.Where(t => t.HealthState == HealthState.Warning);
@@ -2126,10 +2146,11 @@ namespace FabricObserverTests
                 Assert.IsTrue(t.HealthState == HealthState.Warning);
                 Assert.IsTrue(t.ReplicaId > 0);
                 Assert.IsTrue(t.ProcessId > 0);
+                Assert.IsTrue(t.Value > 0.0);
                 Assert.IsTrue(t.ObserverName == ObserverConstants.AppObserverName);
                 Assert.IsTrue(t.Source == $"{t.ObserverName}({t.Code})");
-                Assert.IsTrue(t.Value >= 0.0);
             }
+            etwEnabled = false;
         }
     }
 }
