@@ -1930,7 +1930,6 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-
             using var obs = new FabricSystemObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
@@ -2014,7 +2013,7 @@ namespace FabricObserverTests
                     Assert.IsFalse(x.ReplicaId == 0);
                     Assert.IsFalse(x.ChildProcessCount == 0);
 
-                    Assert.IsTrue(x.ChildProcessInfo != null && x.ChildProcessInfo.Count > 0);
+                    Assert.IsTrue(x.ChildProcessInfo != null && x.ChildProcessInfo.Count == x.ChildProcessCount);
 
                     foreach (var c in x.ChildProcessInfo)
                     {
