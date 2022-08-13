@@ -407,7 +407,7 @@
       <!-- NOTE: On Windows and Linux, FO runs custom Setup scripts that must be run as elevated user. Do not remove this policy or change EntryPointType to Main, for example. 
            Either leave EntryPointType as Setup and run FO as a restricted user, or set EntryPointType to All or remove EntryPointType attribute altogether to run everything 
            as elevated user (Setup and FO service process). -->
-      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="All" />
+      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
     </Policies>
   </ServiceManifestImport>
   <Principals>
