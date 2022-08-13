@@ -48,7 +48,6 @@ namespace FabricObserverTests
         };
 
         private static FabricClient FabricClient => FabricClientUtilities.FabricClientSingleton;
-        private static bool etwEnabled = false;
 
         static ObserverTests()
         {
@@ -432,7 +431,6 @@ namespace FabricObserverTests
 
             await CleanupTestHealthReportsAsync();
             await RemoveTestApplicationsAsync();
-            etwEnabled = false;
         }
 
         private static async Task RemoveTestApplicationsAsync()
@@ -1026,7 +1024,7 @@ namespace FabricObserverTests
 
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = etwEnabled;
+            ObserverManager.EtwEnabled = true;
 
             using var obs = new AppObserver(TestServiceContext)
             {
@@ -1034,7 +1032,7 @@ namespace FabricObserverTests
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_warnings.config.json"),
                 EnableConcurrentMonitoring = true,
                 CheckPrivateWorkingSet = true,
-                IsEtwProviderEnabled = etwEnabled
+                IsEtwProviderEnabled = true
             };
 
             await obs.ObserveAsync(Token);
@@ -1386,13 +1384,13 @@ namespace FabricObserverTests
 
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = etwEnabled;
+            ObserverManager.EtwEnabled = true;
 
             using var obs = new OSObserver(TestServiceContext)
             {
                 ClusterManifestPath = Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml"),
                 IsObserverWebApiAppDeployed = true,
-                IsEtwProviderEnabled = etwEnabled
+                IsEtwProviderEnabled = true
             };
 
             // This is required since output files are only created if fo api app is also deployed to cluster..
@@ -2017,7 +2015,6 @@ namespace FabricObserverTests
         public async Task AppObserver_ETW_EventData_IsChildProcessTelemetryData()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-            etwEnabled = true;
 
             if (!await EnsureTestServicesExistAsync("fabric:/TestApp42"))
             {
@@ -2062,7 +2059,6 @@ namespace FabricObserverTests
                     }
                 }
             }
-            etwEnabled = false;
         }
 
         // AppObserver: TelemetryData \\
@@ -2071,8 +2067,6 @@ namespace FabricObserverTests
         public async Task AppObserver_ETW_EventData_IsTelemetryData()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
-            etwEnabled = true;
 
             if (!await EnsureTestServicesExistAsync("fabric:/TestApp42"))
             {
@@ -2125,15 +2119,12 @@ namespace FabricObserverTests
                 Assert.IsTrue(t.Source == ObserverConstants.AppObserverName);
                 Assert.IsTrue(t.Value >= 0.0);
             }
-            etwEnabled = false;
         }
 
         [TestMethod]
         public async Task AppObserver_ETW_EventData_IsTelemetryData_HealthWarnings()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
-            etwEnabled = true;
 
             if (!await EnsureTestServicesExistAsync("fabric:/TestApp42"))
             {
@@ -2189,7 +2180,6 @@ namespace FabricObserverTests
                 Assert.IsTrue(t.ObserverName == ObserverConstants.AppObserverName);
                 Assert.IsTrue(t.Source == $"{t.ObserverName}({t.Code})");
             }
-            etwEnabled = false;
         }
 
         // DiskObserver: TelemetryData \\
