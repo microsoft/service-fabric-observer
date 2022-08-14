@@ -2007,7 +2007,7 @@ namespace FabricObserverTests
             Assert.IsTrue(total_tcp_ports > ephemeral_tcp_ports);
         }
 
-        // ETW Tests \\
+        #region ETW Tests
 
         // AppObserver: ChildProcessTelemetryData \\
 
@@ -2028,10 +2028,10 @@ namespace FabricObserverTests
 
             await AppObserver_ObserveAsync_Successful_Observer_IsHealthy();
 
-            List<List<ChildProcessTelemetryData>> childTelemData = foEtwListener.foEtwConverter.ChildProcessTelemetry;
-            Assert.IsNotNull(childTelemData);
+            List<List<ChildProcessTelemetryData>> childProcessTelemetryData = foEtwListener.foEtwConverter.ChildProcessTelemetry;
+            Assert.IsNotNull(childProcessTelemetryData);
 
-            foreach (var t in childTelemData)
+            foreach (var t in childProcessTelemetryData)
             {
                 foreach (var x in t)
                 {
@@ -2046,6 +2046,7 @@ namespace FabricObserverTests
                     Assert.IsFalse(x.ChildProcessCount == 0);
 
                     Assert.IsTrue(x.ChildProcessInfo != null && x.ChildProcessInfo.Count == x.ChildProcessCount);
+                    Assert.IsTrue(x.ChildProcessInfo.FindAll(p => p.ProcessId > 0).Distinct().Count() == x.ChildProcessCount);
 
                     foreach (var c in x.ChildProcessInfo)
                     {
@@ -2207,7 +2208,6 @@ namespace FabricObserverTests
                 Assert.IsFalse(string.IsNullOrWhiteSpace(t.Property));
 
                 Assert.IsTrue(t.EntityType == EntityType.Disk);
-
                 Assert.IsTrue(t.HealthState == HealthState.Invalid);
                 Assert.IsTrue(t.ObserverName == ObserverConstants.DiskObserverName);
                 Assert.IsTrue(t.Code == null);
@@ -2359,7 +2359,7 @@ namespace FabricObserverTests
                 Assert.IsFalse(string.IsNullOrWhiteSpace(t.ObserverName));
                 Assert.IsFalse(string.IsNullOrWhiteSpace(t.OS));
 
-                Assert.IsTrue(t.EntityType == EntityType.Machine || t.EntityType == EntityType.Machine);
+                Assert.IsTrue(t.EntityType == EntityType.Machine);
                 Assert.IsTrue(t.HealthState == HealthState.Invalid);
                 Assert.IsTrue(t.ObserverName == ObserverConstants.NodeObserverName);
                 Assert.IsTrue(t.Code == null);
@@ -2388,7 +2388,7 @@ namespace FabricObserverTests
             foreach (var t in telemData)
             {
                 Assert.IsTrue(t.ObserverName == ObserverConstants.NodeObserverName);
-                Assert.IsTrue(t.EntityType == EntityType.Node || t.EntityType == EntityType.Machine);
+                Assert.IsTrue(t.EntityType == EntityType.Machine);
 
                 Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeName));
                 Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeType));
@@ -2417,19 +2417,35 @@ namespace FabricObserverTests
 
             await OSObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors();
 
-            MachineTelemetryData telemData = foEtwListener.foEtwConverter.MachineTelemetryData;
-            Assert.IsNotNull(telemData);
+            MachineTelemetryData machineTelemetryData = foEtwListener.foEtwConverter.MachineTelemetryData;
+            Assert.IsNotNull(machineTelemetryData);
 
-            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.DriveInfo));
-            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.EphemeralTcpPortRange));
-            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.FabricApplicationTcpPortRange));
-            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.HotFixes));
-            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.LastBootUpTime));
-            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.NodeName));
-            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.ObserverName));
-            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.OSName));
-            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.OSVersion));
-            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.OSInstallDate));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(machineTelemetryData.DriveInfo));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(machineTelemetryData.EphemeralTcpPortRange));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(machineTelemetryData.FabricApplicationTcpPortRange));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(machineTelemetryData.HealthState));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(machineTelemetryData.HotFixes));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(machineTelemetryData.LastBootUpTime));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(machineTelemetryData.NodeName));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(machineTelemetryData.ObserverName));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(machineTelemetryData.OSInstallDate));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(machineTelemetryData.OSName));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(machineTelemetryData.OSVersion));
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                Assert.IsTrue(machineTelemetryData.ActiveFirewallRules > 0);
+            }
+
+            Assert.IsTrue(machineTelemetryData.ActiveEphemeralTcpPorts > 0);
+            Assert.IsTrue(machineTelemetryData.ActiveTcpPorts > 0);
+            Assert.IsTrue(machineTelemetryData.AvailablePhysicalMemoryGB > 0);
+            Assert.IsTrue(machineTelemetryData.FreeVirtualMemoryGB > 0);
+            Assert.IsTrue(machineTelemetryData.LogicalDriveCount > 0);
+            Assert.IsTrue(machineTelemetryData.LogicalProcessorCount > 0);
+            Assert.IsTrue(machineTelemetryData.NumberOfRunningProcesses > 0);
+            Assert.IsTrue(machineTelemetryData.TotalMemorySizeGB > 0);
         }
+        #endregion
     }
 }
