@@ -15,7 +15,7 @@ namespace FabricObserverTests
 {
     /// <summary>
     /// Class that converts FabricObserverDataEvent event data into *TelemetryData instances.
-    /// </summary>
+    /// </summary> 
     public class EtwEventConverter
     {
         internal Logger Logger
@@ -60,33 +60,47 @@ namespace FabricObserverTests
                     return;
                 }
 
+                if (eventData.PayloadNames == null || eventData.PayloadNames.Count == 0)
+                {
+                    return;
+                }
+
                 // FabricObserver ETW events will not be emitted as multiple payload items. There is one item in the Payload: 
                 // A serialized instance of a custom data type. Most often, these will be TelemetryData instances, but can also be
                 // ChildProcessTelemetryData, MachineTelemetryData or an anonymous type. Any event that is written to FabricObserverETWProvider will be
                 // available in the payload. These will always be FabricObserverDataEvent events.
                 string json = eventData.Payload[0].ToString();
 
-                // Child procs - ChildProcessTelemetryData type, which will always contain a ChildProcessInfo member (and only be emitted by AppObserver).
-                if (json.Contains("ChildProcessInfo") && JsonHelper.TryDerializeObject(json, out List<ChildProcessTelemetryData> childProcTelemData))
+                // There will only be one payload name of interest for the one payload.
+                string payloadName = eventData.PayloadNames[0];
+
+                // If the payload is a Json object named ObserverConstants.PayloadNameAnonData ("anonData") whose value is not a serialized instance of a *TelemData object then ignore it.
+                if (payloadName == ObserverConstants.PayloadNameAnonData)
+                {
+                    return;
+                }
+
+                // ChildProcessTelemetryData (only from AppObserver).
+                if (payloadName == ObserverConstants.PayloadNameChildProcessTelemetryData && JsonHelper.TryDerializeObject(json, out List<ChildProcessTelemetryData> childProcTelemData))
                 {
                     Logger.LogInfo($"JSON-serialized List<ChildProcessTelemetryData>{Environment.NewLine}{json}");
                     ChildProcessTelemetry ??= new List<List<ChildProcessTelemetryData>>();
                     ChildProcessTelemetry.Add(childProcTelemData);
                 }
-                // TelemetryData, which will be emitted by any observer that is enabled to generate ETW events (OSObserver emits MachineTelemetryData).
-                else if (JsonHelper.TryDerializeObject(json, out TelemetryData telemetryData))
+                // TelemetryData (from all observers but OSObserver).
+                else if (payloadName == ObserverConstants.PayloadNameTelemetryData && JsonHelper.TryDerializeObject(json, out TelemetryData telemetryData))
                 {
                     Logger.LogInfo($"JSON-serialized TelemetryData{Environment.NewLine}{json}");
                     TelemetryData ??= new List<TelemetryData>();
                     TelemetryData.Add(telemetryData); 
                 }
-                // OSObserver
-                else if (json.Contains(ObserverConstants.OSObserverName) && JsonHelper.TryDerializeObject(json, out MachineTelemetryData machineTelemetryData))
+                // MachineTelemetryData (only from OSObserver).
+                else if (payloadName == ObserverConstants.PayloadNameMachineTelemetryData && JsonHelper.TryDerializeObject(json, out MachineTelemetryData machineTelemetryData))
                 {
                     Logger.LogInfo($"JSON-serialized MachineTelemetryData{Environment.NewLine}{json}");
                     MachineTelemetryData = machineTelemetryData;
                 }
-                else
+                else // ignore..
                 {
                     Logger.LogInfo($"Not the droid we're looking for.{Environment.NewLine}{json}");
                 }
@@ -95,7 +109,7 @@ namespace FabricObserverTests
             {
                 Logger.LogError($"Unable to deserialize ETW event data to supported type:{Environment.NewLine}{e}");
 
-                // For unit tests, re-throw.
+                // For unit tests, always re-throw.
                 throw;
             }
         }

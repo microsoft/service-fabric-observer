@@ -223,23 +223,23 @@ namespace FabricObserver.Observers.Utilities
             // Some FO ETW events are written as anonymous .NET types (anonymous object intances with fields/properties).
             // This means they are JSON-serializable for use in content inspection.
 
-            if (!JsonHelper.TrySerializeObject(data, out string aData))
+            if (!JsonHelper.TrySerializeObject(data, out string anonData))
             {
                 return;
             }
 
             var anonType4 = new
             {
-                aData
+                anonData
             };
 
-            if (aData.Contains("Warning"))
+            if (anonData.Contains("Warning"))
             {
                 ServiceEventSource.Current.WriteWarning(eventName, anonType4);
                 return;
             }
 
-            if (aData.Contains("Error"))
+            if (anonData.Contains("Error"))
             {
                 ServiceEventSource.Current.WriteError(eventName, anonType4);
                 return;
