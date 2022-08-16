@@ -21,7 +21,6 @@
 			<group targetFramework="netstandard2.0">
 				<dependency id="Microsoft.Win32.Registry" version="5.0.0" />
 				<dependency id="Microsoft.ServiceFabric.Services" version="5.0.516" />
-				<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="5.0.0" />
 				<dependency id="Microsoft.ApplicationInsights" version="2.20.0" />
 				<dependency id="Microsoft.ApplicationInsights.DependencyCollector" version="2.20.0" />
 				<dependency id="Microsoft.ApplicationInsights.NLogTarget" version="2.20.0" />
