@@ -930,7 +930,7 @@ namespace FabricObserver.Observers
                     NodeName = NodeName,
                     NodeType = NodeType,
                     ObserverName = ObserverName,
-                    Property = entityType == EntityType.Disk ? id : null,
+                    Property = entityType == EntityType.Disk ? $"{id} {data.Property}" : null,
                     Metric = data.Property,
                     Source = ObserverName,
                     Value = data.AverageDataValue
@@ -1171,7 +1171,7 @@ namespace FabricObserver.Observers
                 telemetryData.HealthState = healthState;
                 telemetryData.Description = healthMessage.ToString();
                 telemetryData.Source = $"{ObserverName}({errorWarningCode})";
-                telemetryData.Property = id;
+                telemetryData.Property = entityType == EntityType.Disk ? $"{id} {data.Property}" : id;
 
                 // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                 if (IsTelemetryEnabled)
@@ -1198,7 +1198,7 @@ namespace FabricObserver.Observers
                     State = healthState,
                     NodeName = NodeName,
                     Observer = ObserverName,
-                    Property = id,
+                    Property = entityType == EntityType.Disk ? $"{id} {data.Property}" : id,
                     ResourceUsageDataProperty = data.Property,
                     SourceId = $"{ObserverName}({errorWarningCode})"
                 };
