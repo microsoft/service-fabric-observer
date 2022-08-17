@@ -767,7 +767,7 @@ namespace FabricObserver.Observers
 
             string thresholdName = "Warning";
             bool warningOrError = false;
-            string drive = string.Empty, id = null, appType = null, processStartTime = null;
+            string id = null, appType = null, processStartTime = null;
             int procId = 0;
             T threshold = thresholdWarning;
             HealthState healthState = HealthState.Ok;
@@ -919,7 +919,6 @@ namespace FabricObserver.Observers
             }
             else
             {
-                drive = string.Empty;
                 id = data.Id;
 
                 // Report raw data.
@@ -930,7 +929,7 @@ namespace FabricObserver.Observers
                     NodeName = NodeName,
                     NodeType = NodeType,
                     ObserverName = ObserverName,
-                    Property = entityType == EntityType.Disk ? $"{id} {data.Property}" : null,
+                    Property = id,
                     Metric = data.Property,
                     Source = ObserverName,
                     Value = data.AverageDataValue
@@ -1153,8 +1152,16 @@ namespace FabricObserver.Observers
                                    $"Their cumulative impact on {processName}'s resource usage has been applied.";
                 }
 
-                _ = healthMessage.Append($"{drive}{data.Property}{dynamicRange} has exceeded the specified {thresholdName} limit ({threshold}{data.Units})");
-                _ = healthMessage.Append($" - {data.Property}: {data.AverageDataValue}{data.Units}{totalPorts}");
+                string drive = string.Empty;
+                string metric = data.Property.Contains("(Percent)") ? data.Property.Replace(" (Percent)", string.Empty) : data.Property.Replace(" (MB)", string.Empty);
+                
+                if (entityType == EntityType.Disk)
+                {
+                    drive = $" on drive {id}"; 
+                }
+
+                _ = healthMessage.Append($"{metric}{dynamicRange} has exceeded the specified {thresholdName} limit ({threshold}{data.Units}){drive}");
+                _ = healthMessage.Append($" - {metric}: {data.AverageDataValue}{data.Units}{totalPorts}");
                 
                 if (childProcMsg != string.Empty)
                 {
@@ -1234,7 +1241,7 @@ namespace FabricObserver.Observers
                     }
 
                     telemetryData.HealthState = HealthState.Ok;
-                    telemetryData.Property = id;
+                    telemetryData.Property = entityType == EntityType.Disk ? $"{id} {data.Property}" : id;
                     telemetryData.Description = $"{data.Property} is now within normal/expected range.";
                     telemetryData.Metric = data.Property;
                     telemetryData.Source = $"{ObserverName}({data.ActiveErrorOrWarningCode})";
@@ -1265,7 +1272,7 @@ namespace FabricObserver.Observers
                         State = HealthState.Ok,
                         NodeName = NodeName,
                         Observer = ObserverName,
-                        Property = id,
+                        Property = entityType == EntityType.Disk ? $"{id} {data.Property}" : id,
                         ResourceUsageDataProperty = data.Property,
                         SourceId = $"{ObserverName}({data.ActiveErrorOrWarningCode})"
                     };

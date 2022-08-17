@@ -2374,13 +2374,13 @@ namespace FabricObserverTests
                 Assert.IsFalse(string.IsNullOrWhiteSpace(t.Metric));
                 Assert.IsFalse(string.IsNullOrWhiteSpace(t.ObserverName));
                 Assert.IsFalse(string.IsNullOrWhiteSpace(t.OS));
+                Assert.IsFalse(t.Property == null);
 
                 Assert.IsTrue(t.EntityType == EntityType.Machine);
                 Assert.IsTrue(t.HealthState == HealthState.Invalid);
                 Assert.IsTrue(t.ObserverName == ObserverConstants.NodeObserverName);
                 Assert.IsTrue(t.Code == null);
                 Assert.IsTrue(t.Description == null);
-                Assert.IsTrue(t.Property == null);
                 Assert.IsTrue(t.Source == ObserverConstants.NodeObserverName);
                 Assert.IsTrue(t.Value >= 0.0);
             }

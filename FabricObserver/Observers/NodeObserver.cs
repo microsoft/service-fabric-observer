@@ -426,37 +426,44 @@ namespace FabricObserver.Observers
 
             if (CpuTimeData == null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
             {
-                CpuTimeData = new FabricResourceUsageData<float>(ErrorWarningProperty.CpuTime, "TotalCpuTime", frudCapacity, UseCircularBuffer);
+                CpuTimeData = new FabricResourceUsageData<float>(
+                    ErrorWarningProperty.CpuTime, ErrorWarningProperty.CpuTime.Replace(" ", string.Empty), frudCapacity, UseCircularBuffer);
             }
 
             if (MemDataInUse == null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
             {
-                MemDataInUse = new FabricResourceUsageData<float>(ErrorWarningProperty.MemoryConsumptionMb, "MemoryConsumedMb", frudCapacity, UseCircularBuffer);
+                MemDataInUse = new FabricResourceUsageData<float>(
+                    ErrorWarningProperty.MemoryConsumptionMb, ErrorWarningProperty.MemoryConsumptionMb.Replace(" ", string.Empty), frudCapacity, UseCircularBuffer);
             }
 
             if (MemDataPercent == null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
             {
-                MemDataPercent = new FabricResourceUsageData<double>(ErrorWarningProperty.MemoryConsumptionPercentage, "MemoryConsumedPercentage", frudCapacity, UseCircularBuffer);
+                MemDataPercent = new FabricResourceUsageData<double>(
+                    ErrorWarningProperty.MemoryConsumptionPercentage, ErrorWarningProperty.MemoryConsumptionPercentage.Replace(" ", string.Empty), frudCapacity, UseCircularBuffer);
             }
 
             if (FirewallData == null && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
             {
-                FirewallData = new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveFirewallRules, "ActiveFirewallRules", 1);
+                FirewallData = new FabricResourceUsageData<int>(
+                    ErrorWarningProperty.ActiveFirewallRules, ErrorWarningProperty.ActiveFirewallRules.Replace(" ", string.Empty), 1);
             }
 
             if (ActivePortsData == null && (ActivePortsErrorThreshold > 0 || ActivePortsWarningThreshold > 0))
             {
-                ActivePortsData = new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveTcpPorts, "AllPortsInUse", 1);
+                ActivePortsData = new FabricResourceUsageData<int>(
+                    ErrorWarningProperty.ActiveTcpPorts, ErrorWarningProperty.ActiveTcpPorts.Replace(" ", string.Empty), 1);
             }
 
             if (EphemeralPortsDataRaw == null && (EphemeralPortsRawErrorThreshold > 0 || EphemeralPortsRawWarningThreshold > 0))
             {
-                EphemeralPortsDataRaw = new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveEphemeralPorts, "EphemeralPortsInUseTotal", 1);
+                EphemeralPortsDataRaw = new FabricResourceUsageData<int>(
+                    ErrorWarningProperty.ActiveEphemeralPorts, ErrorWarningProperty.ActiveEphemeralPorts.Replace(" ", string.Empty), 1);
             }
 
             if (EphemeralPortsDataPercent == null && (EphemeralPortsPercentErrorThreshold > 0 || EphemeralPortsPercentWarningThreshold > 0))
             {
-                EphemeralPortsDataPercent = new FabricResourceUsageData<double>(ErrorWarningProperty.ActiveEphemeralPortsPercentage, "EphemeralPortsInUsePercentage", 1);
+                EphemeralPortsDataPercent = new FabricResourceUsageData<double>(
+                    ErrorWarningProperty.ActiveEphemeralPortsPercentage, ErrorWarningProperty.ActiveEphemeralPortsPercentage.Replace(" ", string.Empty), 1);
             }
 
             // This only makes sense for Linux.
@@ -464,12 +471,14 @@ namespace FabricObserver.Observers
             {
                 if (LinuxFileHandlesDataPercentAllocated == null && (LinuxFileHandlesErrorPercent > 0 || LinuxFileHandlesWarningPercent > 0))
                 {
-                    LinuxFileHandlesDataPercentAllocated = new FabricResourceUsageData<double>(ErrorWarningProperty.AllocatedFileHandlesPct, "TotalFileHandlesPercentage", 1);
+                    LinuxFileHandlesDataPercentAllocated = new FabricResourceUsageData<double>(
+                        ErrorWarningProperty.AllocatedFileHandlesPct, ErrorWarningProperty.AllocatedFileHandlesPct.Replace(" ", string.Empty), 1);
                 }
 
                 if (LinuxFileHandlesDataTotalAllocated == null && (LinuxFileHandlesErrorTotalAllocated > 0 || LinuxFileHandlesWarningTotalAllocated > 0))
                 {
-                    LinuxFileHandlesDataTotalAllocated = new FabricResourceUsageData<int>(ErrorWarningProperty.AllocatedFileHandles, "TotalFileHandlesCount", 1);
+                    LinuxFileHandlesDataTotalAllocated = new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.AllocatedFileHandles, ErrorWarningProperty.AllocatedFileHandles.Replace(" ", string.Empty), 1);
                 }
             }
         }
@@ -749,6 +758,7 @@ namespace FabricObserver.Observers
                             NodeName = NodeName,
                             NodeType = NodeType,
                             ObserverName = ObserverName,
+                            Property = $"{LowPort} - {HighPort}",
                             Source = ObserverName,
                             Value = totalEphemeralPorts
                         };
