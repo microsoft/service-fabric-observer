@@ -16,11 +16,11 @@ namespace FabricObserverTests
     /// <summary>
     /// Class that converts FabricObserverDataEvent event data into *TelemetryData instances.
     /// </summary> 
-    public class EtwEventConverter
+    internal class EtwEventConverter
     {
         internal Logger Logger
         {
-            get; set;
+            get;
         }
 
         internal List<TelemetryData> TelemetryData
@@ -42,7 +42,7 @@ namespace FabricObserverTests
         /// Initializes a new instance of the <see cref="EtwEventConverter"/> class.
         /// </summary>
         /// <param name="observerLogger"> Observer logger for local logging.</param>
-        public EtwEventConverter(Logger observerLogger)
+        internal EtwEventConverter(Logger observerLogger)
         {
             Logger = observerLogger;
         }
@@ -51,7 +51,7 @@ namespace FabricObserverTests
         /// Parses the event data into Telemtry data.
         /// </summary>
         /// <param name="eventData">Instance of information associated with the event dispatched for fabric observer event listener.</param>
-        public void EventDataToTelemetryData(EventWrittenEventArgs eventData)
+        internal void EventDataToTelemetryData(EventWrittenEventArgs eventData)
         {
             try
             {
