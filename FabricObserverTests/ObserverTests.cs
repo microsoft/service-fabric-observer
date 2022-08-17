@@ -2029,7 +2029,9 @@ namespace FabricObserverTests
             await AppObserver_ObserveAsync_Successful_Observer_IsHealthy();
 
             List<List<ChildProcessTelemetryData>> childProcessTelemetryData = foEtwListener.foEtwConverter.ChildProcessTelemetry;
+            
             Assert.IsNotNull(childProcessTelemetryData);
+            Assert.IsTrue(childProcessTelemetryData.Count > 0);
 
             foreach (var t in childProcessTelemetryData)
             {
@@ -2082,7 +2084,9 @@ namespace FabricObserverTests
             await AppObserver_ObserveAsync_Successful_Observer_IsHealthy();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            
             Assert.IsNotNull(telemData);
+            Assert.IsTrue(telemData.Count > 0);
 
             foreach (var t in telemData)
             {
@@ -2140,7 +2144,9 @@ namespace FabricObserverTests
             await AppObserver_ObserveAsync_Successful_Observer_WarningsGenerated();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            
             Assert.IsNotNull(telemData);
+            Assert.IsTrue(telemData.Count > 0);
 
             var warningEvents = telemData.Where(t => t.HealthState == HealthState.Warning);
             Assert.IsTrue(warningEvents.Any());
@@ -2195,7 +2201,9 @@ namespace FabricObserverTests
             await DiskObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            
             Assert.IsNotNull(telemData);
+            Assert.IsTrue(telemData.Count > 0);
 
             foreach (var t in telemData)
             {
@@ -2226,7 +2234,9 @@ namespace FabricObserverTests
             await DiskObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrors();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            
             Assert.IsNotNull(telemData);
+            Assert.IsTrue(telemData.Count > 0);
 
             telemData = telemData.Where(d => d.HealthState == HealthState.Warning).ToList();
             Assert.IsTrue(telemData.Any());
@@ -2263,7 +2273,9 @@ namespace FabricObserverTests
             await FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            
             Assert.IsNotNull(telemData);
+            Assert.IsTrue(telemData.Count > 0);
 
             foreach (var t in telemData)
             {
@@ -2303,7 +2315,9 @@ namespace FabricObserverTests
             await FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_MemoryWarningsOrErrorsDetected();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            
             Assert.IsNotNull(telemData);
+            Assert.IsTrue(telemData.Count > 0);
 
             telemData = telemData.Where(d => d.HealthState == HealthState.Warning).ToList();
             Assert.IsTrue(telemData.Any());
@@ -2348,7 +2362,9 @@ namespace FabricObserverTests
             await NodeObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrorsDetected();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            
             Assert.IsNotNull(telemData);
+            Assert.IsTrue(telemData.Count > 0);
 
             foreach (var t in telemData)
             {
@@ -2380,7 +2396,9 @@ namespace FabricObserverTests
             await NodeObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrorsDetected();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            
             Assert.IsNotNull(telemData);
+            Assert.IsTrue(telemData.Count > 0);
 
             telemData = telemData.Where(d => d.HealthState == HealthState.Warning).ToList();
             Assert.IsTrue(telemData.Any());
@@ -2418,6 +2436,7 @@ namespace FabricObserverTests
             await OSObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors();
 
             MachineTelemetryData machineTelemetryData = foEtwListener.foEtwConverter.MachineTelemetryData;
+            
             Assert.IsNotNull(machineTelemetryData);
 
             Assert.IsFalse(string.IsNullOrWhiteSpace(machineTelemetryData.DriveInfo));
