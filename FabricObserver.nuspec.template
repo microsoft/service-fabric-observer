@@ -4,7 +4,13 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.1.831</version>
 		<releaseNotes>
-- Updated ChildProcessInfo to include ProcessId of child process.
+- Updated ETW implementation.
+- New ETW payload format (Json-serialized instance of *TelemetryData or an anonymous type).
+- Added ETW documentation.
+- AppObserver: Updated ChildProcessInfo to include ProcessId of child process.
+- Performance improvements (AppObserver).
+- Bug fix: FO will no longer put itself into Warning with infinite TTL health event when some observer does not complete within user-specified max run time.
+- Bug fix: AppObserver - Same named child processes will now be processed correctly.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
@@ -22,7 +28,6 @@
 			<group targetFramework="netcoreapp3.1">
 				<dependency id="Microsoft.Win32.Registry" version="5.0.0" />
 				<dependency id="Microsoft.ServiceFabric.Services" version="5.0.516" />
-				<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="5.0.0" />
 				<dependency id="Microsoft.ApplicationInsights" version="2.20.0" />
 				<dependency id="Microsoft.ApplicationInsights.DependencyCollector" version="2.20.0" />
 				<dependency id="Microsoft.ApplicationInsights.NLogTarget" version="2.20.0" />
