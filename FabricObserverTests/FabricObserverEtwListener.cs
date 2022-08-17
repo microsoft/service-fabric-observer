@@ -34,7 +34,7 @@ namespace FabricObserverTests
         /// Starts event listening on FO's ServiceEventSource object. 
         /// </summary>
         /// <param name="eventSource">The event source</param>
-        protected void StartFoEventSourceListener()
+        private void StartFoEventSourceListener()
         {
             ServiceEventSource.Current ??= new ServiceEventSource();
             EnableEvents(ServiceEventSource.Current, EventLevel.Informational | EventLevel.Warning | EventLevel.Error);
