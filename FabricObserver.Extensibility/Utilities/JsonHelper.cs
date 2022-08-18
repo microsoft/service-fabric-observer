@@ -62,7 +62,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                data = JsonConvert.SerializeObject(obj, Formatting.Indented);
+                data = JsonConvert.SerializeObject(obj);
                 return true;
             }
             catch (JsonException)

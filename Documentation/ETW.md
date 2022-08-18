@@ -24,46 +24,28 @@ You have to enable ETW for each observer that you want to receive ETW from. You 
 
 By default, ObserverManager's EnableETWProvider setting (also located in ApplicationManifest.xml) is enabled. If you disable this, then no ETW will be generated regardless of the Observer-specific settings you provide. Note that AppObserver is enabled to emit ETW events by default.
 
-Let's take a look at the construction of one of these events.
+Let's take a look at an example of an event that is ingested into the FabricObserverDataEvent Kusto table.
 
 ``` JSON
-{
-  "Timestamp": "2022-08-12T14:01:15.4246616-07:00",
-  "ProviderName": "FabricObserverETWProvider",
-  "Id": 65279,
-  "Message": null,
-  "ProcessId": 36388,
-  "Level": "Verbose",
-  "Keywords": "0x0000000000000004",
-  "EventName": "FabricObserverDataEvent",
-  "ActivityID": "00000072-0001-0000-248e-0000ffdcd7b5",
-  "RelatedActivityID": null,
-  "Payload": {
-    "telemetryData": "{\"ApplicationName\":\"fabric:/Voting\",\"ApplicationType\":\"VotingType\",\"Code\":null,\"ContainerId\":null,\"ClusterId\":\"undefined\",\"Description\":null,\"EntityType\":2,\"HealthState\":0,\"Metric\":\"Thread Count\",\"NodeName\":\"_Node_0\",\"NodeType\":\"NodeType0\",\"ObserverName\":\"AppObserver\",\"OS\":\"Windows\",\"PartitionId\":\"9607e129-beba-4969-93e0-7d96765fa4d0\",\"ProcessId\":23068,\"ProcessName\":\"VotingData\",\"Property\":null,\"ProcessStartTime\":\"2022-08-12T17:16:28.5535412Z\",\"ReplicaId\":133029754548379257,\"ReplicaRole\":2,\"ServiceKind\":2,\"ServiceName\":\"fabric:/Voting/VotingData\",\"ServicePackageActivationMode\":0,\"Source\":\"AppObserver\",\"Value\":77.0}"
-  }
-}
+"Message": data="{"ApplicationName":"fabric:/SomeApplication","ApplicationType":"ResourceCentralType","Code":null,"ContainerId":null,"ClusterId":"undefined","Description":null,"EntityType":2,"HealthState":0,"Metric":"Active Ephemeral Ports","NodeName":"MW2PPF7D8279821","NodeType":"AZSM","ObserverName":"AppObserver","OS":"Windows","PartitionId":"a56a62d7-69fd-4f5f-a5fb-caf8b84b537f","ProcessId":24564,"ProcessName":"SomeService","Property":null,"ProcessStartTime":"2022-08-18T15:45:27.2901800Z","ReplicaId":133053111176036935,"ReplicaRole":1,"ServiceKind":1,"ServiceName":"fabric:/SomeApplication/SomeService","ServicePackageActivationMode":0,"Source":"AppObserver","Value":133.0}"
 ``` 
 
-Note the Payload property. That is a serialized instance of TelemetryData type, which holds the information (in this case) that AppObserver detected for an service named fabric:/Voting/VotingData for the resource metric Thread Count. Included in the data is everything you need to know about the service like ReplicaId, Partition, NodeName, Metric, Value, ProcessName, ProcessId, ProcessStartTime.
+Note the data="" value. data is a serialized instance of TelemetryData type in this case, which holds the information that AppObserver (in this case) detected for a service named fabric:/SomeApplication/SomeService for the resource metric Active Ephemeral Ports. Included in the data is everything you need to know about the service like ReplicaId, PartitionId, NodeName, Metric, Value, ProcessName, ProcessId, ProcessStartTime, etc..
 
-If you have the VM/Machine configured to transmit ETW events to some diagnostics service endpoint, you can readily query the data using KQL. 
-
-For example, using the above event and payload, you could construct a ```KQL``` query like this:
+In order to parse out the Json-serialized instance of some supported FO data type from the Payload (Message, in the above example), you need to reform the string into well-structured Json:
 
 ```SQL
-// If you want play around with an event in Kusto Data Explorer to experiment with how extract json correctly (efficiently) using parse_json._
-//let FabricObserverDataEvent = datatable (Message: string)
-//["{\"telemetryData\":{\"ApplicationName\":\"fabric:/Voting\",\"ApplicationType\":\"VotingType\",\"Code\":null,\"ContainerId\":null,\"ClusterId\":\"undefined\",\"Description\":null,\"EntityType\":2,\"HealthState\":0,\"Metric\":\"Thread Count\",\"NodeName\":\"_Node_0\",\"NodeType\":\"NodeType0\",\"ObserverName\":\"AppObserver\",\"OS\":\"Windows\",\"PartitionId\":\"9607e129-beba-4969-93e0-7d96765fa4d0\",\"ProcessId\":23068,\"ProcessName\":\"VotingData\",\"Property\":null,\"ProcessStartTime\":\"2022-08-12T17:16:28.5535412Z\",\"ReplicaId\":133029754548379257,\"ReplicaRole\":2,\"ServiceKind\":2,\"ServiceName\":\"fabric:/Voting/VotingData\",\"ServicePackageActivationMode\":0,\"Source\":\"AppObserver\",\"Value\":71.0}}"];
-
 FabricObserverDataEvent
-| extend foData = parse_json(Message)
-| extend Metric = foData.telemetryData.Metric, ApplicationName = foData.telemetryData.ApplicationName, ApplicationType = foData.telemetryData.ApplicationType, 
-ServiceName = foData.telemetryData.ServiceName, PartitionId = foData.telemetryData.PartitionId, NodeName = foData.telemetryData.NodeName,
-ReplicaId = foData.telemetryData.ReplicaId, ProcessId = foData.telemetryData.ProcessId, ProcessName = foData.telemetryData.ProcessName,
-Value = foData.telemetryData.Value, ProcessStartTime = foData.telemetryData.ProcessStartTime
-// Do meaningful stuff with properties... or just Project to test that the Json is parsable, which it will be, of course.
-| project Metric, ApplicationName, ApplicationType, NodeName, ServiceName, PartitionId, ReplicaId, ProcessId, ProcessName, ProcessStartTime, Value
-
+| where PreciseTimeStamp >= ago(25min) and Tenant == "uswest2-test-42"
+// reform the data into correct Json format
+| extend reData = replace_string(Message, "data=\"", "")
+| extend reData = replace_string(reData, "}\"", "}")
+// pass the reformatted string to parse_json function
+| extend data = parse_json(reData)
+// extract out Json object member values from data (which is dynamic KQL type in this case) by referencing the member name.
+| extend AppName = data.ApplicationName, ServiceName = data.ServiceName, Metric = data.Metric, Result = data.Value, Replica = data.ReplicaId, PartitionId = data.PartitionId
+| project PreciseTimeStamp, AppName, ServiceName, Metric, Result, ReplicaId, PartitionId, 
+| sort by PreciseTimeStamp desc
 ```
-
-FO emits more than Json-serialized TelemetryData events. It also emits Json-serialized ChildProcessTelemetryData events, MachineTelemetryData events (OSObserver emits these), and aData events (Json-serialized anonymous data type which is typically something like an informational or warning event from some observer that is unrelated to some Metric (and therefore a threshold you provided for it)).
+For information events like above (raw metrics), HealthState is always 0 (Invalid). When some metric crosses the line for a threshold you supplied, HealthState will be 2 (Warning) or 3 (Error), depending upon your related threshold configuration settings.
+FO emits more than Json-serialized TelemetryData ETW events. It also emits Json-serialized ChildProcessTelemetryData events, MachineTelemetryData events (OSObserver emits these), and anonymously typed events (Json-serialized anonymous data type which is typically something like an informational or warning event from some observer or ObserverManager that is not a custom FO data type (class) related resource usage monitoring).

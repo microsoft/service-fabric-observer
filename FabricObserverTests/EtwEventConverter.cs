@@ -60,42 +60,28 @@ namespace FabricObserverTests
                     return;
                 }
 
-                if (eventData.PayloadNames == null || eventData.PayloadNames.Count == 0)
-                {
-                    return;
-                }
-
                 // FabricObserver ETW events will not be emitted as multiple payload items. There is one item in the Payload: 
                 // A serialized instance of a custom data type. Most often, these will be TelemetryData instances, but can also be
                 // ChildProcessTelemetryData, MachineTelemetryData or an anonymous type. Any event that is written to FabricObserverETWProvider will be
                 // available in the payload. These will always be FabricObserverDataEvent events.
                 string json = eventData.Payload[0].ToString();
 
-                // There will only be one payload name of interest for the one payload.
-                string payloadName = eventData.PayloadNames[0];
-
-                // If the payload is a Json object named ObserverConstants.PayloadNameAnonData ("anonData") whose value is not a serialized instance of a *TelemData object then ignore it.
-                if (payloadName == ObserverConstants.PayloadNameAnonData)
-                {
-                    return;
-                }
-
                 // ChildProcessTelemetryData (only from AppObserver).
-                if (payloadName == ObserverConstants.PayloadNameChildProcessTelemetryData && JsonHelper.TryDerializeObject(json, out List<ChildProcessTelemetryData> childProcTelemData))
+                if (JsonHelper.TryDerializeObject(json, out List<ChildProcessTelemetryData> childProcTelemData))
                 {
                     Logger.LogInfo($"JSON-serialized List<ChildProcessTelemetryData>{Environment.NewLine}{json}");
                     ChildProcessTelemetry ??= new List<List<ChildProcessTelemetryData>>();
                     ChildProcessTelemetry.Add(childProcTelemData);
                 }
                 // TelemetryData (from all observers but OSObserver).
-                else if (payloadName == ObserverConstants.PayloadNameTelemetryData && JsonHelper.TryDerializeObject(json, out TelemetryData telemetryData))
+                else if (JsonHelper.TryDerializeObject(json, out TelemetryData telemetryData))
                 {
                     Logger.LogInfo($"JSON-serialized TelemetryData{Environment.NewLine}{json}");
                     TelemetryData ??= new List<TelemetryData>();
                     TelemetryData.Add(telemetryData); 
                 }
                 // MachineTelemetryData (only from OSObserver).
-                else if (payloadName == ObserverConstants.PayloadNameMachineTelemetryData && JsonHelper.TryDerializeObject(json, out MachineTelemetryData machineTelemetryData))
+                else if (JsonHelper.TryDerializeObject(json, out MachineTelemetryData machineTelemetryData))
                 {
                     Logger.LogInfo($"JSON-serialized MachineTelemetryData{Environment.NewLine}{json}");
                     MachineTelemetryData = machineTelemetryData;

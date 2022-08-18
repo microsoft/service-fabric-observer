@@ -136,116 +136,17 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="data">Anonymous object instance.</param>
         public void LogEtw<T>(string eventName, T data)
         {
-            if (!EnableETWLogging || data == null)
+            if (!EnableETWLogging || data == null || eventName != ObserverConstants.FabricObserverETWEventName)
             {
                 return;
             }
 
-            if (data is List<ChildProcessTelemetryData> childProcTelemetryData)
-            {
-                string childProcessTelemetryData = JsonConvert.SerializeObject(childProcTelemetryData);
-                var anonType = new
-                {
-                    childProcessTelemetryData
-                };
-
-                // Info event.
-                ServiceEventSource.Current.WriteInfo(eventName, anonType);
-                return;
-            }
-
-            // TelemetryData?
-            if (data is TelemetryData telemData)
-            {
-                string telemetryData = JsonConvert.SerializeObject(telemData);
-                var anonType1 = new
-                {
-                    telemetryData
-                };
-
-                if (telemData.HealthState == System.Fabric.Health.HealthState.Warning)
-                {
-                    ServiceEventSource.Current.WriteWarning(eventName, anonType1);
-                    return;
-                }
-
-                if (telemData.HealthState == System.Fabric.Health.HealthState.Error)
-                {
-                    ServiceEventSource.Current.WriteError(eventName, anonType1);
-                    return;
-                }
-
-                // Info event.
-                ServiceEventSource.Current.WriteInfo(eventName, anonType1);
-                return;
-            }
-
-            if (data is ServiceFabricUpgradeEventData upgradeEventData)
-            {
-                string upgradeData = JsonConvert.SerializeObject(upgradeEventData);
-                var anonType2 = new
-                {
-                    upgradeData
-                };
-
-                if (upgradeEventData.FabricUpgradeProgress?.UpgradeState == System.Fabric.FabricUpgradeState.Failed 
-                    || upgradeEventData.FabricUpgradeProgress?.UpgradeState == System.Fabric.FabricUpgradeState.RollingBackInProgress)
-                {
-                    ServiceEventSource.Current.WriteWarning(eventName, anonType2);
-                    return;
-                }
-
-                if (upgradeEventData.ApplicationUpgradeProgress?.UpgradeState == System.Fabric.ApplicationUpgradeState.Failed
-                    || upgradeEventData.ApplicationUpgradeProgress?.UpgradeState == System.Fabric.ApplicationUpgradeState.RollingBackInProgress)
-                {
-                    ServiceEventSource.Current.WriteWarning(eventName, anonType2);
-                    return;
-                }
-
-                // Info event.
-                ServiceEventSource.Current.WriteInfo(eventName, anonType2);
-                return;
-            }
-
-            if (data is MachineTelemetryData mTelemetryData)
-            {
-                string machineTelemetryData = JsonConvert.SerializeObject(mTelemetryData);
-                var anonType3 = new
-                {
-                    machineTelemetryData
-                };
-
-                // Info event.
-                ServiceEventSource.Current.WriteInfo(eventName, anonType3);
-                return;
-            }
-
-            // Some FO ETW events are written as anonymous .NET types (anonymous object intances with fields/properties).
-            // This means they are JSON-serializable for use in content inspection.
-
-            if (!JsonHelper.TrySerializeObject(data, out string anonData))
+            if (!JsonHelper.TrySerializeObject(data, out string telemetryData))
             {
                 return;
             }
 
-            var anonType4 = new
-            {
-                anonData
-            };
-
-            if (anonData.Contains("Warning"))
-            {
-                ServiceEventSource.Current.WriteWarning(eventName, anonType4);
-                return;
-            }
-
-            if (anonData.Contains("Error"))
-            {
-                ServiceEventSource.Current.WriteError(eventName, anonType4);
-                return;
-            }
-
-            ServiceEventSource.Current.WriteInfo(eventName, anonType4);
+            ServiceEventSource.Current.FabricObserverDataEvent(telemetryData);
         }
 
         public bool TryWriteLogFile(string path, string content)
