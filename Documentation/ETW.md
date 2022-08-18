@@ -43,8 +43,10 @@ FabricObserverDataEvent
 // pass the reformatted string to parse_json function
 | extend data = parse_json(reData)
 // extract out Json object member values from data (which is dynamic KQL type in this case) by referencing the member name.
-| extend AppName = data.ApplicationName, ServiceName = data.ServiceName, Metric = data.Metric, Result = data.Value, Replica = data.ReplicaId, PartitionId = data.PartitionId
-| project PreciseTimeStamp, AppName, ServiceName, Metric, Result, ReplicaId, PartitionId, 
+| extend AppName = data.ApplicationName, ServiceName = data.ServiceName, Metric = data.Metric, Result = data.Value, ReplicaId = data.ReplicaId, PartitionId = data.PartitionId,
+ProcessId = data.ProcessId, ProcessName = data.ProcessName, ProcessStartTime = data.ProcessStartTime, ServicePackageActivationMode = data.ServicePackageActivationMode, ReplicaRole = data.ReplicaRole,
+ServiceKind = data.ServiceKind
+| project PreciseTimeStamp, AppName, ServiceName, Metric, Result, ReplicaId, PartitionId, ProcessId, ProcessName, ProcessStartTime, ServicePackageActivationMode, ReplicaRole, ServiceKind 
 | sort by PreciseTimeStamp desc
 ```
 For information events like above (raw metrics), HealthState is always 0 (Invalid). When some metric crosses the line for a threshold you supplied, HealthState will be 2 (Warning) or 3 (Error), depending upon your related threshold configuration settings.
