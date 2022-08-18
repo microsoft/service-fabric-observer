@@ -6,7 +6,6 @@
 using System;
 using System.Diagnostics.Tracing;
 using System.Fabric;
-using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
@@ -60,13 +59,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             return ObserverConstants.DefaultEventSourceProviderName;
         }
 
-        static ServiceEventSource()
-        {
-            // A workaround for the problem where ETW activities do not get tracked until Tasks infrastructure is initialized.
-            // This problem is fixed in .NET Framework 4.6.2. If you are running this version or greater, then delete the below code.
-            _ = Task.Run(() => { });
-        }
-
         public ServiceEventSource() : base(GetProviderName())
         {
             
@@ -91,6 +83,19 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             Message(finalMessage);
         }
 
+        private const int FOEventId = 42;
+
+        [Event(FOEventId, Level = EventLevel.Verbose, Opcode = EventOpcode.Info)]
+        internal void FabricObserverDataEvent(string data)
+        {
+            if (!IsEnabled())
+            {
+                return;
+            }
+
+            WriteEvent(FOEventId, data);
+        }
+
         [NonEvent]
         internal void WriteInfo<T>(string eventName, T data)
         {
@@ -99,7 +104,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 ActivityOptions = EventActivityOptions.None,
                 Keywords = Keywords.ResourceUsage,
                 Opcode = EventOpcode.Info,
-                Level = EventLevel.Verbose,
+                Level = EventLevel.Informational
             };
 
             Write(eventName, options, data);

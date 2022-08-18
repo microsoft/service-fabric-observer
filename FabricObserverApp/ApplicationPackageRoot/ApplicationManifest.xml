@@ -6,11 +6,13 @@
     <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
     <Parameter Name="ObserverManagerObserverExecutionTimeoutSeconds" DefaultValue="3600" />
     <Parameter Name="ObserverManagerEnableVerboseLogging" DefaultValue="false" />
+    <!-- If you want to transmit ETW events to Kusto, for example, then enable this setting. Otherwise, set this to false. Please see ETW.md for related documentation. -->
     <Parameter Name="ObserverManagerEnableETWProvider" DefaultValue="true" />
     <!-- You only need to set this if you want to use a different EventSource provider name than the default, FabricObserverETWProvider.
          This is primarily useful for scenarios where you have multiple instances of FO running on a node and you want to ensure that each instance writes 
          ETW event data to different named sinks. This is more of an advanced scenario. In general, just leave this blank. -->
     <Parameter Name="ObserverManagerETWProviderName" DefaultValue="" />
+    <!-- If you want to transmit telemetry events to ApplicationInsights or LogAnalytics, for example, then enable this setting. Otherwise, set this to false. -->
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
     <!-- We would really appreciate it if you kept this set to true. The information we collect contains no PII and helps us understand how FO is doing in the wild. -->
     <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="true" />
@@ -45,7 +47,8 @@
     <Parameter Name="NodeObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
-    <!-- ETW - Custom EventSource Tracing -->
+    <!-- ETW - Custom EventSource Tracing. Each observer can emit ETW. You can decide which ones. 
+         Make sure to enable ObserverManagerEnableETWProvider above if you plan on enabling ETW for some observer below. -->
     <Parameter Name="AppObserverEnableEtw" DefaultValue="true" />
     <Parameter Name="AzureStorageUploadObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableEtw" DefaultValue="false" />
