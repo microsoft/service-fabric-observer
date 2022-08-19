@@ -131,7 +131,7 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Logs EventSource events and automatically determines Level based on object (T data) content inspection.
+        /// Logs EventSource events as specified event name using T data as payload.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="eventName"></param>
