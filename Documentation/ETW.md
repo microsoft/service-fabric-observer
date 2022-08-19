@@ -1,6 +1,7 @@
 ## FabricObserver ETW Support
 
-FabricObserver employs EventSource events for ETW. There are two key pieces to this support. 
+FabricObserver employs EventSource events for ETW. There are two key pieces to this support. This is a feature typically used by internal Microsoft teams. Generally, you should disable this feature unless
+you have a way to push EventSource ETW to Azure Kusto.
 
 - FabricObserverETWProvider is the default name of the EventSource provider. You can customize this name by changing
 the value of the Application parameter ObserverManagerETWProviderName. Doing so is unnecessary unless you have a more advanced scenario (like multiple instance of FO running on the same node).
@@ -22,7 +23,7 @@ You have to enable ETW for each observer that you want to receive ETW from. You 
     <Parameter Name="SFConfigurationObserverEnableEtw" DefaultValue="false" />
 ```
 
-By default, ObserverManager's EnableETWProvider setting (also located in ApplicationManifest.xml) is enabled. If you disable this, then no ETW will be generated regardless of the Observer-specific settings you provide. Note that AppObserver is enabled to emit ETW events by default.
+By default, ObserverManager's EnableETWProvider setting (also located in ApplicationManifest.xml) is enabled. If you disable this, then no ETW will be generated regardless of the Observer-specific settings you provide. Note that AppObserver is enabled to emit ETW events by default for historical reasons. As mentioned above, unless this feature is useful to you, disable it.
 
 Let's take a look at an example of an event that is ingested into the FabricObserverDataEvent Kusto table.
 
@@ -52,11 +53,11 @@ ProcessId = data.ProcessId, ProcessName = data.ProcessName, ProcessStartTime = d
 ServiceKind = data.ServiceKind, Observer = data.ObserverName, NodeName = data.NodeName, NodeType = data.NodeType
 | where Observer == "AppObserver"
 | project PreciseTimeStamp, ServiceName, NodeName, NodeType, Metric, Result, ReplicaId, PartitionId, ProcessId, ProcessName, ProcessStartTime, ReplicaRole, Observer
-| sort by PreciseTimeStamp desc
+| sort by PreciseTimeStamp desc;
 
 // ChildProcessTelemetryData/ChildProcessInfo are Json arrays.
 FabricObserverDataEvent
-| where PreciseTimeStamp >= ago(1h) and Tenant == "uswest2-test-b"
+| where PreciseTimeStamp >= ago(1h) and Tenant == "uswest2-test-42"
 // Look for payload that is a Json array.
 | where Message startswith "data=\"["
 | extend reData = replace_string(Message, "data=\"", "")
@@ -70,4 +71,12 @@ FabricObserverDataEvent
 | sort by PreciseTimeStamp desc
 ```
 For information events like above (raw metrics), HealthState is always 0 (Invalid). When some metric crosses the line for a threshold you supplied, HealthState will be 2 (Warning) or 3 (Error), depending upon your related threshold configuration settings.
-FO emits more than Json-serialized TelemetryData ETW events. It also emits Json-serialized ChildProcessTelemetryData events (see above), MachineTelemetryData events (OSObserver emits these), and anonymously typed events (Json-serialized anonymous data type which is typically something like an informational or warning event from some observer or ObserverManager that is not a custom FO data type (class) related resource usage monitoring).
+FO emits more than Json-serialized TelemetryData ETW events. It also emits Json-serialized ChildProcessTelemetryData events (see above), MachineTelemetryData events (OSObserver emits these), and anonymously typed events (Json-serialized anonymous data type which is typically something like an informational or warning event from some observer or ObserverManager that is not a custom FO data type (class) related resource usage monitoring). 
+
+### API
+
+For [observer plugin](Plugins.md) authors, you can use your own event name and generate your own ETW using ```LogEtw<T>(string eventName, T data)``` which is a member of ObserverBase.ObserverLogger: 
+
+```C# 
+ObserverLogger.LogEtw("MyEventName", myObj);
+```

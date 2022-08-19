@@ -2,9 +2,10 @@
 
 Observers are low-impact, long-lived objects that perform specialied monitoring and reporting activities. Observers monitor and report, but they aren't designed to take action. Observers generally monitor appliations through their side effects on the node, like resource usage, but do not actually communicate with the applications. Observers report to SF Event Store (viewable through SFX) in warning and error states, and can use built-in AppInsights support to report there as well.  
 
-### Note: All of the observers that collect resource usage data can also emit telemetry: EventSource ETW and either LogAnalytics or ApplicationInsights diagnostic service calls. 
+### Note: All of the observers that collect resource usage data can also emit telemetry: [EventSource ETW](ETW.md) and either LogAnalytics or ApplicationInsights diagnostic service calls. 
 
-> AppInsights or LogAnalytics telemetry can be enabled in `Settings.xml` by providing your related authorization/identity information (keys).
+> AppInsights or LogAnalytics telemetry can be configured in `Settings.xml` by providing your related authorization/identity information (keys). You must enable ObserverManagerEnableTelemetryProvider app parameter in AppplicationManifest.xml, which you can also enable/disable with versionless
+> parameter-only application upgrades.
 
 ### Logging
 
