@@ -5,6 +5,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Tracing;
+using System.Fabric.Health;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -131,12 +133,12 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Logs EventSource events and automatically determines Level based on object (T data) content inspection.
         /// </summary>
-        /// <typeparam name="T">Anonymous/generic type.</typeparam>
-        /// <param name="eventName">Name of the event.</param>
-        /// <param name="data">Anonymous object instance.</param>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="eventName"></param>
+        /// <param name="data"></param>
         public void LogEtw<T>(string eventName, T data)
         {
-            if (!EnableETWLogging || data == null || eventName != ObserverConstants.FabricObserverETWEventName)
+            if (!EnableETWLogging || data == null || string.IsNullOrWhiteSpace(eventName))
             {
                 return;
             }
@@ -146,7 +148,22 @@ namespace FabricObserver.Observers.Utilities
                 return;
             }
 
-            ServiceEventSource.Current.FabricObserverDataEvent(telemetryData);
+            EventKeywords keywords = ServiceEventSource.Keywords.ResourceUsage;
+
+            if (data is TelemetryData telemData)
+            {
+                if (telemData.HealthState == HealthState.Error || telemData.HealthState == HealthState.Warning)
+                {
+                    keywords = ServiceEventSource.Keywords.ErrorOrWarning;
+                }
+            }
+
+            var anonType = new
+            {
+                data = telemetryData
+            };
+
+            ServiceEventSource.Current.Write(anonType, eventName, keywords);
         }
 
         public bool TryWriteLogFile(string path, string content)
