@@ -35,19 +35,39 @@ Note the data="" value. data is a serialized instance of TelemetryData type in t
 In order to parse out the Json-serialized instance of some supported FO data type from the Payload (Message, in the above example), you need to reform the string into well-structured Json:
 
 ```SQL
+// TelemetryData type. Json is a single object representation.
+// "data=" will always be the payload name/token for ETW from FO. You must remove it.
 FabricObserverDataEvent
 | where PreciseTimeStamp >= ago(25min) and Tenant == "uswest2-test-42"
-// reform the data into correct Json format
+// Look for payload that is a Json object.
+| where Message startswith "data=\"{"
+// remove opening payload name/token and opening quote character.
 | extend reData = replace_string(Message, "data=\"", "")
+// remove closing quote character.
 | extend reData = replace_string(reData, "}\"", "}")
-// pass the reformatted string to parse_json function
+// Now, we have Json..
 | extend data = parse_json(reData)
-// extract out Json object member values from data (which is dynamic KQL type in this case) by referencing the member name.
 | extend AppName = data.ApplicationName, ServiceName = data.ServiceName, Metric = data.Metric, Result = data.Value, ReplicaId = data.ReplicaId, PartitionId = data.PartitionId,
 ProcessId = data.ProcessId, ProcessName = data.ProcessName, ProcessStartTime = data.ProcessStartTime, ServicePackageActivationMode = data.ServicePackageActivationMode, ReplicaRole = data.ReplicaRole,
-ServiceKind = data.ServiceKind
-| project PreciseTimeStamp, AppName, ServiceName, Metric, Result, ReplicaId, PartitionId, ProcessId, ProcessName, ProcessStartTime, ServicePackageActivationMode, ReplicaRole, ServiceKind 
+ServiceKind = data.ServiceKind, Observer = data.ObserverName, NodeName = data.NodeName, NodeType = data.NodeType
+| where Observer == "AppObserver"
+| project PreciseTimeStamp, ServiceName, NodeName, NodeType, Metric, Result, ReplicaId, PartitionId, ProcessId, ProcessName, ProcessStartTime, ReplicaRole, Observer
+| sort by PreciseTimeStamp desc
+
+// ChildProcessTelemetryData/ChildProcessInfo are Json arrays.
+FabricObserverDataEvent
+| where PreciseTimeStamp >= ago(1h) and Tenant == "uswest2-test-b"
+// Look for payload that is a Json array.
+| where Message startswith "data=\"["
+| extend reData = replace_string(Message, "data=\"", "")
+| extend reData = replace_string(reData, "]\"", "]")
+// Now, we have Json..
+| extend data = parse_json(reData)
+// These are collections.
+| extend ServiceName = data[0].ServiceName
+| extend ChildProcInfo = data[0].ChildProcessInfo
+| project PreciseTimeStamp, ServiceName, ChildProcInfo
 | sort by PreciseTimeStamp desc
 ```
 For information events like above (raw metrics), HealthState is always 0 (Invalid). When some metric crosses the line for a threshold you supplied, HealthState will be 2 (Warning) or 3 (Error), depending upon your related threshold configuration settings.
-FO emits more than Json-serialized TelemetryData ETW events. It also emits Json-serialized ChildProcessTelemetryData events, MachineTelemetryData events (OSObserver emits these), and anonymously typed events (Json-serialized anonymous data type which is typically something like an informational or warning event from some observer or ObserverManager that is not a custom FO data type (class) related resource usage monitoring).
+FO emits more than Json-serialized TelemetryData ETW events. It also emits Json-serialized ChildProcessTelemetryData events (see above), MachineTelemetryData events (OSObserver emits these), and anonymously typed events (Json-serialized anonymous data type which is typically something like an informational or warning event from some observer or ObserverManager that is not a custom FO data type (class) related resource usage monitoring).
