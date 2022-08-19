@@ -30,12 +30,13 @@ Let's take a look at an example of an event that is ingested into the FabricObse
 ``` JSON
 "Message": data="{"ApplicationName":"fabric:/SomeApplication","ApplicationType":"ResourceCentralType","Code":null,"ContainerId":null,"ClusterId":"undefined","Description":null,"EntityType":2,"HealthState":0,"Metric":"Active Ephemeral Ports","NodeName":"MW2PPF7D8279821","NodeType":"AZSM","ObserverName":"AppObserver","OS":"Windows","PartitionId":"a56a62d7-69fd-4f5f-a5fb-caf8b84b537f","ProcessId":24564,"ProcessName":"SomeService","Property":null,"ProcessStartTime":"2022-08-18T15:45:27.2901800Z","ReplicaId":133053111176036935,"ReplicaRole":1,"ServiceKind":1,"ServiceName":"fabric:/SomeApplication/SomeService","ServicePackageActivationMode":0,"Source":"AppObserver","Value":133.0}"
 ``` 
+As you can see, this is not correctly formatted Json. Note the data="" value. 
 
-Note the data="" value. data is a serialized instance of TelemetryData type in this case, which holds the information that AppObserver (in this case) detected for a service named fabric:/SomeApplication/SomeService for the resource metric Active Ephemeral Ports. Included in the data is everything you need to know about the service like ReplicaId, PartitionId, NodeName, Metric, Value, ProcessName, ProcessId, ProcessStartTime, etc..
+data is a serialized instance of TelemetryData type in this case, which holds the information that AppObserver (in this case) detected for a service named fabric:/SomeApplication/SomeService for the resource metric Active Ephemeral Ports. Included in the data is everything you need to know about the service like ReplicaId, PartitionId, NodeName, Metric, Value, ProcessName, ProcessId, ProcessStartTime, etc..
 
-In order to parse out the Json-serialized instance of some supported FO data type from the Payload (Message, in the above example), you need to reform the string into well-structured Json:
+In order to parse out the Json-serialized instance of some supported FO data type from the Payload (Message, in the above example), you need to reformat the Message string into well-structured Json:
 
-```SQL
+```KQL
 // TelemetryData type. Json is a single object representation.
 // "data=" will always be the payload name/token for ETW from FO. You must remove it.
 FabricObserverDataEvent
