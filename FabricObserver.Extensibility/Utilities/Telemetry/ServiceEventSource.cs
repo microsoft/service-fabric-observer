@@ -83,56 +83,15 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             Message(finalMessage);
         }
 
-        private const int FOEventId = 42;
-
-        [Event(FOEventId, Level = EventLevel.Verbose, Opcode = EventOpcode.Info)]
-        internal void FabricObserverDataEvent(string data)
-        {
-            if (!IsEnabled())
-            {
-                return;
-            }
-
-            WriteEvent(FOEventId, data);
-        }
-
         [NonEvent]
-        internal void WriteInfo<T>(string eventName, T data)
+        internal void Write<T>(T data, string eventName, EventKeywords keywords)
         {
             var options = new EventSourceOptions
             {
                 ActivityOptions = EventActivityOptions.None,
-                Keywords = Keywords.ResourceUsage,
+                Keywords = keywords,
                 Opcode = EventOpcode.Info,
-                Level = EventLevel.Informational
-            };
-
-            Write(eventName, options, data);
-        }
-
-        [NonEvent]
-        internal void WriteWarning<T>(string eventName, T data)
-        {
-            var options = new EventSourceOptions
-            {
-                ActivityOptions = EventActivityOptions.None,
-                Keywords = Keywords.ErrorOrWarning,
-                Opcode = EventOpcode.Info,
-                Level = EventLevel.Warning,
-            };
-
-            Write(eventName, options, data);
-        }
-
-        [NonEvent]
-        internal void WriteError<T>(string eventName, T data)
-        {
-            var options = new EventSourceOptions
-            {
-                ActivityOptions = EventActivityOptions.None,
-                Keywords = Keywords.ErrorOrWarning,
-                Opcode = EventOpcode.Info,
-                Level = EventLevel.Error,
+                Level = EventLevel.Verbose
             };
 
             Write(eventName, options, data);
