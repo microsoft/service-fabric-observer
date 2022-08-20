@@ -20,6 +20,7 @@ using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 using FabricObserver.Interfaces;
+using System.Security.Cryptography;
 
 namespace FabricObserver.Observers
 {
@@ -309,7 +310,7 @@ namespace FabricObserver.Observers
                 {
                     ProcessResourceDataList(allCpuData, CpuErrorUsageThresholdPct, CpuWarnUsageThresholdPct);
                 }
-
+  
                 // Memory
                 if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
                 {
@@ -437,7 +438,6 @@ namespace FabricObserver.Observers
 
             return Task.CompletedTask;
         }
-
 
         /// <summary>
         /// ReadServiceFabricWindowsEventLog().
@@ -780,7 +780,7 @@ namespace FabricObserver.Observers
                 CpuWarnUsageThresholdPct = threshold;
             }
 
-            var memWarn = GetSettingParameterValue( ConfigurationSectionName, ObserverConstants.FabricSystemObserverMemoryWarningLimitMb);
+            var memWarn = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverMemoryWarningLimitMb);
 
             if (!string.IsNullOrWhiteSpace(memWarn))
             {
@@ -881,7 +881,7 @@ namespace FabricObserver.Observers
                 {
                     try
                     {
-                        process = Process.GetProcessesByName(procName).First();
+                        process = Process.GetProcessesByName(dotnetArg).First();
                     }
                     catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
                     {
@@ -1155,18 +1155,56 @@ namespace FabricObserver.Observers
 
                 var frud = item.Value;
 
-                if (frud.Data.Count() == 0 || frud.AverageDataValue <= 0)
+                if (!frud.Data.Any() || frud.AverageDataValue <= 0)
                 {
                     continue;
                 }
 
                 string procName = frud.Id;
+                int procId = 0;
+
+                try
+                {
+                    if (IsWindows)
+                    {
+                        procId = NativeMethods.GetProcessIdFromName(procName);
+                    }
+                    else
+                    {
+                        if (procName.EndsWith(".dll"))
+                        {
+                            var procs = GetDotnetLinuxProcessesByFirstArgument(procName);
+
+                            if (procs?.Length == 0)
+                            {
+                                continue;
+                            }
+
+                            procId = procs[0].Id;
+                        }
+                        else
+                        {
+                            var procs = Process.GetProcessesByName(procName);
+
+                            if (procs?.Length == 0)
+                            {
+                                continue;
+                            }
+
+                            procId = procs[0].Id;
+                        }
+                    }
+                }
+                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+                {
+                    continue;
+                }
 
                 if (EnableCsvLogging)
                 {
                     var propertyName = frud.Property;
 
-                    /* Log average data value to long-running store (CSV).*/
+                    // Log average data value to long-running store (CSV). \\
 
                     var dataLogMonitorType = propertyName switch
                     {
@@ -1182,24 +1220,24 @@ namespace FabricObserver.Observers
                     // Log pid
                     try
                     {
-                        int procId = -1;
+                        int pId = -1;
                         Process[] ps = !IsWindows ? GetDotnetLinuxProcessesByFirstArgument(frud.Id) : null;
 
                         if (!IsWindows)
                         {
                             if (ps?.Length > 0)
                             {
-                                procId = ps.First().Id;
+                                pId = ps.First().Id;
                             }
                         }
                         else
                         {
-                            procId = NativeMethods.GetProcessIdFromName(frud.Id);
+                            pId = NativeMethods.GetProcessIdFromName(frud.Id);
                         }
 
-                        if (procId > 0)
+                        if (pId > 0)
                         {
-                            CsvFileLogger.LogData(fileName, frud.Id, "ProcessId", "", procId);
+                            CsvFileLogger.LogData(fileName, frud.Id, "ProcessId", "", pId);
                         }
                     }
                     catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
@@ -1212,12 +1250,15 @@ namespace FabricObserver.Observers
                 }
 
                 ProcessResourceDataReportHealth(
-                        frud,
-                        thresholdError,
-                        thresholdWarning,
-                        TTL,
-                        EntityType.Application,
-                        procName);
+                    frud,
+                    thresholdError,
+                    thresholdWarning,
+                    TTL,
+                    EntityType.Application,
+                    procName,
+                    null,
+                    false,
+                    procId);
             }
         }
     }

@@ -758,17 +758,19 @@ namespace FabricObserver.Observers
                         EntityType entityType,
                         string processName = null,
                         ReplicaOrInstanceMonitoringInfo replicaOrInstance = null,
-                        bool dumpOnErrorOrWarning = false) where T : struct
+                        bool dumpOnErrorOrWarning = false,
+                        int processId = 0) where T : struct
         {
             if (data == null)
             {
+                ObserverLogger.LogWarning("ProcessResourceDataReportHealth: data is null.");
                 return;
             }
 
             string thresholdName = "Warning";
             bool warningOrError = false;
             string id = null, appType = null, processStartTime = null;
-            int procId = 0;
+            int procId = processId;
             T threshold = thresholdWarning;
             HealthState healthState = HealthState.Ok;
             Uri appName = null;
@@ -793,9 +795,9 @@ namespace FabricObserver.Observers
                             return;
                         }
 
-                        if (!EnsureProcess(processName, procId))
+                        if (procId != processId)
                         {
-                            ObserverLogger.LogWarning($"ProcessResourceDataReportHealth: Process name {processName} is not mapped to pid {procId}. Exiting.");
+                            ObserverLogger.LogWarning($"ProcessResourceDataReportHealth: Process with id {processId} is no longer running. Exiting.");
                             return;
                         }
 
@@ -826,6 +828,14 @@ namespace FabricObserver.Observers
                 {
                     if (string.IsNullOrWhiteSpace(processName))
                     {
+                        ObserverLogger.LogWarning("ProcessDataReportHealth: processName is missing.");
+                        data.ClearData();
+                        return;
+                    }
+
+                    if (processId == 0)
+                    {
+                        ObserverLogger.LogWarning("ProcessDataReportHealth: processId is invalid.");
                         data.ClearData();
                         return;
                     }
@@ -850,9 +860,8 @@ namespace FabricObserver.Observers
                         }
                         else
                         {
-                            using (Process proc = Process.GetProcessesByName(processName)?.First())
+                            using (Process proc = Process.GetProcessById(procId))
                             {
-                                procId = proc.Id;
                                 processStartTime = proc.StartTime.ToString("o");
                             }
                         }
