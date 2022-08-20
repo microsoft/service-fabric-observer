@@ -20,7 +20,6 @@ using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 using FabricObserver.Interfaces;
-using System.Security.Cryptography;
 
 namespace FabricObserver.Observers
 {
@@ -1168,6 +1167,12 @@ namespace FabricObserver.Observers
                     if (IsWindows)
                     {
                         procId = NativeMethods.GetProcessIdFromName(procName);
+
+                        // No longer running.
+                        if (procId == -1)
+                        {
+                            continue;
+                        }
                     }
                     else
                     {
@@ -1175,6 +1180,7 @@ namespace FabricObserver.Observers
                         {
                             var procs = GetDotnetLinuxProcessesByFirstArgument(procName);
 
+                            // No longer runing.
                             if (procs?.Length == 0)
                             {
                                 continue;
@@ -1194,71 +1200,45 @@ namespace FabricObserver.Observers
                             procId = procs[0].Id;
                         }
                     }
+
+                    if (EnableCsvLogging)
+                    {
+                        var propertyName = frud.Property;
+
+                        // Log average data value to long-running store (CSV). \\
+
+                        var dataLogMonitorType = propertyName switch
+                        {
+                            ErrorWarningProperty.CpuTime => "CPU %",
+                            ErrorWarningProperty.MemoryConsumptionMb => "Working Set MB",
+                            ErrorWarningProperty.ActiveTcpPorts => "TCP Ports",
+                            ErrorWarningProperty.TotalEphemeralPorts => "Ephemeral Ports",
+                            ErrorWarningProperty.AllocatedFileHandles => "File Handles",
+                            ErrorWarningProperty.ThreadCount => "Threads",
+                            _ => propertyName
+                        };
+
+                        // Log pid
+                        CsvFileLogger.LogData(fileName, frud.Id, "ProcessId", "", procId);
+                        CsvFileLogger.LogData(fileName, frud.Id, dataLogMonitorType, "Average", frud.AverageDataValue);
+                        CsvFileLogger.LogData(fileName, frud.Id, dataLogMonitorType, "Peak", Convert.ToDouble(frud.MaxDataValue));
+                    }
+
+                    ProcessResourceDataReportHealth(
+                        frud,
+                        thresholdError,
+                        thresholdWarning,
+                        TTL,
+                        EntityType.Application,
+                        procName,
+                        null,
+                        false,
+                        procId);
                 }
                 catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
                 {
                     continue;
                 }
-
-                if (EnableCsvLogging)
-                {
-                    var propertyName = frud.Property;
-
-                    // Log average data value to long-running store (CSV). \\
-
-                    var dataLogMonitorType = propertyName switch
-                    {
-                        ErrorWarningProperty.CpuTime => "% CPU Time",
-                        ErrorWarningProperty.MemoryConsumptionMb => "Working Set %",
-                        ErrorWarningProperty.ActiveTcpPorts => "Active TCP Ports",
-                        ErrorWarningProperty.TotalEphemeralPorts => "Active Ephemeral Ports",
-                        ErrorWarningProperty.AllocatedFileHandlesPct => "Allocated (in use) File Handles %",
-                        ErrorWarningProperty.ThreadCount => "Threads",
-                        _ => propertyName
-                    };
-
-                    // Log pid
-                    try
-                    {
-                        int pId = -1;
-                        Process[] ps = !IsWindows ? GetDotnetLinuxProcessesByFirstArgument(frud.Id) : null;
-
-                        if (!IsWindows)
-                        {
-                            if (ps?.Length > 0)
-                            {
-                                pId = ps.First().Id;
-                            }
-                        }
-                        else
-                        {
-                            pId = NativeMethods.GetProcessIdFromName(frud.Id);
-                        }
-
-                        if (pId > 0)
-                        {
-                            CsvFileLogger.LogData(fileName, frud.Id, "ProcessId", "", pId);
-                        }
-                    }
-                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
-                    {
-                        
-                    }
-
-                    CsvFileLogger.LogData(fileName, frud.Id, dataLogMonitorType, "Average", frud.AverageDataValue);
-                    CsvFileLogger.LogData(fileName, frud.Id, dataLogMonitorType, "Peak", Convert.ToDouble(frud.MaxDataValue));
-                }
-
-                ProcessResourceDataReportHealth(
-                    frud,
-                    thresholdError,
-                    thresholdWarning,
-                    TTL,
-                    EntityType.Application,
-                    procName,
-                    null,
-                    false,
-                    procId);
             }
         }
     }
