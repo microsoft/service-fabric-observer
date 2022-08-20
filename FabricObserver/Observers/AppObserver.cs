@@ -357,7 +357,8 @@ namespace FabricObserver.Observers
                             EntityType.Service,
                             processName,
                             repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps);
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            processId);
                 }
 
                 // Memory MB - Parent process
@@ -378,7 +379,8 @@ namespace FabricObserver.Observers
                             EntityType.Service,
                             processName,
                             repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps);
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            processId);
                 }
 
                 // Memory Percent - Parent process
@@ -399,7 +401,8 @@ namespace FabricObserver.Observers
                             EntityType.Service,
                             processName,
                             repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps);
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            processId);
                 }
 
                 // TCP Ports - Active - Parent process
@@ -420,7 +423,8 @@ namespace FabricObserver.Observers
                             EntityType.Service,
                             processName,
                             repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps);
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            processId);
                 }
 
                 // TCP Ports Total - Ephemeral (port numbers fall in the dynamic range) - Parent process
@@ -441,7 +445,8 @@ namespace FabricObserver.Observers
                             EntityType.Service,
                             processName,
                             repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps);
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            processId);
                 }
 
                 // TCP Ports Percentage - Ephemeral (port numbers fall in the dynamic range) - Parent process
@@ -462,7 +467,8 @@ namespace FabricObserver.Observers
                             EntityType.Service,
                             processName,
                             repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps);
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            processId);
                 }
 
                 // Allocated (in use) Handles - Parent process
@@ -483,7 +489,8 @@ namespace FabricObserver.Observers
                             EntityType.Service,
                             processName,
                             repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps);
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            processId);
                 }
 
                 // Threads - Parent process
@@ -504,7 +511,8 @@ namespace FabricObserver.Observers
                             EntityType.Service,
                             processName,
                             repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps);
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            processId);
                 }
 
                 // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
@@ -526,7 +534,8 @@ namespace FabricObserver.Observers
                             EntityType.Service,
                             processName,
                             repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps);
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            processId);
                 }           
 
                 // Child proc info telemetry.
