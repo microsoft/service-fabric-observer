@@ -86,6 +86,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         [NonEvent]
         internal void Write<T>(T data, string eventName, EventKeywords keywords)
         {
+            if (!IsEnabled())
+            {
+                return;
+            }
+
             var options = new EventSourceOptions
             {
                 ActivityOptions = EventActivityOptions.None,

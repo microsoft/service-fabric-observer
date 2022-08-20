@@ -739,7 +739,7 @@ namespace FabricObserver.Observers
         }
 
         /// <summary>
-        /// This function *only* processes *numeric* data held in (FabricResourceUsageData (FRUD) instances and generates Application or Node level Health Reports depending on supplied Error and Warning thresholds. 
+        /// This function *only* processes *numeric* data held in (FabricResourceUsageData (FRUD) instances and generates Application, Service, and Node level Health Reports depending on supplied Error and Warning thresholds. 
         /// </summary>
         /// <typeparam name="T">Generic: This represents the numeric type of data this function will operate on.</typeparam>
         /// <param name="data">FabricResourceUsageData (FRUD) instance.</param>
@@ -750,6 +750,7 @@ namespace FabricObserver.Observers
         /// <param name="processName">For service reporting, you must provide a process name for the target service instance. Except for ContainerObserver, where this does not apply.</param>
         /// <param name="replicaOrInstance">Replica or Instance information contained in a type.</param>
         /// <param name="dumpOnErrorOrWarning">Whether or not to dump process if Error threshold has been reached.</param>
+        /// <param name="processId">The id of the service process (AppObserver, FabricSystemObserver supply these, for example).</param>
         public void ProcessResourceDataReportHealth<T>(
                         FabricResourceUsageData<T> data,
                         T thresholdError,
@@ -792,18 +793,20 @@ namespace FabricObserver.Observers
                         if (string.IsNullOrWhiteSpace(processName))
                         {
                             ObserverLogger.LogWarning("ProcessResourceDataReportHealth: Process name is required for service level reporting. Exiting.");
+                            data.ClearData();
                             return;
                         }
 
                         if (procId != processId)
                         {
                             ObserverLogger.LogWarning($"ProcessResourceDataReportHealth: Process with id {processId} is no longer running. Exiting.");
+                            data.ClearData();
                             return;
                         }
 
                         try
                         {
-                            // Accessing Process properties is really expensive for Windows (net core).
+                            // Accessing Process properties is really expensive for Windows (net core), so call the interop function instead.
                             if (IsWindows)
                             {
                                 processStartTime = NativeMethods.GetProcessStartTime(procId).ToString("o");
@@ -846,16 +849,6 @@ namespace FabricObserver.Observers
                     {
                         if (IsWindows)
                         {
-                            procId = NativeMethods.GetProcessIdFromName(processName);
-
-                            if (procId == -1)
-                            {
-                                // Process may no longer be alive or we can't access privileged information (FO running as user with lesser privilege than target process).
-                                // It makes no sense to report on it.
-                                data.ClearData();
-                                return;
-                            }
-
                             processStartTime = NativeMethods.GetProcessStartTime(procId).ToString("o");
                         }
                         else
@@ -1357,15 +1350,27 @@ namespace FabricObserver.Observers
         /// <returns>True if the pid is mapped to the process of supplied name. False otherwise.</returns>
         public bool EnsureProcess(string procName, int procId)
         {
-            // net core's ProcessManager.EnsureState is a CPU bottleneck on Windows.
+            if (string.IsNullOrWhiteSpace(procName) || procId < 1)
+            {
+                return false;
+            }
+
             if (!IsWindows)
             {
-                using (Process proc = Process.GetProcessById(procId))
+                try
                 {
-                    return proc.ProcessName == procName;
+                    using (Process proc = Process.GetProcessById(procId))
+                    {
+                        return proc.ProcessName == procName;
+                    }
+                }
+                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                {
+                    return false;
                 }
             }
 
+            // net core's ProcessManager.EnsureState is a CPU bottleneck on Windows.
             return NativeMethods.GetProcessNameFromId(procId) == procName;
         }
 
