@@ -35,13 +35,15 @@ namespace FabricObserverTests
     [TestClass]
     public class ObserverTests
     {
+        // Change these to suit your env.
         private const string NodeName = "_Node_0";
+        private const string EtwTestsLogFolder = @"C:\temp\FOTests";
         private static readonly Uri TestServiceName = new Uri("fabric:/app/service");
         private static readonly bool IsSFRuntimePresentOnTestMachine = IsLocalSFRuntimePresent();
         private static readonly CancellationToken Token = new CancellationToken();
         private static readonly ICodePackageActivationContext CodePackageContext = null;
         private static readonly StatelessServiceContext TestServiceContext = null;
-        private static readonly Logger _logger = new Logger("TestLogger", @"C:\temp\FOTests", 1)
+        private static readonly Logger _logger = new Logger("TestLogger", EtwTestsLogFolder, 1)
         {
             EnableETWLogging = true,
             EnableVerboseLogging = true,
@@ -417,7 +419,14 @@ namespace FabricObserverTests
             // Remove any files generated.
             try
             {
-                var outputFolder = Path.Combine(Environment.CurrentDirectory, "observer_logs");
+                var outputFolder = Path.Combine(Environment.CurrentDirectory, "fabric_observer_logs");
+
+                if (Directory.Exists(outputFolder))
+                {
+                    Directory.Delete(outputFolder, true);
+                }
+
+                outputFolder = EtwTestsLogFolder;
 
                 if (Directory.Exists(outputFolder))
                 {
