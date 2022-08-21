@@ -135,7 +135,7 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Logs EventSource events as specified event name using T data as payload.
         /// </summary>
-        /// <typeparam name="T">Generic type. Must be Serializable.</typeparam>
+        /// <typeparam name="T">Generic type. Must be a class or struct attributed as EventData (EventSource.EventDataAttribute).</typeparam>
         /// <param name="eventName">The name of the ETW event. This corresponds to the table name in Kusto.</param>
         /// <param name="eventData">The data of generic type that will be the event Payload.</param>
         public void LogEtw<T>(string eventName, T eventData)
