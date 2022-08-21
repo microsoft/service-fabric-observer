@@ -9,10 +9,12 @@ using System.Diagnostics.Tracing;
 using System.Fabric.Health;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Runtime.Serialization;
 using System.Threading;
 using FabricObserver.Observers.Interfaces;
 using FabricObserver.Observers.Utilities.Telemetry;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using NLog;
 using NLog.Config;
 using NLog.Targets;
@@ -133,24 +135,24 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Logs EventSource events as specified event name using T data as payload.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="eventName"></param>
-        /// <param name="data"></param>
-        public void LogEtw<T>(string eventName, T data)
+        /// <typeparam name="T">Generic type. Must be a class or struct attributed as EventData (EventSource.EventDataAttribute).</typeparam>
+        /// <param name="eventName">The name of the ETW event. This corresponds to the table name in Kusto.</param>
+        /// <param name="eventData">The data of generic type that will be the event Payload.</param>
+        public void LogEtw<T>(string eventName, T eventData)
         {
-            if (!EnableETWLogging || data == null || string.IsNullOrWhiteSpace(eventName))
+            if (!EnableETWLogging || eventData == null || string.IsNullOrWhiteSpace(eventName))
             {
                 return;
             }
 
-            if (!JsonHelper.TrySerializeObject(data, out string telemetryData))
+            if (!JsonHelper.TrySerializeObject(eventData, out string data))
             {
                 return;
             }
 
             EventKeywords keywords = ServiceEventSource.Keywords.ResourceUsage;
 
-            if (data is TelemetryData telemData)
+            if (eventData is TelemetryData telemData)
             {
                 if (telemData.HealthState == HealthState.Error || telemData.HealthState == HealthState.Warning)
                 {
@@ -158,12 +160,7 @@ namespace FabricObserver.Observers.Utilities
                 }
             }
 
-            var anonType = new
-            {
-                data = telemetryData
-            };
-
-            ServiceEventSource.Current.Write(anonType, eventName, keywords);
+            ServiceEventSource.Current.Write(new { data }, eventName, keywords);
         }
 
         public bool TryWriteLogFile(string path, string content)
