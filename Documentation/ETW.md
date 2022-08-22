@@ -38,22 +38,23 @@ In order to parse out the Json-serialized instance of some supported FO data typ
 
 ```KQL
 // TelemetryData type. Json is a single object representation.
-// "data=" will always be the payload name/token for ETW from FO. You must remove it.
+// data is the payload name. You must remove it.
 FabricObserverDataEvent
-| where PreciseTimeStamp >= ago(25min) and Tenant == "uswest2-test-42"
+| where PreciseTimeStamp >= ago(1h) and Tenant == "uswest2-test-42"
 // Look for payload that is a Json object.
 | where Message startswith "data=\"{"
-// remove opening payload name/token and opening quote character.
+// remove opening payload name and opening quote
 | extend reData = replace_string(Message, "data=\"", "")
-// remove closing quote character.
+// remove closing quote
 | extend reData = replace_string(reData, "}\"", "}")
 // Now, we have Json..
 | extend data = parse_json(reData)
 | extend AppName = data.ApplicationName, ServiceName = data.ServiceName, Metric = data.Metric, Result = data.Value, ReplicaId = data.ReplicaId, PartitionId = data.PartitionId,
 ProcessId = data.ProcessId, ProcessName = data.ProcessName, ProcessStartTime = data.ProcessStartTime, ServicePackageActivationMode = data.ServicePackageActivationMode, ReplicaRole = data.ReplicaRole,
-ServiceKind = data.ServiceKind, Observer = data.ObserverName, NodeName = data.NodeName, NodeType = data.NodeType
-| where Observer == "AppObserver"
-| project PreciseTimeStamp, ServiceName, NodeName, NodeType, Metric, Result, ReplicaId, PartitionId, ProcessId, ProcessName, ProcessStartTime, ReplicaRole, Observer
+ServiceKind = data.ServiceKind, Observer = data.ObserverName, NodeName = data.NodeName, NodeType = data.NodeType, Property = data.Property
+//| where Observer == "NodeObserver"
+//| where Metric == "CPU Time (Percent)" and Result > 0
+| project PreciseTimeStamp, ServiceName, NodeName, NodeType, Metric, Result, ReplicaId, PartitionId, ProcessId, ProcessName, ProcessStartTime, ReplicaRole, Observer, Property
 | sort by PreciseTimeStamp desc;
 
 // ChildProcessTelemetryData/ChildProcessInfo are Json arrays.
@@ -63,12 +64,15 @@ FabricObserverDataEvent
 | where Message startswith "data=\"["
 | extend reData = replace_string(Message, "data=\"", "")
 | extend reData = replace_string(reData, "]\"", "]")
-// Now, we have Json..
 | extend data = parse_json(reData)
-// These are collections.
-| extend ServiceName = data[0].ServiceName
-| extend ChildProcInfo = data[0].ChildProcessInfo
-| project PreciseTimeStamp, ServiceName, ChildProcInfo
+// data is a collection (array). Expand into rows.
+| mv-expand data
+| extend ServiceName = data.ServiceName
+| extend Metric = data.Metric
+// Parent + child processes culmulative usage value for some metric
+| extend CulmulativeValue = data.Value
+| extend ChildProcInfo = data.ChildProcessInfo
+| project PreciseTimeStamp, ServiceName, Metric, CulmulativeValue, ChildProcInfo
 | sort by PreciseTimeStamp desc
 ```
 For information events like above (raw metrics), HealthState is always 0 (Invalid). When some metric crosses the line for a threshold you supplied, HealthState will be 2 (Warning) or 3 (Error), depending upon your related threshold configuration settings.
