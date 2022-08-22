@@ -4,13 +4,10 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
-using System.Fabric.Description;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;

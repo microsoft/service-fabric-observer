@@ -21,7 +21,6 @@ using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 using FabricObserver.Utilities.ServiceFabric;
-using Newtonsoft.Json;
 
 namespace FabricObserver.Observers
 {
