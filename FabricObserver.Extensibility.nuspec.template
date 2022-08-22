@@ -4,7 +4,8 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.1</version>
 		<releaseNotes>
-
+- Performance improvements (Windows).
+- Updated ETW implementation: FabricObserverDataEvent payloads are now Json-serialized *TelemetryData instances.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
