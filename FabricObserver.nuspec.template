@@ -4,14 +4,15 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.1.960</version>
 		<releaseNotes>
-- Updated ETW implementation.
-- New ETW payload format (Json-serialized instance of *TelemetryData or an anonymous type). This breaks existing KQL queries. Please see ETW documentation for how to parse the new format using parse_json.
-- Added ETW documentation with sample KQL.
-- AppObserver: Updated ChildProcessInfo to include ProcessId of child process.
-- Performance improvements (AppObserver).
-- Bug fix: FO will no longer put itself into Warning with an infinite TTL health event when some observer does not complete within user-specified max run time.
-- Bug fix: AppObserver - Same named child processes will now be processed correctly.
-- DiskObserver: TelemetryData Property value is now "[drive] [Metric name]", e.g., on Windows, "C: Disk Space Usage (Percent)".
+		- Updated ETW implementation.
+		- New ETW payload format: Json-serialized instances of *TelemetryData or an anonymous types. This breaks existing KQL queries. See new ETW documentation for info.
+		- AppObserver: Updated ChildProcessInfo to include ProcessId of child process.
+		- Bug fix: FO will no longer put itself into Warning with an infinite TTL health event when some observer does not complete within user-specified max run time.
+		- Bug fix: AppObserver - Same named child processes will now be processed correctly.
+		- Bug fix: FabricSystemObserver regression in reporting has been resolved.
+		- DiskObserver: TelemetryData Property value is now "[drive] [Metric name]", e.g., on Windows, "C: Disk Space Usage (Percent)".
+		- Performance improvements.
+		- Added ETW documentation with sample KQL.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
