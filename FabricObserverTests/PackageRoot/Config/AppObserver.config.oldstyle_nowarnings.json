@@ -32,5 +32,11 @@
     "cpuWarningLimitPercent": 60,
     "memoryWarningLimitPercent": 30,
     "memoryWarningLimitMb": 500
+  },
+  {
+    "targetApp": "fabric:/Voting",
+    "cpuWarningLimitPercent": 60,
+    "memoryWarningLimitPercent": 30,
+    "memoryWarningLimitMb": 500
   }
 ]

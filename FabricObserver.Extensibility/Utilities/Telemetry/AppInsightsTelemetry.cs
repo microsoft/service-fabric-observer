@@ -318,7 +318,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                         { "ProcessName", telemData.ProcessName },
                         { "ChildProcessInfo", JsonConvert.SerializeObject(telemData.ChildProcessInfo) },
                         { "PartitionId", telemData.PartitionId },
-                        { "ReplicaId", telemData.ReplicaId },
+                        { "ReplicaId", telemData.ReplicaId.ToString() },
                         { "Source", ObserverConstants.AppObserverName },
                         { "NodeName", telemData.NodeName },
                         { "OS", OS }
@@ -553,7 +553,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                             long value,
                             CancellationToken cancellationToken)
         {
-            await ReportMetricAsync(role, id.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken).ConfigureAwait(false);
+            await ReportMetricAsync(role, id.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken);
         }
 
         /// <summary>

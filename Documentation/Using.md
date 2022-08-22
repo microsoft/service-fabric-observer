@@ -576,7 +576,13 @@ $appParams = @{ "FabricSystemObserverEnabled" = "true"; "FabricSystemObserverMem
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.2.0.831 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.2.1.960 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```  
 
-Note: On *Linux*, this will restart FO processes (one at a time, UD Walk with safety checks) due to the way Linux Capabilites work. In a nutshell, for any kind of application upgrade, we have to re-run the FO setup script to get the Capabilities in place. For Windows, FO processes will NOT be restarted.
+**Important**: This action will overwrite previous changes that were made this way. If you want to preserve any earlier changes, then you will need to
+supply those parameter values again along with the new ones. This is because these updates reset all observers' ConfigurationSettings. In a future release, this
+behavior will be changed, but for now this is how it works.
+
+**Important**: On *Linux*, this will restart FO processes (one at a time, UD Walk with safety checks) due to the way Linux Capabilites work. 
+In a nutshell, for any kind of application upgrade, we have to re-run the FO setup script to get the Capabilities in place, which requires restarting FabricObserver (which is just fine given that it is a stateless service).
+For Windows, FO processes will NOT be restarted.

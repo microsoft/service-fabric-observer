@@ -120,7 +120,7 @@ namespace FabricObserver.Observers
                 apps.AddRange(appList.ToList());
 
                 // Wait a second before grabbing the next batch of apps..
-                await Task.Delay(TimeSpan.FromSeconds(1), Token).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromSeconds(1), Token);
             }
 
             var totalNumberOfDeployedSFApps = apps.Count;
@@ -132,7 +132,7 @@ namespace FabricObserver.Observers
                                         app.ApplicationName,
                                         null,
                                         AsyncClusterOperationTimeoutSeconds,
-                                        token).ConfigureAwait(false);
+                                        token);
 
                 totalNumberOfDeployedServices += services.Count;
                 servicesInWarningError += services.Count(s => s.HealthState == HealthState.Warning || s.HealthState == HealthState.Error);
@@ -143,7 +143,7 @@ namespace FabricObserver.Observers
                                             service.ServiceName,
                                             null,
                                             AsyncClusterOperationTimeoutSeconds,
-                                            token).ConfigureAwait(false);
+                                            token);
 
                     totalNumberOfPartitions += partitions.Count;
                     partitionsInWarningError += partitions.Count(p => p.HealthState == HealthState.Warning || p.HealthState == HealthState.Error);
@@ -154,7 +154,7 @@ namespace FabricObserver.Observers
                                                 partition.PartitionInformation.Id,
                                                 null,
                                                 AsyncClusterOperationTimeoutSeconds,
-                                                token).ConfigureAwait(false);
+                                                token);
 
                         totalNumberOfReplicas += replicas.Count;
                         replicasInWarningError += replicas.Count(r => r.HealthState == HealthState.Warning || r.HealthState == HealthState.Error);
@@ -271,7 +271,7 @@ namespace FabricObserver.Observers
                 NodeName = NodeName,
                 Observer = ObserverName,
                 Property = "SomeUniquePropertyForMyHealthEvent",
-                EntityType = EntityType.Node, // this is an FO 3.2.0.831 required change.
+                EntityType = EntityType.Node, // this is an FO 3.2.1.831 required change.
                 //ReportType = HealthReportType.Node, // this is gone in FO 3.2.x.
                 State = HealthState.Ok
             };

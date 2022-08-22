@@ -11,7 +11,6 @@ using System.Fabric.Query;
 using System.IO;
 using System.Linq;
 using System.Management;
-using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
 using System.Threading;
@@ -30,7 +29,6 @@ namespace FabricObserver.Observers
     public sealed class OSObserver : ObserverBase
     {
         private const string AuStateUnknownMessage = "Unable to determine Windows AutoUpdate state.";
-        private readonly bool isWindows;
         private string osReport;
         private string osStatus;
         private bool auStateUnknown;
@@ -52,7 +50,7 @@ namespace FabricObserver.Observers
         /// <param name="context">The StatelessServiceContext instance.</param>
         public OSObserver(StatelessServiceContext context) : base(null, context)
         {
-            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -66,7 +64,7 @@ namespace FabricObserver.Observers
             Token = token;
 
             // This only makes sense for Windows and only for non-dev clusters.
-            if (isWindows)
+            if (IsWindows)
             {
                 await InitializeAUCheckAsync();
 
@@ -207,7 +205,7 @@ namespace FabricObserver.Observers
                 HealthReporter.ReportHealthToServiceFabric(report);
 
                 // Windows Update automatic download enabled?
-                if (isWindows && isAUAutomaticDownloadEnabled)
+                if (IsWindows && isAUAutomaticDownloadEnabled)
                 {
                     CurrentWarningCount++;
 
@@ -267,7 +265,7 @@ namespace FabricObserver.Observers
 
         private async Task InitializeAUCheckAsync()
         {
-            if (!isWindows)
+            if (!IsWindows)
             {
                 return;
             }
@@ -292,7 +290,7 @@ namespace FabricObserver.Observers
                                                 null,
                                                 AsyncClusterOperationTimeoutSeconds,
                                                 Token), 
-                                    Token).ConfigureAwait(false);
+                                    Token);
 
                 return allSystemServices.Count > 0 && allSystemServices.Count(
                                 service => service.ServiceTypeName.Equals(
@@ -306,10 +304,10 @@ namespace FabricObserver.Observers
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "isWindows check exits the function immediately if not Windows...")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "IsWindows check exits the function immediately if not Windows...")]
         private string GetWindowsHotFixes(bool generateKbUrl, CancellationToken token)
         {
-            if (!isWindows)
+            if (!IsWindows)
             {
                 return null;
             }
@@ -380,7 +378,7 @@ namespace FabricObserver.Observers
 
         private void CheckWuAutoDownloadEnabled()
         {
-            if (!isWindows)
+            if (!IsWindows)
             {
                 return;
             }
@@ -399,7 +397,7 @@ namespace FabricObserver.Observers
                     wuLibAutoUpdates.Settings.NotificationLevel == AutomaticUpdatesNotificationLevel.aunlScheduledInstallation;
             }
             catch (Exception e) when (
-                    e is COMException ||
+                    e is System.Runtime.InteropServices.COMException ||
                     e is InvalidOperationException ||
                     e is SecurityException ||
                     e is Win32Exception)
@@ -430,7 +428,7 @@ namespace FabricObserver.Observers
                 string clusterManifestXml =
                     !string.IsNullOrWhiteSpace(ClusterManifestPath) ? await File.ReadAllTextAsync(ClusterManifestPath, token)
                                                                     : await FabricClientInstance.ClusterManager.GetClusterManifestAsync(
-                                                                                  AsyncClusterOperationTimeoutSeconds, Token).ConfigureAwait(false);
+                                                                                  AsyncClusterOperationTimeoutSeconds, Token);
 
                 (int lowPortApp, int highPortApp) =
                     NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(NodeType, clusterManifestXml);
@@ -449,7 +447,7 @@ namespace FabricObserver.Observers
 
                 _ = sb.AppendLine($"LastBootUpTime*: {osInfo.LastBootUpTime}");
 
-                if (isWindows)
+                if (IsWindows)
                 {
                     // WU AutoUpdate - Automatic Download enabled.
                     if (IsAUCheckSettingEnabled)
@@ -512,12 +510,12 @@ namespace FabricObserver.Observers
                 }
 
                 string virtMem = "AvailableVirtualMemory";
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                if (!IsWindows)
                 {
                     virtMem = "SwapFree";
                 }
 
-                _ = sb.AppendLine($"AvailablePhysicalMemory*: {(RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? Math.Round(osInfo.AvailableMemoryKB / 1048576.0, 2) : Math.Round(osInfo.FreePhysicalMemoryKB / 1048576.0, 2))} GB");
+                _ = sb.AppendLine($"AvailablePhysicalMemory*: {(!IsWindows ? Math.Round(osInfo.AvailableMemoryKB / 1048576.0, 2) : Math.Round(osInfo.FreePhysicalMemoryKB / 1048576.0, 2))} GB");
                 _ = sb.AppendLine($"{virtMem}*: {Math.Round(osInfo.FreeVirtualMemoryKB / 1048576.0, 2)} GB");
 
                 // Disk
@@ -533,7 +531,7 @@ namespace FabricObserver.Observers
 
                     string drvSize;
 
-                    if (isWindows)
+                    if (IsWindows)
                     {
                         string systemDrv = "Data";
 
@@ -556,7 +554,7 @@ namespace FabricObserver.Observers
 
                 string osHotFixes = string.Empty;
 
-                if (isWindows)
+                if (IsWindows)
                 {
                     osHotFixes = GetWindowsHotFixes(true, token);
 
@@ -571,7 +569,7 @@ namespace FabricObserver.Observers
                 osReport = sb.ToString();
                 string kbOnlyHotFixes = null;
 
-                if (isWindows)
+                if (IsWindows)
                 {
                     kbOnlyHotFixes = GetWindowsHotFixes(false, token)?.Replace($"{Environment.NewLine}", ", ").TrimEnd(',');
                 }
@@ -587,7 +585,7 @@ namespace FabricObserver.Observers
                     LastBootUpTime = osInfo.LastBootUpTime,
                     WindowsUpdateAutoDownloadEnabled = isAUAutomaticDownloadEnabled,
                     TotalMemorySizeGB = (int)osInfo.TotalVisibleMemorySizeKB / 1048576,
-                    AvailablePhysicalMemoryGB = RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? Math.Round(osInfo.AvailableMemoryKB / 1048576.0, 2) : Math.Round(osInfo.FreePhysicalMemoryKB / 1048576.0, 2),
+                    AvailablePhysicalMemoryGB = !IsWindows ? Math.Round(osInfo.AvailableMemoryKB / 1048576.0, 2) : Math.Round(osInfo.FreePhysicalMemoryKB / 1048576.0, 2),
                     FreeVirtualMemoryGB = Math.Round(osInfo.FreeVirtualMemoryKB / 1048576.0, 2),
                     LogicalProcessorCount = logicalProcessorCount,
                     LogicalDriveCount = logicalDriveCount,

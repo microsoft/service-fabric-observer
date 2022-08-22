@@ -4,14 +4,13 @@
 		<ProjectGuid>{48C88BEB-9960-4183-861B-DF25C193E4C9}</ProjectGuid>
 		<RootNamespace>FabricObserverTests</RootNamespace>
 		<TargetFramework>netcoreapp3.1</TargetFramework>
-		<PlatformTarget>x64</PlatformTarget>
 		<NoWarn>CS0414</NoWarn>
 		<AssemblyVersion>1.0.0.0</AssemblyVersion>
 		<FileVersion>1.0.0.0</FileVersion>
 		<Copyright>Copyright ©  2020</Copyright>
 		<Product>FabricObserverTests</Product>
 		<AssemblyTitle>FabricObserverTests</AssemblyTitle>
-		<Platforms>AnyCPU;x64</Platforms>
+		<Platforms>x64</Platforms>
 	</PropertyGroup>
 	<ItemGroup>
 		<Compile Remove="IMockCodePackageActivationContext.cs" />
@@ -36,10 +35,10 @@
 		</None>
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.11.0" />
-		<PackageReference Include="MSTest.TestAdapter" Version="2.2.7" />
-		<PackageReference Include="MSTest.TestFramework" Version="2.2.7" />
-		<PackageReference Include="coverlet.collector" Version="3.1.0">
+		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.2.0" />
+		<PackageReference Include="MSTest.TestAdapter" Version="2.2.10" />
+		<PackageReference Include="MSTest.TestFramework" Version="2.2.10" />
+		<PackageReference Include="coverlet.collector" Version="3.1.2">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
@@ -104,6 +103,9 @@
 		</None>
 		<None Update="PackageRoot\Config\ContainerObserver.config.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="TestApp42.zip">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
 </Project>

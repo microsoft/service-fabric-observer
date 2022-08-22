@@ -19,8 +19,9 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         public double Value;
         public int ProcessId;
         public string ProcessName;
+        public string ProcessStartTime;
         public string PartitionId;
-        public string ReplicaId;
+        public long ReplicaId;
         public string NodeName;
         public int ChildProcessCount;
         public List<ChildProcessInfo> ChildProcessInfo;

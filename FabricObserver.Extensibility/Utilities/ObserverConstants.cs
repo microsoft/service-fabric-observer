@@ -170,5 +170,11 @@ namespace FabricObserver.Observers.Utilities
         public const string Undefined = "Undefined";
         public const string ClusterTypePaasV1 = "PaasV1";
         public const string ClusterTypeStandalone = "Standalone";
+
+        // ETW
+        public const string PayloadNameChildProcessTelemetryData = "childProcessTelemetryData";
+        public const string PayloadNameTelemetryData = "telemetryData";
+        public const string PayloadNameMachineTelemetryData = "machineTelemetryData";
+        public const string PayloadNameAnonData = "anonData";
     }
 }

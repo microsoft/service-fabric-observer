@@ -40,6 +40,10 @@ namespace FabricObserver.Observers.Utilities
 
                 return instance;
             }
+            set
+            {
+                instance = value;
+            }
         }
 
         protected Logger Logger 
