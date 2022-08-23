@@ -1,11 +1,13 @@
 ## FabricObserver ETW Support
 
-FabricObserver employs EventSource events for ETW. There are two key pieces to this support. This is a feature typically used by internal Microsoft teams. Generally, you should disable this feature unless
-you have a way to push EventSource ETW to Azure Kusto.
+> This is a feature typically used by internal Microsoft teams. Generally, you should disable this feature unless
+you have a way to push EventSource ETW events to Azure Kusto.
 
-- FabricObserverETWProvider is the default name of the EventSource provider. You can customize this name by changing
-the value of the Application parameter ObserverManagerETWProviderName. Doing so is unnecessary unless you have a more advanced scenario (like multiple instance of FO running on the same node).
-- FabricObserverDataEvent is the name of each EventSource event that FabricObserver emits. 
+FabricObserver employs EventSource events for ETW. There are two key pieces to this support. 
+
+- ```FabricObserverETWProvider``` is the default name of the EventSource provider. You can customize this name by changing
+the value of the Application parameter ```ObserverManagerETWProviderName```. Doing so is unnecessary unless you have a more advanced scenario (like multiple instances of FO running on the same node).
+- ```FabricObserverDataEvent``` is the name of each EventSource event that FabricObserver emits. 
 
 You have to enable ETW for each observer that you want to receive ETW from. You do this in ApplicationManifest.xml: 
 
@@ -23,9 +25,9 @@ You have to enable ETW for each observer that you want to receive ETW from. You 
     <Parameter Name="SFConfigurationObserverEnableEtw" DefaultValue="false" />
 ```
 
-By default, ObserverManager's EnableETWProvider setting (also located in ApplicationManifest.xml) is enabled. If you disable this, then no ETW will be generated regardless of the Observer-specific settings you provide. Note that AppObserver is enabled to emit ETW events by default for historical reasons. As mentioned above, unless this feature is useful to you, disable it.
+By default, ObserverManager's ```EnableETWProvider``` setting (also located in ApplicationManifest.xml) is enabled. If you disable this, then no ETW will be generated regardless of the Observer-specific settings you provide. Note that AppObserver is enabled to emit ETW events by default for historical reasons. As mentioned above, unless this feature is useful to you, disable it.
 
-Let's take a look at an example of an event that is ingested into the FabricObserverDataEvent Kusto table.
+Let's take a look at an example of an event that is ingested into the ```FabricObserverDataEvent``` Kusto table.
 
 ``` JSON
 "Message": data="{"ApplicationName":"fabric:/SomeApplication","ApplicationType":"ResourceCentralType","Code":null,"ContainerId":null,"ClusterId":"undefined","Description":null,"EntityType":2,"HealthState":0,"Metric":"Active Ephemeral Ports","NodeName":"MW2PPF7D8279821","NodeType":"AZSM","ObserverName":"AppObserver","OS":"Windows","PartitionId":"a56a62d7-69fd-4f5f-a5fb-caf8b84b537f","ProcessId":24564,"ProcessName":"SomeService","Property":null,"ProcessStartTime":"2022-08-18T15:45:27.2901800Z","ReplicaId":133053111176036935,"ReplicaRole":1,"ServiceKind":1,"ServiceName":"fabric:/SomeApplication/SomeService","ServicePackageActivationMode":0,"Source":"AppObserver","Value":133.0}"
@@ -76,7 +78,7 @@ FabricObserverDataEvent
 | sort by PreciseTimeStamp desc
 ```
 For information events like above (raw metrics), HealthState is always 0 (Invalid). When some metric crosses the line for a threshold you supplied, HealthState will be 2 (Warning) or 3 (Error), depending upon your related threshold configuration settings.
-FO emits more than Json-serialized TelemetryData ETW events. It also emits Json-serialized ChildProcessTelemetryData events (see above), MachineTelemetryData events (OSObserver emits these), and anonymously typed events (Json-serialized anonymous data type which is typically something like an informational or warning event from some observer or ObserverManager that is not a custom FO data type (class) related resource usage monitoring). 
+FO emits more than Json-serialized TelemetryData ETW events. It also emits Json-serialized ChildProcessTelemetryData events (see above), MachineTelemetryData events (OSObserver emits these), and anonymously typed events (Json-serialized anonymous data type which is typically something like an informational or warning event from some observer or ObserverManager that is not a custom FO data type (class) related to resource usage). 
 
 ### API
 
@@ -85,3 +87,6 @@ For [observer plugin](Plugins.md) authors, you can use your own event name and g
 ```C# 
 ObserverLogger.LogEtw("MyEventName", myObj);
 ```
+
+Note that ```T``` must be a type marked with ```EventSourceAttribute``` attribute or an anonymous type (e.g., ```new { myField = "foo", myOtherField = 0 }```). For the non-anonymous type case, the class must be serializble to Json string.
+
