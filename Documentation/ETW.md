@@ -88,5 +88,5 @@ For [observer plugin](Plugins.md) authors, you can use your own event name and g
 ObserverLogger.LogEtw("MyEventName", myObj);
 ```
 
-Note that ```T``` must be a type marked with ```EventSourceAttribute``` attribute or an anonymous type (e.g., ```new { myField = "foo", myOtherField = 0 }```). For the non-anonymous type case, the class must be serializble to Json string.
+Note that ```T``` must be a type marked with ```EventSourceAttribute``` attribute or an anonymous type (e.g., ```new { myField = "foo", myOtherField = 0 }```). For the non-anonymous type case, the class must be serializable to Json string.
 
