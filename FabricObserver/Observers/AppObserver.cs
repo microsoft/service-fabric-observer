@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
+using System.Fabric.Description;
 using System.Fabric.Health;
 using System.Fabric.Query;
 using System.IO;
@@ -16,6 +17,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
 using FabricObserver.Interfaces;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
@@ -159,7 +161,7 @@ namespace FabricObserver.Observers
 
         public override async Task ObserveAsync(CancellationToken token)
         {
-            ObserverLogger.LogInfo($"Started ObserveAsync...");
+            ObserverLogger.LogInfo($"Started ObserveAsync.");
 
             if (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
@@ -209,7 +211,7 @@ namespace FabricObserver.Observers
 
             CleanUp();
             _stopwatch.Reset();
-            ObserverLogger.LogInfo($"Completed ObserveAsync...");
+            ObserverLogger.LogInfo($"Completed ObserveAsync.");
             LastRunDateTime = DateTime.Now;
         }
        
@@ -220,7 +222,7 @@ namespace FabricObserver.Observers
                 return Task.CompletedTask;
             }
 
-            ObserverLogger.LogInfo($"Started ReportAsync...");
+            ObserverLogger.LogInfo($"Started ReportAsync.");
 
             //DEBUG
             //var stopwatch = Stopwatch.StartNew();
@@ -368,6 +370,22 @@ namespace FabricObserver.Observers
                     if (hasChildProcs)
                     {
                         ProcessChildProcs(AllAppMemDataMb, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                    }
+
+                    // RG Report.
+                    if (repOrInst.RGEnabled && repOrInst.RGMemoryLimitMb > 0)
+                    {
+                        ProcessResourceDataReportHealth(
+                            parentFrud,
+                            0,
+                            (float)(repOrInst.RGMemoryLimitMb * 0.90),
+                            TTL,
+                            EntityType.Service,
+                            processName,
+                            repOrInst,
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            processId,
+                            true);
                     }
 
                     ProcessResourceDataReportHealth(
@@ -554,7 +572,7 @@ namespace FabricObserver.Observers
 
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"ReportAsync run duration with parallel: {stopwatch.Elapsed}");
-            ObserverLogger.LogInfo($"Completed ReportAsync...");
+            ObserverLogger.LogInfo($"Completed ReportAsync.");
             return Task.CompletedTask;
         }
 
@@ -562,7 +580,7 @@ namespace FabricObserver.Observers
         // be up to date.
         public async Task<bool> InitializeAsync()
         {
-            ObserverLogger.LogInfo($"Initializing...");
+            ObserverLogger.LogInfo($"Initializing AppObserver.");
             ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
             _userTargetList = new List<ApplicationInfo>();
             _deployedTargetList = new List<ApplicationInfo>();
@@ -741,7 +759,7 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            ObserverLogger.LogInfo($"Started processing of global (*/all) settings from appObserver.config.json...");
+            ObserverLogger.LogInfo($"Started processing of global (*/all) settings from appObserver.config.json.");
 
             ApplicationInfo application = _userTargetList.First(app => app.TargetApp?.ToLower() == "all" || app.TargetApp == "*");
 
@@ -877,12 +895,12 @@ namespace FabricObserver.Observers
 
             // Remove the All/* config item.
              _ = _userTargetList.Remove(application);
-            ObserverLogger.LogInfo($"Completed processing of global (*/all) settings from appObserver.config.json...");
+            ObserverLogger.LogInfo($"Completed processing of global (*/all) settings from appObserver.config.json.");
         }
 
         private void FilterTargetAppFormat()
         {
-            ObserverLogger.LogInfo($"Evaluating targetApp format. Will attempt to correct malformed values, if any...");
+            ObserverLogger.LogInfo($"Evaluating targetApp format. Will attempt to correct malformed values, if any.");
             for (int i = 0; i < _userTargetList.Count; i++)
             {
                 var target = _userTargetList[i];
@@ -971,12 +989,12 @@ namespace FabricObserver.Observers
 
                 }
             }
-            ObserverLogger.LogInfo($"Completed targetApp evaluation...");
+            ObserverLogger.LogInfo($"Completed targetApp evaluation.");
         }
 
         private async Task<bool> ProcessJSONConfigAsync()
         {
-            ObserverLogger.LogInfo($"Processing Json configuration...");
+            ObserverLogger.LogInfo($"Processing Json configuration.");
             if (!File.Exists(JsonConfigPath))
             {
                 string message = $"Will not observe resource consumption on node {NodeName} as no configuration file has been supplied.";
@@ -1130,7 +1148,7 @@ namespace FabricObserver.Observers
                 IsUnhealthy = true;
                 return false;
             }
-            ObserverLogger.LogInfo($"Completed processing Json configuration...");
+            ObserverLogger.LogInfo($"Completed processing Json configuration.");
             return true;
         }
 
@@ -1139,7 +1157,7 @@ namespace FabricObserver.Observers
         /// </summary>
         private void SetPropertiesFromApplicationSettings()
         {
-            ObserverLogger.LogInfo($"Setting properties from application parameters...");
+            ObserverLogger.LogInfo($"Setting properties from application parameters.");
             
             // TODO Right another TEST....
             // Config path.
@@ -1253,7 +1271,7 @@ namespace FabricObserver.Observers
                 // Observers that monitor LVIDs should ensure the static ObserverManager.CanInstallLvidCounter is true before attempting to monitor LVID usage.
                 EnableKvsLvidMonitoring = enableLvidMonitoring && ObserverManager.IsLvidCounterEnabled;
             }
-            ObserverLogger.LogInfo($"Completed setting properties from application parameters...");
+            ObserverLogger.LogInfo($"Completed setting properties from application parameters.");
         }
 
         private void ProcessChildProcs<T>(
@@ -1271,7 +1289,7 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            ObserverLogger.LogInfo($"Started ProcessChildProcs...");
+            ObserverLogger.LogInfo($"Started ProcessChildProcs.");
             try
             { 
                 var (childProcInfo, Sum) = TupleProcessChildFruds(childFruds, repOrInst, appInfo, token);
@@ -1294,7 +1312,7 @@ namespace FabricObserver.Observers
             {
                 ObserverLogger.LogWarning($"ProcessChildProcs - Failure processing descendants:{Environment.NewLine}{e}");
             }
-            ObserverLogger.LogInfo($"Completed ProcessChildProcs...");
+            ObserverLogger.LogInfo($"Completed ProcessChildProcs.");
         }
 
         private (ChildProcessTelemetryData childProcInfo, double Sum) TupleProcessChildFruds<T>(
@@ -1303,7 +1321,7 @@ namespace FabricObserver.Observers
                                                                          ApplicationInfo app,
                                                                          CancellationToken token) where T : struct
         {
-            ObserverLogger.LogInfo($"Started TupleProcessChildFruds...");
+            ObserverLogger.LogInfo($"Started TupleProcessChildFruds.");
             var childProcs = repOrInst.ChildProcesses;
 
             if (childProcs == null || childProcs.Count == 0 || token.IsCancellationRequested)
@@ -1514,7 +1532,7 @@ namespace FabricObserver.Observers
                 ObserverLogger.LogWarning($"TupleProcessChildFruds - Failure processing descendants:{Environment.NewLine}{ae.Message}");
             }
 
-            ObserverLogger.LogInfo($"Completed TupleProcessChildFruds with Warning...");
+            ObserverLogger.LogInfo($"Completed TupleProcessChildFruds with Warning.");
             return (null, 0);
         }
 
@@ -1542,7 +1560,7 @@ namespace FabricObserver.Observers
         private Task<ParallelLoopResult> MonitorDeployedAppsAsync(CancellationToken token)
         {
             Stopwatch execTimer = Stopwatch.StartNew();
-            ObserverLogger.LogInfo("Starting MonitorDeployedAppsAsync...");
+            ObserverLogger.LogInfo("Starting MonitorDeployedAppsAsync.");
             int capacity = ReplicaOrInstanceList.Count;
             var exceptions = new ConcurrentQueue<Exception>();
             AllAppCpuData ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
@@ -1887,7 +1905,7 @@ namespace FabricObserver.Observers
 
             // DEBUG 
             //int threadcount = threadData.Distinct().Count();
-            ObserverLogger.LogInfo("Completed MonitorDeployedAppsAsync...");
+            ObserverLogger.LogInfo("Completed MonitorDeployedAppsAsync.");
             ObserverLogger.LogInfo($"MonitorDeployedAppsAsync Execution time: {execTimer.Elapsed}"); //Threads: {threadcount}");
             return Task.FromResult(result);
         }
@@ -2160,7 +2178,7 @@ namespace FabricObserver.Observers
 
         private async Task SetDeployedApplicationReplicaOrInstanceListAsync(Uri applicationNameFilter = null, string applicationType = null)
         {
-            ObserverLogger.LogInfo("Starting SetDeployedApplicationReplicaOrInstanceListAsync...");
+            ObserverLogger.LogInfo("Starting SetDeployedApplicationReplicaOrInstanceListAsync.");
             List<DeployedApplication> deployedApps = _deployedApps;
 
             // DEBUG
@@ -2261,7 +2279,7 @@ namespace FabricObserver.Observers
 
             deployedApps.Clear();
             deployedApps = null;
-            ObserverLogger.LogInfo("Completed SetDeployedApplicationReplicaOrInstanceListAsync...");
+            ObserverLogger.LogInfo("Completed SetDeployedApplicationReplicaOrInstanceListAsync.");
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"SetDeployedApplicationReplicaOrInstanceListAsync for {applicationNameFilter?.OriginalString} run duration: {stopwatch.Elapsed}");
         }
@@ -2272,7 +2290,7 @@ namespace FabricObserver.Observers
                                                                      ServiceFilterType filterType = ServiceFilterType.None,
                                                                      string appTypeName = null)
         {
-            ObserverLogger.LogInfo("Starting GetDeployedPrimaryReplicaAsync...");
+            ObserverLogger.LogInfo("Starting GetDeployedPrimaryReplicaAsync.");
             // DEBUG
             //var stopwatch = Stopwatch.StartNew();
             var deployedReplicaList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
@@ -2296,7 +2314,7 @@ namespace FabricObserver.Observers
             {
 
             }
-            ObserverLogger.LogInfo("Completed GetDeployedPrimaryReplicaAsync...");
+            ObserverLogger.LogInfo("Completed GetDeployedPrimaryReplicaAsync.");
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"GetDeployedPrimaryReplicaAsync for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
             return replicaMonitoringList.ToList();
@@ -2310,7 +2328,7 @@ namespace FabricObserver.Observers
                         DeployedServiceReplicaList deployedReplicaList,
                         ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList)
         {
-            ObserverLogger.LogInfo("Starting SetInstanceOrReplicaMonitoringList...");
+            ObserverLogger.LogInfo("Starting SetInstanceOrReplicaMonitoringList.");
             // DEBUG
             //var stopwatch = Stopwatch.StartNew();
             _ = Parallel.For (0, deployedReplicaList.Count, _parallelOptions, (i, state) =>
@@ -2349,7 +2367,7 @@ namespace FabricObserver.Observers
                                 ServiceTypeName = statefulReplica.ServiceTypeName,
                                 ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
                                 ServicePackageActivationMode = string.IsNullOrWhiteSpace(statefulReplica.ServicePackageActivationId) ?
-                                    System.Fabric.Description.ServicePackageActivationMode.SharedProcess : System.Fabric.Description.ServicePackageActivationMode.ExclusiveProcess,
+                                                ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
                                 ReplicaStatus = statefulReplica.ReplicaStatus
                             };
 
@@ -2408,7 +2426,7 @@ namespace FabricObserver.Observers
                                 ServiceTypeName = statelessInstance.ServiceTypeName,
                                 ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
                                 ServicePackageActivationMode = string.IsNullOrWhiteSpace(statelessInstance.ServicePackageActivationId) ?
-                                    System.Fabric.Description.ServicePackageActivationMode.SharedProcess : System.Fabric.Description.ServicePackageActivationMode.ExclusiveProcess,
+                                                ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
                                 ReplicaStatus = statelessInstance.ReplicaStatus
                             };
 
@@ -2427,9 +2445,37 @@ namespace FabricObserver.Observers
                                 //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
                             }
                             break;
-                        }
+                        } 
                 }
-                
+
+                // RG
+                ObserverLogger.LogInfo($"Starting RG configuration check for {replicaInfo.ServiceName.OriginalString}.");
+                try
+                {
+                    var appTypeList = FabricClientInstance.QueryManager.GetApplicationTypeListAsync(appTypeName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
+                  
+                    if (appTypeList?.Count > 0)
+                    {
+                        string appTypeVersion = appTypeList[0].ApplicationTypeVersion;
+
+                        if (!string.IsNullOrWhiteSpace(appTypeVersion))
+                        {
+                            string appManifest = FabricClientInstance.ApplicationManager.GetApplicationManifestAsync(
+                                                    appTypeName, appTypeVersion, ConfigurationSettings.AsyncTimeout, Token)?.Result;
+
+                            if (!string.IsNullOrWhiteSpace(appManifest))
+                            {
+                                (replicaInfo.RGEnabled, replicaInfo.RGCpuCoreLimit, replicaInfo.RGMemoryLimitMb) = TupleGetResourceGovernanceInfo(appManifest);
+                            }
+                        }
+                    }
+                }
+                catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is TimeoutException || e is XmlException)
+                {
+                    ObserverLogger.LogWarning($"Handled: Failed to process RG configuration for {replicaInfo.ServiceName.OriginalString} with exception '{e.Message}'");
+                    // move along
+                }
+                ObserverLogger.LogInfo($"Completed RG configuration check for {replicaInfo.ServiceName.OriginalString}.");
 
                 if (replicaInfo?.HostProcessId > 0 && !ReplicaOrInstanceList.Any(r => r.ServiceName == replicaInfo.ServiceName))
                 {
@@ -2455,9 +2501,101 @@ namespace FabricObserver.Observers
                     replicaMonitoringList.Enqueue(replicaInfo);
                 }
             });
-            ObserverLogger.LogInfo("Completed SetInstanceOrReplicaMonitoringList...");
+            ObserverLogger.LogInfo("Completed SetInstanceOrReplicaMonitoringList.");
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"SetInstanceOrReplicaMonitoringList for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
+        }
+
+        private (bool IsRGEnabled, double CpuCores, double MemoryLimitMb) TupleGetResourceGovernanceInfo(string appManifestXml)
+        {
+            ObserverLogger.LogInfo("Starting TupleGetResourceGovernanceInfo.");
+
+            if (!string.IsNullOrWhiteSpace(appManifestXml))
+            {
+                // Safe XML pattern - *Do not use LoadXml*.
+                var appManifestXdoc = new XmlDocument { XmlResolver = null };
+
+                using (var sreader = new StringReader(appManifestXml))
+                {
+                    using (var xreader = XmlReader.Create(sreader, new XmlReaderSettings { XmlResolver = null }))
+                    {
+                        lock (_lock)
+                        {
+                            appManifestXdoc?.Load(xreader);
+
+                            // Get values from cluster manifest, clusterId if it exists in either Paas or Diagnostics section.
+                            return TupleGetResourceGovernanceInfoFromAppManifest(ref appManifestXdoc);
+                        }
+                    }
+                }
+            }
+
+            ObserverLogger.LogInfo("Completed TupleGetResourceGovernanceInfo.");
+            return (false, 0, 0);
+        }
+
+        private (bool IsRGEnabled, double CpuCores, double MemoryLimitMb) TupleGetResourceGovernanceInfoFromAppManifest(ref XmlDocument xDoc)
+        {
+            ObserverLogger.LogInfo("Starting TupleGetResourceGovernanceInfoFromAppManifest.");
+           
+            if (xDoc == null)
+            {
+                ObserverLogger.LogInfo("Completed TupleGetResourceGovernanceInfoFromAppManifest: xDoc == null.");
+                return (false, 0, 0);
+            }
+
+            try
+            {
+                XmlNode rgNode = xDoc.DocumentElement?.SelectSingleNode("//*[local-name()='ResourceGovernancePolicy']");
+                
+                if (rgNode == null)
+                {
+                    ObserverLogger.LogInfo("Completing TupleGetResourceGovernanceInfoFromAppManifest: RG is not enabled for specified application.");
+                    return (false, 0, 0);
+                }
+
+                XmlAttribute memAttr = rgNode.Attributes["MemoryInMBLimit"];
+                
+                if (memAttr != null)
+                {
+                    /*
+                    <Policies>
+                      <ResourceGovernancePolicy CodePackageRef="Code" MemoryInMBLimit="[RGMemoryLimitInMb]" />
+                    </Policies>
+                    */
+
+                    // App Parameter
+                    if (memAttr.Value != null && memAttr.Value.StartsWith("["))
+                    {
+                        XmlNode parametersNode = xDoc.DocumentElement?.SelectSingleNode("//*[local-name()='Parameters']");
+                        XmlNode parameterNode = parametersNode?.SelectSingleNode($"//*[local-name()='Parameter' and @Name='{memAttr.Value[1..^1]}']");
+                        XmlAttribute attr = parameterNode?.Attributes?["DefaultValue"];
+                        memAttr.Value = attr.Value;
+                    }
+                }
+
+                XmlAttribute cpuAttr = rgNode.Attributes["CpuCores"];
+
+                if (cpuAttr != null)
+                {
+                    // App Parameter
+                    if (cpuAttr.Value != null && cpuAttr.Value.StartsWith("["))
+                    {
+                        XmlNode parametersNode = xDoc.DocumentElement?.SelectSingleNode("//*[local-name()='Parameters']");
+                        XmlNode parameterNode = parametersNode?.SelectSingleNode($"//*[local-name()='Parameter' and @Name='{cpuAttr.Value[1..^1]}']");
+                        XmlAttribute attr = parameterNode?.Attributes?["DefaultValue"];
+                        cpuAttr.Value = attr.Value;
+                    }
+                }
+
+                ObserverLogger.LogInfo("Completed TupleGetResourceGovernanceInfoFromAppManifest: RG enabled.");
+                return (true, double.TryParse(cpuAttr?.Value, out double cpu) ? cpu : 0, double.TryParse(memAttr?.Value, out double mem) ? mem : 0);
+            }
+            catch (System.Xml.XPath.XPathException xe)
+            {
+                ObserverLogger.LogWarning($"Failure in TupleGetResourceGovernanceInfoFromAppManifest: {xe.Message}");
+                return (false, 0, 0);
+            }
         }
 
         private void LogAllAppResourceDataToCsv(string appName)

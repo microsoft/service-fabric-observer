@@ -145,6 +145,24 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         [EventField]
+        public bool RGEnabled
+        {
+            get; set;
+        }
+
+        [EventField]
+        public double RGMemoryLimitMb
+        {
+            get; set;
+        }
+
+        [EventField]
+        public double RGCpuCoresLimit
+        {
+            get; set;
+        }
+
+        [EventField]
         public ServiceKind ServiceKind
         {
             get; set;

@@ -90,5 +90,20 @@ namespace FabricObserver.Observers.MachineInfoModel
         {
             get; set;
         }
+
+        public bool RGEnabled
+        {
+            get; set;
+        }
+
+        public double RGMemoryLimitMb
+        {
+            get; set;
+        }
+
+        public double RGCpuCoreLimit
+        {
+            get; set;
+        }
     }
 }

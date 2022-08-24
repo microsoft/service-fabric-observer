@@ -757,7 +757,8 @@ namespace FabricObserver.Observers
                         string processName = null,
                         ReplicaOrInstanceMonitoringInfo replicaOrInstance = null,
                         bool dumpOnErrorOrWarning = false,
-                        int processId = 0) where T : struct
+                        int processId = 0,
+                        bool isRGReport = false) where T : struct
         {
             if (data == null)
             {
@@ -886,6 +887,9 @@ namespace FabricObserver.Observers
                     ProcessStartTime = processStartTime,
                     ReplicaId = replicaOrInstance != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
                     ReplicaRole = replicaOrInstance != null ? replicaOrInstance.ReplicaRole : ReplicaRole.Unknown,
+                    RGEnabled = replicaOrInstance != null ? replicaOrInstance.RGEnabled : false,
+                    RGCpuCoresLimit = replicaOrInstance != null ? replicaOrInstance.RGCpuCoreLimit : 0,
+                    RGMemoryLimitMb = replicaOrInstance != null ? replicaOrInstance.RGMemoryLimitMb : 0,
                     ServiceKind = replicaOrInstance != null ? replicaOrInstance.ServiceKind : System.Fabric.Query.ServiceKind.Invalid,
                     ServiceName = serviceName?.OriginalString ?? null,
                     ServicePackageActivationMode = replicaOrInstance?.ServicePackageActivationMode,
@@ -1144,6 +1148,7 @@ namespace FabricObserver.Observers
 
                 var healthMessage = new StringBuilder();
                 string childProcMsg = string.Empty;
+                string rgInfo = string.Empty;
 
                 if (replicaOrInstance != null && replicaOrInstance.ChildProcesses != null)
                 {
@@ -1151,16 +1156,32 @@ namespace FabricObserver.Observers
                                    $"Their cumulative impact on {processName}'s resource usage has been applied.";
                 }
 
-                string drive = string.Empty;
-                string metric = data.Property.Contains("(Percent)") ? data.Property.Replace(" (Percent)", string.Empty) : data.Property.Replace(" (MB)", string.Empty);
-                
-                if (entityType == EntityType.Disk)
+                if (replicaOrInstance != null && isRGReport)
                 {
-                    drive = $" on drive {id}"; 
+                    rgInfo =
+                        $"{replicaOrInstance.ServiceName.OriginalString} is approaching (90%) the specified Resource Governance limit 'MemoryLimitMb' " +
+                        $"({replicaOrInstance.RGMemoryLimitMb}). Current Memory usage: {data.AverageDataValue}MB";
+
+                    telemetryData.Property += "_RG";
                 }
 
-                _ = healthMessage.Append($"{metric}{dynamicRange} has exceeded the specified {thresholdName} limit ({threshold}{data.Units}){drive}");
-                _ = healthMessage.Append($" - {metric}: {data.AverageDataValue}{data.Units}{totalPorts}");
+                if (rgInfo != string.Empty)
+                {
+                    _ = healthMessage.Append(rgInfo);
+                }
+                else
+                {
+                    string drive = string.Empty;
+                    string metric = data.Property.Contains("(Percent)") ? data.Property.Replace(" (Percent)", string.Empty) : data.Property.Replace(" (MB)", string.Empty);
+
+                    if (entityType == EntityType.Disk)
+                    {
+                        drive = $" on drive {id}";
+                    }
+
+                    _ = healthMessage.Append($"{metric}{dynamicRange} has exceeded the specified {thresholdName} limit ({threshold}{data.Units}){drive}");
+                    _ = healthMessage.Append($" - {metric}: {data.AverageDataValue}{data.Units}{totalPorts}"); 
+                }
                 
                 if (childProcMsg != string.Empty)
                 {
@@ -1286,57 +1307,12 @@ namespace FabricObserver.Observers
                 }
             }
 
-            data.ClearData();
-        }
-
-        private (string AppType, string AppTypeVersion) TupleGetApplicationTypeInfo(Uri appName)
-        {
-            try
+            // This is to protect against clearing out the data used for the non-RG (memory,cpu) reports. The same FRUD instance is used for both reports (non-RG and RG)
+            // RG report runs first, so the data will be cleared by the non-RG call.
+            if (!isRGReport)
             {
-                var appList = FabricClientInstance.QueryManager.GetApplicationListAsync(appName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
-
-                if (appList?.Count > 0)
-                {
-                    string appType = appList[0].ApplicationTypeName;
-                    string appTypeVersion = appList[0].ApplicationTypeVersion;
-                    return (appType, appTypeVersion);
-                }
+                data.ClearData();
             }
-            catch (AggregateException)
-            {
-
-            }
-            catch (FabricException)
-            {
-
-            }
-
-            return (null, null);
-        }
-
-        private (string ServiceType, string ServiceManifestVersion) TupleGetServiceTypeInfo(Uri appName, Uri serviceName)
-        {
-            try
-            {
-                var serviceList = FabricClientInstance.QueryManager.GetServiceListAsync(appName, serviceName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
-
-                if (serviceList?.Count > 0)
-                {
-                    string serviceType = serviceList[0].ServiceTypeName;
-                    string serviceManifestVersion = serviceList[0].ServiceManifestVersion;
-                    return (serviceType, serviceManifestVersion);
-                }
-            }
-            catch (AggregateException)
-            {
-
-            }
-            catch (FabricException)
-            {
-
-            }
-
-            return (null, null);
         }
 
         /// <summary>
