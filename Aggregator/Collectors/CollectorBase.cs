@@ -1,5 +1,6 @@
 ﻿using Aggregator.Data;
 using FabricObserver.Observers.Utilities;
+using FabricObserver.Observers.Utilities.Telemetry;
 using Microsoft.ServiceFabric.Services.Remoting.Client;
 using System;
 using System.Collections.Generic;
@@ -51,7 +52,7 @@ namespace Aggregator.Collectors
             this.cancellationToken = cancellationToken;
             fabricClient = new FabricClient();
             logger = new Logger("Collector");
-            healthReporter = new ObserverHealthReporter(logger, fabricClient);
+            healthReporter = new ObserverHealthReporter(logger);
         }
 
         public async Task RunAsync(string ReliableQueueName) 
@@ -92,7 +93,7 @@ namespace Aggregator.Collectors
                         NodeName = Context.NodeContext.NodeName,
                         PartitionId = Context.PartitionId,
                         ReplicaOrInstanceId = Context.ReplicaOrInstanceId,
-                        ReportType = HealthReportType.Application,
+                        EntityType = EntityType.Application,
                         ServiceName = Context.ServiceName,
                         SourceId = "Collector",
                         Property = "Data Collection Failure",

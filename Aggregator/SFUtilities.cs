@@ -17,14 +17,12 @@ namespace Aggregator
     {
         private static SFUtilities instance;
         private static readonly object lockObj = new object();
-        private FabricClient fabricClient;
         private QueryClient queryManager;
         public static readonly double intervalMiliseconds = 10000.00;
 
         protected SFUtilities() 
         {
-            fabricClient = new FabricClient();
-            queryManager = fabricClient.QueryManager;
+            queryManager = FabricClientUtilities.FabricClientSingleton.QueryManager;
         }
         /// <summary>
         /// </summary>
@@ -81,7 +79,7 @@ namespace Aggregator
 
                     foreach (var partition in partitionList)
                     {
-                        int cnt = (await fabricClient.QueryManager.GetReplicaListAsync(partition.PartitionInformation.Id)).Where(r => r.ReplicaStatus == ServiceReplicaStatus.Ready).Count();
+                        int cnt = (await queryManager.GetReplicaListAsync(partition.PartitionInformation.Id)).Where(r => r.ReplicaStatus == ServiceReplicaStatus.Ready).Count();
                         
                         if (isStatefull)
                         {
@@ -112,10 +110,9 @@ namespace Aggregator
         /// <returns></returns>
         public async Task<Dictionary<int,ProcessData>> GetDeployedProcesses(string NodeName,ServiceContext serviceContext,CancellationToken token)
         {
-            
             Dictionary<int, ProcessData> pid=new Dictionary<int, ProcessData>();
-            Client client = new Client(fabricClient, serviceContext);
-            List<ReplicaOrInstanceMonitoringInfo> replicaList = await client.GetAllLocalReplicasOrInstances(token);
+            FabricClientUtilities client = new FabricClientUtilities();
+            List<ReplicaOrInstanceMonitoringInfo> replicaList = await client.GetAllDeployedReplicasOrInstances(true, token);
 
             foreach(var replica in replicaList)
             {
@@ -162,9 +159,7 @@ namespace Aggregator
                 processData.AllCounts.Count++;
 
                 //for a shared process this may not be correct -> each service has the same processID so child processes are the same so we should overide not extend? 
-                //processData.ChildProcesses.AddRange(replica.ChildProcesses);
-
-                
+                //processData.ChildProcesses.AddRange(replica.ChildProcesses); 
             }
             
             return pid;
@@ -172,9 +167,10 @@ namespace Aggregator
 
         public (double cpuPercentage, float ramMB) TupleGetResourceUsageForProcess(int pid)
         {
-            var cpuUsage = new CpuUsage();
-            double cpu=cpuUsage.GetCpuUsagePercentageProcess((int) pid);
-            float ramMb = ProcessInfoProvider.Instance.GetProcessWorkingSetMb((int)pid);
+            var cpuUsage = new CpuUsageProcess();
+            double cpu=cpuUsage.GetCurrentCpuUsagePercentage(pid);
+            string procName = NativeMethods.GetProcessNameFromId(pid);
+            float ramMb = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(pid, procName, CancellationToken.None);
 
             return (cpu, ramMb);
         }

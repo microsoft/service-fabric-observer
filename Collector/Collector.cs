@@ -1,18 +1,11 @@
-using System;
 using System.Collections.Generic;
 using System.Fabric;
-using System.Fabric.Health;
-using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Aggregator;
 using Aggregator.Collectors;
 using FabricObserver.Observers.Utilities;
 using Microsoft.ServiceFabric.Services.Communication.Runtime;
-using Microsoft.ServiceFabric.Services.Remoting.Client;
 using Microsoft.ServiceFabric.Services.Runtime;
-using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace Collector
 {
@@ -21,19 +14,13 @@ namespace Collector
     /// </summary>
     internal sealed class Collector : StatelessService
     {
-        // CT: Don't create a new FabricClient each iteration. Just use one instance. This is important for memory use.
-        private readonly FabricClient fabricClient;
         private readonly ObserverHealthReporter healthReporter;
         private readonly Logger logger;
 
-        public Collector(StatelessServiceContext context)
-            : base(context)
+        public Collector(StatelessServiceContext context) : base(context)
         {
-            fabricClient = new FabricClient();
-            
-            // CT: you can use FO Logger to stuff to Collector folder.
             logger = new Logger("Collector");
-            healthReporter = new ObserverHealthReporter(logger, fabricClient);
+            healthReporter = new ObserverHealthReporter(logger);
         }
 
         /// <summary>
@@ -54,7 +41,5 @@ namespace Collector
             NodeCollector c = new NodeCollector(Context, cancellationToken);
             await c.RunAsync(Context.NodeContext.NodeName);
         }
-
-        
     }
 }
