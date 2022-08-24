@@ -23,8 +23,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
     // LogAnalyticsTelemetry class is partially (SendTelemetryAsync/GetSignature) based on public sample: https://dejanstojanovic.net/aspnet/2018/february/send-data-to-azure-log-analytics-from-c-code/
     public class LogAnalyticsTelemetry : ITelemetryProvider
     {
-        private readonly FabricClient fabricClient;
-        private readonly CancellationToken token;
         private readonly Logger logger;
 
         private string WorkspaceId
@@ -51,15 +49,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 string workspaceId,
                 string sharedKey,
                 string logType,
-                FabricClient fabricClient,
-                CancellationToken token,
                 string apiVersion = "2016-04-01")
         {
             WorkspaceId = workspaceId;
             Key = sharedKey;
             LogType = logType;
-            this.fabricClient = fabricClient;
-            this.token = token;
             ApiVersion = apiVersion;
             logger = new Logger("TelemetryLogger");
         }
@@ -73,13 +67,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                             string serviceName = null,
                             string instanceName = null)
         {
-            var (clusterId, _, _) =
-                await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).ConfigureAwait(true);
-
             string jsonPayload = JsonConvert.SerializeObject(
                 new
                 {
-                    clusterId = clusterId ?? string.Empty,
+                    ClusterInformation.ClusterInfoTuple.ClusterId,
                     source,
                     property = propertyName,
                     healthState = state.ToString(),
@@ -89,7 +80,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux"
                 });
 
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
+            await SendTelemetryAsync(jsonPayload, cancellationToken);
         }
 
         public async Task ReportHealthAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
@@ -100,7 +91,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
 
             string jsonPayload = JsonConvert.SerializeObject(telemetryData);
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
+            await SendTelemetryAsync(jsonPayload, cancellationToken);
         }
 
         public async Task ReportMetricAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
@@ -111,7 +102,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
 
             string jsonPayload = JsonConvert.SerializeObject(telemetryData);
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
+            await SendTelemetryAsync(jsonPayload, cancellationToken);
         }
 
         public async Task ReportMetricAsync(List<ChildProcessTelemetryData> telemetryData, CancellationToken cancellationToken)
@@ -122,7 +113,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
 
             string jsonPayload = JsonConvert.SerializeObject(telemetryData);
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
+            await SendTelemetryAsync(jsonPayload, cancellationToken);
         }
 
         public async Task ReportMetricAsync(MachineTelemetryData machineTelemetryData, CancellationToken cancellationToken)
@@ -133,7 +124,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
 
             string jsonPayload = JsonConvert.SerializeObject(machineTelemetryData);
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
+            await SendTelemetryAsync(jsonPayload, cancellationToken);
         }
 
         public async Task<bool> ReportMetricAsync<T>(
@@ -142,25 +133,86 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                                     string source,
                                     CancellationToken cancellationToken)
         {
-            var (clusterId, _, _) =
-               await ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(
-                   fabricClient,
-                   token).ConfigureAwait(true);
-
             string jsonPayload = JsonConvert.SerializeObject(
                 new
                 {
                     id = $"FO_{Guid.NewGuid()}",
                     datetime = DateTime.UtcNow,
-                    clusterId = clusterId ?? string.Empty,
+                    ClusterInformation.ClusterInfoTuple.ClusterId,
                     source,
                     property = name,
                     value
                 });
 
-            await SendTelemetryAsync(jsonPayload, cancellationToken).ConfigureAwait(true);
+            await SendTelemetryAsync(jsonPayload, cancellationToken);
 
-            return await Task.FromResult(true).ConfigureAwait(true);
+            return await Task.FromResult(true);
+        }
+
+        public async Task ReportClusterUpgradeStatusAsync(ServiceFabricUpgradeEventData eventData, CancellationToken token)
+        {
+            if (eventData?.FabricUpgradeProgress == null || token.IsCancellationRequested)
+            {
+                return;
+            }
+
+            try
+            {
+                string jsonPayload = JsonConvert.SerializeObject(
+                        new
+                        {
+                            ClusterId = eventData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId,
+                            Timestamp = DateTime.UtcNow,
+                            eventData.OS,
+                            CurrentUpgradeDomain = eventData.FabricUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName,
+                            eventData.FabricUpgradeProgress?.NextUpgradeDomain,
+                            UpgradeTargetCodeVersion = eventData.FabricUpgradeProgress.UpgradeDescription?.TargetCodeVersion,
+                            UpgradeTargetConfigVersion = eventData.FabricUpgradeProgress.UpgradeDescription?.TargetConfigVersion,
+                            UpgradeState = Enum.GetName(typeof(FabricUpgradeState), eventData.FabricUpgradeProgress.UpgradeState),
+                            UpgradeDuration = eventData.FabricUpgradeProgress.CurrentUpgradeDomainDuration,
+                            FailureReason = eventData.FabricUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.FabricUpgradeProgress.FailureReason.Value) : null,
+                        });
+
+                await SendTelemetryAsync(jsonPayload, token).ConfigureAwait(true);
+            }
+            catch (Exception e)
+            {
+                // Telemetry is non-critical and should not take down FH.
+                logger.LogWarning($"Failure in ReportClusterUpgradeStatus:{Environment.NewLine}{e}");
+            }
+        }
+
+        public async Task ReportApplicationUpgradeStatusAsync(ServiceFabricUpgradeEventData eventData, CancellationToken token)
+        {
+            if (eventData?.ApplicationUpgradeProgress == null || token.IsCancellationRequested)
+            {
+                return;
+            }
+
+            try
+            {
+                string jsonPayload = JsonConvert.SerializeObject(
+                        new
+                        {
+                            ClusterId = eventData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId,
+                            Timestamp = DateTime.UtcNow,
+                            eventData.OS,
+                            ApplicationName = eventData.ApplicationUpgradeProgress.ApplicationName?.OriginalString,
+                            CurrentUpgradeDomain = eventData.ApplicationUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName,
+                            eventData.ApplicationUpgradeProgress?.NextUpgradeDomain,
+                            UpgradeTargetAppTypeVersion = eventData.ApplicationUpgradeProgress.UpgradeDescription?.TargetApplicationTypeVersion,
+                            UpgradeState = Enum.GetName(typeof(FabricUpgradeState), eventData.ApplicationUpgradeProgress.UpgradeState),
+                            UpgradeDuration = eventData.ApplicationUpgradeProgress.CurrentUpgradeDomainDuration,
+                            FailureReason = eventData.ApplicationUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.ApplicationUpgradeProgress.FailureReason.Value) : null,
+                        });
+
+                await SendTelemetryAsync(jsonPayload, token).ConfigureAwait(true);
+            }
+            catch (Exception e)
+            {
+                // Telemetry is non-critical and should not take down FH.
+                logger.LogWarning($"Failure in ReportClusterUpgradeStatus:{Environment.NewLine}{e}");
+            }
         }
 
         // Implement functions below as you need.

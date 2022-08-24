@@ -8,5 +8,15 @@
         "protocol": "http"
       }
     ]
+  },
+  {
+    "targetApp": "fabric:/FabricObserver",
+    "endpoints": [
+      {
+        "hostname": "yahoo.com",
+        "port": 443,
+        "protocol": "http"
+      }
+    ]
   }
 ]

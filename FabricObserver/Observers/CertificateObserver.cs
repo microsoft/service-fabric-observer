@@ -9,7 +9,6 @@ using System.Fabric;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Security;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -17,19 +16,18 @@ using System.Threading.Tasks;
 using System.Xml;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
+using FabricObserver.TelemetryLib;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
 {
-    public class CertificateObserver : ObserverBase
+    public sealed class CertificateObserver : ObserverBase
     {
         private const string HowToUpdateCnCertsSfLinkHtml =
             "<a href=\"https://aka.ms/AA69ai7\" target=\"_blank\">Click here to learn how to update expiring/expired certificates.</a>";
 
         private const string HowToUpdateSelfSignedCertSfLinkHtml =
            "<a href=\"https://aka.ms/AA6cicw\" target=\"_blank\">Click here to learn how to fix expired self-signed certificates.</a>";
-
-        private readonly bool isWindows;
 
         private TimeSpan HealthReportTimeToLive
         {
@@ -51,10 +49,13 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public CertificateObserver(FabricClient fabricClient, StatelessServiceContext context)
-            : base (fabricClient, context)
+        /// <summary>
+        /// Creates a new instance of the type.
+        /// </summary>
+        /// <param name="context">The StatelessServiceContext instance.</param>
+        public CertificateObserver(StatelessServiceContext context) : base (null, context)
         {
-            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+
         }
 
         public int DaysUntilClusterExpireWarningThreshold
@@ -97,14 +98,14 @@ namespace FabricObserver.Observers
 
             Token = token;
 
-            await Initialize(token).ConfigureAwait(true);
+            await Initialize(token);
             
             ExpiredWarnings = new List<string>();
             ExpiringWarnings = new List<string>();
             NotFoundWarnings = new List<string>();
 
             // Unix LocalMachine X509Store is limited to the Root and CertificateAuthority stores.
-            var store = new X509Store(RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? StoreName.Root : StoreName.My, StoreLocation.LocalMachine);
+            var store = new X509Store(IsWindows ? StoreName.My : StoreName.Root, StoreLocation.LocalMachine);
 
             try
             {
@@ -139,7 +140,7 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                await ReportAsync(token).ConfigureAwait(true);
+                await ReportAsync(token);
             }
             catch (SecurityException e)
             {
@@ -185,42 +186,34 @@ namespace FabricObserver.Observers
                 healthReport = new HealthReport
                 {
                     Observer = ObserverName,
-                    ReportType = HealthReportType.Node,
+                    EntityType = EntityType.Node,
                     EmitLogEvent = true,
                     NodeName = NodeName,
                     HealthMessage = "All cluster and monitored app certificates are healthy.",
                     State = HealthState.Ok,
-                    HealthReportTimeToLive = RunInterval > TimeSpan.MinValue ? RunInterval : this.HealthReportTimeToLive
+                    HealthReportTimeToLive = RunInterval > TimeSpan.MinValue ? RunInterval : HealthReportTimeToLive
                 };
 
                 HasActiveFabricErrorOrWarning = false;
+                var telemetryData = new TelemetryData()
+                {
+                    ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
+                    Description = "All cluster and monitored app certificates are healthy.",
+                    HealthState = HealthState.Ok,
+                    NodeName = NodeName,
+                    NodeType = NodeType,
+                    ObserverName = ObserverName,
+                    Source = ObserverConstants.FabricObserverName
+                };
 
                 if (IsTelemetryEnabled)
                 {
-                    var telemetryData = new TelemetryData(FabricClientInstance, token)
-                    {
-                        HealthState = "Ok",
-                        NodeName = NodeName,
-                        Description = "All cluster and monitored app certificates are healthy.",
-                        ObserverName = ObserverName,
-                        Source = ObserverConstants.FabricObserverName
-                    };
-
                     await TelemetryClient.ReportHealthAsync(telemetryData, Token);
                 }
 
                 if (IsEtwEnabled)
                 {
-                    ObserverLogger.LogEtw(
-                                    ObserverConstants.FabricObserverETWEventName,
-                                    new
-                                    {
-                                        HealthState = "Ok",
-                                        NodeName,
-                                        HealthEventDescription = "All cluster and monitored app certificates are healthy.",
-                                        ObserverName,
-                                        Source = ObserverConstants.FabricObserverName
-                                    });
+                    ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, telemetryData);
                 }
             }
             else
@@ -233,7 +226,7 @@ namespace FabricObserver.Observers
                 {
                     Code = FOErrorWarningCodes.WarningCertificateExpiration,
                     Observer = ObserverName,
-                    ReportType = HealthReportType.Node,
+                    EntityType = EntityType.Node,
                     EmitLogEvent = true,
                     NodeName = NodeName,
                     HealthMessage = healthMessage,
@@ -243,40 +236,27 @@ namespace FabricObserver.Observers
 
                 HasActiveFabricErrorOrWarning = true;
                 CurrentWarningCount++;
+                var telemetryData = new TelemetryData()
+                {
+                    ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
+                    Code = FOErrorWarningCodes.WarningCertificateExpiration,
+                    Description = healthMessage,
+                    HealthState = HealthState.Warning,
+                    Metric = ErrorWarningProperty.CertificateExpiration,
+                    NodeName = NodeName,
+                    NodeType = NodeType,
+                    ObserverName = ObserverName,
+                    Source = ObserverConstants.FabricObserverName,
+                };
 
                 if (IsTelemetryEnabled)
                 {
-                    var telemetryData = new TelemetryData(FabricClientInstance, token)
-                    {
-                        Code = FOErrorWarningCodes.WarningCertificateExpiration,
-                        HealthState = "Warning",
-                        NodeName = NodeName,
-                        Metric = ErrorWarningProperty.CertificateExpiration,
-                        Description = healthMessage,
-                        ObserverName = ObserverName,
-                        OS = isWindows ? "Windows" : "Linux",
-                        Source = ObserverConstants.FabricObserverName,
-                    };
-
                     await TelemetryClient.ReportHealthAsync(telemetryData, Token);
                 }
 
                 if (IsEtwEnabled)
                 {
-                    ObserverLogger.LogEtw(
-                                    ObserverConstants.FabricObserverETWEventName,
-                                    new
-                                    {
-                                        Code = FOErrorWarningCodes.WarningCertificateExpiration,
-                                        HealthState = "Warning",
-                                        NodeName,
-                                        Metric = ErrorWarningProperty.CertificateExpiration,
-                                        HealthEventDescription = healthMessage,
-                                        ObserverName,
-                                        OS = isWindows ? "Windows" : "Linux",
-                                        Source = ObserverConstants.FabricObserverName,
-                                        Value = FOErrorWarningCodes.GetErrorWarningNameFromFOCode(FOErrorWarningCodes.WarningCertificateExpiration)
-                                    });
+                    ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, telemetryData);
                 }
             }
 
@@ -357,7 +337,7 @@ namespace FabricObserver.Observers
                 AppCertificateCommonNamesToObserve = !string.IsNullOrEmpty(appCommonNamesToObserve) ? JsonHelper.ConvertFromString<List<string>>(appCommonNamesToObserve) : new List<string>();
             }
 
-            await GetSecurityTypes(token).ConfigureAwait(true);
+            await GetSecurityTypes(token);
         }
 
         private async Task GetSecurityTypes(CancellationToken token)
@@ -365,7 +345,7 @@ namespace FabricObserver.Observers
             token.ThrowIfCancellationRequested();
 
             SecurityConfiguration = new SecurityConfiguration();
-            string clusterManifestXml = await FabricClientInstance.ClusterManager.GetClusterManifestAsync(AsyncClusterOperationTimeoutSeconds, Token).ConfigureAwait(true);
+            string clusterManifestXml = await FabricClientInstance.ClusterManager.GetClusterManifestAsync(AsyncClusterOperationTimeoutSeconds, Token);
             XmlReader xreader = null;
             StringReader sreader = null;
 
@@ -415,10 +395,9 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (!(e is OperationCanceledException))
+            catch (Exception e) when (!(e is TaskCanceledException || e is OperationCanceledException))
             {
                 ObserverLogger.LogError($"There was an issue parsing the cluster manifest. Observer cannot run. Error Details:{Environment.NewLine}{e}");
-
                 throw;
             }
             finally
@@ -484,7 +463,7 @@ namespace FabricObserver.Observers
 
             if (certificates.Count == 0)
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                if (!IsWindows)
                 {
                     if (!TryFindCertificate("/var/lib/sfcerts", thumbprint, out certificate) &&
                         !TryFindCertificate("/var/lib/waagent", thumbprint, out certificate))

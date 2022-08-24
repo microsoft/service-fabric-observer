@@ -31,7 +31,7 @@ namespace FabricObserver.TelemetryLib
         private readonly string clusterId, tenantId, clusterType;
         private readonly TelemetryConfiguration appInsightsTelemetryConf;
 
-        public TelemetryEvents(FabricClient fabricClient, ServiceContext context, CancellationToken token)
+        public TelemetryEvents(ServiceContext context)
         {
             serviceContext = context;
             appInsightsTelemetryConf = TelemetryConfiguration.CreateDefault();
@@ -39,10 +39,9 @@ namespace FabricObserver.TelemetryLib
             telemetryClient = new TelemetryClient(appInsightsTelemetryConf);
 
             // Set instance fields.
-            var (ClusterId, TenantId, ClusterType) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabricClient, token).GetAwaiter().GetResult();
-            clusterId = ClusterId;
-            tenantId = TenantId;
-            clusterType = ClusterType;
+            clusterId = ClusterInformation.ClusterInfoTuple.ClusterId;
+            tenantId = ClusterInformation.ClusterInfoTuple.TenantId;
+            clusterType = ClusterInformation.ClusterInfoTuple.ClusterType;
         }
 
         public bool EmitFabricObserverOperationalEvent(FabricObserverOperationalEventData foData, TimeSpan runInterval, string logFilePath)
@@ -65,6 +64,7 @@ namespace FabricObserver.TelemetryLib
                     { "ClusterType", clusterType },
                     { "NodeNameHash", nodeHashString },
                     { "FOVersion", foData.Version },
+                    { "SFRuntimeVersion", foData.SFRuntimeVersion },
                     { "HasPlugins", foData.HasPlugins.ToString() },
                     { "ParallelCapable", foData.ParallelExecutionCapable.ToString() },
                     { "UpTime", foData.UpTime },
@@ -175,7 +175,7 @@ namespace FabricObserver.TelemetryLib
                     }
 
                     // Concurrency
-                    if (obData.Key == appobs || obData.Key == fsobs || obData.Key == contobs)
+                    if (obData.Key == appobs || obData.Key == contobs)
                     {
                         data = obData.Value.ServiceData.ConcurrencyEnabled ? 1 : 0;
                         key = $"{obData.Key}{parallel}";
@@ -206,9 +206,10 @@ namespace FabricObserver.TelemetryLib
                 telemetryClient.TrackEvent($"{FOTaskName}.{OperationalEventName}", eventProperties, metrics);
                 telemetryClient.Flush();
 
-                // allow time for flushing
+                // Allow time for flushing
                 Thread.Sleep(1000);
 
+                // Audit log.
                 _ = TryWriteLogFile(logFilePath, JsonConvert.SerializeObject(foData));
                 
                 eventProperties.Clear();
@@ -243,10 +244,11 @@ namespace FabricObserver.TelemetryLib
                     { "ClusterId", clusterId },
                     { "ClusterType", clusterType },
                     { "TenantId", tenantId },
-                    { "FOVersion", errorData.Version },
+                    { source == FOTaskName ? "FOVersion" : "COVersion", errorData.Version },
+                    { "SFRuntimeVersion", errorData.SFRuntimeVersion },
                     { "CrashTime", errorData.CrashTime },
                     { "ErrorMessage", errorData.ErrorMessage },
-                    { "CrashData", errorData.ErrorStack },
+                    { "Stack", errorData.ErrorStack },
                     { "Timestamp", DateTime.UtcNow.ToString("o") },
                     { "OS", errorData.OS }
                 };
@@ -259,7 +261,7 @@ namespace FabricObserver.TelemetryLib
                     eventProperties.Add("NodeNameHash", nodeHashString);
                 }
 
-                telemetryClient.TrackEvent($"{FOTaskName}.{CriticalErrorEventName}", eventProperties);
+                telemetryClient.TrackEvent($"{source}.{CriticalErrorEventName}", eventProperties);
                 telemetryClient.Flush();
 
                 // allow time for flushing

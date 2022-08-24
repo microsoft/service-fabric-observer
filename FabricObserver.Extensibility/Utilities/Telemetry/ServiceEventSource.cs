@@ -6,25 +6,60 @@
 using System;
 using System.Diagnostics.Tracing;
 using System.Fabric;
-using System.Threading.Tasks;
-using FabricObserver.TelemetryLib;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
     public sealed class ServiceEventSource : EventSource
     {
-        public static readonly ServiceEventSource Current = new ServiceEventSource();
+        private static ServiceEventSource _current = null;
+        private static readonly object _lock = new object();
 
-        static ServiceEventSource()
+        public static ServiceEventSource Current
         {
-            // A workaround for the problem where ETW activities do not get tracked until Tasks infrastructure is initialized.
-            // This problem is fixed in .NET Framework 4.6.2. If you are running this version or greater, then delete the below code.
-            _ = Task.Run(() => { });
+            get
+            {
+                if (_current == null)
+                {
+                    lock (_lock)
+                    {
+                        if (_current == null)
+                        {
+                            _current = new ServiceEventSource();
+                        }
+                    }
+                }
+                return _current;
+            }
+            set // This is used by unit tests.
+            {
+                lock (_lock)
+                {
+                    _current = value;
+                }
+            }
         }
 
-        // Instance constructor is private to enforce singleton semantics.
-        // FabricObserver ETW provider name is passed to base.ctor here instead of decorating this class.
-        private ServiceEventSource() : base(ObserverConstants.EventSourceProviderName)
+        private static string GetProviderName()
+        {
+            try
+            {
+                var config = FabricRuntime.GetActivationContext().GetConfigurationPackageObject("Config");
+                string providerName =
+                    config?.Settings?.Sections[ObserverConstants.ObserverManagerConfigurationSectionName]?.Parameters[ObserverConstants.ETWProviderName]?.Value;
+
+                return !string.IsNullOrWhiteSpace(providerName) ? providerName : ObserverConstants.DefaultEventSourceProviderName;
+            }
+            catch (Exception e) when (e is FabricException || e is InvalidOperationException || e is TimeoutException)
+            {
+                // The handled exception types are expected and benign.
+                // InvalidOperationException will always happen when this code is run from a unit test, for example,
+                // as there is no FabricRuntime static available.
+            }
+
+            return ObserverConstants.DefaultEventSourceProviderName;
+        }
+
+        public ServiceEventSource() : base(GetProviderName())
         {
             
         }
@@ -49,42 +84,19 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         [NonEvent]
-        public void DataTypeWriteInfo<T>(string eventName, T data)
+        internal void Write<T>(T data, string eventName, EventKeywords keywords)
         {
+            if (!IsEnabled())
+            {
+                return;
+            }
+
             var options = new EventSourceOptions
             {
                 ActivityOptions = EventActivityOptions.None,
-                Keywords = Keywords.ResourceUsage,
+                Keywords = keywords,
                 Opcode = EventOpcode.Info,
-                Level = EventLevel.Verbose,
-            };
-
-            Write(eventName, options, data);
-        }
-
-        [NonEvent]
-        public void DataTypeWriteWarning<T>(string eventName, T data)
-        {
-            var options = new EventSourceOptions
-            {
-                ActivityOptions = EventActivityOptions.None,
-                Keywords = Keywords.ErrorOrWarning,
-                Opcode = EventOpcode.Info,
-                Level = EventLevel.Warning,
-            };
-
-            Write(eventName, options, data);
-        }
-
-        [NonEvent]
-        public void DataTypeWriteError<T>(string eventName, T data)
-        {
-            var options = new EventSourceOptions
-            {
-                ActivityOptions = EventActivityOptions.None,
-                Keywords = Keywords.ErrorOrWarning,
-                Opcode = EventOpcode.Info,
-                Level = EventLevel.Error,
+                Level = EventLevel.Verbose
             };
 
             Write(eventName, options, data);

@@ -34,6 +34,11 @@ namespace FabricObserver.TelemetryLib
             get; set;
         }
 
+        public string SFRuntimeVersion
+        {
+            get; set;
+        }
+
         public string OS => RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
     }
 }

@@ -23,11 +23,11 @@ function Build-SFPkg {
 try {
     Push-Location $scriptPath
 
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserver.Linux.SelfContained.3.1.24" "$scriptPath\bin\release\FabricObserver\linux-x64\self-contained\FabricObserverType"
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserver.Linux.FrameworkDependent.3.1.24" "$scriptPath\bin\release\FabricObserver\linux-x64\framework-dependent\FabricObserverType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserver.Linux.SelfContained.3.2.1.831" "$scriptPath\bin\release\FabricObserver\linux-x64\self-contained\FabricObserverType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserver.Linux.FrameworkDependent.3.2.1.831" "$scriptPath\bin\release\FabricObserver\linux-x64\framework-dependent\FabricObserverType"
 
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained.3.1.24" "$scriptPath\bin\release\FabricObserver\win-x64\self-contained\FabricObserverType"
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserver.Windows.FrameworkDependent.3.1.24" "$scriptPath\bin\release\FabricObserver\win-x64\framework-dependent\FabricObserverType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained.3.2.1.831" "$scriptPath\bin\release\FabricObserver\win-x64\self-contained\FabricObserverType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserver.Windows.FrameworkDependent.3.2.1.831" "$scriptPath\bin\release\FabricObserver\win-x64\framework-dependent\FabricObserverType"
 }
 finally {
     Pop-Location

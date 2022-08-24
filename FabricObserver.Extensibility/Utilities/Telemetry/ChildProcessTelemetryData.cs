@@ -3,14 +3,14 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
     [EventData]
-    [JsonObject]
+    [Serializable]
     public class ChildProcessTelemetryData
     {
         public string ApplicationName;
@@ -18,8 +18,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         public string Metric;
         public double Value;
         public int ProcessId;
+        public string ProcessName;
+        public string ProcessStartTime;
         public string PartitionId;
-        public string ReplicaId;
+        public long ReplicaId;
         public string NodeName;
         public int ChildProcessCount;
         public List<ChildProcessInfo> ChildProcessInfo;

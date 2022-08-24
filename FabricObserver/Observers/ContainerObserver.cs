@@ -12,20 +12,19 @@ using System.Linq;
 using System.IO;
 using System.Fabric.Query;
 using System.Fabric;
-using System.Runtime.InteropServices;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.MachineInfoModel;
 using System.Fabric.Description;
 using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Fabric.Health;
+using FabricObserver.Observers.Utilities.Telemetry;
 
 namespace FabricObserver.Observers
 {
-    public class ContainerObserver : ObserverBase
+    public sealed class ContainerObserver : ObserverBase
     {
         private const int MaxProcessExitWaitTimeMS = 60000;
-        private readonly bool isWindows;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> allCpuDataPercentage;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> allMemDataMB;
 
@@ -35,7 +34,6 @@ namespace FabricObserver.Observers
         // deployedTargetList is the list of ApplicationInfo objects representing currently deployed applications in the user-supplied list.
         private ConcurrentQueue<ApplicationInfo> deployedTargetList;
         private ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList;
-        private readonly string ConfigPackagePath;
         private readonly object lockObj = new object();
         private Stopwatch runDurationTimer;
         public string ConfigurationFilePath = string.Empty;
@@ -43,19 +41,20 @@ namespace FabricObserver.Observers
         public bool EnableConcurrentMonitoring
         {
             get; set;
-        } = false;
-
-        public ParallelOptions ParallelOptions 
-        { 
-            get; private set; 
         }
 
-        public ContainerObserver(FabricClient fabricClient, StatelessServiceContext context)
-            : base(fabricClient, context)
+        public ParallelOptions ParallelOptions
         {
-            var configSettings = new MachineInfoModel.ConfigSettings(context);
-            ConfigPackagePath = configSettings.ConfigPackagePath;
-            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            get; private set;
+        }
+
+        /// <summary>
+        /// Creates a new instance of the type.
+        /// </summary>
+        /// <param name="context">The StatelessServiceContext instance.</param>
+        public ContainerObserver(StatelessServiceContext context) : base(null, context)
+        {
+            
         }
 
         // OsbserverManager passes in a special token to ObserveAsync and ReportAsync that enables it to stop this observer outside of
@@ -70,13 +69,13 @@ namespace FabricObserver.Observers
 
             runDurationTimer = Stopwatch.StartNew();
 
-            if (!await InitializeAsync(token).ConfigureAwait(false))
+            if (!await InitializeAsync(token))
             {
                 return;
             }
 
             Token = token;
-            
+
             if (MonitorContainers())
             {
                 await ReportAsync(token);
@@ -84,7 +83,7 @@ namespace FabricObserver.Observers
 
             runDurationTimer.Stop();
             RunDuration = runDurationTimer.Elapsed;
-            
+
             if (EnableVerboseLogging)
             {
                 ObserverLogger.LogInfo($"Run Duration {(ParallelOptions.MaxDegreeOfParallelism == -1 ? "with" : "without")} " +
@@ -135,50 +134,50 @@ namespace FabricObserver.Observers
                     lock (lockObj)
                     {
                         CsvFileLogger.LogData(
-                                        csvFileName,
-                                        id,
-                                        ErrorWarningProperty.TotalCpuTime,
-                                        "Total",
-                                        Math.Round(cpuFrudInst.AverageDataValue));
+                            csvFileName,
+                            id,
+                            ErrorWarningProperty.CpuTime,
+                            "Total",
+                            Math.Round(cpuFrudInst.AverageDataValue));
                     }
 
                     // Memory - MB
                     lock (lockObj)
                     {
                         CsvFileLogger.LogData(
-                                        csvFileName,
-                                        id,
-                                        ErrorWarningProperty.TotalMemoryConsumptionMb,
-                                        "Total",
-                                        Math.Round(memFrudInst.AverageDataValue));
+                            csvFileName,
+                            id,
+                            ErrorWarningProperty.MemoryConsumptionMb,
+                            "Total",
+                            Math.Round(memFrudInst.AverageDataValue));
                     }
                 }
 
                 // Report -> Send Telemetry/Write ETW/Create SF Health Warnings (if threshold breach)
-               
+
                 ProcessResourceDataReportHealth(
-                                    cpuFrudInst,
-                                    app.CpuErrorLimitPercent,
-                                    app.CpuWarningLimitPercent,
-                                    timeToLive,
-                                    HealthReportType.Application,
-                                    repOrInst);
-                
+                    cpuFrudInst,
+                    app.CpuErrorLimitPercent,
+                    app.CpuWarningLimitPercent,
+                    timeToLive,
+                    EntityType.Service,
+                    null,
+                    repOrInst);
+
                 ProcessResourceDataReportHealth(
-                                    memFrudInst,
-                                    app.MemoryErrorLimitMb,
-                                    app.MemoryWarningLimitMb,
-                                    timeToLive,
-                                    HealthReportType.Application,
-                                    repOrInst);
-               
+                    memFrudInst,
+                    app.MemoryErrorLimitMb,
+                    app.MemoryWarningLimitMb,
+                    timeToLive,
+                    EntityType.Service,
+                    null,
+                    repOrInst);
+
             });
 
             return Task.CompletedTask;
         }
 
-        // Runs each time ObserveAsync is run to ensure that any new app targets and config changes will
-        // be up to date across observer loop iterations.
         // Runs each time ObserveAsync is run to ensure that any new app targets and config changes will
         // be up to date across observer loop iterations.
         private async Task<bool> InitializeAsync(CancellationToken token)
@@ -190,24 +189,36 @@ namespace FabricObserver.Observers
             }
 
             // Concurrency/Parallelism support.
-            if (Environment.ProcessorCount >= 4 && bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
+            // Default to using [1/4 of available logical processors ~* 2] threads if MaxConcurrentTasks setting is not supplied.
+            // So, this means around 10 - 11 threads (or less) could be used if processor count = 20. This is only being done to limit the impact
+            // FabricObserver has on the resources it monitors and alerts on...
+            // Concurrency/Parallelism support. The minimum requirement is 4 logical processors, regardless of user setting.
+            if (Environment.ProcessorCount >= 4 && bool.TryParse(
+                    GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
             {
                 EnableConcurrentMonitoring = enableConcurrency;
             }
 
-            // Default to using [1/4 of available logical processors ~* 2] threads if MaxConcurrentTasks setting is not supplied.
-            // So, this means around 10 - 11 threads (or less) could be used if processor count = 20. This is only being done to limit the impact
-            // FabricObserver has on the resources it monitors and alerts on...
-            int maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
-            if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasks), out int maxTasks))
+            // Effectively, sequential.
+            int maxDegreeOfParallelism = 1;
+
+            if (EnableConcurrentMonitoring)
             {
-                maxDegreeOfParallelism = maxTasks;
+                // Default to using [1/4 of available logical processors ~* 2] threads if MaxConcurrentTasks setting is not supplied.
+                // So, this means around 10 - 11 threads (or less) could be used if processor count = 20. This is only being done to limit the impact
+                // FabricObserver has on the resources it monitors and alerts on...
+                maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
+
+                // If user configures MaxConcurrentTasks setting, then use that value instead.
+                if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasks), out int maxTasks))
+                {
+                    maxDegreeOfParallelism = maxTasks;
+                }
             }
 
             ParallelOptions = new ParallelOptions
             {
-                // Parallelism only makes sense for capable CPU configurations. The minimum requirement is 4 logical processors; which would map to more than 1 available core.
-                MaxDegreeOfParallelism = EnableConcurrentMonitoring ? maxDegreeOfParallelism : 1,
+                MaxDegreeOfParallelism = maxDegreeOfParallelism,
                 CancellationToken = Token,
                 TaskScheduler = TaskScheduler.Default
             };
@@ -243,11 +254,11 @@ namespace FabricObserver.Observers
                 };
 
                 var appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                             () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                                            deployedAppQueryDesc,
-                                                                                            ConfigurationSettings.AsyncTimeout,
-                                                                                            Token),
-                                                             Token);
+                                        () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
+                                                deployedAppQueryDesc,
+                                                ConfigurationSettings.AsyncTimeout,
+                                                Token),
+                                        Token);
 
                 // DeployedApplicationList is a wrapper around List, but does not support AddRange.. Thus, cast it ToList and add to the temp list, then iterate through it.
                 // In reality, this list will never be greater than, say, 1000 apps deployed to a node, but it's a good idea to be prepared since AppObserver supports
@@ -262,11 +273,11 @@ namespace FabricObserver.Observers
 
                     deployedAppQueryDesc.ContinuationToken = appList.ContinuationToken;
                     appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                             () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                                                            deployedAppQueryDesc,
-                                                                                            ConfigurationSettings.AsyncTimeout,
-                                                                                            Token),
-                                                             Token);
+                                        () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
+                                                deployedAppQueryDesc,
+                                                ConfigurationSettings.AsyncTimeout,
+                                                Token),
+                                        Token);
                     apps.AddRange(appList.ToList());
                     await Task.Delay(250, Token);
                 }
@@ -349,16 +360,16 @@ namespace FabricObserver.Observers
                 }
 
                 ServiceFilterType filterType = ServiceFilterType.None;
-                List<string> filteredServiceList = null;
+                string[] filteredServiceList = null;
 
                 if (!string.IsNullOrWhiteSpace(application.ServiceExcludeList))
                 {
-                    filteredServiceList = application.ServiceExcludeList.Replace(" ", string.Empty).Split(',').ToList();
+                    filteredServiceList = application.ServiceExcludeList.Replace(" ", string.Empty).Split(',').ToArray();
                     filterType = ServiceFilterType.Exclude;
                 }
                 else if (!string.IsNullOrWhiteSpace(application.ServiceIncludeList))
                 {
-                    filteredServiceList = application.ServiceIncludeList.Replace(" ", string.Empty).Split(',').ToList();
+                    filteredServiceList = application.ServiceIncludeList.Replace(" ", string.Empty).Split(',').ToArray();
                     filterType = ServiceFilterType.Include;
                 }
 
@@ -366,12 +377,12 @@ namespace FabricObserver.Observers
                 {
                     var codepackages = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                () => FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(
-                                                                                NodeName,
-                                                                                new Uri(application.TargetApp),
-                                                                                null,
-                                                                                null,
-                                                                                ConfigurationSettings.AsyncTimeout,
-                                                                                token),
+                                                        NodeName,
+                                                        new Uri(application.TargetApp),
+                                                        null,
+                                                        null,
+                                                        ConfigurationSettings.AsyncTimeout,
+                                                        token),
                                                Token);
 
                     if (codepackages.Count == 0)
@@ -387,7 +398,7 @@ namespace FabricObserver.Observers
                     }
 
                     deployedTargetList.Enqueue(application);
-                    await SetInstanceOrReplicaMonitoringList(new Uri(application.TargetApp), filteredServiceList, filterType, null).ConfigureAwait(false);
+                    await SetInstanceOrReplicaMonitoringList(new Uri(application.TargetApp), filteredServiceList, filterType, null);
                 }
                 catch (Exception e) when (e is FabricException || e is TimeoutException)
                 {
@@ -432,14 +443,14 @@ namespace FabricObserver.Observers
                 string filename = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe";
                 string error = string.Empty;
 
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                if (!IsWindows)
                 {
                     args = string.Empty;
 
                     // We need the full path to the currently deployed FO CodePackage, which is where our 
                     // linux Capabilities-laced proxy binary lives, which is used for elevated_docker_stats call.
-                    string path = FabricServiceContext.CodePackageActivationContext.GetCodePackageObject("Code").Path;
-                    filename = $"{path}/elevated_docker_stats";
+
+                    filename = $"{CodePackage.Path}/elevated_docker_stats";
                 }
 
                 var ps = new ProcessStartInfo
@@ -454,23 +465,27 @@ namespace FabricObserver.Observers
                 };
 
                 var output = new List<string>();
-                using Process p = new Process();
-                p.ErrorDataReceived += (sender, e) => { error += e.Data; };
-                p.OutputDataReceived += (sender, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) { output.Add(e.Data); } };
-                p.StartInfo = ps;
-                _ = p.Start();
+                using Process process = new Process();
+                process.ErrorDataReceived += (sender, e) => { error += e.Data; };
+                process.OutputDataReceived += (sender, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) { output.Add(e.Data); } };
+                process.StartInfo = ps;
+
+                if (!process.Start())
+                {
+                    return false;
+                }
 
                 // Start async reads.
-                p.BeginErrorReadLine();
-                p.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+                process.BeginOutputReadLine();
 
                 // It should not take 60 seconds for the process that calls docker stats to exit.
                 // If so, then end execution of the outer loop: stop monitoring for this run of ContainerObserver.
-                if (!p.WaitForExit(MaxProcessExitWaitTimeMS))
+                if (!process.WaitForExit(MaxProcessExitWaitTimeMS))
                 {
                     try
                     {
-                        p?.Kill(true);
+                        process?.Kill(true);
                     }
                     catch (Exception e) when (e is AggregateException || e is InvalidOperationException || e is NotSupportedException || e is Win32Exception)
                     {
@@ -481,24 +496,27 @@ namespace FabricObserver.Observers
                     return false;
                 }
 
-                int exitStatus = p.ExitCode;
+                int exitStatus = process.ExitCode;
 
                 // Was there an error running docker stats?
                 if (exitStatus != 0)
                 {
-                    string msg = $"docker stats exited with {exitStatus}: {error}";
+                    string msg = $"docker stats exited with {exitStatus} on node {NodeName}: {error}{Environment.NewLine}";
 
-                    if (isWindows)
+                    if (IsWindows)
                     {
-                        msg += " NOTE: docker must be running and you must run FabricObserver as System user or Admin user on Windows " +
-                                "in order for ContainerObserver to function correctly on Windows.";
+                        msg += "NOTE: docker must be running and you must run FabricObserver as System user or Admin user on Windows " +
+                               "in order for ContainerObserver to function correctly on Windows.";
                     }
-                    else // TODO: Figure out how to make this more resilient to when SF touches the cap binary (probably as part of a cluster upgrade), removing the cap set.. 
+                    else
                     {
-                        msg += " NOTE: the elevated_docker_stats Capabilities binary may have been touched, which removes the Capabilities set. " +
-                               "In order to fix this, you can do a versionless parameter-only app upgrade (setting ContainerObserverEnableConcurrentMonitoring to false, for example), " +
-                               "which will restart FabricObserver on each node. This will reset the Capabilities on the elevated_docker_stats binary. " +
-                               "If this consistently happens, then consider running FabricObserver as LocalSystem user (maps to root) on Linux, as a last resort.";
+                        if (error.ToLower().Contains("permission denied"))
+                        {
+                            msg += "elevated_docker_stats Capabilities may have been removed. " +
+                                   "This is most likely due to an SF runtime upgrade, which unsets Linux caps because SF re-acls (so, touches) all binaries in application Code folders as part of the upgrade process. " +
+                                   $"An unhandled LinuxPermissionException will be generated by FabricObserver that will take down the FabricObserver process running on node {NodeName} " +
+                                   "to mitigate the issue. Capabilities will be set on the elevated_docker_stats binary when FabricObserver is re-activated by the SF runtime.";
+                        }
                     }
 
                     ObserverLogger.LogWarning(msg);
@@ -507,13 +525,14 @@ namespace FabricObserver.Observers
                     {
                         AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
                         EmitLogEvent = EnableVerboseLogging,
-                        HealthMessage = $"{msg}",
+                        HealthMessage = msg,
                         HealthReportTimeToLive = GetHealthReportTimeToLive(),
-                        Property = "docker_stats_failure",
-                        ReportType = HealthReportType.Application,
+                        Property = $"docker_stats_failure({NodeName})",
+                        EntityType = EntityType.Service,
+                        ServiceName = FabricServiceContext.ServiceName,
                         State = HealthState.Warning,
                         NodeName = NodeName,
-                        Observer = ObserverName,
+                        Observer = ObserverName
                     };
 
                     // Generate a Service Fabric Health Report.
@@ -544,6 +563,15 @@ namespace FabricObserver.Observers
                                         });
                     }
 
+                    // Linux: Try and work around the unsetting of caps issues when SF runs a cluster upgrade.
+                    if (!IsWindows && error.ToLower().Contains("permission denied"))
+                    {
+                        // Throwing LinuxPermissionException here will eventually take down FO (by design). The failure will be logged and telemetry will be emitted, then
+                        // the exception will be re-thrown by ObserverManager and the FO process will fail fast exit. Then, SF will create a new instance of FO on the offending node which
+                        // will run the setup bash script that ensures the elevated_docker_stats binary has the correct caps in place.
+                        throw new LinuxPermissionException($"Capabilities have been removed from elevated_docker_stats{Environment.NewLine}{error}");
+                    }
+
                     return false;
                 }
 
@@ -556,59 +584,87 @@ namespace FabricObserver.Observers
 
                     if (!allCpuDataPercentage.ContainsKey(cpuId))
                     {
-                        _ = allCpuDataPercentage.TryAdd(cpuId, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalCpuTime, cpuId, 1, false));
+                        _ = allCpuDataPercentage.TryAdd(cpuId, new FabricResourceUsageData<double>(ErrorWarningProperty.CpuTime, cpuId, 1, EnableConcurrentMonitoring));
                     }
 
                     if (!allMemDataMB.ContainsKey(memId))
                     {
-                        _ = allMemDataMB.TryAdd(memId, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionMb, memId, 1, false));
+                        _ = allMemDataMB.TryAdd(memId, new FabricResourceUsageData<double>(ErrorWarningProperty.MemoryConsumptionMb, memId, 1, EnableConcurrentMonitoring));
                     }
 
                     foreach (string line in output)
                     {
                         Token.ThrowIfCancellationRequested();
 
-                        if (line.Contains("CPU"))
+                        try
                         {
-                            continue;
-                        }
+                            if (line.Contains("CPU"))
+                            {
+                                continue;
+                            }
 
-                        string[] stats = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                            string[] stats = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
-                        // Something went wrong if the collection size is less than 4 given the supplied output table format:
-                        // {{.Container}}\t{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}
-                        if (stats.Length < 4)
-                        {
-                            ObserverLogger.LogWarning($"docker stats not returning expected information: stats.Count = {stats.Length}. Expected 4.");
-                            return;
-                        }
+                            // Something went wrong if the collection size is less than 4 given the supplied output table format:
+                            // {{.Container}}\t{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}
+                            if (stats.Length < 4)
+                            {
+                                ObserverLogger.LogWarning($"docker stats not returning expected information: stats.Count = {stats.Length}. Expected 4.");
+                                return;
+                            }
 
-                        if (!stats[1].Contains(repOrInst.ServicePackageActivationId))
-                        {
-                            continue;
-                        }
+                            if (string.IsNullOrWhiteSpace(repOrInst?.ServicePackageActivationId) || !stats[1].Contains(repOrInst.ServicePackageActivationId))
+                            {
+                                continue;
+                            }
 
-                        containerId = stats[0];
-                        repOrInst.ContainerId = containerId;
+                            containerId = stats[0];
+                            repOrInst.ContainerId = containerId;
 #if DEBUG
-                        ObserverLogger.LogInfo($"cpu: {stats[2]}");
-                        ObserverLogger.LogInfo($"mem: {stats[3]}");
+                            ObserverLogger.LogInfo($"cpu: {stats[2]}");
+                            ObserverLogger.LogInfo($"mem: {stats[3]}");
 #endif
-                        // CPU (%)
-                        double cpu_percent = double.TryParse(stats[2].Replace("%", ""), out double cpuPerc) ? cpuPerc : 0;
-                        allCpuDataPercentage[cpuId].AddData(cpu_percent);
+                            // CPU (%)
+                            double cpu_percent = double.TryParse(stats[2].Replace("%", ""), out double cpuPerc) ? cpuPerc : 0;
+                            allCpuDataPercentage[cpuId].AddData(cpu_percent);
 
-                        // Memory (MiB)
-                        double mem_working_set_mb = double.TryParse(stats[3].Replace("MiB", ""), out double memMib) ? memMib : 0;
-                        allMemDataMB[memId].AddData(mem_working_set_mb);
+                            // Memory (MiB)
+                            double mem_working_set_mb = double.TryParse(stats[3].Replace("MiB", ""), out double memMib) ? memMib : 0;
+                            allMemDataMB[memId].AddData(mem_working_set_mb);
 
-                        break;
+                            break;
+                        }
+                        catch (ArgumentException)
+                        {
+                            continue;
+                        }
                     }
-               });
+                });
+
+                output.Clear();
+                output = null;
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (AggregateException ae)
             {
-                ObserverLogger.LogError($"Exception in MonitorContainers:{Environment.NewLine}{e}");
+                foreach (Exception e in ae.Flatten().InnerExceptions)
+                {
+                    if (e is OperationCanceledException || e is TaskCanceledException)
+                    {
+                        // Time to die. Do not run ReportAsync.
+                        return false;
+                    }
+                }
+            }
+            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException || e is SystemException)
+            {
+                // SystemException would come from WaitForExit.
+                return false;
+            }
+            catch (Exception e)
+            {
+                ObserverLogger.LogWarning($"Unhandled Exception in MonitorContainers:{Environment.NewLine}{e}");
+
+                // no-op. Bye.
                 throw;
             }
 
@@ -623,15 +679,15 @@ namespace FabricObserver.Observers
                 return true;
             }
 
-            string configDataFilename = GetSettingParameterValue(ConfigurationSectionName, "ConfigFileName");
-            
-            if (string.IsNullOrWhiteSpace(configDataFilename))
+            string configFilename = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileName);
+
+            if (string.IsNullOrWhiteSpace(configFilename))
             {
                 return false;
             }
 
-            string path = Path.Combine(ConfigPackagePath, configDataFilename);
-            
+            string path = Path.Combine(ConfigPackage.Path, configFilename);
+
             if (File.Exists(path))
             {
                 ConfigurationFilePath = path;
@@ -642,87 +698,95 @@ namespace FabricObserver.Observers
         }
 
         private async Task SetInstanceOrReplicaMonitoringList(
-                              Uri appName,
-                              IReadOnlyCollection<string> serviceFilterList,
-                              ServiceFilterType filterType,
-                              string appTypeName)
+                            Uri appName,
+                            string[] filterList,
+                            ServiceFilterType filterType,
+                            string appTypeName)
         {
+
             var deployedReplicaList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                () => FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, appName),
                                                Token);
-
-            foreach (var deployedReplica in deployedReplicaList)
+            // DEBUG
+            //var stopwatch = Stopwatch.StartNew();
+            _ = Parallel.For(0, deployedReplicaList.Count, ParallelOptions, (i, state) =>
             {
+                Token.ThrowIfCancellationRequested();
+
+                var deployedReplica = deployedReplicaList[i];
                 ReplicaOrInstanceMonitoringInfo replicaInfo = null;
 
                 switch (deployedReplica)
                 {
                     case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole == ReplicaRole.Primary || statefulReplica.ReplicaRole == ReplicaRole.ActiveSecondary:
-
-                        replicaInfo = new ReplicaOrInstanceMonitoringInfo()
                         {
-                            ApplicationName = appName,
-                            ApplicationTypeName = appTypeName,
-                            HostProcessId = statefulReplica.HostProcessId,
-                            ReplicaOrInstanceId = statefulReplica.ReplicaId,
-                            PartitionId = statefulReplica.Partitionid,
-                            ServiceKind = statefulReplica.ServiceKind,
-                            ServiceName = statefulReplica.ServiceName,
-                            ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
-                            ReplicaRole = statefulReplica.ReplicaRole,
-                            ReplicaStatus = statefulReplica.ReplicaStatus
-                        };
-
-                        if (serviceFilterList != null && filterType != ServiceFilterType.None)
-                        {
-                            bool isInFilterList = serviceFilterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
-
-                            switch (filterType)
+                            if (filterList != null && filterType != ServiceFilterType.None)
                             {
-                                case ServiceFilterType.Include when !isInFilterList:
-                                case ServiceFilterType.Exclude when isInFilterList:
-                                    continue;
+                                bool isInFilterList = filterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+
+                                switch (filterType)
+                                {
+                                    case ServiceFilterType.Include when !isInFilterList:
+                                    case ServiceFilterType.Exclude when isInFilterList:
+                                        return;
+                                }
                             }
+
+                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
+                            {
+                                ApplicationName = appName,
+                                ApplicationTypeName = appTypeName,
+                                HostProcessId = statefulReplica.HostProcessId,
+                                ReplicaOrInstanceId = statefulReplica.ReplicaId,
+                                PartitionId = statefulReplica.Partitionid,
+                                ReplicaRole = statefulReplica.ReplicaRole,
+                                ServiceKind = statefulReplica.ServiceKind,
+                                ServiceName = statefulReplica.ServiceName,
+                                ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
+                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(statefulReplica.ServicePackageActivationId) ?
+                                    ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
+                                ReplicaStatus = statefulReplica.ReplicaStatus
+                            };
+                            break;
                         }
-                        break;
-                        
                     case DeployedStatelessServiceInstance statelessInstance:
-                        
-                        replicaInfo = new ReplicaOrInstanceMonitoringInfo()
                         {
-                            ApplicationName = appName,
-                            ApplicationTypeName = appTypeName,
-                            HostProcessId = statelessInstance.HostProcessId,
-                            ReplicaOrInstanceId = statelessInstance.InstanceId,
-                            PartitionId = statelessInstance.Partitionid,
-                            ServiceKind = statelessInstance.ServiceKind,
-                            ServiceName = statelessInstance.ServiceName,
-                            ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
-                            ReplicaRole = ReplicaRole.None,
-                            ReplicaStatus = statelessInstance.ReplicaStatus
-                        };
-
-                        if (serviceFilterList != null && filterType != ServiceFilterType.None)
-                        {
-                            bool isInFilterList = serviceFilterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
-
-                            switch (filterType)
+                            if (filterList != null && filterType != ServiceFilterType.None)
                             {
-                                case ServiceFilterType.Include when !isInFilterList:
-                                case ServiceFilterType.Exclude when isInFilterList:
-                                    continue;
+                                bool isInFilterList = filterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+
+                                switch (filterType)
+                                {
+                                    case ServiceFilterType.Include when !isInFilterList:
+                                    case ServiceFilterType.Exclude when isInFilterList:
+                                        return;
+                                }
                             }
+
+                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
+                            {
+                                ApplicationName = appName,
+                                ApplicationTypeName = appTypeName,
+                                HostProcessId = statelessInstance.HostProcessId,
+                                ReplicaOrInstanceId = statelessInstance.InstanceId,
+                                PartitionId = statelessInstance.Partitionid,
+                                ReplicaRole = ReplicaRole.None,
+                                ServiceKind = statelessInstance.ServiceKind,
+                                ServiceName = statelessInstance.ServiceName,
+                                ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
+                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(statelessInstance.ServicePackageActivationId) ?
+                                    ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
+                                ReplicaStatus = statelessInstance.ReplicaStatus
+                            };
+                            break;
                         }
-                        break;   
                 }
 
-                if (replicaInfo == null)
+                if (replicaInfo?.HostProcessId > 0 && !ReplicaOrInstanceList.Any(r => r.ServiceName == replicaInfo.ServiceName))
                 {
-                    continue;
+                    ReplicaOrInstanceList.Enqueue(replicaInfo);
                 }
-
-                ReplicaOrInstanceList.Enqueue(replicaInfo);
-            }
+            });
         }
     }
 }

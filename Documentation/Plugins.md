@@ -1,67 +1,76 @@
 ## How to implement an observer plugin using FO's extensibility model
 
-This document is a simple overview of how to get started with building an observer plugin. Also, for a more advanced sample, please see [ContainerObserver](https://github.com/gittorre/containerobserver) reference project (ContainerObserver is a part of FO (since version 3.1.17)).
+#### Note that starting in version 2.2.0.831, ClusterObserver supports the FO plugin model. So, you can build cluster-level monitoring plugins should you so desire.
 
-Note: The plugin model depends on the following packages, which **must have the same versions in both your plugin project and FabricObserver**:
+1. Create a new .NET Standard (2.0) library project.
 
-Current: 
+2. Install the latest Microsoft.ServiceFabricApps.FabricObserver.Extensibility nupkg from https://www.nuget.org/profiles/ServiceFabricApps into your plugin project.
 
-**Microsoft.Extensions.DependencyInjection, Version 5.0.1**  
-**Microsoft.Extensions.DependencyInjection.Abstractions, Version 5.0.0**  (Observer plugins must employ this package, which must be the same version as FabricObserver's referenced package)  
+3. Write an observer plugin!
 
-#### Steps 
+    E.g., create a new class file, MyObserver.cs.
 
-FabricObserver is a .NET Core 3.1 application. A FabricObserver plugin is a .NET Standard 2.0 library that consumes FabricObserver's public API, which is housed inside a .NET Standard 2.0 library, FabricObserver.Extensibility.dll. 
-Your plugin must be built as a .NET Standard 2.0 library.
+    This is the required signature for your plugin's constructor: 
 
-Install [.Net Core 3.1](https://dotnet.microsoft.com/download/dotnet-core/3.1).
-
-Create a new .NET Standard 2.0 library project, install the nupkg you need for your target OS (Linux (Ubuntu) or Windows):  
-
-You can find the Microsoft-signed packages in the nuget.org gallery [here](https://www.nuget.org/profiles/ServiceFabricApps) or just run this in the package manager console:
-
-```
-Install-Package Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained -Version 3.1.24   
-
-or for Linux:
-
-Install-Package Microsoft.ServiceFabricApps.FabricObserver.Linux.SelfContained -Version 3.1.24
+```C#
+    // FO will provide (and manage) both the FabricClient instance and StatelessServiceContext instance during startup.
+    public MyObserver(FabricClient fabricClient, StatelessServiceContext context) : base(fabricClient, context)
+    {
+    }
 ```
 
-Note:
+You must implement ObserverBase's two abstract functions: 
 
-FrameworkDependent = Requires that .NET Core 3.1 is already installed on target machine.  
+```C#
+    public override Task ObserveAsync()
+    {
+    }
 
-SelfContained = Includes all the binaries necessary for running .NET Core 3.1 applications on target machine. ***This is what you will want to use for your Azure deployments.***
+    public override Task ReportAsync()
+    {
+    }
+```
 
-**Plugins and Dependencies** 
+4. Create a [PluginTypeName]Startup.cs file with this format (e.g., MyObserver is the name of your plugin class.):
+    
+```C#
+    using System.Fabric;
+    using FabricObserver;
+    using FabricObserver.Observers;
+    using Microsoft.Extensions.DependencyInjection;
 
-- You MUST place all plugin dependency libraries in the same folder as your plugin dll.
-- Plugins (and their dependencies) can live in child folders in the Plugins directory, which will keep things cleaner for folks with multiple plugins.
+    [assembly: FabricObserverStartup(typeof(MyObserverStartup))]
+    namespace FabricObserver.Observers
+    {
+        public class MyObserverStartup : IFabricObserverStartup
+        {
+            public void ConfigureServices(IServiceCollection services, FabricClient fabricClient, StatelessServiceContext context)
+            {
+                services.AddScoped(typeof(ObserverBase), s => new MyObserver(fabricClient, context));
+            }
+        }
+    }
+```
 
-The Plugins folder/file structure MUST be: 
+5. Build your observer project, drop the output dll and *ALL* of its dependencies, both managed and native (this is *very* important), into the Config/Data/Plugins folder in FabricObserver/PackageRoot. 
+   You can place your plugin dll and all of its dependencies in its own (*same*) folder under the Plugins directory (useful if you have multiple plugins). 
+   Again, ALL plugin dll dependencies (and their dependencies, if any) need to live in the *same* folder as the plugin dll.
 
-- Config/Data/Plugins/MyPlugin/MyPlugin.dll (required), MyPlugin.pdb (optional), [ALL of MyPlugin.dll's private dependencies] (required) 
-
-OR 
-
-- Config/Data/Plugins/MyPlugin.dll (required), MyPlugin.pdb(optional), [ALL of MyPlugin.dll's private dependencies] (required).  
-
-A private plugin dependency is any file (typically a dll) that you reference in your plugin project that is not already referenced by FabricObserver. 
-
-So, things like Nuget packages or Project References or COM References that are only used by your plugin. It is important to stress that if a dependency dll has dependencies, then you MUST also place those in the plugin's directory.
-When you build your plugin project you will see the dependencies (if any) in the bin folder. Make sure ALL of them are placed into FO's Plugins folder or your plugin will not work. 
-
-**Build and Publish**  
-
-- Write your observer plugin!
-
-- Build your observer project, drop the output dll into the Data/Plugins folder in FabricObserver/PackageRoot.
-
-- Add a new config section for your observer in FabricObserver/PackageRoot/Config/Settings.xml (see example at bottom of that file)
-   Update ApplicationManifest.xml with Parameters if you want to support Application Parameter Updates for your plugin.
+6. Add a new config section for your observer in FabricObserver/PackageRoot/Config/Settings.xml (see example at bottom of that file)
+   Update ApplicationManifest.xml with Parameters if you want to support Versionless Application Parameter-only Upgrades for your plugin.
    (Look at both FabricObserver/PackageRoot/Config/Settings.xml and FabricObserverApp/ApplicationPackageRoot/ApplicationManifest.xml for several examples of how to do this.)
 
-- Deploy FabricObserver to your cluster. Your new observer will be managed and run just like any other observer.
+7. Ship it! (Well, test it first =)
 
-#### Due to the complexity of unloading plugins at runtime, in order to add or update a plugin, you must redeploy FabricObserver. The problem is easier to solve for new plugins, as this could be done via a Data configuration update, but we have not added support for this yet.
+
+If you want to build your own nupkg from FO source, then:
+
+Open a PowerShell console, navigate to the top level directory of the FO repo (in this example, C:\Users\me\source\repos\service-fabric-observer):
+
+```PowerShell
+cd C:\Users\me\source\repos\service-fabric-observer
+./Build-FabricObserver
+./Build-NugetPackages
+```
+The output from the above commands, FabricObserver platform-specific nupkgs and a package you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.0.nupkg, would be located in 
+C:\Users\me\source\repos\service-fabric-observer\bin\release\FabricObserver\Nugets.

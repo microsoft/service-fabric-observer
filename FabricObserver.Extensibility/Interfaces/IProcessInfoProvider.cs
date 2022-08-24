@@ -4,44 +4,45 @@
 // ------------------------------------------------------------
 
 using System.Collections.Generic;
-using System.Fabric;
+using System.Threading;
 
 namespace FabricObserver.Observers.Utilities
 {
     public interface IProcessInfoProvider
     {
         /// <summary>
-        /// Gets the amount, in megabytes, of Working Set memory for a specified process. By default, this is the full Working Set amount (private plus shared process memory). You can supply
-        /// a boolean value for optional parameter getPrivateWorkingSet to inform the function that you want Active Private Working Set only.
+        /// Gets the amount, in megabytes, of Working Set memory for a specified process. By default, this is the full Working Set amount (private plus shared process memory).
+        /// If you want Private Working Set data, then you must provide a process name and pass true for getPrivateWorkingSet.
         /// </summary>
         /// <param name="processId">The id of the process.</param>
         /// <param name="procName">Optional: The name of the process. This value is required if you supply true for getPrivateWorkingSet.</param>
         /// <param name="getPrivateWorkingSet">Optional: return data for Private working set only.</param>
         /// <returns>The amount, in megabytes, of Working Set memory for a specified process (total or active private, depending on how the function is called).</returns>
-        float GetProcessWorkingSetMb(int processId, string procName = null, bool getPrivateWorkingSet = false);
+        float GetProcessWorkingSetMb(int processId, string procName, CancellationToken token, bool getPrivateWorkingSet = false);
 
         /// <summary>
         /// Gets the number of allocated (in use) file handles for a specified process.
         /// </summary>
         /// <param name="processId">The id of the process.</param>
-        /// <param name="context">StatelessServiceContext instance.</param>
+        /// <param name="configPath">Full path to Configuration Settings file.</param>
         /// <returns>The float value representing number of allocated file handles for the process.</returns>
-        float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null, bool useProcessObject = false);
+        float GetProcessAllocatedHandles(int processId, string configPath = null);
 
         /// <summary>
         /// Gets process information (name, pid) for descendants of the parent process represented by the supplied process id.
         /// </summary>
         /// <param name="parentPid">The parent process id.</param>
+        /// <param name="handleToSnapshot">Windows only. Handle to a Windows process snapshot(created using NativeMethods.CreateToolhelp32Snapshot). This has no meaning for Linux, just supply IntPtr.Zero.</param>
         /// <returns>List of tuple (string ProcName, int Pid) for descendants of the parent process or null if the parent has no children.</returns>
-        List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid);
+        List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot = null);
 
         /// <summary>
-        /// Gets the current percentage of KVS LVIDs in use for the supplied process name (Windows-only. Returns -1 if called on Linux).
+        /// Windows only. Determines the percentage of Windows KVS LVIDs currently in use.
         /// </summary>
-        /// <param name="procName">Name of target process.</param>
-        /// <param name="procId">Optional. The target process ID. This is used to determine the Windows internal process name to pass to the counter. 
-        /// This is very important when there are multiple processes with the same name.</param>
-        /// <returns>Percentage (double) of total LVIDs the process is currently consuming. A result of -1 means failure. Consumer should handle the case when the result is less than 0.</returns>
-        double GetProcessKvsLvidsUsagePercentage(string procName, int procId = -1);
+        /// <param name="procName">The name of the target process.</param>
+        /// <param name="procId" type="optional">If there may be multiple processes with the same name, 
+        /// then also supply this value to ensure the correct process is measured.</param>
+        /// <returns>double representing the current percentage of LVIDs in use out of a possible int.MaxValue total.</returns>
+        double GetProcessKvsLvidsUsagePercentage(string procName, CancellationToken token, int procId = -1);
     }
 }

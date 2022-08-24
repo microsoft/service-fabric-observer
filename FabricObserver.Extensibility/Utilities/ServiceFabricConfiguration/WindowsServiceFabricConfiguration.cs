@@ -4,6 +4,9 @@
 // ------------------------------------------------------------
 
 using Microsoft.Win32;
+using System;
+using System.IO;
+using System.Security;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -17,12 +20,26 @@ namespace FabricObserver.Observers.Utilities
 
         public override string GetString(string name)
         {
-            return (string)Registry.GetValue(ServiceFabricWindowsRegistryPath, name, null);
+            try
+            {
+                return (string)Registry.GetValue(ServiceFabricWindowsRegistryPath, name, null);
+            }
+            catch (Exception e) when (e is ArgumentException || e is IOException || e is SecurityException)
+            {
+                return "Unknown";
+            }
         }
 
         public override int GetInt32(string name)
         {
-            return (int)Registry.GetValue(ServiceFabricWindowsRegistryPath, name, 0);
+            try
+            { 
+                return (int)Registry.GetValue(ServiceFabricWindowsRegistryPath, name, 0);
+            }
+            catch (Exception e) when (e is ArgumentException || e is IOException || e is SecurityException)
+            {
+                return 0;
+            }
         }
     }
 }

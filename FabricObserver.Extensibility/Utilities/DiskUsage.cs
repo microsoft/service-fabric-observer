@@ -10,12 +10,31 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading;
 
 namespace FabricObserver.Observers.Utilities
 {
     public static class DiskUsage
     {
+        private static PerformanceCounter _performanceCounter = null;
+        
+        private static PerformanceCounter QueueLengthCounter
+        {
+            get
+            {
+                if (_performanceCounter == null)
+                {
+                    _performanceCounter = new PerformanceCounter
+                    {
+                        CategoryName = "LogicalDisk",
+                        CounterName = "Avg. Disk Queue Length",
+                        ReadOnly = true
+                    };
+                }
+
+                return _performanceCounter;
+            }
+        }
+
         public static bool ShouldCheckDrive(DriveInfo driveInfo)
         {
             if (!driveInfo.IsReady)
@@ -104,19 +123,14 @@ namespace FabricObserver.Observers.Utilities
                 return 0F;
             }
 
-            PerformanceCounter diskAverageQueueLengthCounter = null;
-
             try
             {
-                diskAverageQueueLengthCounter = new PerformanceCounter
-                {
-                    InstanceName = instance,
-                    CategoryName = "LogicalDisk",
-                    CounterName = "Avg. Disk Queue Length",
-                    ReadOnly = true
-                };
+                QueueLengthCounter.InstanceName = instance;
 
-                return diskAverageQueueLengthCounter.NextValue();
+                // Warm up counter.
+                _ = QueueLengthCounter.RawValue;
+
+                return QueueLengthCounter.NextValue();
             }
             catch (Exception e)
             {
@@ -124,19 +138,14 @@ namespace FabricObserver.Observers.Utilities
 
                 if (e is ArgumentNullException || e is PlatformNotSupportedException || e is Win32Exception || e is UnauthorizedAccessException)
                 {
-                    logger.LogWarning($"{diskAverageQueueLengthCounter.CategoryName} {diskAverageQueueLengthCounter.CounterName} PerfCounter handled exception: " + e);
+                    logger.LogWarning($"{QueueLengthCounter.CategoryName} {QueueLengthCounter.CounterName} PerfCounter handled exception: " + e);
 
                     // Don't throw.
                     return 0F;
                 }
 
-                logger.LogError($"{diskAverageQueueLengthCounter.CategoryName} {diskAverageQueueLengthCounter.CounterName} PerfCounter unhandled exception: " + e);
+                logger.LogError($"{QueueLengthCounter.CategoryName} {QueueLengthCounter.CounterName} PerfCounter unhandled exception: " + e);
                 throw;
-            }
-            finally
-            {
-                diskAverageQueueLengthCounter?.Dispose();
-                diskAverageQueueLengthCounter = null;
             }
         }
 

@@ -14,12 +14,11 @@ namespace FabricObserver.Observers.Utilities
         public const string EnableCSVDataLogging = "EnableCSVDataLogging";
         public const string Fqdn = "FQDN";
         public const string EnableETWProvider = "EnableETWProvider";
-        public const string EventSourceProviderName = "FabricObserverETWProvider";
+        public const string ETWProviderName = "ETWProviderName";
+        public const string DefaultEventSourceProviderName = "FabricObserverETWProvider";
+        public const string FabricObserverETWEventName = "FabricObserverDataEvent";
         public const string EnableFabricObserverOperationalTelemetry = "EnableFabricObserverOperationalTelemetry";
         public const string AsyncClusterOperationTimeoutSeconds = "ClusterOperationTimeoutSeconds";
-        public const string FabricObserverName = "FabricObserver";
-        public const string FabricObserverETWEventName = "FabricObserverDataEvent";
-        public const string EnableConcurrentExecution = "EnableConcurrentExecution";
         public const string ObserverFailureHealthStateLevelParameter = "ObserverFailureHealthStateLevel";
 
         // The name of the package that contains this Observer's configuration
@@ -39,6 +38,8 @@ namespace FabricObserver.Observers.Utilities
         // Setting name for Maximum time an observer should run before being considered hung or in some failure state.
         public const string ObserverExecutionTimeout = "ObserverExecutionTimeout";
 
+        public const string FabricObserverName = "FabricObserver";
+
         // Common Observer Settings Parameters.
         public const string ObserverLogPathParameter = "ObserverLogPath";
         public const string DataLogPathParameter = "DataLogPath";
@@ -57,9 +58,12 @@ namespace FabricObserver.Observers.Utilities
         public const string MaxConcurrentTasks = "MaxConcurrentTasks";
         public const string EnableKvsLvidMonitoringParameter = "EnableKvsLvidMonitoring";
         public const string MonitorPrivateWorkingSet = "MonitorPrivateWorkingSet";
+        public const string ConfigurationFileName = "ConfigurationFileName";
+        public const string ProcessDumpFolderName = "MemoryDumps";
 
         // AppObserver.
         public const string AppObserverName = "AppObserver";
+        public const string AppObserverDataFileName = "AppObserverDataFileName";
         public const string AppObserverConfigurationSectionName = "AppObserverConfiguration";
         public const string EnableChildProcessMonitoringParameter = "EnableChildProcessMonitoring";
         public const string MaxChildProcTelemetryDataCountParameter = "MaxChildProcTelemetryDataCount";
@@ -94,9 +98,13 @@ namespace FabricObserver.Observers.Utilities
         public const string DiskObserverDiskSpacePercentWarning = "DiskSpacePercentUsageWarningThreshold";
         public const string DiskObserverAverageQueueLengthError = "AverageQueueLengthErrorThreshold";
         public const string DiskObserverAverageQueueLengthWarning = "AverageQueueLengthWarningThreshold";
+        public const string DiskObserverEnableFolderSizeMonitoring = "EnableFolderSizeMonitoring";
+        public const string DiskObserverFolderPathsErrorThresholdsMb = "FolderPathsErrorThresholdsMb";
+        public const string DiskObserverFolderPathsWarningThresholdsMb = "FolderPathsWarningThresholdsMb";
 
         // FabricSystemObserver.
         public const string FabricSystemObserverName = "FabricSystemObserver";
+        public const string FabricSystemObserverConfigurationName = "FabricSystemObserverConfiguration";
         public const string FabricSystemObserverCpuErrorLimitPct = "CpuErrorLimitPercent";
         public const string FabricSystemObserverCpuWarningLimitPct = "CpuWarningLimitPercent";
         public const string FabricSystemObserverMemoryErrorLimitMb = "MemoryErrorLimitMb";
@@ -129,6 +137,8 @@ namespace FabricObserver.Observers.Utilities
         public const string NodeObserverNetworkWarningActivePorts = "NetworkWarningActivePorts";
         public const string NodeObserverNetworkErrorEphemeralPorts = "NetworkErrorEphemeralPorts";
         public const string NodeObserverNetworkWarningEphemeralPorts = "NetworkWarningEphemeralPorts";
+        public const string NodeObserverNetworkErrorEphemeralPortsPercentage = "NetworkErrorEphemeralPortsPercentage";
+        public const string NodeObserverNetworkWarningEphemeralPortsPercentage = "NetworkWarningEphemeralPortsPercentage";
         public const string NodeObserverNetworkErrorFirewallRules = "NetworkErrorFirewallRules";
         public const string NodeObserverNetworkWarningFirewallRules = "NetworkWarningFirewallRules";
 
@@ -160,5 +170,11 @@ namespace FabricObserver.Observers.Utilities
         public const string Undefined = "Undefined";
         public const string ClusterTypePaasV1 = "PaasV1";
         public const string ClusterTypeStandalone = "Standalone";
+
+        // ETW
+        public const string PayloadNameChildProcessTelemetryData = "childProcessTelemetryData";
+        public const string PayloadNameTelemetryData = "telemetryData";
+        public const string PayloadNameMachineTelemetryData = "machineTelemetryData";
+        public const string PayloadNameAnonData = "anonData";
     }
 }

@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Fabric;
 using System.IO;
 using System.Linq;
@@ -14,31 +13,23 @@ using System.Threading.Tasks;
 using FabricObserver.Observers;
 using McMaster.NETCore.Plugins;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.ServiceFabric.Services.Communication.Runtime;
 using Microsoft.ServiceFabric.Services.Runtime;
-using Microsoft.ServiceFabric.Services.Remoting;
-using Microsoft.ServiceFabric.Services.Remoting.Runtime;
 
 namespace FabricObserver
 {
-    
     /// <summary>
     /// An instance of this class is created for each service instance by the Service Fabric runtime.
     /// </summary>
     internal sealed class FabricObserver : StatelessService
     {
-        private readonly FabricClient fabricClient;
-
         /// <summary>
-        /// Initializes a new instance of the <see cref="FabricObserver"/> class.
+        /// Initializes a new instance of the type.
         /// </summary>
-        /// <param name="context">StatelessServiceContext.</param>
-        public FabricObserver(StatelessServiceContext context)
-            : base(context)
+        /// <param name="context">StatelessServiceContext instance.</param>
+        public FabricObserver(StatelessServiceContext context) : base(context)
         {
-            fabricClient = new FabricClient();
-        }
 
+        }
 
         /// <summary>
         /// This is the main entry point for your service instance.
@@ -51,27 +42,26 @@ namespace FabricObserver
             ConfigureServices(services);
 
             await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-            using var observerManager = new ObserverManager(serviceProvider, fabricClient, cancellationToken);
-            await observerManager.StartObserversAsync().ConfigureAwait(true);
+            using var observerManager = new ObserverManager(serviceProvider, cancellationToken);
+            await observerManager.StartObserversAsync();
         }
 
         /// <summary>
-        /// This function will add observer instances, both static (so, part of the FO impl) and dynamic (so, observer plugin dlls).
+        /// This function will add observer instances, both static (observers that are already implemented in FabricObserver) and dynamic (custom observer plugin dlls).
         /// </summary>
         /// <param name="services">ServiceCollection collection instance.</param>
         private void ConfigureServices(IServiceCollection services)
         {
-            _ = services.AddScoped(typeof(ObserverBase), s => new AppObserver(fabricClient, Context));
-            _ = services.AddScoped(typeof(ObserverBase), s => new AzureStorageUploadObserver(fabricClient, Context));
-            _ = services.AddScoped(typeof(ObserverBase), s => new CertificateObserver(fabricClient, Context));
-            _ = services.AddScoped(typeof(ObserverBase), s => new ContainerObserver(fabricClient, Context));
-            _ = services.AddScoped(typeof(ObserverBase), s => new DiskObserver(fabricClient, Context));
-            _ = services.AddScoped(typeof(ObserverBase), s => new FabricSystemObserver(fabricClient, Context));
-            _ = services.AddScoped(typeof(ObserverBase), s => new NetworkObserver(fabricClient, Context));
-            _ = services.AddScoped(typeof(ObserverBase), s => new NodeObserver(fabricClient, Context));
-            _ = services.AddScoped(typeof(ObserverBase), s => new OSObserver(fabricClient, Context));
-            _ = services.AddScoped(typeof(ObserverBase), s => new SFConfigurationObserver(fabricClient, Context));
-
+            _ = services.AddScoped(typeof(ObserverBase), s => new AppObserver(Context));
+            _ = services.AddScoped(typeof(ObserverBase), s => new AzureStorageUploadObserver(Context));
+            _ = services.AddScoped(typeof(ObserverBase), s => new CertificateObserver(Context));
+            _ = services.AddScoped(typeof(ObserverBase), s => new ContainerObserver(Context));
+            _ = services.AddScoped(typeof(ObserverBase), s => new DiskObserver(Context));
+            _ = services.AddScoped(typeof(ObserverBase), s => new FabricSystemObserver(Context));
+            _ = services.AddScoped(typeof(ObserverBase), s => new NetworkObserver(Context));
+            _ = services.AddScoped(typeof(ObserverBase), s => new NodeObserver(Context));
+            _ = services.AddScoped(typeof(ObserverBase), s => new OSObserver(Context));
+            _ = services.AddScoped(typeof(ObserverBase), s => new SFConfigurationObserver(Context));
             _ = services.AddSingleton(typeof(StatelessServiceContext), Context);
 
             LoadObserversFromPlugins(services);
@@ -125,7 +115,10 @@ namespace FabricObserver
 
                         if (startupObject is IFabricObserverStartup fabricObserverStartup)
                         {
-                            fabricObserverStartup.ConfigureServices(services, fabricClient, Context);
+                            // The null parameter (re FabricClient) is used here *only to preserve the existing (historical, in use..) interface specification for IFabricObserverStartup*. 
+                            // There is actually no longer a need to pass in a FabricClient instance as this is now a singleton instance managed by 
+                            // FabricObserver.Extensibility.FabricClientUtilities that protects against premature disposal (by plugins, for example).
+                            fabricObserverStartup.ConfigureServices(services, null, Context);
                         }
                         else
                         {

@@ -16,49 +16,97 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using FabricObserver.Interfaces;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 using FabricObserver.Utilities.ServiceFabric;
-using Newtonsoft.Json;
-using ConfigSettings = FabricObserver.Observers.MachineInfoModel.ConfigSettings;
 
 namespace FabricObserver.Observers
 {
     // This observer monitors the behavior of user SF service processes (and their children) and signals Warning and Error based on user-supplied resource thresholds
     // in AppObserver.config.json. This observer will also emit telemetry (ETW, LogAnalytics/AppInsights) if enabled in Settings.xml (ObserverManagerConfiguration) and ApplicationManifest.xml (AppObserverEnableEtw).
-    public class AppObserver : ObserverBase
+    public sealed class AppObserver : ObserverBase
     {
         private const double KvsLvidsWarningPercentage = 75.0;
-        private readonly bool isWindows;
+        private const int MaxSameNamedProcesses = 50;
+        private readonly object _lock = new object();
 
-        // Support for concurrent monitoring.
+        // These are the concurrent data containers that hold all monitoring data for all application targets for specific metrics.
+        // In the case where machine has capable CPU configuration and AppObserverEnableConcurrentMonitoring is enabled, these ConcurrentDictionaries
+        // will be read by and written to by multiple threads. In the case where concurrency is not possible (or not enabled), they will sort of act as "normal"
+        // Dictionaries (not precisely) since the monitoring loop will always be sequential (exactly one thread, so no internal locking) and there will not be *any* concurrent reads/writes.
+        // The modest cost in memory allocation in the sequential processing case is not an issue here.
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData;
         private ConcurrentDictionary<string, FabricResourceUsageData<float>> AllAppMemDataMb;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppMemDataPercent;
         private ConcurrentDictionary<string, FabricResourceUsageData<int>> AllAppTotalActivePortsData;
         private ConcurrentDictionary<string, FabricResourceUsageData<int>> AllAppEphemeralPortsData;
+        private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppEphemeralPortsDataPercent;
         private ConcurrentDictionary<string, FabricResourceUsageData<float>> AllAppHandlesData;
         private ConcurrentDictionary<string, FabricResourceUsageData<int>> AllAppThreadsData;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppKvsLvidsData;
-        private ConcurrentDictionary<int, string> processInfo;
 
-        // userTargetList is the list of ApplicationInfo objects representing app/app types supplied in configuration. List<T> is thread-safe for reads.
-        // There are no concurrent writes to this List, so no need it for ConcurrentQueue here, for example.
-        private List<ApplicationInfo> userTargetList;
+        // Stores process id (key) / process name pairs for all monitored service processes.
+        private ConcurrentDictionary<int, string> _processInfoDictionary;
 
-        // deployedTargetList is the list of ApplicationInfo objects representing currently deployed applications in the user-supplied list.
-        // List<T> is thread-safe for reads. There are no concurrent writes to this List.
-        private List<ApplicationInfo> deployedTargetList;
-        
-        private readonly ConfigSettings configSettings;
-        private readonly Stopwatch stopwatch;
+        // _userTargetList is the list of ApplicationInfo objects representing app/app types supplied in user configuration (AppObserver.config.json).
+        // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
+        private List<ApplicationInfo> _userTargetList;
+
+        // _deployedTargetList is the list of ApplicationInfo objects representing currently deployed applications in the user-supplied target list.
+        // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
+        private List<ApplicationInfo> _deployedTargetList;
+
+        // _deployedApps is the List of all apps currently deployed on the local Fabric node.
+        // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
+        private List<DeployedApplication> _deployedApps;
+
+        private readonly Stopwatch _stopwatch;
         private readonly object lockObj = new object();
-        private readonly Client client;
-        private string fileName;
-        private int appCount;
-        private int serviceCount;
-        private bool checkPrivateWorkingSet;
+        private FabricClientUtilities _client;
+        private ParallelOptions _parallelOptions;
+        private string _fileName;
+        private int _appCount;
+        private int _serviceCount;
+        private NativeMethods.SafeObjectHandle _handleToProcSnapshot = null;
+        
+        private NativeMethods.SafeObjectHandle Win32HandleToProcessSnapshot
+        {
+            get
+            {
+                // This is only useful for Windows.
+                if (!IsWindows)
+                {
+                    return null;
+                }
+
+                if (_handleToProcSnapshot == null)
+                {
+                    lock (lockObj)
+                    {
+                        if (_handleToProcSnapshot == null)
+                        {
+                            _handleToProcSnapshot = 
+                                NativeMethods.CreateToolhelp32Snapshot((uint)NativeMethods.CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
+                            
+                            if (_handleToProcSnapshot.IsInvalid)
+                            {
+                                string message = $"HandleToProcessSnapshot: Failed to get process snapshot with error code {Marshal.GetLastWin32Error()}";
+                                ObserverLogger.LogWarning(message);
+                                throw new Win32Exception(message);
+                            }
+                        }
+                    }
+                }
+
+                return _handleToProcSnapshot;
+            }
+        }
+
+        // ReplicaOrInstanceList is the List of all replicas or instances that will be monitored during the current run.
+        // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
+        public List<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList;
 
         public int MaxChildProcTelemetryDataCount
         {
@@ -70,23 +118,12 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        // List<T> is thread-safe for reads. There are no concurrent writes to this IList.
-        public List<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList
-        {
-            get; set;
-        }
-
-        public string ConfigPackagePath
+        public string JsonConfigPath
         {
             get; set;
         }
 
         public bool EnableConcurrentMonitoring
-        {
-            get; set;
-        }
-
-        ParallelOptions ParallelOptions
         {
             get; set;
         }
@@ -101,72 +138,108 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="AppObserver"/> class.
-        /// </summary>
-        public AppObserver(FabricClient fabricClient, StatelessServiceContext context)
-            : base(fabricClient, context)
+        public int OperationalHealthEvents
         {
-            configSettings = new ConfigSettings(FabricServiceContext);
-            ConfigPackagePath = configSettings.ConfigPackagePath;
-            stopwatch = new Stopwatch();
-            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-            client = new Client(fabricClient, context);
+            get; set;
+        }
+
+        public bool CheckPrivateWorkingSet
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// Creates a new instance of the type.
+        /// </summary>
+        /// <param name="context">The StatelessServiceContext instance.</param>
+        public AppObserver(StatelessServiceContext context) : base(null, context)
+        {
+            _stopwatch = new Stopwatch();
         }
 
         public override async Task ObserveAsync(CancellationToken token)
         {
+            ObserverLogger.LogInfo($"Started ObserveAsync...");
+
             if (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
+                ObserverLogger.LogInfo($"RunInterval ({RunInterval}) has not elapsed. Exiting.");
                 return;
             }
 
-            stopwatch.Start();
-            bool initialized = await InitializeAsync();
             Token = token;
+            _stopwatch.Start();
 
-            if (!initialized)
+            try
             {
-                ObserverLogger.LogWarning("AppObserver was unable to initialize correctly due to misconfiguration. " +
-                                          "Please check your AppObserver configuration settings.");
-                stopwatch.Stop();
-                stopwatch.Reset();
-                return;
+                bool initialized = await InitializeAsync();
+
+                if (!initialized)
+                {
+                    ObserverLogger.LogWarning("AppObserver was unable to initialize correctly due to misconfiguration. " +
+                                              "Please check your AppObserver configuration settings.");
+                    _stopwatch.Stop();
+                    _stopwatch.Reset();
+                    CleanUp();
+                    LastRunDateTime = DateTime.Now;
+                    return;
+                }
+            }
+            catch (Exception e)
+            {
+                ObserverLogger.LogWarning($"DEBUG: InitializeAsync failure:{Environment.NewLine}{e}");
+                throw;
             }
 
-            await MonitorDeployedAppsAsync(token);
-            await ReportAsync(token);
+            ParallelLoopResult result = await MonitorDeployedAppsAsync(token);
+            
+            if (result.IsCompleted)
+            {
+                await ReportAsync(token);
+            }
 
-            stopwatch.Stop();
-            RunDuration = stopwatch.Elapsed;
+            _stopwatch.Stop();
+            RunDuration = _stopwatch.Elapsed;
            
             if (EnableVerboseLogging)
             {
-                ObserverLogger.LogInfo($"Run Duration {(ParallelOptions.MaxDegreeOfParallelism > 1 ? "with" : "without")} " +
-                                       $"Parallel (Processors: {Environment.ProcessorCount} MaxDegreeOfParallelism: {ParallelOptions.MaxDegreeOfParallelism}):{RunDuration}");
+                ObserverLogger.LogInfo($"Run Duration {(_parallelOptions.MaxDegreeOfParallelism == 1 ? "without" : "with")} " +
+                                       $"Parallel (Processors: {Environment.ProcessorCount} MaxDegreeOfParallelism: {_parallelOptions.MaxDegreeOfParallelism}):{RunDuration}");
             }
 
             CleanUp();
-            stopwatch.Reset();
+            _stopwatch.Reset();
+            ObserverLogger.LogInfo($"Completed ObserveAsync...");
             LastRunDateTime = DateTime.Now;
         }
-
+       
         public override Task ReportAsync(CancellationToken token)
         {
-            if (deployedTargetList.Count == 0)
+            if (_deployedTargetList.Count == 0)
             {
                 return Task.CompletedTask;
             }
 
-            var stopwatch = Stopwatch.StartNew();
+            ObserverLogger.LogInfo($"Started ReportAsync...");
+
+            //DEBUG
+            //var stopwatch = Stopwatch.StartNew();
             TimeSpan TTL = GetHealthReportTimeToLive();
 
-            // This will run sequentially if the underlying CPU config does not meet the requirements for concurrency (e.g., if logical procs < 4).
-            _ = Parallel.For (0, ReplicaOrInstanceList.Count, ParallelOptions, (i, state) =>
+            // This will run sequentially (with 1 thread) if the underlying CPU config does not meet the requirements for concurrency (e.g., if logical procs < 4).
+            _ = Parallel.For (0, ReplicaOrInstanceList.Count, _parallelOptions, (i, state) =>
             {
-                token.ThrowIfCancellationRequested();
+                if (token.IsCancellationRequested)
+                {
+                    state.Stop();
+                }
 
                 var repOrInst = ReplicaOrInstanceList[i];
+                
+                if (repOrInst.HostProcessId < 1)
+                {
+                    return;
+                }
 
                 // For use in process family tree monitoring.
                 ConcurrentQueue<ChildProcessTelemetryData> childProcessTelemetryDataList = null;
@@ -181,14 +254,50 @@ namespace FabricObserver.Observers
                     childProcessTelemetryDataList = new ConcurrentQueue<ChildProcessTelemetryData>();
                 }
 
-                app = deployedTargetList.First(
+                if (!_deployedTargetList.Any(
+                         a => (a.TargetApp != null && a.TargetApp == repOrInst.ApplicationName.OriginalString) ||
+                              (a.TargetAppType != null && a.TargetAppType == repOrInst.ApplicationTypeName)))
+                {
+                    return;
+                }
+
+                app = _deployedTargetList.First(
                         a => (a.TargetApp != null && a.TargetApp == repOrInst.ApplicationName.OriginalString) ||
-                              (a.TargetAppType != null && a.TargetAppType == repOrInst.ApplicationTypeName));
+                                (a.TargetAppType != null && a.TargetAppType == repOrInst.ApplicationTypeName));
+                
+
+                // process serviceIncludeList config items for a single app.
+                if (app?.ServiceIncludeList != null)
+                {
+                    // Ensure the service is the one we are looking for.
+                    if (_deployedTargetList.Any(
+                            a => a.ServiceIncludeList != null &&
+                                    a.ServiceIncludeList.Contains(repOrInst.ServiceName.OriginalString.Remove(0, repOrInst.ApplicationName.OriginalString.Length + 1))))
+                    {
+                        // It could be the case that user config specifies multiple inclusion lists for a single app/type in user configuration. We want the correct service here.
+                        app = _deployedTargetList.First(
+                                a => a.ServiceIncludeList != null &&
+                                a.ServiceIncludeList.Contains(repOrInst.ServiceName.OriginalString.Remove(0, repOrInst.ApplicationName.OriginalString.Length + 1)));
+                    }
+                }
                 
                 try
                 {
                     processId = (int)repOrInst.HostProcessId;
-                    processName = processInfo.FirstOrDefault(p => p.Key == processId).Value;
+
+                    // Make sure the process id was monitored.
+                    if (!_processInfoDictionary.ContainsKey(processId))
+                    {
+                        return;
+                    }
+
+                    processName = _processInfoDictionary[processId];
+
+                    // Make sure the target process still exists, otherwise why report on it (it was ephemeral as far as this run of AO is concerned).
+                    if (!EnsureProcess(processName, processId))
+                    {
+                        return;
+                    }
                 }
                 catch (Exception e) when (e is ArgumentException)
                 {
@@ -209,9 +318,9 @@ namespace FabricObserver.Observers
                     }
 
                     // This lock is required.
-                    lock (lockObj)
+                    lock (_lock)
                     {
-                        fileName = $"{processName}{(CsvWriteFormat == CsvFileWriteFormat.MultipleFilesNoArchives ? "_" + DateTime.UtcNow.ToString("o") : string.Empty)}";
+                        _fileName = $"{processName}{(CsvWriteFormat == CsvFileWriteFormat.MultipleFilesNoArchives ? "_" + DateTime.UtcNow.ToString("o") : string.Empty)}";
 
                         // BaseLogDataLogFolderPath is set in ObserverBase or a default one is created by CsvFileLogger.
                         // This means a new folder will be added to the base path.
@@ -221,7 +330,7 @@ namespace FabricObserver.Observers
                         }
 
                         // Log pid..
-                        CsvFileLogger.LogData(fileName, id, "ProcessId", "", processId);
+                        CsvFileLogger.LogData(_fileName, id, "ProcessId", "", processId);
 
                         // Log resource usage data to CSV files.
                         LogAllAppResourceDataToCsv(id);
@@ -244,9 +353,11 @@ namespace FabricObserver.Observers
                             app.CpuErrorLimitPercent,
                             app.CpuWarningLimitPercent,
                             TTL,
-                            HealthReportType.Application,
+                            EntityType.Service,
+                            processName,
                             repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps);
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            processId);
                 }
 
                 // Memory MB - Parent process
@@ -264,9 +375,11 @@ namespace FabricObserver.Observers
                             app.MemoryErrorLimitMb,
                             app.MemoryWarningLimitMb,
                             TTL,
-                            HealthReportType.Application,
+                            EntityType.Service,
+                            processName,
                             repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps);
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            processId);
                 }
 
                 // Memory Percent - Parent process
@@ -284,9 +397,11 @@ namespace FabricObserver.Observers
                             app.MemoryErrorLimitPercent,
                             app.MemoryWarningLimitPercent,
                             TTL,
-                            HealthReportType.Application,
+                            EntityType.Service,
+                            processName,
                             repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps);
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            processId);
                 }
 
                 // TCP Ports - Active - Parent process
@@ -304,12 +419,14 @@ namespace FabricObserver.Observers
                             app.NetworkErrorActivePorts,
                             app.NetworkWarningActivePorts,
                             TTL,
-                            HealthReportType.Application,
+                            EntityType.Service,
+                            processName,
                             repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps);
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            processId);
                 }
 
-                // TCP Ports - Ephemeral (port numbers fall in the dynamic range) - Parent process
+                // TCP Ports Total - Ephemeral (port numbers fall in the dynamic range) - Parent process
                 if (AllAppEphemeralPortsData.ContainsKey(id))
                 {
                     var parentFrud = AllAppEphemeralPortsData[id];
@@ -324,11 +441,35 @@ namespace FabricObserver.Observers
                             app.NetworkErrorEphemeralPorts,
                             app.NetworkWarningEphemeralPorts,
                             TTL,
-                            HealthReportType.Application,
+                            EntityType.Service,
+                            processName,
                             repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps);
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            processId);
                 }
-                
+
+                // TCP Ports Percentage - Ephemeral (port numbers fall in the dynamic range) - Parent process
+                if (AllAppEphemeralPortsDataPercent.ContainsKey(id))
+                {
+                    var parentFrud = AllAppEphemeralPortsDataPercent[id];
+
+                    if (hasChildProcs)
+                    {
+                        ProcessChildProcs(AllAppEphemeralPortsDataPercent, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                    }
+
+                    ProcessResourceDataReportHealth(
+                            parentFrud,
+                            app.NetworkErrorEphemeralPortsPercent,
+                            app.NetworkWarningEphemeralPortsPercent,
+                            TTL,
+                            EntityType.Service,
+                            processName,
+                            repOrInst,
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            processId);
+                }
+
                 // Allocated (in use) Handles - Parent process
                 if (AllAppHandlesData.ContainsKey(id))
                 {
@@ -344,9 +485,11 @@ namespace FabricObserver.Observers
                             app.ErrorOpenFileHandles,
                             app.WarningOpenFileHandles,
                             TTL,
-                            HealthReportType.Application,
+                            EntityType.Service,
+                            processName,
                             repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps);
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            processId);
                 }
 
                 // Threads - Parent process
@@ -364,13 +507,15 @@ namespace FabricObserver.Observers
                             app.ErrorThreadCount,
                             app.WarningThreadCount,
                             TTL,
-                            HealthReportType.Application,
+                            EntityType.Service,
+                            processName,
                             repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps);
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            processId);
                 }
 
                 // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
-                if (EnableKvsLvidMonitoring && AllAppKvsLvidsData.ContainsKey(id))
+                if (EnableKvsLvidMonitoring && AllAppKvsLvidsData != null && AllAppKvsLvidsData.ContainsKey(id))
                 {
                     var parentFrud = AllAppKvsLvidsData[id];
 
@@ -385,22 +530,19 @@ namespace FabricObserver.Observers
                             0,
                             KvsLvidsWarningPercentage,
                             TTL,
-                            HealthReportType.Application,
+                            EntityType.Service,
+                            processName,
                             repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps);
-                }
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            processId);
+                }           
 
                 // Child proc info telemetry.
-                if (hasChildProcs && MaxChildProcTelemetryDataCount > 0)
+                if (hasChildProcs && MaxChildProcTelemetryDataCount > 0 && childProcessTelemetryDataList.Count > 0)
                 {
                     if (IsEtwEnabled)
                     {
-                        var data = new
-                        {
-                            ChildProcessTelemetryData = JsonConvert.SerializeObject(childProcessTelemetryDataList.ToList())
-                        };
-
-                        ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, data);
+                        ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, childProcessTelemetryDataList.ToList());
                     }
 
                     if (IsTelemetryEnabled)
@@ -410,670 +552,120 @@ namespace FabricObserver.Observers
                 }
            });
 
-            stopwatch.Stop();
-
+            //stopwatch.Stop();
             //ObserverLogger.LogInfo($"ReportAsync run duration with parallel: {stopwatch.Elapsed}");
+            ObserverLogger.LogInfo($"Completed ReportAsync...");
             return Task.CompletedTask;
         }
 
-        private void ProcessChildProcs<T>(
-                        ConcurrentDictionary<string, FabricResourceUsageData<T>> fruds,
-                        ConcurrentQueue<ChildProcessTelemetryData> childProcessTelemetryDataList, 
-                        ReplicaOrInstanceMonitoringInfo repOrInst, 
-                        ApplicationInfo app, 
-                        FabricResourceUsageData<T> parentFrud, 
-                        CancellationToken token) where T : struct
-        {
-            token.ThrowIfCancellationRequested();
-
-            if (childProcessTelemetryDataList == null)
-            {
-                return;
-            }
-
-            try
-            { 
-                string metric = parentFrud.Property;
-                var parentDataAvg = parentFrud.AverageDataValue;
-                var (childProcInfo, Sum) = ProcessChildFrudsGetDataSum(fruds, repOrInst, app, token);
-                double sumAllValues = Sum + parentDataAvg;
-                childProcInfo.Metric = metric;
-                childProcInfo.Value = sumAllValues;
-                childProcessTelemetryDataList.Enqueue(childProcInfo);
-                
-                // this lock probably isn't necessary.
-                lock (lockObj)
-                {
-                    parentFrud.ClearData();
-                    parentFrud.AddData((T)Convert.ChangeType(sumAllValues, typeof(T)));
-                }
-            }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
-            {
-                ObserverLogger.LogWarning($"Error processing child processes:{Environment.NewLine}{e}");
-            }
-        }
-
-        private (ChildProcessTelemetryData childProcInfo, double Sum) ProcessChildFrudsGetDataSum<T>(
-                                                                         ConcurrentDictionary<string, FabricResourceUsageData<T>> fruds,
-                                                                         ReplicaOrInstanceMonitoringInfo repOrInst,
-                                                                         ApplicationInfo app,
-                                                                         CancellationToken token) where T : struct
-        {
-            var childProcs = repOrInst.ChildProcesses;
-
-            if (childProcs == null || childProcs.Count == 0 || token.IsCancellationRequested)
-            {
-                return (null, 0);
-            }
-
-            double sumValues = 0;
-            string metric = string.Empty;
-            var childProcessInfoData = new ChildProcessTelemetryData
-            {
-                ApplicationName = repOrInst.ApplicationName.OriginalString,
-                ServiceName = repOrInst.ServiceName.OriginalString,
-                NodeName = NodeName,
-                ProcessId = (int)repOrInst.HostProcessId,
-                PartitionId = repOrInst.PartitionId.ToString(),
-                ReplicaId = repOrInst.ReplicaOrInstanceId.ToString(),
-                ChildProcessCount = childProcs.Count,
-                ChildProcessInfo = new List<ChildProcessInfo>()
-            };
-
-            for (int i = 0; i < childProcs.Count; ++i)
-            {
-                token.ThrowIfCancellationRequested();
-
-                int childPid = childProcs[i].Pid;
-                string childProcName = childProcs[i].procName;
-
-                try
-                {
-                    if (fruds.Any(x => x.Key.Contains(childProcName)))
-                    {
-                        var childFruds = fruds.Where(x => x.Key.Contains(childProcName)).ToList();
-                        metric = childFruds[0].Value.Property;
-
-                        for (int j = 0; j < childFruds.Count; ++j)
-                        {
-                            token.ThrowIfCancellationRequested();
-
-                            var frud = childFruds[j];
-                            double value = frud.Value.AverageDataValue;
-                            sumValues += value;
-
-                            if (IsEtwEnabled || IsTelemetryEnabled)
-                            {
-                                var childProcInfo = new ChildProcessInfo { ProcessName = childProcName, Value = value };
-                                childProcessInfoData.ChildProcessInfo.Add(childProcInfo);
-                            }
-
-                            // Windows process dump support for descendant/child processes \\
-
-                            if (isWindows && app.DumpProcessOnError && EnableProcessDumps)
-                            {
-                                string prop = frud.Value.Property;
-                                bool dump = false;
-
-                                switch (prop)
-                                {
-                                    case ErrorWarningProperty.TotalCpuTime:
-                                        // Test error threshold breach for supplied metric.
-                                        if (frud.Value.IsUnhealthy(app.CpuErrorLimitPercent))
-                                        {
-                                            dump = true;
-                                        }
-                                        break;
-
-                                    case ErrorWarningProperty.TotalMemoryConsumptionMb:
-                                        if (frud.Value.IsUnhealthy(app.MemoryErrorLimitMb))
-                                        {
-                                            dump = true;
-                                        }
-                                        break;
-
-                                    case ErrorWarningProperty.TotalMemoryConsumptionPct:
-                                        if (frud.Value.IsUnhealthy(app.MemoryErrorLimitPercent))
-                                        {
-                                            dump = true;
-                                        }
-                                        break;
-
-                                    case ErrorWarningProperty.TotalActivePorts:
-                                        if (frud.Value.IsUnhealthy(app.NetworkErrorActivePorts))
-                                        {
-                                            dump = true;
-                                        }
-                                        break;
-
-                                    case ErrorWarningProperty.TotalEphemeralPorts:
-                                        if (frud.Value.IsUnhealthy(app.NetworkErrorEphemeralPorts))
-                                        {
-                                            dump = true;
-                                        }
-                                        break;
-
-                                    case ErrorWarningProperty.TotalFileHandles:
-                                        if (frud.Value.IsUnhealthy(app.ErrorOpenFileHandles))
-                                        {
-                                            dump = true;
-                                        }
-                                        break;
-
-                                    case ErrorWarningProperty.TotalThreadCount:
-                                        if (frud.Value.IsUnhealthy(app.ErrorThreadCount))
-                                        {
-                                            dump = true;
-                                        }
-                                        break;
-                                }
-
-                                lock (lockObj)
-                                {
-                                    if (dump)
-                                    {
-                                        _ = DumpWindowsServiceProcess(childPid, childProcName, prop);
-                                    }
-                                }
-                            }
-
-                            // Remove child FRUD from FRUDs.
-                            _ = fruds.TryRemove(frud.Key, out _);
-                        }
-
-                        childFruds?.Clear();
-                        childFruds = null;
-                    }
-                }
-                catch (Exception e) when (e is ArgumentException || e is Win32Exception || e is InvalidOperationException)
-                {
-                    // ignore
-                }
-                catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
-                {
-                    ObserverLogger.LogWarning($"Error processing child processes:{Environment.NewLine}{e}");
-                }
-            }
-
-            // Order List<ChildProcessInfo> by Value descending.
-            childProcessInfoData.ChildProcessInfo = childProcessInfoData.ChildProcessInfo.OrderByDescending(v => v.Value).ToList();
-
-            // Cap size of List<ChildProcessInfo> to MaxChildProcTelemetryDataCount.
-            if (childProcessInfoData.ChildProcessInfo.Count >= MaxChildProcTelemetryDataCount)
-            {
-                childProcessInfoData.ChildProcessInfo = childProcessInfoData.ChildProcessInfo.Take(MaxChildProcTelemetryDataCount).ToList();
-            }
-
-            return (childProcessInfoData, sumValues);
-        }
-
-        private static string GetAppNameOrType(ReplicaOrInstanceMonitoringInfo repOrInst)
-        {
-            // targetType specified as TargetAppType name, which means monitor all apps of specified type.
-            var appNameOrType = !string.IsNullOrWhiteSpace(repOrInst.ApplicationTypeName) ? repOrInst.ApplicationTypeName : repOrInst.ApplicationName.OriginalString.Replace("fabric:/", string.Empty);
-            return appNameOrType;
-        }
-
         // This runs each time ObserveAsync is run to ensure that any new app targets and config changes will
-        // be up to date across observer loop iterations.
-        private async Task<bool> InitializeAsync()
+        // be up to date.
+        public async Task<bool> InitializeAsync()
         {
+            ObserverLogger.LogInfo($"Initializing...");
             ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
-            userTargetList = new List<ApplicationInfo>();
-            deployedTargetList = new List<ApplicationInfo>();
+            _userTargetList = new List<ApplicationInfo>();
+            _deployedTargetList = new List<ApplicationInfo>();
+
+            // NodeName is passed here to not break unit tests, which include a mock service fabric context..
+            _client = new FabricClientUtilities(NodeName);
+            _deployedApps = await _client.GetAllDeployedAppsAsync(Token);
 
             // DEBUG
             //var stopwatch = Stopwatch.StartNew();
 
-            // Private working set monitoring.
-            if (bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MonitorPrivateWorkingSet), out bool monitorWsPriv))
+            // Set properties with Application Parameter settings (housed in ApplicationManifest.xml) for this run.
+            SetPropertiesFromApplicationSettings();
+
+            // Process JSON object configuration settings (housed in [AppObserver.config].json) for this run.
+            if (!await ProcessJSONConfigAsync())
             {
-                checkPrivateWorkingSet = monitorWsPriv;
-            }
-
-            /* Child/Descendant proc monitoring config */
-            if (bool.TryParse( GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableChildProcessMonitoringParameter), out bool enableDescendantMonitoring))
-            {
-                EnableChildProcessMonitoring = enableDescendantMonitoring;
-            }
-
-            if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxChildProcTelemetryDataCountParameter), out int maxChildProcs))
-            {
-                MaxChildProcTelemetryDataCount = maxChildProcs;
-            }
-
-            /* dumpProcessOnError config */
-            if (bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableProcessDumpsParameter), out bool enableDumps))
-            {
-                EnableProcessDumps = enableDumps;
-
-                if (string.IsNullOrWhiteSpace(DumpsPath) && enableDumps)
-                {
-                    SetDumpPath();
-                }
-            }
-
-            if (Enum.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.DumpTypeParameter), out DumpType dumpType))
-            {
-                DumpType = dumpType;
-            }
-
-            if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxDumpsParameter), out int maxDumps))
-            {
-                MaxDumps = maxDumps;
-            }
-
-            if (TimeSpan.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxDumpsTimeWindowParameter), out TimeSpan dumpTimeWindow))
-            {
-                MaxDumpsTimeWindow = dumpTimeWindow;
-            }
-
-            // Concurrency/Parallelism support. The minimum requirement is 4 logical processors, regardless of user setting.
-            if (Environment.ProcessorCount >= 4 && bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
-            {
-                EnableConcurrentMonitoring = enableConcurrency;
-            }
-
-            // Default to using [1/4 of available logical processors ~* 2] threads if MaxConcurrentTasks setting is not supplied.
-            // So, this means around 10 - 11 threads (or less) could be used if processor count = 20. This is only being done to limit the impact
-            // FabricObserver has on the resources it monitors and alerts on...
-            int maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
-            if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasks), out int maxTasks))
-            {
-                maxDegreeOfParallelism = maxTasks;
-            }
-
-            ParallelOptions = new ParallelOptions
-            {
-                MaxDegreeOfParallelism = EnableConcurrentMonitoring ? maxDegreeOfParallelism : 1,
-                CancellationToken = Token,
-                TaskScheduler = TaskScheduler.Default
-            };
-
-            // KVS LVID Monitoring - Windows-only.
-            if (isWindows && bool.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableKvsLvidMonitoringParameter), out bool enableLvidMonitoring))
-            {
-                EnableKvsLvidMonitoring = enableLvidMonitoring && ObserverManager.IsLvidCounterEnabled;
-            }
-
-            configSettings.Initialize(
-                            FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject(
-                                                                                 ObserverConstants.ObserverConfigurationPackageName)?.Settings,
-                                                                                 ConfigurationSectionName,
-                                                                                 "AppObserverDataFileName");
-
-            // Unit tests may have null path and filename, thus the null equivalence operations.
-            var appObserverConfigFileName = Path.Combine(ConfigPackagePath ?? string.Empty, configSettings.AppObserverConfigFileName ?? string.Empty);
-
-            if (!File.Exists(appObserverConfigFileName))
-            {
-                string message = $"Will not observe resource consumption on node {NodeName} as no configuration file has been supplied.";
-                var healthReport = new Utilities.HealthReport
-                {
-                    AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
-                    EmitLogEvent = true,
-                    HealthMessage = message,
-                    HealthReportTimeToLive = GetHealthReportTimeToLive(),
-                    Property = "MissingAppConfiguration",
-                    ReportType = HealthReportType.Application,
-                    State = HealthState.Warning,
-                    NodeName = NodeName,
-                    Observer = ObserverConstants.AppObserverName,
-                };
-
-                // Generate a Service Fabric Health Report.
-                HealthReporter.ReportHealthToServiceFabric(healthReport);
-
-                if (IsTelemetryEnabled)
-                {
-                    _ = TelemetryClient?.ReportHealthAsync(
-                                               "MissingAppConfiguration",
-                                               HealthState.Warning,
-                                               message,
-                                               ObserverName,
-                                               Token);
-                }
-
-                if (IsEtwEnabled)
-                {
-                    ObserverLogger.LogEtw(
-                                    ObserverConstants.FabricObserverETWEventName,
-                                    new
-                                    {
-                                        Property = "MissingAppConfiguration",
-                                        Level = "Warning",
-                                        Message = message,
-                                        ObserverName
-                                    });
-                }
-
                 return false;
             }
 
-            bool isJson = JsonHelper.IsJson<List<ApplicationInfo>>(await File.ReadAllTextAsync(appObserverConfigFileName));
+            // Filter JSON targetApp setting format; try and fix malformed values, if possible.
+            FilterTargetAppFormat();
 
-            if (!isJson)
-            {
-                string message = "AppObserver's JSON configuration file is malformed. Please fix the JSON and redeploy FabricObserver if you want AppObserver to monitor service processes.";
-                var healthReport = new Utilities.HealthReport
-                {
-                    AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
-                    EmitLogEvent = true,
-                    HealthMessage = message,
-                    HealthReportTimeToLive = GetHealthReportTimeToLive(),
-                    Property = "JsonValidation",
-                    ReportType = HealthReportType.Application,
-                    State = HealthState.Warning,
-                    NodeName = NodeName,
-                    Observer = ObserverConstants.AppObserverName,
-                };
-
-                // Generate a Service Fabric Health Report.
-                HealthReporter.ReportHealthToServiceFabric(healthReport);
-
-                // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
-                if (IsTelemetryEnabled)
-                {
-                    _ = TelemetryClient?.ReportHealthAsync(
-                                               "JsonValidation",
-                                               HealthState.Warning,
-                                               message,
-                                               ObserverName,
-                                               Token);
-                }
-
-                // ETW.
-                if (IsEtwEnabled)
-                {
-                    ObserverLogger.LogEtw(
-                                    ObserverConstants.FabricObserverETWEventName,
-                                    new
-                                    {
-                                        Property = "JsonValidation",
-                                        Level = "Warning",
-                                        Message = message,
-                                        ObserverName
-                                    });
-                }
-
-                return false;
-            }
-
-            await using Stream stream = new FileStream(appObserverConfigFileName, FileMode.Open, FileAccess.Read, FileShare.Read);
-            var appInfo = JsonHelper.ReadFromJsonStream<ApplicationInfo[]>(stream);
-            userTargetList.AddRange(appInfo);
-            
-            // Does the configuration have any objects (targets) defined?
-            if (userTargetList.Count == 0)
-            {
-                string message = $"Please add targets to AppObserver's JSON configuration file and redeploy FabricObserver if you want AppObserver to monitor service processes.";
-           
-                var healthReport = new Utilities.HealthReport
-                {
-                    AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
-                    EmitLogEvent = true,
-                    HealthMessage = message,
-                    HealthReportTimeToLive = GetHealthReportTimeToLive(),
-                    Property = "Misconfiguration",
-                    ReportType = HealthReportType.Application,
-                    State = HealthState.Warning,
-                    NodeName = NodeName,
-                    Observer = ObserverConstants.AppObserverName,
-                };
-
-                // Generate a Service Fabric Health Report.
-                HealthReporter.ReportHealthToServiceFabric(healthReport);
-                CurrentWarningCount++;
-               
-                // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
-                if (IsTelemetryEnabled)
-                {
-                    _ = TelemetryClient?.ReportHealthAsync(
-                                               "Misconfiguration",
-                                               HealthState.Warning,
-                                               message,
-                                               ObserverName,
-                                               Token);
-                }
-
-                // ETW.
-                if (IsEtwEnabled)
-                {
-                    ObserverLogger.LogEtw(
-                                    ObserverConstants.FabricObserverETWEventName,
-                                    new
-                                    {
-                                        Property = "Misconfiguration",
-                                        Level = "Warning",
-                                        Message = message,
-                                        ObserverName
-                                    });
-                }
-
-                return false;
-            }
-
-            // Support for specifying single configuration item for all or * applications.
-            if (userTargetList != null && userTargetList.Any(app => app.TargetApp?.ToLower() == "all" || app.TargetApp == "*"))
-            {
-                ApplicationInfo application = userTargetList.First(app => app.TargetApp?.ToLower() == "all" || app.TargetApp == "*");
-                List<DeployedApplication> apps = await client.GetAllLocalDeployedAppsAsync(Token);
-
-                for (int i = 0; i < apps.Count; ++i)
-                {
-                    Token.ThrowIfCancellationRequested();
-
-                    var app = apps[i];
-
-                    if (app.ApplicationName.OriginalString == "fabric:/System")
-                    {
-                        continue;
-                    }
-
-                    // App filtering: AppExcludeList, AppIncludeList. This is only useful when you are observing All/* applications for a range of thresholds.
-                    if (!string.IsNullOrWhiteSpace(application.AppExcludeList) && application.AppExcludeList.Contains(app.ApplicationName.OriginalString.Replace("fabric:/", string.Empty)))
-                    {
-                        continue;
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(application.AppIncludeList) && !application.AppIncludeList.Contains(app.ApplicationName.OriginalString.Replace("fabric:/", string.Empty)))
-                    {
-                        continue;
-                    }
-
-                    // Don't create a brand new entry for an existing (specified in configuration) app target/type. Just update the appConfig instance with data supplied in the All//* apps config entry.
-                    // Note that if you supply a conflicting setting (where you specify a threshold for a specific app target config item and also in a global config item), then the target-specific setting will be used.
-                    // E.g., if you supply a memoryWarningLimitMb threshold for an app named fabric:/MyApp and also supply a memoryWarningLimitMb threshold for all apps ("targetApp" : "All"),
-                    // then the threshold specified for fabric:/MyApp will remain in place for that app target. So, target specificity overrides any global setting.
-                    if (userTargetList.Any(a => a.TargetApp == app.ApplicationName.OriginalString || a.TargetAppType == app.ApplicationTypeName))
-                    {
-                        var existingAppConfig = userTargetList.First(a => a.TargetApp == app.ApplicationName.OriginalString || a.TargetAppType == app.ApplicationTypeName);
-
-                        if (existingAppConfig == null)
-                        {
-                            continue;
-                        }
-
-                        existingAppConfig.ServiceExcludeList = string.IsNullOrWhiteSpace(existingAppConfig.ServiceExcludeList) && !string.IsNullOrWhiteSpace(application.ServiceExcludeList) ? application.ServiceExcludeList : existingAppConfig.ServiceExcludeList;
-                        existingAppConfig.ServiceIncludeList = string.IsNullOrWhiteSpace(existingAppConfig.ServiceIncludeList) && !string.IsNullOrWhiteSpace(application.ServiceIncludeList) ? application.ServiceIncludeList : existingAppConfig.ServiceIncludeList;
-                        existingAppConfig.MemoryWarningLimitMb = existingAppConfig.MemoryWarningLimitMb == 0 && application.MemoryWarningLimitMb > 0 ? application.MemoryWarningLimitMb : existingAppConfig.MemoryWarningLimitMb;
-                        existingAppConfig.MemoryErrorLimitMb = existingAppConfig.MemoryErrorLimitMb == 0 && application.MemoryErrorLimitMb > 0 ? application.MemoryErrorLimitMb : existingAppConfig.MemoryErrorLimitMb;
-                        existingAppConfig.MemoryWarningLimitPercent = existingAppConfig.MemoryWarningLimitPercent == 0 && application.MemoryWarningLimitPercent > 0 ? application.MemoryWarningLimitPercent : existingAppConfig.MemoryWarningLimitPercent;
-                        existingAppConfig.MemoryErrorLimitPercent = existingAppConfig.MemoryErrorLimitPercent == 0 && application.MemoryErrorLimitPercent > 0 ? application.MemoryErrorLimitPercent : existingAppConfig.MemoryErrorLimitPercent;
-                        existingAppConfig.CpuErrorLimitPercent = existingAppConfig.CpuErrorLimitPercent == 0 && application.CpuErrorLimitPercent > 0 ? application.CpuErrorLimitPercent : existingAppConfig.CpuErrorLimitPercent;
-                        existingAppConfig.CpuWarningLimitPercent = existingAppConfig.CpuWarningLimitPercent == 0 && application.CpuWarningLimitPercent > 0 ? application.CpuWarningLimitPercent : existingAppConfig.CpuWarningLimitPercent;
-                        existingAppConfig.NetworkErrorActivePorts = existingAppConfig.NetworkErrorActivePorts == 0 && application.NetworkErrorActivePorts > 0 ? application.NetworkErrorActivePorts : existingAppConfig.NetworkErrorActivePorts;
-                        existingAppConfig.NetworkWarningActivePorts = existingAppConfig.NetworkWarningActivePorts == 0 && application.NetworkWarningActivePorts > 0 ? application.NetworkWarningActivePorts : existingAppConfig.NetworkWarningActivePorts;
-                        existingAppConfig.NetworkErrorEphemeralPorts = existingAppConfig.NetworkErrorEphemeralPorts == 0 && application.NetworkErrorEphemeralPorts > 0 ? application.NetworkErrorEphemeralPorts : existingAppConfig.NetworkErrorEphemeralPorts;
-                        existingAppConfig.NetworkWarningEphemeralPorts = existingAppConfig.NetworkWarningEphemeralPorts == 0 && application.NetworkWarningEphemeralPorts > 0 ? application.NetworkWarningEphemeralPorts : existingAppConfig.NetworkWarningEphemeralPorts;
-                        existingAppConfig.DumpProcessOnError = application.DumpProcessOnError == existingAppConfig.DumpProcessOnError ? application.DumpProcessOnError : existingAppConfig.DumpProcessOnError;
-                        existingAppConfig.ErrorOpenFileHandles = existingAppConfig.ErrorOpenFileHandles == 0 && application.ErrorOpenFileHandles > 0 ? application.ErrorOpenFileHandles : existingAppConfig.ErrorOpenFileHandles;
-                        existingAppConfig.WarningOpenFileHandles = existingAppConfig.WarningOpenFileHandles == 0 && application.WarningOpenFileHandles > 0 ? application.WarningOpenFileHandles : existingAppConfig.WarningOpenFileHandles;
-                        existingAppConfig.ErrorThreadCount = existingAppConfig.ErrorThreadCount == 0 && application.ErrorThreadCount > 0 ? application.ErrorThreadCount : existingAppConfig.ErrorThreadCount;
-                        existingAppConfig.WarningThreadCount = existingAppConfig.WarningThreadCount == 0 && application.WarningThreadCount > 0 ? application.WarningThreadCount : existingAppConfig.WarningThreadCount;
-                    }
-                    else
-                    {
-                        var appConfig = new ApplicationInfo
-                        {
-                            TargetApp = app.ApplicationName.OriginalString,
-                            TargetAppType = null,
-                            AppExcludeList = application.AppExcludeList,
-                            AppIncludeList = application.AppIncludeList,
-                            ServiceExcludeList = application.ServiceExcludeList,
-                            ServiceIncludeList = application.ServiceIncludeList,
-                            MemoryWarningLimitMb = application.MemoryWarningLimitMb,
-                            MemoryErrorLimitMb = application.MemoryErrorLimitMb,
-                            MemoryWarningLimitPercent = application.MemoryWarningLimitPercent,
-                            MemoryErrorLimitPercent = application.MemoryErrorLimitPercent,
-                            CpuErrorLimitPercent = application.CpuErrorLimitPercent,
-                            CpuWarningLimitPercent = application.CpuWarningLimitPercent,
-                            NetworkErrorActivePorts = application.NetworkErrorActivePorts,
-                            NetworkWarningActivePorts = application.NetworkWarningActivePorts,
-                            NetworkErrorEphemeralPorts = application.NetworkErrorEphemeralPorts,
-                            NetworkWarningEphemeralPorts = application.NetworkWarningEphemeralPorts,
-                            DumpProcessOnError = application.DumpProcessOnError,
-                            ErrorOpenFileHandles = application.ErrorOpenFileHandles,
-                            WarningOpenFileHandles = application.WarningOpenFileHandles,
-                            ErrorThreadCount = application.ErrorThreadCount,
-                            WarningThreadCount = application.WarningThreadCount
-                        };
-
-                        userTargetList.Add(appConfig);
-                    }
-                }
-
-                // Remove the All or * config item.
-                _ = userTargetList.Remove(application);
-                apps.Clear();
-                apps = null;
-            }
+            // Support for specifying single configuration JSON object for all applications.
+            await ProcessGlobalThresholdSettingsAsync();
 
             int settingsFail = 0;
 
-            for (int i = 0; i < userTargetList.Count; ++i) 
+            for (int i = 0; i < _userTargetList.Count; i++)
             {
                 Token.ThrowIfCancellationRequested();
 
+                ApplicationInfo application = _userTargetList[i];
                 Uri appUri = null;
-                ApplicationInfo application = userTargetList[i];
+
+                try
+                {
+                    if (application.TargetApp != null)
+                    {
+                        appUri = new Uri(application.TargetApp);
+                    }
+                }
+                catch (UriFormatException)
+                {
+                    continue;
+                }
 
                 if (string.IsNullOrWhiteSpace(application.TargetApp) && string.IsNullOrWhiteSpace(application.TargetAppType))
                 {
                     settingsFail++;
+
+                    // No required settings supplied for deployed application(s).
+                    if (settingsFail == _userTargetList.Count)
+                    {
+                        string message = "No required settings supplied for deployed applications in AppObserver.config.json. " +
+                                         "You must supply either a targetApp or targetAppType setting.";
+
+                        var healthReport = new Utilities.HealthReport
+                        {
+                            AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
+                            EmitLogEvent = true,
+                            HealthMessage = message,
+                            HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                            Property = "AppMisconfiguration",
+                            EntityType = EntityType.Application,
+                            State = HealthState.Warning,
+                            NodeName = NodeName,
+                            Observer = ObserverConstants.AppObserverName,
+                        };
+
+                        // Generate a Service Fabric Health Report.
+                        HealthReporter.ReportHealthToServiceFabric(healthReport);
+
+                        // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
+                        if (IsTelemetryEnabled)
+                        {
+                            _ = TelemetryClient?.ReportHealthAsync(
+                                    "AppMisconfiguration",
+                                    HealthState.Warning,
+                                    message,
+                                    ObserverName,
+                                    Token);
+                        }
+
+                        // ETW.
+                        if (IsEtwEnabled)
+                        {
+                            ObserverLogger.LogEtw(
+                                ObserverConstants.FabricObserverETWEventName,
+                                new
+                                {
+                                    Property = "AppMisconfiguration",
+                                    Level = "Warning",
+                                    Message = message,
+                                    ObserverName
+                                });
+                        }
+
+                        OperationalHealthEvents++;
+                        return false;
+                    }
+
                     continue;
-                }
-
-                // No required settings supplied for deployed application(s).
-                if (settingsFail == userTargetList.Count)
-                {
-                    string message = "No required settings supplied for deployed applications in AppObserver.config.json. " +
-                                     "You must supply either a targetApp or targetAppType setting.";
-
-                    var healthReport = new Utilities.HealthReport
-                    {
-                        AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
-                        EmitLogEvent = true,
-                        HealthMessage = message,
-                        HealthReportTimeToLive = GetHealthReportTimeToLive(),
-                        Property = "AppMisconfiguration",
-                        ReportType = HealthReportType.Application,
-                        State = HealthState.Warning,
-                        NodeName = NodeName,
-                        Observer = ObserverConstants.AppObserverName,
-                    };
-
-                    // Generate a Service Fabric Health Report.
-                    HealthReporter.ReportHealthToServiceFabric(healthReport);
-
-                    // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
-                    if (IsTelemetryEnabled)
-                    {
-                        _ = TelemetryClient?.ReportHealthAsync(
-                                                   "AppMisconfiguration",
-                                                   HealthState.Warning,
-                                                   message,
-                                                   ObserverName,
-                                                   Token);
-                    }
-
-                    // ETW.
-                    if (IsEtwEnabled)
-                    {
-                        ObserverLogger.LogEtw(
-                                        ObserverConstants.FabricObserverETWEventName,
-                                        new
-                                        {
-                                            Property = "AppMisconfiguration",
-                                            Level = "Warning",
-                                            Message = message,
-                                            ObserverName
-                                        });
-                    }
-
-                    return false;
-                }
-
-                if (!string.IsNullOrWhiteSpace(application.TargetApp))
-                {
-                    try
-                    {
-                        // Try and fix malformed app names, if possible. \\
-
-                        if (application.TargetApp.StartsWith("fabric:/") == false)
-                        {
-                            application.TargetApp = application.TargetApp.Insert(0, "fabric:/");
-                        }
-
-                        if (application.TargetApp.Contains("://"))
-                        {
-                            application.TargetApp = application.TargetApp.Replace("://", ":/");
-                        }
-
-                        if (application.TargetApp.Contains(" "))
-                        {
-                            application.TargetApp = application.TargetApp.Replace(" ", string.Empty);
-                        }
-
-                        appUri = new Uri(application.TargetApp);
-
-                        // Make sure app is deployed and not a containerized app. \\
-
-                        var codepackages = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                              () => FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(
-                                                                               NodeName,
-                                                                               appUri,
-                                                                               null,
-                                                                               null,
-                                                                               ConfigurationSettings.AsyncTimeout,
-                                                                               Token),
-                                              Token);
-
-                        if (codepackages.Count == 0)
-                        {
-                            continue;
-                        }
-
-                        int containerHostCount = codepackages.Count(c => c.HostType == HostType.ContainerHost);
-
-                        // Ignore containerized apps. ContainerObserver is designed for those types of services.
-                        if (containerHostCount > 0)
-                        {
-                            continue;
-                        }
-                    }
-                    catch (FabricException)
-                    {
-                        // This will happen if the specified app is not found in the codepackage query (so, not deployed). Ignore.
-                        continue;
-                    }
-                    catch (Exception e) when (e is ArgumentException || e is UriFormatException)
-                    {
-                        ObserverLogger.LogWarning($"InitializeAsync: Unexpected TargetApp value {application.TargetApp}. " +
-                                                  $"Value must be a valid Uri string of format \"fabric:/MyApp\" OR just \"MyApp\"");
-                        continue;
-                    }
                 }
 
                 if (!string.IsNullOrWhiteSpace(application.TargetAppType))
@@ -1091,10 +683,10 @@ namespace FabricObserver.Observers
             // internal diagnostic telemetry \\
 
             // Do not emit the same service count data over and over again.
-            if (repCount != serviceCount)
+            if (repCount != _serviceCount)
             {
                 MonitoredServiceProcessCount = repCount;
-                serviceCount = repCount;
+                _serviceCount = repCount;
             }
             else
             {
@@ -1102,10 +694,10 @@ namespace FabricObserver.Observers
             }
 
             // Do not emit the same app count data over and over again.
-            if (deployedTargetList.Count != appCount)
+            if (_deployedTargetList.Count != _appCount)
             {
-                MonitoredAppCount = deployedTargetList.Count;
-                appCount = deployedTargetList.Count;
+                MonitoredAppCount = _deployedTargetList.Count;
+                _appCount = _deployedTargetList.Count;
             }
             else
             {
@@ -1116,13 +708,19 @@ namespace FabricObserver.Observers
             {
                 return true;
             }
-
+#if DEBUG
+            for (int i = 0; i < _deployedTargetList.Count; i++)
+            {
+                Token.ThrowIfCancellationRequested();
+                ObserverLogger.LogInfo($"AppObserver settings applied to {_deployedTargetList[i].TargetApp}:{Environment.NewLine}{_deployedTargetList[i]}");
+            }
+#endif
             for (int i = 0; i < repCount; ++i)
             {
                 Token.ThrowIfCancellationRequested();
 
                 var rep = ReplicaOrInstanceList[i];
-                ObserverLogger.LogInfo($"Will observe resource consumption by {rep.ServiceName?.OriginalString}({rep.HostProcessId}) on Node {NodeName}."); 
+                ObserverLogger.LogInfo($"Will observe resource consumption by {rep.ServiceName?.OriginalString}({rep.HostProcessId}) on Node {NodeName}.");
             }
 
             //stopwatch.Stop();
@@ -1131,11 +729,807 @@ namespace FabricObserver.Observers
             return true;
         }
 
+        private async Task ProcessGlobalThresholdSettingsAsync()
+        {
+            if (_userTargetList == null || _userTargetList.Count == 0)
+            {
+                return;
+            }
+
+            if (!_userTargetList.Any(app => app.TargetApp?.ToLower() == "all" || app.TargetApp == "*"))
+            {
+                return;
+            }
+
+            ObserverLogger.LogInfo($"Started processing of global (*/all) settings from appObserver.config.json...");
+
+            ApplicationInfo application = _userTargetList.First(app => app.TargetApp?.ToLower() == "all" || app.TargetApp == "*");
+
+            for (int i = 0; i < _deployedApps.Count; i++)
+            {
+                Token.ThrowIfCancellationRequested();
+
+                var app = _deployedApps[i];
+
+                // Make sure deployed app is not a containerized app.
+                var codepackages = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                            () => FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(
+                                                    NodeName,
+                                                    app.ApplicationName,
+                                                    null,
+                                                    null,
+                                                    ConfigurationSettings.AsyncTimeout,
+                                                    Token), Token);
+
+                if (codepackages.Count == 0)
+                {
+                    continue;
+                }
+
+                int containerHostCount = codepackages.Count(c => c.HostType == HostType.ContainerHost);
+
+                // Ignore containerized apps. ContainerObserver is designed for those types of services.
+                if (containerHostCount > 0)
+                {
+                    continue;
+                }
+
+                if (app.ApplicationName.OriginalString == "fabric:/System")
+                {
+                    continue;
+                }
+
+                // App filtering: AppExcludeList, AppIncludeList. This is only useful when you are observing All/* applications for a range of thresholds.
+                if (!string.IsNullOrWhiteSpace(application.AppExcludeList) && application.AppExcludeList.Contains(app.ApplicationName.OriginalString.Replace("fabric:/", string.Empty)))
+                {
+                    continue;
+                }
+
+                if (!string.IsNullOrWhiteSpace(application.AppIncludeList) && !application.AppIncludeList.Contains(app.ApplicationName.OriginalString.Replace("fabric:/", string.Empty)))
+                {
+                    continue;
+                }
+
+                // Don't create a brand new entry for an existing (specified in configuration) app target/type. Just update the appConfig instance with data supplied in the All/* apps config entry.
+                // Note that if you supply a conflicting setting (where you specify a threshold for a specific app target config item and also in a global config item), then the target-specific setting will be used.
+                // E.g., if you supply a memoryWarningLimitMb threshold for an app named fabric:/MyApp and also supply a memoryWarningLimitMb threshold for all apps ("targetApp" : "All"),
+                // then the threshold specified for fabric:/MyApp will remain in place for that app target. So, target specificity overrides any global setting.
+                if (_userTargetList.Any(a => a.TargetApp == app.ApplicationName.OriginalString || a.TargetAppType == app.ApplicationTypeName))
+                {
+                    var existingAppConfig = _userTargetList.FindAll(a => a.TargetApp == app.ApplicationName.OriginalString || a.TargetAppType == app.ApplicationTypeName);
+
+                    if (existingAppConfig == null || existingAppConfig.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    for (int j = 0; j < existingAppConfig.Count; j++)
+                    {
+                        // Service include/exclude lists
+                        existingAppConfig[j].ServiceExcludeList = string.IsNullOrWhiteSpace(existingAppConfig[j].ServiceExcludeList) && !string.IsNullOrWhiteSpace(application.ServiceExcludeList) ? application.ServiceExcludeList : existingAppConfig[j].ServiceExcludeList;
+                        existingAppConfig[j].ServiceIncludeList = string.IsNullOrWhiteSpace(existingAppConfig[j].ServiceIncludeList) && !string.IsNullOrWhiteSpace(application.ServiceIncludeList) ? application.ServiceIncludeList : existingAppConfig[j].ServiceIncludeList;
+
+                        // Memory
+                        existingAppConfig[j].MemoryErrorLimitMb = existingAppConfig[j].MemoryErrorLimitMb == 0 && application.MemoryErrorLimitMb > 0 ? application.MemoryErrorLimitMb : existingAppConfig[j].MemoryErrorLimitMb;
+                        existingAppConfig[j].MemoryWarningLimitMb = existingAppConfig[j].MemoryWarningLimitMb == 0 && application.MemoryWarningLimitMb > 0 ? application.MemoryWarningLimitMb : existingAppConfig[j].MemoryWarningLimitMb;
+                        existingAppConfig[j].MemoryErrorLimitPercent = existingAppConfig[j].MemoryErrorLimitPercent == 0 && application.MemoryErrorLimitPercent > 0 ? application.MemoryErrorLimitPercent : existingAppConfig[j].MemoryErrorLimitPercent;
+                        existingAppConfig[j].MemoryWarningLimitPercent = existingAppConfig[j].MemoryWarningLimitPercent == 0 && application.MemoryWarningLimitPercent > 0 ? application.MemoryWarningLimitPercent : existingAppConfig[j].MemoryWarningLimitPercent;
+
+                        // CPU
+                        existingAppConfig[j].CpuErrorLimitPercent = existingAppConfig[j].CpuErrorLimitPercent == 0 && application.CpuErrorLimitPercent > 0 ? application.CpuErrorLimitPercent : existingAppConfig[j].CpuErrorLimitPercent;
+                        existingAppConfig[j].CpuWarningLimitPercent = existingAppConfig[j].CpuWarningLimitPercent == 0 && application.CpuWarningLimitPercent > 0 ? application.CpuWarningLimitPercent : existingAppConfig[j].CpuWarningLimitPercent;
+
+                        // Active TCP Ports
+                        existingAppConfig[j].NetworkErrorActivePorts = existingAppConfig[j].NetworkErrorActivePorts == 0 && application.NetworkErrorActivePorts > 0 ? application.NetworkErrorActivePorts : existingAppConfig[j].NetworkErrorActivePorts;
+                        existingAppConfig[j].NetworkWarningActivePorts = existingAppConfig[j].NetworkWarningActivePorts == 0 && application.NetworkWarningActivePorts > 0 ? application.NetworkWarningActivePorts : existingAppConfig[j].NetworkWarningActivePorts;
+
+                        // Active Ephemeral Ports
+                        existingAppConfig[j].NetworkErrorEphemeralPorts = existingAppConfig[j].NetworkErrorEphemeralPorts == 0 && application.NetworkErrorEphemeralPorts > 0 ? application.NetworkErrorEphemeralPorts : existingAppConfig[j].NetworkErrorEphemeralPorts;
+                        existingAppConfig[j].NetworkWarningEphemeralPorts = existingAppConfig[j].NetworkWarningEphemeralPorts == 0 && application.NetworkWarningEphemeralPorts > 0 ? application.NetworkWarningEphemeralPorts : existingAppConfig[j].NetworkWarningEphemeralPorts;
+                        existingAppConfig[j].NetworkErrorEphemeralPortsPercent = existingAppConfig[j].NetworkErrorEphemeralPortsPercent == 0 && application.NetworkErrorEphemeralPortsPercent > 0 ? application.NetworkErrorEphemeralPortsPercent : existingAppConfig[j].NetworkErrorEphemeralPortsPercent;
+                        existingAppConfig[j].NetworkWarningEphemeralPortsPercent = existingAppConfig[j].NetworkWarningEphemeralPortsPercent == 0 && application.NetworkWarningEphemeralPortsPercent > 0 ? application.NetworkWarningEphemeralPortsPercent : existingAppConfig[j].NetworkWarningEphemeralPortsPercent;
+
+                        // DumpOnError
+                        existingAppConfig[j].DumpProcessOnError = application.DumpProcessOnError == existingAppConfig[j].DumpProcessOnError ? application.DumpProcessOnError : existingAppConfig[j].DumpProcessOnError;
+
+                        // Handles
+                        existingAppConfig[j].ErrorOpenFileHandles = existingAppConfig[j].ErrorOpenFileHandles == 0 && application.ErrorOpenFileHandles > 0 ? application.ErrorOpenFileHandles : existingAppConfig[j].ErrorOpenFileHandles;
+                        existingAppConfig[j].WarningOpenFileHandles = existingAppConfig[j].WarningOpenFileHandles == 0 && application.WarningOpenFileHandles > 0 ? application.WarningOpenFileHandles : existingAppConfig[j].WarningOpenFileHandles;
+
+                        // Threads
+                        existingAppConfig[j].ErrorThreadCount = existingAppConfig[j].ErrorThreadCount == 0 && application.ErrorThreadCount > 0 ? application.ErrorThreadCount : existingAppConfig[j].ErrorThreadCount;
+                        existingAppConfig[j].WarningThreadCount = existingAppConfig[j].WarningThreadCount == 0 && application.WarningThreadCount > 0 ? application.WarningThreadCount : existingAppConfig[j].WarningThreadCount;
+
+                    }
+                }
+                else
+                {
+                    var appConfig = new ApplicationInfo
+                    {
+                        TargetApp = app.ApplicationName.OriginalString,
+                        TargetAppType = null,
+                        AppExcludeList = application.AppExcludeList,
+                        AppIncludeList = application.AppIncludeList,
+                        ServiceExcludeList = application.ServiceExcludeList,
+                        ServiceIncludeList = application.ServiceIncludeList,
+                        CpuErrorLimitPercent = application.CpuErrorLimitPercent,
+                        CpuWarningLimitPercent = application.CpuWarningLimitPercent,
+                        MemoryErrorLimitMb = application.MemoryErrorLimitMb,
+                        MemoryWarningLimitMb = application.MemoryWarningLimitMb,
+                        MemoryErrorLimitPercent = application.MemoryErrorLimitPercent,
+                        MemoryWarningLimitPercent = application.MemoryWarningLimitPercent,
+                        NetworkErrorActivePorts = application.NetworkErrorActivePorts,
+                        NetworkWarningActivePorts = application.NetworkWarningActivePorts,
+                        NetworkErrorEphemeralPorts = application.NetworkErrorEphemeralPorts,
+                        NetworkWarningEphemeralPorts = application.NetworkWarningEphemeralPorts,
+                        NetworkErrorEphemeralPortsPercent = application.NetworkErrorEphemeralPortsPercent,
+                        NetworkWarningEphemeralPortsPercent = application.NetworkWarningEphemeralPortsPercent,
+                        DumpProcessOnError = application.DumpProcessOnError,
+                        ErrorOpenFileHandles = application.ErrorOpenFileHandles,
+                        WarningOpenFileHandles = application.WarningOpenFileHandles,
+                        ErrorThreadCount = application.ErrorThreadCount,
+                        WarningThreadCount = application.WarningThreadCount
+                    };
+
+                    _userTargetList.Add(appConfig);
+                }
+            }
+
+            // Remove the All/* config item.
+             _ = _userTargetList.Remove(application);
+            ObserverLogger.LogInfo($"Completed processing of global (*/all) settings from appObserver.config.json...");
+        }
+
+        private void FilterTargetAppFormat()
+        {
+            ObserverLogger.LogInfo($"Evaluating targetApp format. Will attempt to correct malformed values, if any...");
+            for (int i = 0; i < _userTargetList.Count; i++)
+            {
+                var target = _userTargetList[i];
+
+                // We are only filtering/fixing targetApp string format.
+                if (string.IsNullOrWhiteSpace(target.TargetApp))
+                {
+                    continue;
+                }
+
+                if (target.TargetApp == "*" || target.TargetApp.ToLower() == "all")
+                {
+                    continue;
+                }
+
+                try
+                {
+                    /* Try and fix malformed app names, if possible. */
+
+                    if (!target.TargetApp.StartsWith("fabric:/"))
+                    {
+                        target.TargetApp = target.TargetApp.Insert(0, "fabric:/");
+                    }
+
+                    if (target.TargetApp.Contains("://"))
+                    {
+                        target.TargetApp = target.TargetApp.Replace("://", ":/");
+                    }
+
+                    if (target.TargetApp.Contains(" "))
+                    {
+                        target.TargetApp = target.TargetApp.Replace(" ", string.Empty);
+                    }
+
+                    if (!Uri.IsWellFormedUriString(target.TargetApp, UriKind.RelativeOrAbsolute))
+                    {
+                        _userTargetList.RemoveAt(i);
+
+                        string msg = $"FilterTargetAppFormat: Unsupported TargetApp value: {target.TargetApp}. " +
+                                     "Value must be a valid Uri string of format \"fabric:/MyApp\" OR just \"MyApp\". Ignoring targetApp.";
+
+                        var healthReport = new Utilities.HealthReport
+                        {
+                            AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
+                            EmitLogEvent = true,
+                            HealthMessage = msg,
+                            HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                            Property = "UnsupportedTargetAppValue",
+                            EntityType = EntityType.Application,
+                            State = HealthState.Warning,
+                            NodeName = NodeName,
+                            Observer = ObserverConstants.AppObserverName
+                        };
+
+                        // Generate a Service Fabric Health Report.
+                        HealthReporter.ReportHealthToServiceFabric(healthReport);
+
+                        if (IsTelemetryEnabled)
+                        {
+                            _ = TelemetryClient?.ReportHealthAsync(
+                                    "UnsupportedTargetAppValue",
+                                    HealthState.Warning,
+                                    msg,
+                                    ObserverName,
+                                    Token);
+                        }
+
+                        if (IsEtwEnabled)
+                        {
+                            ObserverLogger.LogEtw(
+                                ObserverConstants.FabricObserverETWEventName,
+                                new
+                                {
+                                    Property = "UnsupportedTargetAppValue",
+                                    Level = "Warning",
+                                    Message = msg,
+                                    ObserverName
+                                });
+                        }
+
+                        OperationalHealthEvents++;
+                    }
+                }
+                catch (ArgumentException)
+                {
+
+                }
+            }
+            ObserverLogger.LogInfo($"Completed targetApp evaluation...");
+        }
+
+        private async Task<bool> ProcessJSONConfigAsync()
+        {
+            ObserverLogger.LogInfo($"Processing Json configuration...");
+            if (!File.Exists(JsonConfigPath))
+            {
+                string message = $"Will not observe resource consumption on node {NodeName} as no configuration file has been supplied.";
+                var healthReport = new Utilities.HealthReport
+                {
+                    AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
+                    EmitLogEvent = true,
+                    HealthMessage = message,
+                    HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                    Property = "MissingAppConfiguration",
+                    EntityType = EntityType.Application,
+                    State = HealthState.Warning,
+                    NodeName = NodeName,
+                    Observer = ObserverConstants.AppObserverName,
+                };
+
+                // Generate a Service Fabric Health Report.
+                HealthReporter.ReportHealthToServiceFabric(healthReport);
+
+                if (IsTelemetryEnabled)
+                {
+                    _ = TelemetryClient?.ReportHealthAsync(
+                            "MissingAppConfiguration",
+                            HealthState.Warning,
+                            message,
+                            ObserverName,
+                            Token);
+                }
+
+                if (IsEtwEnabled)
+                {
+                    ObserverLogger.LogEtw(
+                        ObserverConstants.FabricObserverETWEventName,
+                        new
+                        {
+                            Property = "MissingAppConfiguration",
+                            Level = "Warning",
+                            Message = message,
+                            ObserverName
+                        });
+                }
+
+                OperationalHealthEvents++;
+                IsUnhealthy = true;
+                return false;
+            }
+
+            bool isJson = JsonHelper.IsJson<List<ApplicationInfo>>(await File.ReadAllTextAsync(JsonConfigPath));
+
+            if (!isJson)
+            {
+                string message = "AppObserver's JSON configuration file is malformed. Please fix the JSON and redeploy FabricObserver if you want AppObserver to monitor service processes.";
+                var healthReport = new Utilities.HealthReport
+                {
+                    AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
+                    EmitLogEvent = true,
+                    HealthMessage = message,
+                    HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                    Property = "JsonValidation",
+                    EntityType = EntityType.Application,
+                    State = HealthState.Warning,
+                    NodeName = NodeName,
+                    Observer = ObserverConstants.AppObserverName,
+                };
+
+                // Generate a Service Fabric Health Report.
+                HealthReporter.ReportHealthToServiceFabric(healthReport);
+
+                // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
+                if (IsTelemetryEnabled)
+                {
+                    _ = TelemetryClient?.ReportHealthAsync(
+                            "JsonValidation",
+                            HealthState.Warning,
+                            message,
+                            ObserverName,
+                            Token);
+                }
+
+                // ETW.
+                if (IsEtwEnabled)
+                {
+                    ObserverLogger.LogEtw(
+                        ObserverConstants.FabricObserverETWEventName,
+                        new
+                        {
+                            Property = "JsonValidation",
+                            Level = "Warning",
+                            Message = message,
+                            ObserverName
+                        });
+                }
+
+                OperationalHealthEvents++;
+                IsUnhealthy = true;
+                return false;
+            }
+
+            await using Stream stream = new FileStream(JsonConfigPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+            var appInfo = JsonHelper.ReadFromJsonStream<ApplicationInfo[]>(stream);
+            _userTargetList.AddRange(appInfo);
+
+            // Does the configuration have any objects (targets) defined?
+            if (_userTargetList.Count == 0)
+            {
+                string message = $"Please add targets to AppObserver's JSON configuration file and redeploy FabricObserver if you want AppObserver to monitor service processes.";
+
+                var healthReport = new Utilities.HealthReport
+                {
+                    AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
+                    EmitLogEvent = true,
+                    HealthMessage = message,
+                    HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                    Property = "Misconfiguration",
+                    EntityType = EntityType.Application,
+                    State = HealthState.Warning,
+                    NodeName = NodeName,
+                    Observer = ObserverConstants.AppObserverName,
+                };
+
+                // Generate a Service Fabric Health Report.
+                HealthReporter.ReportHealthToServiceFabric(healthReport);
+                CurrentWarningCount++;
+
+                // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
+                if (IsTelemetryEnabled)
+                {
+                    _ = TelemetryClient?.ReportHealthAsync(
+                            "Misconfiguration",
+                            HealthState.Warning,
+                            message,
+                            ObserverName,
+                            Token);
+                }
+
+                // ETW.
+                if (IsEtwEnabled)
+                {
+                    ObserverLogger.LogEtw(
+                        ObserverConstants.FabricObserverETWEventName,
+                        new
+                        {
+                            Property = "Misconfiguration",
+                            Level = "Warning",
+                            Message = message,
+                            ObserverName
+                        });
+                }
+
+                OperationalHealthEvents++;
+                IsUnhealthy = true;
+                return false;
+            }
+            ObserverLogger.LogInfo($"Completed processing Json configuration...");
+            return true;
+        }
+
+        /// <summary>
+        /// Set properties with Application Parameter settings supplied by user.
+        /// </summary>
+        private void SetPropertiesFromApplicationSettings()
+        {
+            ObserverLogger.LogInfo($"Setting properties from application parameters...");
+            
+            // TODO Right another TEST....
+            // Config path.
+            if (JsonConfigPath == null)
+            {
+                JsonConfigPath =
+                    Path.Combine(ConfigPackage.Path, GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileName));
+
+                ObserverLogger.LogInfo(JsonConfigPath);
+            }
+
+            ObserverLogger.LogInfo($"MonitorPrivateWorkingSet");
+            // Private working set monitoring.
+            if (bool.TryParse(
+                GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MonitorPrivateWorkingSet), out bool monitorWsPriv))
+            {
+                CheckPrivateWorkingSet = monitorWsPriv;
+            }
+
+            ObserverLogger.LogInfo($"EnableChildProcessMonitoringParameter");
+            /* Child/Descendant proc monitoring config */
+            if (bool.TryParse(
+                GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableChildProcessMonitoringParameter), out bool enableDescendantMonitoring))
+            {
+                EnableChildProcessMonitoring = enableDescendantMonitoring;
+            }
+
+            ObserverLogger.LogInfo($"MaxChildProcTelemetryDataCountParameter");
+            if (int.TryParse(
+                GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxChildProcTelemetryDataCountParameter), out int maxChildProcs))
+            {
+                MaxChildProcTelemetryDataCount = maxChildProcs;
+            }
+
+            ObserverLogger.LogInfo($"EnableProcessDumpsParameter");
+            /* dumpProcessOnError config */
+            if (bool.TryParse(
+                GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableProcessDumpsParameter), out bool enableDumps))
+            {
+                EnableProcessDumps = enableDumps;
+
+                if (string.IsNullOrWhiteSpace(DumpsPath) && enableDumps)
+                {
+                    SetDumpPath();
+                }
+            }
+
+            ObserverLogger.LogInfo($"DumpTypeParameter");
+            if (Enum.TryParse(
+                GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.DumpTypeParameter), out DumpType dumpType))
+            {
+                DumpType = dumpType;
+            }
+
+            ObserverLogger.LogInfo($"MaxDumpsParameter");
+            if (int.TryParse(
+                GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxDumpsParameter), out int maxDumps))
+            {
+                MaxDumps = maxDumps;
+            }
+
+            ObserverLogger.LogInfo($"MaxDumpsTimeWindowParameter");
+            if (TimeSpan.TryParse(
+                GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxDumpsTimeWindowParameter), out TimeSpan dumpTimeWindow))
+            {
+                MaxDumpsTimeWindow = dumpTimeWindow;
+            }
+
+            ObserverLogger.LogInfo($"EnableConcurrentMonitoring");
+            // Concurrency/Parallelism support. The minimum requirement is 4 logical processors, regardless of user setting.
+            if (Environment.ProcessorCount >= 4 && bool.TryParse(
+                    GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
+            {
+                EnableConcurrentMonitoring = enableConcurrency;
+            }
+
+            ObserverLogger.LogInfo($"MaxConcurrentTasks");
+            // Effectively, sequential.
+            int maxDegreeOfParallelism = 1;
+
+            if (EnableConcurrentMonitoring)
+            {
+                // Default to using [1/4 of available logical processors ~* 2] threads if MaxConcurrentTasks setting is not supplied.
+                // So, this means around 10 - 11 threads (or less) could be used if processor count = 20. This is only being done to limit the impact
+                // FabricObserver has on the resources it monitors and alerts on.
+                maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
+                
+                // If user configures MaxConcurrentTasks setting, then use that value instead.
+                if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasks), out int maxTasks))
+                {
+                    if (maxTasks > 0)
+                    {
+                        maxDegreeOfParallelism = maxTasks;
+                    }
+                }
+            }
+
+            ObserverLogger.LogInfo($"ParallelOps");
+            _parallelOptions = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = maxDegreeOfParallelism,
+                CancellationToken = Token,
+                TaskScheduler = TaskScheduler.Default
+            };
+
+            ObserverLogger.LogInfo($"EnableKvsLvidMonitoringParameter");
+            // KVS LVID Monitoring - Windows-only.
+            if (IsWindows && bool.TryParse(
+                    GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableKvsLvidMonitoringParameter), out bool enableLvidMonitoring))
+            {
+                // Observers that monitor LVIDs should ensure the static ObserverManager.CanInstallLvidCounter is true before attempting to monitor LVID usage.
+                EnableKvsLvidMonitoring = enableLvidMonitoring && ObserverManager.IsLvidCounterEnabled;
+            }
+            ObserverLogger.LogInfo($"Completed setting properties from application parameters...");
+        }
+
+        private void ProcessChildProcs<T>(
+                        ConcurrentDictionary<string, FabricResourceUsageData<T>> childFruds,
+                        ConcurrentQueue<ChildProcessTelemetryData> childProcessTelemetryDataList, 
+                        ReplicaOrInstanceMonitoringInfo repOrInst, 
+                        ApplicationInfo appInfo, 
+                        FabricResourceUsageData<T> parentFrud, 
+                        CancellationToken token) where T : struct
+        {
+            token.ThrowIfCancellationRequested();
+
+            if (childProcessTelemetryDataList == null)
+            {
+                return;
+            }
+
+            ObserverLogger.LogInfo($"Started ProcessChildProcs...");
+            try
+            { 
+                var (childProcInfo, Sum) = TupleProcessChildFruds(childFruds, repOrInst, appInfo, token);
+                
+                if (childProcInfo == null)
+                {
+                    return;
+                }
+
+                string metric = parentFrud.Property;
+                var parentDataAvg = parentFrud.AverageDataValue;
+                double sumAllValues = Sum + parentDataAvg;
+                childProcInfo.Metric = metric;
+                childProcInfo.Value = sumAllValues;
+                childProcessTelemetryDataList.Enqueue(childProcInfo);
+                parentFrud.ClearData();
+                parentFrud.AddData((T)Convert.ChangeType(sumAllValues, typeof(T)));
+            }
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            {
+                ObserverLogger.LogWarning($"ProcessChildProcs - Failure processing descendants:{Environment.NewLine}{e}");
+            }
+            ObserverLogger.LogInfo($"Completed ProcessChildProcs...");
+        }
+
+        private (ChildProcessTelemetryData childProcInfo, double Sum) TupleProcessChildFruds<T>(
+                                                                         ConcurrentDictionary<string, FabricResourceUsageData<T>> fruds,
+                                                                         ReplicaOrInstanceMonitoringInfo repOrInst,
+                                                                         ApplicationInfo app,
+                                                                         CancellationToken token) where T : struct
+        {
+            ObserverLogger.LogInfo($"Started TupleProcessChildFruds...");
+            var childProcs = repOrInst.ChildProcesses;
+
+            if (childProcs == null || childProcs.Count == 0 || token.IsCancellationRequested)
+            {
+                return (null, 0);
+            }
+
+            double sumValues = 0;
+            string metric = string.Empty;
+            string procStartTime = string.Empty;
+
+            if (IsWindows)
+            {
+                try
+                {
+                    procStartTime = NativeMethods.GetProcessStartTime((int)repOrInst.HostProcessId).ToString("o");
+                }
+                catch (Exception e) when (e is ArgumentException || e is FormatException || e is Win32Exception)
+                {
+                    ObserverLogger.LogInfo($"Can't get process start time for {repOrInst.HostProcessId}: {e.Message}");
+                    // Just don't set the ChildProcessTelemetryData.ProcessStartTime field. Don't exit the function.
+                }
+            }
+            else
+            {
+                try
+                {
+                    using (Process proc = Process.GetProcessById((int)repOrInst.HostProcessId))
+                    {
+                        procStartTime = proc.StartTime.ToString("o");
+                    }
+                }
+                catch (Exception e) when (e is ArgumentException || e is FormatException || e is InvalidOperationException || e is NotSupportedException || e is Win32Exception)
+                {
+                    ObserverLogger.LogInfo($"Can't get process start time for {repOrInst.HostProcessId}: {e.Message}");
+                    // Just don't set the ChildProcessTelemetryData.ProcessStartTime field. Don't exit the function.
+                }
+            }
+
+            var childProcessInfoData = new ChildProcessTelemetryData
+            {
+                ApplicationName = repOrInst.ApplicationName.OriginalString,
+                ServiceName = repOrInst.ServiceName.OriginalString,
+                NodeName = NodeName,
+                ProcessId = (int)repOrInst.HostProcessId,
+                ProcessName = IsWindows ? NativeMethods.GetProcessNameFromId((int)repOrInst.HostProcessId) : Process.GetProcessById((int)repOrInst.HostProcessId)?.ProcessName,
+                ProcessStartTime = procStartTime,
+                PartitionId = repOrInst.PartitionId.ToString(),
+                ReplicaId = repOrInst.ReplicaOrInstanceId,
+                ChildProcessCount = childProcs.Count,
+                ChildProcessInfo = new List<ChildProcessInfo>()
+            };
+
+            for (int i = 0; i < childProcs.Count; ++i)
+            {
+                token.ThrowIfCancellationRequested();
+
+                try
+                {
+                    int childPid = childProcs[i].Pid;
+                    string childProcName = childProcs[i].procName;
+                    string startTime;
+
+                    if (!EnsureProcess(childProcName, childPid))
+                    {
+                        continue;
+                    }
+
+                    if (IsWindows)
+                    {
+                        startTime = NativeMethods.GetProcessStartTime(childPid).ToString("o");
+                    }
+                    else
+                    {
+                        using Process p = Process.GetProcessById(childPid);
+                        startTime = p.StartTime.ToString("o");
+                    }
+
+                    if (fruds.Any(x => x.Key.Contains(childPid.ToString())))
+                    {
+                        var childFruds = fruds.Where(x => x.Key.Contains(childPid.ToString())).ToList();
+                        metric = childFruds[0].Value.Property;
+
+                        for (int j = 0; j < childFruds.Count; ++j)
+                        {
+                            token.ThrowIfCancellationRequested();
+
+                            var frud = childFruds[j];
+                            double value = frud.Value.AverageDataValue;
+                            sumValues += value;
+
+                            if (IsEtwEnabled || IsTelemetryEnabled)
+                            {
+                                var childProcInfo = new ChildProcessInfo { ProcessId = childPid, ProcessName = childProcName, ProcessStartTime = startTime, Value = value };
+                                childProcessInfoData.ChildProcessInfo.Add(childProcInfo);
+                            }
+
+                            // Windows process dump support for descendant/child processes \\
+
+                            if (IsWindows && app.DumpProcessOnError && EnableProcessDumps)
+                            {
+                                string prop = frud.Value.Property;
+                                bool dump = false;
+
+                                switch (prop)
+                                {
+                                    case ErrorWarningProperty.CpuTime:
+                                        // Test error threshold breach for supplied metric.
+                                        if (frud.Value.IsUnhealthy(app.CpuErrorLimitPercent))
+                                        {
+                                            dump = true;
+                                        }
+                                        break;
+
+                                    case ErrorWarningProperty.MemoryConsumptionMb:
+                                        if (frud.Value.IsUnhealthy(app.MemoryErrorLimitMb))
+                                        {
+                                            dump = true;
+                                        }
+                                        break;
+
+                                    case ErrorWarningProperty.MemoryConsumptionPercentage:
+                                        if (frud.Value.IsUnhealthy(app.MemoryErrorLimitPercent))
+                                        {
+                                            dump = true;
+                                        }
+                                        break;
+
+                                    case ErrorWarningProperty.ActiveTcpPorts:
+                                        if (frud.Value.IsUnhealthy(app.NetworkErrorActivePorts))
+                                        {
+                                            dump = true;
+                                        }
+                                        break;
+
+                                    case ErrorWarningProperty.ActiveEphemeralPorts:
+                                        if (frud.Value.IsUnhealthy(app.NetworkErrorEphemeralPorts))
+                                        {
+                                            dump = true;
+                                        }
+                                        break;
+
+                                    case ErrorWarningProperty.ActiveEphemeralPortsPercentage:
+                                        if (frud.Value.IsUnhealthy(app.NetworkErrorEphemeralPortsPercent))
+                                        {
+                                            dump = true;
+                                        }
+                                        break;
+
+                                    case ErrorWarningProperty.AllocatedFileHandles:
+                                        if (frud.Value.IsUnhealthy(app.ErrorOpenFileHandles))
+                                        {
+                                            dump = true;
+                                        }
+                                        break;
+
+                                    case ErrorWarningProperty.ThreadCount:
+                                        if (frud.Value.IsUnhealthy(app.ErrorThreadCount))
+                                        {
+                                            dump = true;
+                                        }
+                                        break;
+                                }
+
+                                lock (_lock)
+                                {
+                                    if (dump)
+                                    {
+                                        // Make sure the child process is still the one we're looking for.
+                                        if (EnsureProcess(childProcName, childPid))
+                                        {
+                                            _ = DumpWindowsServiceProcess(childPid, childProcName, prop);
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Remove child FRUD from FRUDs.
+                            _ = fruds.TryRemove(frud.Key, out _);
+                        }
+
+                        childFruds?.Clear();
+                        childFruds = null;
+                    }
+                }
+                catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+                {
+                    ObserverLogger.LogWarning($"Failure processing descendant information: {e.Message}");
+                    continue;
+                }
+            }
+
+            try
+            {
+                // Order List<ChildProcessInfo> by Value descending.
+                childProcessInfoData.ChildProcessInfo = childProcessInfoData.ChildProcessInfo.OrderByDescending(v => v.Value).ToList();
+
+                // Cap size of List<ChildProcessInfo> to MaxChildProcTelemetryDataCount.
+                if (childProcessInfoData.ChildProcessInfo.Count >= MaxChildProcTelemetryDataCount)
+                {
+                    childProcessInfoData.ChildProcessInfo = childProcessInfoData.ChildProcessInfo.Take(MaxChildProcTelemetryDataCount).ToList();
+                }
+                ObserverLogger.LogInfo($"Successfully completed TupleProcessChildFruds...");
+                return (childProcessInfoData, sumValues);
+            }
+            catch (ArgumentException ae)
+            {
+                ObserverLogger.LogWarning($"TupleProcessChildFruds - Failure processing descendants:{Environment.NewLine}{ae.Message}");
+            }
+
+            ObserverLogger.LogInfo($"Completed TupleProcessChildFruds with Warning...");
+            return (null, 0);
+        }
+
+        private static string GetAppNameOrType(ReplicaOrInstanceMonitoringInfo repOrInst)
+        {
+            // targetType specified as TargetAppType name, which means monitor all apps of specified type.
+            var appNameOrType = !string.IsNullOrWhiteSpace(repOrInst.ApplicationTypeName) ? repOrInst.ApplicationTypeName : repOrInst.ApplicationName.OriginalString.Replace("fabric:/", string.Empty);
+            return appNameOrType;
+        }
+
         private void SetDumpPath()
         {
             try
             {
-                DumpsPath = Path.Combine(ObserverLogger.LogFolderBasePath, ObserverName, "MemoryDumps");
+                DumpsPath = Path.Combine(ObserverLogger.LogFolderBasePath, ObserverName, ObserverConstants.ProcessDumpFolderName);
                 Directory.CreateDirectory(DumpsPath);
             }
             catch (Exception e) when (e is ArgumentException || e is IOException || e is NotSupportedException || e is UnauthorizedAccessException)
@@ -1145,9 +1539,10 @@ namespace FabricObserver.Observers
             }
         }
 
-        private Task MonitorDeployedAppsAsync(CancellationToken token)
+        private Task<ParallelLoopResult> MonitorDeployedAppsAsync(CancellationToken token)
         {
             Stopwatch execTimer = Stopwatch.StartNew();
+            ObserverLogger.LogInfo("Starting MonitorDeployedAppsAsync...");
             int capacity = ReplicaOrInstanceList.Count;
             var exceptions = new ConcurrentQueue<Exception>();
             AllAppCpuData ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
@@ -1155,6 +1550,7 @@ namespace FabricObserver.Observers
             AllAppMemDataPercent ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
             AllAppTotalActivePortsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
             AllAppEphemeralPortsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
+            AllAppEphemeralPortsDataPercent ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
             AllAppHandlesData ??= new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
             AllAppThreadsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
             
@@ -1164,28 +1560,38 @@ namespace FabricObserver.Observers
                 AllAppKvsLvidsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
             }
 
-            processInfo ??= new ConcurrentDictionary<int, string>();
+            _processInfoDictionary ??= new ConcurrentDictionary<int, string>();
 
             // DEBUG
             //var threadData = new ConcurrentQueue<int>();
 
-            _ = Parallel.For (0, ReplicaOrInstanceList.Count, ParallelOptions, (i, state) =>
+            ParallelLoopResult result = Parallel.For (0, ReplicaOrInstanceList.Count, _parallelOptions, (i, state) =>
             {
-                token.ThrowIfCancellationRequested();
-                
+                if (token.IsCancellationRequested)
+                {
+                    state.Stop();
+                }
+
                 // DEBUG
                 //threadData.Enqueue(Thread.CurrentThread.ManagedThreadId);
-
-                var repOrInst = ReplicaOrInstanceList.ElementAt(i);
+                var repOrInst = ReplicaOrInstanceList[i];
                 var timer = new Stopwatch();
                 int parentPid = (int)repOrInst.HostProcessId;
-                bool checkCpu = false, checkMemMb = false, checkMemPct = false, checkAllPorts = false, checkEphemeralPorts = false, checkHandles = false, checkThreads = false, checkLvids = false;
-                var application = deployedTargetList?.First(
+                bool checkCpu = false;
+                bool checkMemMb = false;
+                bool checkMemPct = false;
+                bool checkAllPorts = false;
+                bool checkEphemeralPorts = false;
+                bool checkPercentageEphemeralPorts = false;
+                bool checkHandles = false;
+                bool checkThreads = false;
+                bool checkLvids = false;
+                var application = _deployedTargetList?.First(
                                     app => app?.TargetApp?.ToLower() == repOrInst.ApplicationName?.OriginalString.ToLower() ||
                                     !string.IsNullOrWhiteSpace(app?.TargetAppType) &&
                                     app.TargetAppType?.ToLower() == repOrInst.ApplicationTypeName?.ToLower());
                 
-                ConcurrentDictionary<string, int> procs;
+                ConcurrentDictionary<int, string> procs;
 
                 if (application?.TargetApp == null && application?.TargetAppType == null)
                 {
@@ -1195,100 +1601,146 @@ namespace FabricObserver.Observers
 
                 try
                 {
+                    string parentProcName = null;
                     Process parentProc = null;
 
                     try
                     {
-                        parentProc = Process.GetProcessById(parentPid);
-
-                        if (isWindows && parentProc?.ProcessName == "Idle")
+                        if (!IsWindows)
                         {
-                            return;
-                        }
+                            parentProc = Process.GetProcessById(parentPid);
 
-                        // This will throw Win32Exception if process is running at higher elevation than FO.
-                        // If it is not, then this would mean the process has exited so move on to next process.
-                        if (parentProc.HasExited)
-                        {
-                            return;
-                        }
-                    }
-                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
-                    {
-                        if (!isWindows || ObserverManager.ObserverFailureHealthStateLevel == HealthState.Unknown)
-                        {
-                            return;
-                        }
-
-                        if (e is Win32Exception exception && exception.NativeErrorCode == 5 || e.Message.ToLower().Contains("access is denied"))
-                        {
-                            string message = $"{repOrInst?.ServiceName?.OriginalString} is running as Admin or System user on Windows and can't be monitored by FabricObserver, which is running as Network Service.{Environment.NewLine}" +
-                                             $"Please configure FabricObserver to run as Admin or System user on Windows to solve this problem and/or, determine if {repOrInst?.ServiceName?.OriginalString} really needs to run as Admin or System user on Windows.";
-
-                            var healthReport = new Utilities.HealthReport
+                            if (parentProc.HasExited)
                             {
-                                AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
-                                EmitLogEvent = EnableVerboseLogging,
-                                HealthMessage = message,
-                                HealthReportTimeToLive = GetHealthReportTimeToLive(),
-                                Property = $"UserAccount({parentProc?.ProcessName})",
-                                ReportType = HealthReportType.Application,
-                                State = ObserverManager.ObserverFailureHealthStateLevel,
-                                NodeName = NodeName,
-                                Observer = ObserverName,
-                            };
-
-                            // Generate a Service Fabric Health Report.
-                            HealthReporter.ReportHealthToServiceFabric(healthReport);
-
-                            // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
-                            if (IsTelemetryEnabled)
-                            {
-                                _ = TelemetryClient?.ReportHealthAsync(
-                                                            $"UserAccountPrivilege({parentProc?.ProcessName})",
-                                                            ObserverManager.ObserverFailureHealthStateLevel,
-                                                            message,
-                                                            ObserverName,
-                                                            token,
-                                                            repOrInst?.ServiceName?.OriginalString);
+                                return;
                             }
 
-                            // ETW.
-                            if (IsEtwEnabled)
+                            parentProcName = parentProc.ProcessName;
+                            
+                        }
+                        else
+                        {
+                            // Has the process exited?
+                            if (NativeMethods.GetProcessExitTime(parentPid) != DateTime.MinValue)
                             {
-                                ObserverLogger.LogEtw(
-                                                ObserverConstants.FabricObserverETWEventName,
-                                                new
-                                                {
-                                                    Property = $"UserAccountPrivilege({parentProc?.ProcessName})",
-                                                    Level = Enum.GetName(typeof(HealthState), ObserverManager.ObserverFailureHealthStateLevel),
-                                                    Message = message,
-                                                    ObserverName,
-                                                    ServiceName = repOrInst?.ServiceName?.OriginalString
-                                                });
+                                return;
+                            }
+
+                            // On Windows, this will throw a Win32Exception if target process is running at a higher user privilege than FO, handled below.
+                            parentProcName = NativeMethods.GetProcessNameFromId(parentPid);
+                        }
+
+                        // For hosted container apps, the host service is Fabric. AppObserver can't monitor these types of services.
+                        // Please use ContainerObserver for SF container app service monitoring.
+                        if (parentProcName == null || parentProcName == "Fabric")
+                        {
+                            return;
+                        }
+                    }
+                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is NotSupportedException || e is Win32Exception)
+                    {
+                        if (!IsWindows || ObserverManager.ObserverFailureHealthStateLevel == HealthState.Unknown)
+                        {
+                            return;
+                        }
+
+                        if (e is Win32Exception exception)
+                        {
+                            if (exception.NativeErrorCode == 5 || exception.NativeErrorCode == 6)
+                            {
+                                string serviceName = repOrInst?.ServiceName?.OriginalString;
+                                string message = $"{serviceName} is running as Admin or System user on Windows and can't be monitored by FabricObserver, which is running as Network Service. " +
+                                                 $"Please configure FabricObserver to run as Admin or System user on Windows to solve this problem and/or determine if {serviceName} really needs to run as Admin or System user on Windows.";
+
+                                string property = $"RestrictedAccess({serviceName})";
+                                var healthReport = new Utilities.HealthReport
+                                {
+                                    ServiceName = ServiceName,
+                                    EmitLogEvent = EnableVerboseLogging,
+                                    HealthMessage = message,
+                                    HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                                    Property = property,
+                                    EntityType = EntityType.Service,
+                                    State = ObserverManager.ObserverFailureHealthStateLevel,
+                                    NodeName = NodeName,
+                                    Observer = ObserverName
+                                };
+
+                                // Generate a Service Fabric Health Report.
+                                HealthReporter.ReportHealthToServiceFabric(healthReport);
+
+                                // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
+                                if (IsTelemetryEnabled)
+                                {
+                                    _ = TelemetryClient?.ReportHealthAsync(
+                                            property,
+                                            ObserverManager.ObserverFailureHealthStateLevel,
+                                            message,
+                                            ObserverName,
+                                            token,
+                                            repOrInst?.ServiceName?.OriginalString);
+                                }
+
+                                // ETW.
+                                if (IsEtwEnabled)
+                                {
+                                    ObserverLogger.LogEtw(
+                                        ObserverConstants.FabricObserverETWEventName,
+                                        new
+                                        {
+                                            Property = property,
+                                            Level = Enum.GetName(typeof(HealthState), ObserverManager.ObserverFailureHealthStateLevel),
+                                            Message = message,
+                                            ObserverName,
+                                            ServiceName = repOrInst?.ServiceName?.OriginalString
+                                        });
+                                }
                             }
                         }
 
                         return;
                     }
 
-                    if (parentProc == null)
+                    /* In order to provide accurate resource usage of an SF service process we need to also account for
+                       any processes that the service process (parent) created/spawned (children). */
+
+                    procs = new ConcurrentDictionary<int, string>();
+
+                    // Add parent to the process tree list since we want to monitor all processes in the family. If there are no child processes,
+                    // then only the parent process will be in this dictionary..
+                    _ = procs.TryAdd(parentPid, parentProcName);
+
+                    if (repOrInst.ChildProcesses != null && repOrInst.ChildProcesses.Count > 0)
                     {
-                        return;
+                        for (int k = 0; k < repOrInst.ChildProcesses.Count; ++k)
+                        {
+                            if (token.IsCancellationRequested)
+                            {
+                                state.Stop();
+                            }
+
+                            // Make sure the child process still exists. Descendant processes are often ephemeral.
+                            if (!EnsureProcess(repOrInst.ChildProcesses[k].procName, repOrInst.ChildProcesses[k].Pid))
+                            {
+                                continue;
+                            }
+
+                            _ = procs.TryAdd(repOrInst.ChildProcesses[k].Pid, repOrInst.ChildProcesses[k].procName);
+                        }
                     }
 
-                    string parentProcName = parentProc.ProcessName;
-                    int parentProcId = parentProc.Id;
-
-                    // For hosted container apps, the host service is Fabric. AppObserver can't monitor these types of services.
-                    // Please use ContainerObserver for SF container app service monitoring.
-                    if (parentProcName == null || parentProcName == "Fabric")
+                    foreach (var proc in procs)
                     {
-                        return;
+                        if (token.IsCancellationRequested)
+                        {
+                            state.Stop();
+                        }
+
+                        _ = _processInfoDictionary.TryAdd(proc.Key, proc.Value);
                     }
 
                     string appNameOrType = GetAppNameOrType(repOrInst);
-                    string id = $"{appNameOrType}:{parentProcName}{parentProcId}";
+                    string id = $"{appNameOrType}:{parentProcName}{parentPid}";
 
                     if (UseCircularBuffer)
                     {
@@ -1302,7 +1754,7 @@ namespace FabricObserver.Observers
                     // CPU
                     if (application.CpuErrorLimitPercent > 0 || application.CpuWarningLimitPercent > 0)
                     {
-                        _ = AllAppCpuData.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalCpuTime, id, capacity, UseCircularBuffer));
+                        _ = AllAppCpuData.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.CpuTime, id, capacity, UseCircularBuffer, EnableConcurrentMonitoring));
                     }
 
                     if (AllAppCpuData.ContainsKey(id))
@@ -1313,7 +1765,7 @@ namespace FabricObserver.Observers
                     // Memory Mb
                     if (application.MemoryErrorLimitMb > 0 || application.MemoryWarningLimitMb > 0)
                     {
-                        _ = AllAppMemDataMb.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, id, capacity, UseCircularBuffer, EnableConcurrentMonitoring));
+                        _ = AllAppMemDataMb.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.MemoryConsumptionMb, id, capacity, UseCircularBuffer, EnableConcurrentMonitoring));
                     }
 
                     if (AllAppMemDataMb.ContainsKey(id))
@@ -1324,7 +1776,7 @@ namespace FabricObserver.Observers
                     // Memory percent
                     if (application.MemoryErrorLimitPercent > 0 || application.MemoryWarningLimitPercent > 0)
                     {
-                        _ = AllAppMemDataPercent.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionPct, id, capacity, UseCircularBuffer, EnableConcurrentMonitoring));
+                        _ = AllAppMemDataPercent.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.MemoryConsumptionPercentage, id, capacity, UseCircularBuffer, EnableConcurrentMonitoring));
                     }
 
                     if (AllAppMemDataPercent.ContainsKey(id))
@@ -1335,7 +1787,7 @@ namespace FabricObserver.Observers
                     // Active TCP Ports
                     if (application.NetworkErrorActivePorts > 0 || application.NetworkWarningActivePorts > 0)
                     {
-                        _ = AllAppTotalActivePortsData.TryAdd(id, new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, id, 1, false, EnableConcurrentMonitoring));
+                        _ = AllAppTotalActivePortsData.TryAdd(id, new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveTcpPorts, id, 1, false, EnableConcurrentMonitoring));
                     }
 
                     if (AllAppTotalActivePortsData.ContainsKey(id))
@@ -1343,10 +1795,10 @@ namespace FabricObserver.Observers
                         checkAllPorts = true;
                     }
 
-                    // Ephemeral TCP Ports
+                    // Ephemeral TCP Ports - Total number.
                     if (application.NetworkErrorEphemeralPorts > 0 || application.NetworkWarningEphemeralPorts > 0)
                     {
-                        _ = AllAppEphemeralPortsData.TryAdd(id, new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, id, 1, false, EnableConcurrentMonitoring));
+                        _ = AllAppEphemeralPortsData.TryAdd(id, new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveEphemeralPorts, id, 1, false, EnableConcurrentMonitoring));
                     }
 
                     if (AllAppEphemeralPortsData.ContainsKey(id))
@@ -1354,10 +1806,21 @@ namespace FabricObserver.Observers
                         checkEphemeralPorts = true;
                     }
 
+                    // Ephemeral TCP Ports - Percentage in use of total available.
+                    if (application.NetworkErrorEphemeralPortsPercent > 0 || application.NetworkWarningEphemeralPortsPercent > 0)
+                    {
+                        _ = AllAppEphemeralPortsDataPercent.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.ActiveEphemeralPortsPercentage, id, 1, false, EnableConcurrentMonitoring));
+                    }
+
+                    if (AllAppEphemeralPortsDataPercent.ContainsKey(id))
+                    {
+                        checkPercentageEphemeralPorts = true;
+                    }
+
                     // File Handles
                     if (application.ErrorOpenFileHandles > 0 || application.WarningOpenFileHandles > 0)
                     {
-                        _ = AllAppHandlesData.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.TotalFileHandles, id, 1, false, EnableConcurrentMonitoring));
+                        _ = AllAppHandlesData.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.AllocatedFileHandles, id, 1, false, EnableConcurrentMonitoring));
                     }
 
                     if (AllAppHandlesData.ContainsKey(id))
@@ -1368,7 +1831,7 @@ namespace FabricObserver.Observers
                     // Threads
                     if (application.ErrorThreadCount > 0 || application.WarningThreadCount > 0)
                     {
-                        _ = AllAppThreadsData.TryAdd(id, new FabricResourceUsageData<int>(ErrorWarningProperty.TotalThreadCount, id, 1, false, EnableConcurrentMonitoring));
+                        _ = AllAppThreadsData.TryAdd(id, new FabricResourceUsageData<int>(ErrorWarningProperty.ThreadCount, id, 1, false, EnableConcurrentMonitoring));
                     }
 
                     if (AllAppThreadsData.ContainsKey(id))
@@ -1380,54 +1843,36 @@ namespace FabricObserver.Observers
                     // Note: This is a non-configurable Windows monitor and will be removed when SF ships with the latest version of ESE.
                     if (EnableKvsLvidMonitoring && AllAppKvsLvidsData != null && repOrInst.ServiceKind == ServiceKind.Stateful)
                     {
-                        if (AllAppKvsLvidsData.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.TotalKvsLvidsPercent, id, 1, false, EnableConcurrentMonitoring)))
-                        {
-                            checkLvids = true;
-                        }
+                        _ = AllAppKvsLvidsData.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.KvsLvidsPercent, id, 1, false, EnableConcurrentMonitoring));
                     }
 
-                    /* In order to provide accurate resource usage of an SF service process we need to also account for
-                       any processes that the service process (parent) created/spawned (children). */
-
-                    procs = new ConcurrentDictionary<string, int>();
-
-                    // Add parent to the process tree list since we want to monitor all processes in the family. If there are no child processes,
-                    // then only the parent process will be in this dictionary..
-                    _ = procs.TryAdd(parentProc.ProcessName, parentProc.Id);
-
-                    if (repOrInst.ChildProcesses != null && repOrInst.ChildProcesses.Count > 0)
+                    if (AllAppKvsLvidsData != null && AllAppKvsLvidsData.ContainsKey(id))
                     {
-                        for (int k = 0; k < repOrInst.ChildProcesses.Count; ++k)
-                        {
-                            _ = procs.TryAdd(repOrInst.ChildProcesses[k].procName, repOrInst.ChildProcesses[k].Pid);
-                        }
+                        checkLvids = true;
                     }
 
-                    foreach (var proc in procs)
-                    {
-                        _ = processInfo.TryAdd(proc.Value, proc.Key);
-                    }
+                    // Regardless of user setting, if there are more than 50 service processes with the same name, then FO will check Private + Shared (fast, efficient).
+                    bool checkPrivateWS = ReplicaOrInstanceList.Count(p => p.HostProcessName == parentProcName) < MaxSameNamedProcesses && CheckPrivateWorkingSet;
 
                     // Compute the resource usage of the family of processes (each proc in the family tree). This is also parallelized and has real perf benefits when 
                     // a service process has mulitple descendants.
                     ComputeResourceUsage(
-                            capacity,
-                            parentPid,
-                            checkCpu,
-                            checkMemMb,
-                            checkMemPct,
-                            checkAllPorts,
-                            checkEphemeralPorts,
-                            checkHandles,
-                            checkThreads,
-                            checkLvids,
-                            procs,
-                            id,
-                            token);
-                }
-                catch (AggregateException e) when (e.InnerExceptions.Any(ex => ex is OperationCanceledException || ex is TaskCanceledException))
-                {
-                    state.Stop();
+                        capacity,
+                        parentPid,
+                        checkCpu,
+                        checkMemMb,
+                        checkMemPct,
+                        checkAllPorts,
+                        checkEphemeralPorts,
+                        checkPercentageEphemeralPorts,
+                        checkHandles,
+                        checkThreads,
+                        checkLvids,
+                        procs,
+                        id,
+                        repOrInst,
+                        checkPrivateWS,
+                        token);
                 }
                 catch (Exception e)
                 {
@@ -1437,15 +1882,14 @@ namespace FabricObserver.Observers
 
             if (!exceptions.IsEmpty)
             {
-                var aggEx = new AggregateException(exceptions);
-                ObserverLogger.LogError($"Unhandled exception in MonitorDeployedAppsAsync:{Environment.NewLine}{aggEx}");
-                throw new AggregateException(aggEx);
+                throw new AggregateException(exceptions);
             }
 
             // DEBUG 
             //int threadcount = threadData.Distinct().Count();
+            ObserverLogger.LogInfo("Completed MonitorDeployedAppsAsync...");
             ObserverLogger.LogInfo($"MonitorDeployedAppsAsync Execution time: {execTimer.Elapsed}"); //Threads: {threadcount}");
-            return Task.CompletedTask;
+            return Task.FromResult(result);
         }
 
         private void ComputeResourceUsage(
@@ -1456,20 +1900,34 @@ namespace FabricObserver.Observers
                             bool checkMemPct,
                             bool checkAllPorts,
                             bool checkEphemeralPorts,
+                            bool checkPercentageEphemeralPorts,
                             bool checkHandles,
                             bool checkThreads,
                             bool checkLvids,
-                            ConcurrentDictionary<string, int> procs,
+                            ConcurrentDictionary<int, string> processDictionary,
                             string id,
+                            ReplicaOrInstanceMonitoringInfo repOrInst,
+                            bool checkPrivateWS,
                             CancellationToken token)
         {
-            _ = Parallel.For (0, procs.Count, ParallelOptions, (i, state) =>
+            _ = Parallel.For (0, processDictionary.Count, _parallelOptions, (i, state) =>
             {
-                string procName = procs.ElementAt(i).Key;
-                int procId = procs[procName];
+                if (token.IsCancellationRequested)
+                {
+                    state.Stop();
+                }
+
+                var index = processDictionary.ElementAt(i);
+                string procName = index.Value;
+                int procId = index.Key;
                 
+                // Make sure this is still the process we're looking for.
+                if (!EnsureProcess(procName, procId))
+                {
+                    return;
+                }
+
                 TimeSpan maxDuration = TimeSpan.FromSeconds(1);
-                CpuUsage cpuUsage = new CpuUsage();
 
                 if (MonitorDuration > TimeSpan.MinValue)
                 {
@@ -1479,17 +1937,8 @@ namespace FabricObserver.Observers
                 // Handles/FDs
                 if (checkHandles)
                 {
-                    float handles = 0F;
+                    float handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId, IsWindows ? null : CodePackage?.Path);
 
-                    if (isWindows)
-                    {
-                        handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId, null, ReplicaOrInstanceList.Count >= 50); 
-                    }
-                    else
-                    {
-                        handles = ProcessInfoProvider.Instance.GetProcessAllocatedHandles(procId, FabricServiceContext);
-                    }
-                  
                     if (handles > 0F)
                     {
                         if (procId == parentPid)
@@ -1498,7 +1947,7 @@ namespace FabricObserver.Observers
                         }
                         else
                         {
-                            _ = AllAppHandlesData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<float>(ErrorWarningProperty.TotalFileHandles, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
+                            _ = AllAppHandlesData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<float>(ErrorWarningProperty.AllocatedFileHandles, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
                             AllAppHandlesData[$"{id}:{procName}{procId}"].AddData(handles);
                         }
                     }
@@ -1508,22 +1957,16 @@ namespace FabricObserver.Observers
                 if (checkThreads)
                 {
                     int threads = 0;
-                    
-                    if (isWindows)
+
+                    if (!IsWindows)
                     {
-                        try
-                        {
-                            threads = NativeMethods.GetProcessThreadCount(procId);
-                        }
-                        catch (Win32Exception)
-                        {
-                            // Log...?
-                        }
+                        // Lightweight on Linux..
+                        threads = ProcessInfoProvider.GetProcessThreadCount(procId);
                     }
                     else
                     {
-                        // Process object is much less expensive on Linux..
-                        threads = ProcessInfoProvider.GetProcessThreadCount(procId);
+                        // Much faster, less memory.. employs Win32's PSSCaptureSnapshot/PSSQuerySnapshot.
+                        threads = NativeMethods.GetProcessThreadCount(procId);
                     }
 
                     if (threads > 0)
@@ -1533,9 +1976,9 @@ namespace FabricObserver.Observers
                         {
                             AllAppThreadsData[id].AddData(threads);
                         }
-                        else // Child procs spawned by the parent service process.
+                        else // Child proc spawned by the parent service process.
                         {
-                            _ = AllAppThreadsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<int>(ErrorWarningProperty.TotalFileHandles, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
+                            _ = AllAppThreadsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<int>(ErrorWarningProperty.ThreadCount, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
                             AllAppThreadsData[$"{id}:{procName}{procId}"].AddData(threads);
                         }
                     }
@@ -1547,34 +1990,50 @@ namespace FabricObserver.Observers
                     // Parent process (the service process).
                     if (procId == parentPid)
                     {
-                        AllAppTotalActivePortsData[id].AddData(OSInfoProvider.Instance.GetActiveTcpPortCount(procId, FabricServiceContext));
+                        AllAppTotalActivePortsData[id].AddData(OSInfoProvider.Instance.GetActiveTcpPortCount(procId, CodePackage?.Path));
                     }
-                    else // Child procs spawned by the parent service process.
+                    else // Child proc spawned by the parent service process.
                     {
-                        _ = AllAppTotalActivePortsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<int>(ErrorWarningProperty.TotalActivePorts, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
-                        AllAppTotalActivePortsData[$"{id}:{procName}{procId}"].AddData(OSInfoProvider.Instance.GetActiveTcpPortCount(procId, FabricServiceContext));
+                        _ = AllAppTotalActivePortsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveTcpPorts, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
+                        AllAppTotalActivePortsData[$"{id}:{procName}{procId}"].AddData(OSInfoProvider.Instance.GetActiveTcpPortCount(procId, CodePackage?.Path));
                     }
                 }
 
-                // Ephemeral TCP ports usage
+                // Ephemeral TCP ports usage - Raw count.
                 if (checkEphemeralPorts)
                 {
                     if (procId == parentPid)
                     {
-                        AllAppEphemeralPortsData[id].AddData(OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, FabricServiceContext));
+                        AllAppEphemeralPortsData[id].AddData(OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, CodePackage?.Path));
                     }
                     else
                     {
-                        _ = AllAppEphemeralPortsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<int>(ErrorWarningProperty.TotalEphemeralPorts, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
-                        AllAppEphemeralPortsData[$"{id}:{procName}{procId}"].AddData(OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, FabricServiceContext));
+                        _ = AllAppEphemeralPortsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveEphemeralPorts, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
+                        AllAppEphemeralPortsData[$"{id}:{procName}{procId}"].AddData(OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, CodePackage?.Path));
+                    }
+                }
+
+                // Ephemeral TCP ports usage - Percentage.
+                if (checkPercentageEphemeralPorts)
+                {
+                    double usedPct = OSInfoProvider.Instance.GetActiveEphemeralPortCountPercentage(procId, CodePackage?.Path);
+
+                    if (procId == parentPid)
+                    {
+                        AllAppEphemeralPortsDataPercent[id].AddData(usedPct);
+                    }
+                    else
+                    {
+                        _ = AllAppEphemeralPortsDataPercent.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.ActiveEphemeralPortsPercentage, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
+                        AllAppEphemeralPortsDataPercent[$"{id}:{procName}{procId}"].AddData(usedPct);
                     }
                 }
 
                 // KVS LVIDs
-                if (isWindows && checkLvids && ReplicaOrInstanceList.Any(r => r.HostProcessId == procId && r.ServiceKind == ServiceKind.Stateful))
+                if (IsWindows && checkLvids && repOrInst.HostProcessId == procId && repOrInst.ServiceKind == ServiceKind.Stateful)
                 {
-                    var lvidPct = ProcessInfoProvider.Instance.GetProcessKvsLvidsUsagePercentage(procName, procId);
-                    
+                    var lvidPct = ProcessInfoProvider.Instance.GetProcessKvsLvidsUsagePercentage(procName, Token, procId);
+
                     // ProcessGetCurrentKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
                     if (lvidPct > -1)
                     {
@@ -1584,7 +2043,7 @@ namespace FabricObserver.Observers
                         }
                         else
                         {
-                            _ = AllAppKvsLvidsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.TotalKvsLvidsPercent, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
+                            _ = AllAppKvsLvidsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.KvsLvidsPercent, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
                             AllAppKvsLvidsData[$"{id}:{procName}{procId}"].AddData(lvidPct);
                         }
                     }
@@ -1596,78 +2055,104 @@ namespace FabricObserver.Observers
                     state.Stop();
                 }
 
+                // Memory \\
+
+                if (checkMemMb)
+                {
+                    if (procId == parentPid)
+                    {
+                        _ = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, checkPrivateWS);
+                        Thread.Sleep(100);
+                        AllAppMemDataMb[id].AddData(ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, checkPrivateWS));
+                    }
+                    else
+                    {
+                        _ = AllAppMemDataMb.TryAdd(
+                                $"{id}:{procName}{procId}",
+                                new FabricResourceUsageData<float>(
+                                    ErrorWarningProperty.MemoryConsumptionMb,
+                                    $"{id}:{procName}{procId}",
+                                    capacity,
+                                    UseCircularBuffer,
+                                    EnableConcurrentMonitoring));
+
+                        _ = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, checkPrivateWS);
+                        Thread.Sleep(100);
+                        AllAppMemDataMb[$"{id}:{procName}{procId}"].AddData(ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, checkPrivateWS));
+                    }
+                }
+
+                // Process memory, percent in use (of machine total).
+                if (checkMemPct)
+                {
+                    float processMemMb = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, checkPrivateWS);
+                    var (TotalMemoryGb, _, _) = OSInfoProvider.Instance.TupleGetSystemMemoryInfo();
+
+                    if (TotalMemoryGb > 0)
+                    {
+                        double usedPct = (double)(processMemMb * 100) / (TotalMemoryGb * 1024);
+
+                        if (procId == parentPid)
+                        {
+                            AllAppMemDataPercent[id].AddData(Math.Round(usedPct, 2));
+                        }
+                        else
+                        {
+                            _ = AllAppMemDataPercent.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.MemoryConsumptionPercentage, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
+                            AllAppMemDataPercent[$"{id}:{procName}{procId}"].AddData(Math.Round(usedPct, 2));
+                        }
+                    }
+                }
+
+                // CPU \\
+
+                ICpuUsage cpuUsage;
+
+                if (IsWindows)
+                {
+                    cpuUsage = new CpuUsageWin32();
+                }
+                else
+                {
+                    cpuUsage = new CpuUsageProcess();
+                }
+
                 Stopwatch timer = Stopwatch.StartNew();
 
                 while (timer.Elapsed <= maxDuration)
                 {
-                    token.ThrowIfCancellationRequested();
+                    if (token.IsCancellationRequested)
+                    {
+                        state.Stop();
+                    }
 
                     // CPU (all cores) \\
                     // USEFUL_CPU
                     if (checkCpu)
                     {
-                        double cpu = cpuUsage.GetCpuUsagePercentageProcess(procId);
+                        double cpu = 0;
+                        cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, IsWindows ? procName : null);
 
-                        if (cpu >= 0)
-                        {
-                            if (cpu > 100)
-                            {
-                                cpu = 100;
-                            }
-
-                            if (procId == parentPid)
-                            {
-                                AllAppCpuData[id].AddData(cpu);
-                            }
-                            else
-                            {
-                                _ = AllAppCpuData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.TotalCpuTime, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
-                                AllAppCpuData[$"{id}:{procName}{procId}"].AddData(cpu);
-                            }
-                        }
-                    }
-
-                    // Memory \\
-
-                    // Process working set (total or private, based on user configuration)
-                    if (checkMemMb)
-                    {
-                        float processMemMb = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, checkPrivateWorkingSet ? procName : null, checkPrivateWorkingSet);
-                       
                         if (procId == parentPid)
                         {
-                            AllAppMemDataMb[id].AddData(processMemMb);
+                            AllAppCpuData[id].AddData(cpu);
                         }
                         else
                         {
-                            _ = AllAppMemDataMb.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<float>(ErrorWarningProperty.TotalMemoryConsumptionMb, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
-                            AllAppMemDataMb[$"{id}:{procName}{procId}"].AddData(processMemMb);
+                            _ = AllAppCpuData.TryAdd(
+                                    $"{id}:{procName}{procId}",
+                                    new FabricResourceUsageData<double>(ErrorWarningProperty.CpuTime, $"{id}:{procName}{procId}",
+                                    capacity,
+                                    UseCircularBuffer,
+                                    EnableConcurrentMonitoring));
+
+                            AllAppCpuData[$"{id}:{procName}{procId}"].AddData(cpu);
                         }
                     }
 
-                    // Process memory, percent in use (of machine total).
-                    if (checkMemPct)
-                    {
-                        float processMemMb = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, checkPrivateWorkingSet ? procName : null, checkPrivateWorkingSet);
-                        var (TotalMemoryGb, _, _) = OSInfoProvider.Instance.TupleGetSystemMemoryInfo();
-
-                        if (TotalMemoryGb > 0)
-                        {
-                            double usedPct = (double)(processMemMb * 100) / (TotalMemoryGb * 1024);
-
-                            if (procId == parentPid)
-                            {
-                                AllAppMemDataPercent[id].AddData(Math.Round(usedPct, 2));
-                            }
-                            else
-                            {
-                                _ = AllAppMemDataPercent.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.TotalMemoryConsumptionPct, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
-                                AllAppMemDataPercent[$"{id}:{procName}{procId}"].AddData(Math.Round(usedPct, 2));
-                            }
-                        }
-                    }
-                    Thread.Sleep(150);
+                    Thread.Sleep(50);
                 }
+
                 timer.Stop();
                 timer = null;
             });
@@ -1675,71 +2160,108 @@ namespace FabricObserver.Observers
 
         private async Task SetDeployedApplicationReplicaOrInstanceListAsync(Uri applicationNameFilter = null, string applicationType = null)
         {
-            List<DeployedApplication> deployedApps = await client.GetAllLocalDeployedAppsAsync(Token);
+            ObserverLogger.LogInfo("Starting SetDeployedApplicationReplicaOrInstanceListAsync...");
+            List<DeployedApplication> deployedApps = _deployedApps;
+
             // DEBUG
             //var stopwatch = Stopwatch.StartNew();
 
-            if (applicationNameFilter != null)
+            try
             {
-                deployedApps = deployedApps.FindAll(a => a.ApplicationName == applicationNameFilter);
-            }
-            else if (!string.IsNullOrWhiteSpace(applicationType))
-            {
-                deployedApps = deployedApps.FindAll(a => a.ApplicationTypeName == applicationType);
-            }
-
-            for (int i = 0; i < deployedApps.Count; ++i)
-            {
-                Token.ThrowIfCancellationRequested();
-
-                var deployedApp = deployedApps[i];
-                string[] filteredServiceList = null;
-
-                // Filter service list if ServiceExcludeList/ServiceIncludeList config setting is non-empty.
-                var serviceFilter = 
-                    userTargetList.FirstOrDefault(x => (x.TargetApp?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
-                                                        || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower())
-                                                        && (!string.IsNullOrWhiteSpace(x.ServiceExcludeList) || !string.IsNullOrWhiteSpace(x.ServiceIncludeList)));
-
-                ServiceFilterType filterType = ServiceFilterType.None;
-
-                if (serviceFilter != null)
+                if (applicationNameFilter != null)
                 {
-                    if (!string.IsNullOrWhiteSpace(serviceFilter.ServiceExcludeList))
+                    deployedApps = deployedApps.FindAll(a => a.ApplicationName.Equals(applicationNameFilter));
+                }
+                else if (!string.IsNullOrWhiteSpace(applicationType))
+                {
+                    deployedApps = deployedApps.FindAll(a => a.ApplicationTypeName == applicationType);
+                }
+            }
+            catch (ArgumentException ae)
+            {
+                ObserverLogger.LogWarning($"SetDeployedApplicationReplicaOrInstanceListAsync: Unable to process replica information:{Environment.NewLine}{ae}");
+                return;
+            }
+
+            foreach (var userTarget in _userTargetList)
+            {
+                for (int i = 0; i < deployedApps.Count; i++)
+                {
+                    Token.ThrowIfCancellationRequested();
+
+                    try
                     {
-                        filteredServiceList = serviceFilter.ServiceExcludeList.Replace(" ", string.Empty).Split(',');
-                        filterType = ServiceFilterType.Exclude;
+                        Token.ThrowIfCancellationRequested();
+
+                        // TargetAppType supplied in user config, so set TargetApp on deployedApp instance by searching for it in the currently deployed application list.
+                        if (userTarget.TargetAppType != null)
+                        {
+                            if (deployedApps[i].ApplicationTypeName != userTarget.TargetAppType)
+                            {
+                                continue;
+                            }
+
+                            userTarget.TargetApp = deployedApps[i].ApplicationName.OriginalString;
+                        }
+
+                        if (userTarget.TargetApp == null)
+                        {
+                            continue;
+                        }
+
+                        if (deployedApps[i].ApplicationName.OriginalString != userTarget.TargetApp)
+                        {
+                            continue;
+                        }
+
+                        string[] filteredServiceList = null;
+                        ServiceFilterType filterType = ServiceFilterType.None;
+
+                        // Filter serviceInclude/Exclude config.
+                        if (!string.IsNullOrWhiteSpace(userTarget.ServiceExcludeList))
+                        {
+                            filteredServiceList = userTarget.ServiceExcludeList.Replace(" ", string.Empty).Split(',');
+                            filterType = ServiceFilterType.Exclude;
+                        }
+                        else if (!string.IsNullOrWhiteSpace(userTarget.ServiceIncludeList))
+                        {
+                            filteredServiceList = userTarget.ServiceIncludeList.Replace(" ", string.Empty).Split(',');
+                            filterType = ServiceFilterType.Include;
+                        }
+
+                        List<ReplicaOrInstanceMonitoringInfo> replicasOrInstances = await GetDeployedPrimaryReplicaAsync(
+                                                                                            new Uri(userTarget.TargetApp),
+                                                                                            filteredServiceList,
+                                                                                            filterType,
+                                                                                            applicationType);
+
+                        if (replicasOrInstances?.Count > 0)
+                        {
+                            ReplicaOrInstanceList.AddRange(replicasOrInstances);
+
+                            var targets = _userTargetList.Where(x => x.TargetApp != null && x.TargetApp == userTarget.TargetApp
+                                                                  || x.TargetAppType != null && x.TargetAppType == userTarget.TargetAppType);
+
+                            if (userTarget.TargetApp != null && !_deployedTargetList.Any(r => r.TargetApp == userTarget.TargetApp))
+                            {
+                                _deployedTargetList.AddRange(targets);
+                            }
+                        }
+
+                        replicasOrInstances.Clear();
+                        replicasOrInstances = null;
                     }
-                    else if (!string.IsNullOrWhiteSpace(serviceFilter.ServiceIncludeList))
+                    catch (Exception e) when (e is ArgumentException || e is FabricException || e is Win32Exception)
                     {
-                        filteredServiceList = serviceFilter.ServiceIncludeList.Replace(" ", string.Empty).Split(',');
-                        filterType = ServiceFilterType.Include;
+                        ObserverLogger.LogWarning(
+                            $"SetDeployedApplicationReplicaOrInstanceListAsync: Unable to process replica information for {userTarget}{Environment.NewLine}{e}");
                     }
                 }
-
-                List<ReplicaOrInstanceMonitoringInfo> replicasOrInstances = await GetDeployedPrimaryReplicaAsync(
-                                                                                     deployedApp.ApplicationName, 
-                                                                                     filteredServiceList,
-                                                                                     filterType,
-                                                                                     applicationType);
-
-                if (!ReplicaOrInstanceList.Any(r => r.ApplicationName.OriginalString == deployedApp.ApplicationName.OriginalString))
-                {
-                    ReplicaOrInstanceList.AddRange(replicasOrInstances);
-
-                    var targets = userTargetList.Where(x => (x.TargetApp != null || x.TargetAppType != null)
-                                                                && (x.TargetApp?.ToLower() == deployedApp.ApplicationName?.OriginalString.ToLower()
-                                                                    || x.TargetAppType?.ToLower() == deployedApp.ApplicationTypeName?.ToLower()));
-                    deployedTargetList.AddRange(targets);
-                }
-
-                replicasOrInstances.Clear();
-                replicasOrInstances = null;
             }
-           
+
             deployedApps.Clear();
             deployedApps = null;
-
+            ObserverLogger.LogInfo("Completed SetDeployedApplicationReplicaOrInstanceListAsync...");
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"SetDeployedApplicationReplicaOrInstanceListAsync for {applicationNameFilter?.OriginalString} run duration: {stopwatch.Elapsed}");
         }
@@ -1751,22 +2273,31 @@ namespace FabricObserver.Observers
                                                                      ServiceFilterType filterType = ServiceFilterType.None,
                                                                      string appTypeName = null)
         {
+            ObserverLogger.LogInfo("Starting GetDeployedPrimaryReplicaAsync...");
             // DEBUG
             //var stopwatch = Stopwatch.StartNew();
             var deployedReplicaList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                 () => FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, appName, null, null, ConfigurationSettings.AsyncTimeout, Token),
                                                 Token);
+
             //ObserverLogger.LogInfo($"QueryManager.GetDeployedReplicaListAsync for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
             var replicaMonitoringList = new ConcurrentQueue<ReplicaOrInstanceMonitoringInfo>();
 
-            SetInstanceOrReplicaMonitoringList(
-               appName,
-               serviceFilterList,
-               filterType,
-               appTypeName,
-               deployedReplicaList,
-               replicaMonitoringList);
+            try
+            {
+                SetInstanceOrReplicaMonitoringList(
+                   appName,
+                   appTypeName ?? _deployedApps.First(app => app.ApplicationName == appName).ApplicationTypeName,
+                   serviceFilterList,
+                   filterType,
+                   deployedReplicaList,
+                   replicaMonitoringList);
+            }
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+            {
 
+            }
+            ObserverLogger.LogInfo("Completed GetDeployedPrimaryReplicaAsync...");
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"GetDeployedPrimaryReplicaAsync for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
             return replicaMonitoringList.ToList();
@@ -1774,15 +2305,16 @@ namespace FabricObserver.Observers
 
         private void SetInstanceOrReplicaMonitoringList(
                         Uri appName,
+                        string appTypeName,
                         string[] filterList,
                         ServiceFilterType filterType,
-                        string appTypeName,
                         DeployedServiceReplicaList deployedReplicaList,
                         ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList)
         {
+            ObserverLogger.LogInfo("Starting SetInstanceOrReplicaMonitoringList...");
             // DEBUG
             //var stopwatch = Stopwatch.StartNew();
-            _ = Parallel.For (0, deployedReplicaList.Count, ParallelOptions, (i, state) =>
+            _ = Parallel.For (0, deployedReplicaList.Count, _parallelOptions, (i, state) =>
             {
                 Token.ThrowIfCancellationRequested();
 
@@ -1792,122 +2324,256 @@ namespace FabricObserver.Observers
                 switch (deployedReplica)
                 {
                     case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole == ReplicaRole.Primary || statefulReplica.ReplicaRole == ReplicaRole.ActiveSecondary:
-                    {
-                        if (filterList != null && filterType != ServiceFilterType.None)
                         {
-                            bool isInFilterList = filterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
-
-                            switch (filterType)
+                            if (filterList != null && filterType != ServiceFilterType.None)
                             {
-                                case ServiceFilterType.Include when !isInFilterList:
-                                case ServiceFilterType.Exclude when isInFilterList:
-                                    return;
+                                bool isInFilterList = filterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+
+                                switch (filterType)
+                                {
+                                    case ServiceFilterType.Include when !isInFilterList:
+                                    case ServiceFilterType.Exclude when isInFilterList:
+                                        return;
+                                }
                             }
-                        }
 
-                        replicaInfo = new ReplicaOrInstanceMonitoringInfo
-                        {
-                            ApplicationName = appName,
-                            ApplicationTypeName = appTypeName,
-                            HostProcessId = statefulReplica.HostProcessId,
-                            ReplicaOrInstanceId = statefulReplica.ReplicaId,
-                            PartitionId = statefulReplica.Partitionid,
-                            ReplicaRole = statefulReplica.ReplicaRole,
-                            ServiceKind = statefulReplica.ServiceKind,
-                            ServiceName = statefulReplica.ServiceName,
-                            ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
-                            ReplicaStatus = statefulReplica.ReplicaStatus
-                        };
-
-                        /* In order to provide accurate resource usage of an SF service process we need to also account for
-                        any processes (children) that the service process (parent) created/spawned. */
-
-                        if (EnableChildProcessMonitoring)
-                        {
-                            // DEBUG
-                            //var sw = Stopwatch.StartNew();
-                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId);
-
-                            if (childPids != null && childPids.Count > 0)
+                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
                             {
-                                replicaInfo.ChildProcesses = childPids;
-                                ObserverLogger.LogInfo($"{replicaInfo.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
-                            }
-                           //sw.Stop();
-                           //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
-                        }
+                                ApplicationName = appName,
+                                ApplicationTypeName = appTypeName,
+                                HostProcessId = statefulReplica.HostProcessId,
+                                ReplicaOrInstanceId = statefulReplica.ReplicaId,
+                                PartitionId = statefulReplica.Partitionid,
+                                ReplicaRole = statefulReplica.ReplicaRole,
+                                ServiceKind = statefulReplica.ServiceKind,
+                                ServiceName = statefulReplica.ServiceName,
+                                ServiceTypeName = statefulReplica.ServiceTypeName,
+                                ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
+                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(statefulReplica.ServicePackageActivationId) ?
+                                    System.Fabric.Description.ServicePackageActivationMode.SharedProcess : System.Fabric.Description.ServicePackageActivationMode.ExclusiveProcess,
+                                ReplicaStatus = statefulReplica.ReplicaStatus
+                            };
 
-                        break;
-                    }
+                            /* In order to provide accurate resource usage of an SF service process we need to also account for
+                            any processes (children) that the service process (parent) created/spawned. */
+
+                            if (EnableChildProcessMonitoring && replicaInfo?.HostProcessId > 0)
+                            {
+                                // DEBUG
+                                //var sw = Stopwatch.StartNew();
+                                List<(string ProcName, int Pid)> childPids;
+
+                                if (IsWindows)
+                                {
+                                    childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, Win32HandleToProcessSnapshot);
+                                }
+                                else
+                                {
+                                    childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId);
+                                }
+
+                                if (childPids != null && childPids.Count > 0)
+                                {
+                                    replicaInfo.ChildProcesses = childPids;
+                                    ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
+                                }
+                                //sw.Stop();
+                                //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
+                            }
+                            break;
+                        }
                     case DeployedStatelessServiceInstance statelessInstance:
-                    {
-                        if (filterList != null && filterType != ServiceFilterType.None)
                         {
-                            bool isInFilterList = filterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
-
-                            switch (filterType)
+                            if (filterList != null && filterType != ServiceFilterType.None)
                             {
-                                case ServiceFilterType.Include when !isInFilterList:
-                                case ServiceFilterType.Exclude when isInFilterList:
-                                    return;
+                                bool isInFilterList = filterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+
+                                switch (filterType)
+                                {
+                                    case ServiceFilterType.Include when !isInFilterList:
+                                    case ServiceFilterType.Exclude when isInFilterList:
+                                        return;
+                                }
                             }
-                        }
 
-                        replicaInfo = new ReplicaOrInstanceMonitoringInfo
-                        {
-                            ApplicationName = appName,
-                            ApplicationTypeName = appTypeName,
-                            HostProcessId = statelessInstance.HostProcessId,
-                            ReplicaOrInstanceId = statelessInstance.InstanceId,
-                            PartitionId = statelessInstance.Partitionid,
-                            ReplicaRole = ReplicaRole.None,
-                            ServiceKind = statelessInstance.ServiceKind,
-                            ServiceName = statelessInstance.ServiceName,
-                            ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
-                            ReplicaStatus = statelessInstance.ReplicaStatus
-                        };
-
-                        if (EnableChildProcessMonitoring)
-                        {
-                            // DEBUG
-                            //var sw = Stopwatch.StartNew();
-                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId);
-
-                            if (childPids != null && childPids.Count > 0)
+                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
                             {
-                                replicaInfo.ChildProcesses = childPids;
-                                ObserverLogger.LogInfo($"{replicaInfo.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
-                            }
-                            //sw.Stop();
-                            //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
-                        }
+                                ApplicationName = appName,
+                                ApplicationTypeName = appTypeName,
+                                HostProcessId = statelessInstance.HostProcessId,
+                                ReplicaOrInstanceId = statelessInstance.InstanceId,
+                                PartitionId = statelessInstance.Partitionid,
+                                ReplicaRole = ReplicaRole.None,
+                                ServiceKind = statelessInstance.ServiceKind,
+                                ServiceName = statelessInstance.ServiceName,
+                                ServiceTypeName = statelessInstance.ServiceTypeName,
+                                ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
+                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(statelessInstance.ServicePackageActivationId) ?
+                                    System.Fabric.Description.ServicePackageActivationMode.SharedProcess : System.Fabric.Description.ServicePackageActivationMode.ExclusiveProcess,
+                                ReplicaStatus = statelessInstance.ReplicaStatus
+                            };
 
-                        break;
-                    }
+                            if (EnableChildProcessMonitoring && replicaInfo?.HostProcessId > 0)
+                            {
+                                // DEBUG
+                                //var sw = Stopwatch.StartNew();
+                                List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, Win32HandleToProcessSnapshot);
+
+                                if (childPids != null && childPids.Count > 0)
+                                {
+                                    replicaInfo.ChildProcesses = childPids;
+                                    ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
+                                }
+                                //sw.Stop();
+                                //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
+                            }
+                            break;
+                        }
                 }
+                
 
-                if (replicaInfo != null)
+                if (replicaInfo?.HostProcessId > 0 && !ReplicaOrInstanceList.Any(r => r.ServiceName == replicaInfo.ServiceName))
                 {
+                    if (IsWindows)
+                    {
+                        replicaInfo.HostProcessName = NativeMethods.GetProcessNameFromId((int)replicaInfo.HostProcessId);
+                    }
+                    else
+                    {
+                        try
+                        {
+                            using (Process p = Process.GetProcessById((int)replicaInfo.HostProcessId))
+                            {
+                                replicaInfo.HostProcessName = p.ProcessName;
+                            }
+                        }
+                        catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is NotSupportedException)
+                        {
+
+                        }
+                    }
+
                     replicaMonitoringList.Enqueue(replicaInfo);
                 }
             });
+            ObserverLogger.LogInfo("Completed SetInstanceOrReplicaMonitoringList...");
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"SetInstanceOrReplicaMonitoringList for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
         }
 
+        private void LogAllAppResourceDataToCsv(string appName)
+        {
+            if (!EnableCsvLogging)
+            {
+                return;
+            }
+
+            // CPU Time
+            if (AllAppCpuData.ContainsKey(appName))
+            {
+                CsvFileLogger.LogData(
+                    _fileName,
+                    appName,
+                    ErrorWarningProperty.CpuTime,
+                    "Average",
+                    Math.Round(AllAppCpuData.First(x => x.Key == appName).Value.AverageDataValue));
+
+                CsvFileLogger.LogData(
+                    _fileName,
+                    appName,
+                    ErrorWarningProperty.CpuTime,
+                    "Peak",
+                    Math.Round(AllAppCpuData.First(x => x.Key == appName).Value.MaxDataValue));
+            }
+
+            // Memory - MB
+            if (AllAppMemDataMb.ContainsKey(appName))
+            {
+                CsvFileLogger.LogData(
+                    _fileName,
+                    appName,
+                    ErrorWarningProperty.MemoryConsumptionMb,
+                    "Average",
+                    Math.Round(AllAppMemDataMb.First(x => x.Key == appName).Value.AverageDataValue));
+
+                CsvFileLogger.LogData(
+                    _fileName,
+                    appName,
+                    ErrorWarningProperty.MemoryConsumptionMb,
+                    "Peak",
+                    Math.Round(Convert.ToDouble(AllAppMemDataMb.First(x => x.Key == appName).Value.MaxDataValue)));
+            }
+
+            if (AllAppMemDataPercent.ContainsKey(appName))
+            {
+                CsvFileLogger.LogData(
+                   _fileName,
+                   appName,
+                   ErrorWarningProperty.MemoryConsumptionPercentage,
+                   "Average",
+                   Math.Round(AllAppMemDataPercent.First(x => x.Key == appName).Value.AverageDataValue));
+
+                CsvFileLogger.LogData(
+                    _fileName,
+                    appName,
+                    ErrorWarningProperty.MemoryConsumptionPercentage,
+                    "Peak",
+                    Math.Round(Convert.ToDouble(AllAppMemDataPercent.FirstOrDefault(x => x.Key == appName).Value.MaxDataValue)));
+            }
+
+            if (AllAppTotalActivePortsData.ContainsKey(appName))
+            {
+                // Network
+                CsvFileLogger.LogData(
+                    _fileName,
+                    appName,
+                    ErrorWarningProperty.ActiveTcpPorts,
+                    "Total",
+                    Math.Round(Convert.ToDouble(AllAppTotalActivePortsData.First(x => x.Key == appName).Value.MaxDataValue)));
+            }
+
+            if (AllAppEphemeralPortsData.ContainsKey(appName))
+            {
+                // Network
+                CsvFileLogger.LogData(
+                    _fileName,
+                    appName,
+                    ErrorWarningProperty.ActiveEphemeralPorts,
+                    "Total",
+                    Math.Round(Convert.ToDouble(AllAppEphemeralPortsData.First(x => x.Key == appName).Value.MaxDataValue)));
+            }
+
+            if (AllAppHandlesData.ContainsKey(appName))
+            {
+                // Handles
+                CsvFileLogger.LogData(
+                     _fileName,
+                     appName,
+                     ErrorWarningProperty.AllocatedFileHandles,
+                     "Total",
+                     AllAppHandlesData.First(x => x.Key == appName).Value.MaxDataValue);
+            }
+
+            DataTableFileLogger.Flush();
+        }
+
         private void CleanUp()
         {
-            deployedTargetList?.Clear();
-            deployedTargetList = null;
+            ObserverLogger.LogInfo("Starting CleanUp...");
+            _deployedTargetList?.Clear();
+            _deployedTargetList = null;
 
-            userTargetList?.Clear();
-            userTargetList = null;
+            _userTargetList?.Clear();
+            _userTargetList = null;
 
             ReplicaOrInstanceList?.Clear();
             ReplicaOrInstanceList = null;
 
-            processInfo?.Clear();
-            processInfo = null;
+            _processInfoDictionary?.Clear();
+            _processInfoDictionary = null;
+
+            _deployedApps?.Clear();
+            _deployedApps = null;
 
             if (AllAppCpuData != null && AllAppCpuData.All(frud => !frud.Value.ActiveErrorOrWarning))
             {
@@ -1919,6 +2585,12 @@ namespace FabricObserver.Observers
             {
                 AllAppEphemeralPortsData?.Clear();
                 AllAppEphemeralPortsData = null;
+            }
+
+            if (AllAppEphemeralPortsDataPercent != null && AllAppEphemeralPortsDataPercent.All(frud => !frud.Value.ActiveErrorOrWarning))
+            {
+                AllAppEphemeralPortsDataPercent?.Clear();
+                AllAppEphemeralPortsDataPercent = null;
             }
 
             if (AllAppHandlesData != null && AllAppHandlesData.All(frud => !frud.Value.ActiveErrorOrWarning))
@@ -1956,103 +2628,14 @@ namespace FabricObserver.Observers
                 AllAppKvsLvidsData?.Clear();
                 AllAppKvsLvidsData = null;
             }
+
+            if (IsWindows)
+            {
+                _handleToProcSnapshot?.Dispose();
+                GC.KeepAlive(_handleToProcSnapshot);
+                _handleToProcSnapshot = null;
+            }
+            ObserverLogger.LogInfo("Completed CleanUp...");
         }
-
-        private void LogAllAppResourceDataToCsv(string appName)
-        {
-            if (!EnableCsvLogging)
-            {
-                return;
-            }
-
-            // CPU Time
-            if (AllAppCpuData.ContainsKey(appName))
-            {
-                CsvFileLogger.LogData(
-                    fileName,
-                    appName,
-                    ErrorWarningProperty.TotalCpuTime,
-                    "Average",
-                    Math.Round(AllAppCpuData.First(x => x.Key == appName).Value.AverageDataValue));
-
-                CsvFileLogger.LogData(
-                    fileName,
-                    appName,
-                    ErrorWarningProperty.TotalCpuTime,
-                    "Peak",
-                    Math.Round(AllAppCpuData.First(x => x.Key == appName).Value.MaxDataValue));
-            }
-
-            // Memory - MB
-            if (AllAppMemDataMb.ContainsKey(appName))
-            {
-                CsvFileLogger.LogData(
-                    fileName,
-                    appName,
-                    ErrorWarningProperty.TotalMemoryConsumptionMb,
-                    "Average",
-                    Math.Round(AllAppMemDataMb.First(x => x.Key == appName).Value.AverageDataValue));
-
-                CsvFileLogger.LogData(
-                    fileName,
-                    appName,
-                    ErrorWarningProperty.TotalMemoryConsumptionMb,
-                    "Peak",
-                    Math.Round(Convert.ToDouble(AllAppMemDataMb.First(x => x.Key == appName).Value.MaxDataValue)));
-            }
-
-            if (AllAppMemDataPercent.ContainsKey(appName))
-            {
-                CsvFileLogger.LogData(
-                   fileName,
-                   appName,
-                   ErrorWarningProperty.TotalMemoryConsumptionPct,
-                   "Average",
-                   Math.Round(AllAppMemDataPercent.First(x => x.Key == appName).Value.AverageDataValue));
-
-                CsvFileLogger.LogData(
-                    fileName,
-                    appName,
-                    ErrorWarningProperty.TotalMemoryConsumptionPct,
-                    "Peak",
-                    Math.Round(Convert.ToDouble(AllAppMemDataPercent.FirstOrDefault(x => x.Key == appName).Value.MaxDataValue)));
-            }
-
-            if (AllAppTotalActivePortsData.ContainsKey(appName))
-            {
-                // Network
-                CsvFileLogger.LogData(
-                    fileName,
-                    appName,
-                    ErrorWarningProperty.TotalActivePorts,
-                    "Total",
-                    Math.Round(Convert.ToDouble(AllAppTotalActivePortsData.First(x => x.Key == appName).Value.MaxDataValue)));
-            }
-
-            if (AllAppEphemeralPortsData.ContainsKey(appName))
-            {
-                // Network
-                CsvFileLogger.LogData(
-                    fileName,
-                    appName,
-                    ErrorWarningProperty.TotalEphemeralPorts,
-                    "Total",
-                    Math.Round(Convert.ToDouble(AllAppEphemeralPortsData.First(x => x.Key == appName).Value.MaxDataValue)));
-            }
-
-            if (AllAppHandlesData.ContainsKey(appName))
-            {
-                // Handles
-                CsvFileLogger.LogData(
-                     fileName,
-                     appName,
-                     ErrorWarningProperty.TotalFileHandles,
-                     "Total",
-                     AllAppHandlesData.First(x => x.Key == appName).Value.MaxDataValue);
-            }
-
-            DataTableFileLogger.Flush();
-        }
-
     }
 }

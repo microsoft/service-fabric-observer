@@ -19,7 +19,7 @@ namespace FabricObserver.Observers
     // This observer doesn't monitor or report health status. It is only useful if you employ the FabricObserverWebApi App.
     // It provides information about the currently installed Service Fabric runtime environment, apps, and services.
     // The output (a local file) is used by the FO API service to render an HTML page (http://localhost:5000/api/ObserverManager).
-    public class SFConfigurationObserver : ObserverBase
+    public sealed class SFConfigurationObserver : ObserverBase
     {
         private string SFVersion;
         private string SFBinRoot;
@@ -43,11 +43,12 @@ namespace FabricObserver.Observers
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="SFConfigurationObserver"/> class.
+        /// Creates a new instance of the type.
         /// </summary>
-        public SFConfigurationObserver(FabricClient fabricClient, StatelessServiceContext context)
-            : base(fabricClient, context)
+        /// <param name="context">The StatelessServiceContext instance.</param>
+        public SFConfigurationObserver(StatelessServiceContext context) : base(null, context)
         {
+
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -79,13 +80,13 @@ namespace FabricObserver.Observers
                 unsupportedPreviewFeaturesEnabled = config.EnableUnsupportedPreviewFeatures;
                 SFNodeLastBootTime = config.NodeLastBootUpTime;
 
-                await ReportAsync(token).ConfigureAwait(true);
+                await ReportAsync(token);
             }
             catch (Exception e) when (e is ArgumentException || e is IOException)
             {
                 
             }
-            catch (Exception e) when (!(e is OperationCanceledException))
+            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
                 ObserverLogger.LogWarning($"Unhandled Exception in ObserveAsync:{Environment.NewLine}{e}");
 
@@ -148,7 +149,7 @@ namespace FabricObserver.Observers
                 _ = sb.AppendLine("Enable Circular trace session: " + SFEnableCircularTraceSession);
             }
 
-            _ = sb.Append(await GetDeployedAppsInfoAsync(token).ConfigureAwait(true));
+            _ = sb.Append(await GetDeployedAppsInfoAsync(token));
             _ = sb.AppendLine();
 
             token.ThrowIfCancellationRequested();
@@ -174,7 +175,7 @@ namespace FabricObserver.Observers
 
             try
             {
-                appList = await FabricClientInstance.QueryManager.GetApplicationListAsync().ConfigureAwait(true);
+                appList = await FabricClientInstance.QueryManager.GetApplicationListAsync();
                     
                 if (!string.IsNullOrWhiteSpace(ClusterManifestPath))
                 {
@@ -182,7 +183,7 @@ namespace FabricObserver.Observers
                 }
                 else
                 {
-                    clusterManifestXml = await FabricClientInstance.ClusterManager.GetClusterManifestAsync(AsyncClusterOperationTimeoutSeconds, Token).ConfigureAwait(true);
+                    clusterManifestXml = await FabricClientInstance.ClusterManager.GetClusterManifestAsync(AsyncClusterOperationTimeoutSeconds, Token);
                 }
             }
             catch (Exception e) when (e is FabricException || e is TimeoutException)
@@ -232,10 +233,8 @@ namespace FabricObserver.Observers
                 // Node Information.
                 _ = sb.AppendLine($"{Environment.NewLine}Node Info:{Environment.NewLine}");
                 _ = sb.AppendLine($"Node Name: {NodeName}");
-                _ = sb.AppendLine($"Node Id: {FabricServiceContext.NodeContext.NodeId}");
-                _ = sb.AppendLine($"Node Instance Id: {FabricServiceContext.NodeContext.NodeInstanceId}");
-                _ = sb.AppendLine($"Node Type: {FabricServiceContext.NodeContext.NodeType}");
-                var (lowPort, highPort) = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(FabricServiceContext.NodeContext.NodeType, clusterManifestXml);
+                _ = sb.AppendLine($"Node Type: {NodeType}");
+                var (lowPort, highPort) = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(NodeType, clusterManifestXml);
 
                 if (lowPort > -1)
                 {
@@ -281,8 +280,8 @@ namespace FabricObserver.Observers
 
                         // Service(s).
                         _ = sb.AppendLine($"{Environment.NewLine}\tServices:");
-                        var serviceList = await FabricClientInstance.QueryManager.GetServiceListAsync(app.ApplicationName).ConfigureAwait(true);
-                        var replicaList = await FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, app.ApplicationName).ConfigureAwait(true);
+                        var serviceList = await FabricClientInstance.QueryManager.GetServiceListAsync(app.ApplicationName);
+                        var replicaList = await FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, app.ApplicationName);
 
                         foreach (var service in serviceList)
                         {
@@ -290,7 +289,7 @@ namespace FabricObserver.Observers
                             var type = service.ServiceTypeName;
                             var serviceManifestVersion = service.ServiceManifestVersion;
                             var serviceName = service.ServiceName;
-                            var serviceDescription = await FabricClientInstance.ServiceManager.GetServiceDescriptionAsync(serviceName).ConfigureAwait(true);
+                            var serviceDescription = await FabricClientInstance.ServiceManager.GetServiceDescriptionAsync(serviceName);
                             var processModel = serviceDescription.ServicePackageActivationMode.ToString();
 
                             foreach (var rep in replicaList)
@@ -306,8 +305,8 @@ namespace FabricObserver.Observers
 
                                 if (procId > -1)
                                 {
-                                    ports = OSInfoProvider.Instance.GetActiveTcpPortCount(procId, RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? FabricServiceContext : null);
-                                    ephemeralPorts = OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? FabricServiceContext : null);
+                                    ports = OSInfoProvider.Instance.GetActiveTcpPortCount(procId, RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? ConfigPackage.Path : null);
+                                    ephemeralPorts = OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? ConfigPackage.Path : null);
                                 }
 
                                 _ = sb.AppendLine("\tService Name: " + serviceName.OriginalString);
@@ -332,25 +331,25 @@ namespace FabricObserver.Observers
                                 if (IsEtwEnabled)
                                 {
                                     ObserverLogger.LogEtw(
-                                                    ObserverConstants.FabricObserverETWEventName,
-                                                    new
-                                                    {
-                                                        Level = 0, // Info
-                                                        Node = NodeName,
-                                                        Observer = ObserverName,
-                                                        AppName = appName,
-                                                        AppType = appType,
-                                                        AppVersion = appVersion,
-                                                        AppHealthState = healthState,
-                                                        AppStatus = status,
-                                                        ServiceName = serviceName.OriginalString,
-                                                        ServiceTypeName = type,
-                                                        Kind = kind,
-                                                        ProcessModel = processModel,
-                                                        ServiceManifestVersion = serviceManifestVersion,
-                                                        ActivePorts = ports,
-                                                        EphemeralPorts = ephemeralPorts
-                                                    });
+                                        ObserverConstants.FabricObserverETWEventName,
+                                        new
+                                        {
+                                            Level = 0, // Info
+                                            Node = NodeName,
+                                            Observer = ObserverName,
+                                            AppName = appName,
+                                            AppType = appType,
+                                            AppVersion = appVersion,
+                                            AppHealthState = healthState,
+                                            AppStatus = status,
+                                            ServiceName = serviceName.OriginalString,
+                                            ServiceTypeName = type,
+                                            Kind = kind,
+                                            ProcessModel = processModel,
+                                            ServiceManifestVersion = serviceManifestVersion,
+                                            ActivePorts = ports,
+                                            EphemeralPorts = ephemeralPorts
+                                        });
                                 }
 
                                 break;

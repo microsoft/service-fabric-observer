@@ -1,33 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
-  <metadata minClientVersion="3.3.0">
-    <id>%PACKAGE_ID%</id>
-    <version>3.1.24</version>
-    <releaseNotes>
-- Rewrote WindowsInfoProvider.TupleGetSystemMemoryInfo to be more performant (across memory and CPU).
-	</releaseNotes>
-    <authors>Microsoft</authors>
-    <license type="expression">MIT</license>
-    <requireLicenseAcceptance>true</requireLicenseAcceptance>
-    <title>Service Fabric FabricObserver Application</title>
-    <icon>icon.png</icon>
-	<readme>fonuget.md</readme>
-    <language>en-US</language>
-    <description>This package contains the FabricObserver Application, a highly configurable and extensible resource usage watchdog service that is designed to be run in Azure Service Fabric Windows and Linux clusters. This package contains the entire application and is required to build .NET Standard 2.0 observer plugins.</description>
-    <contentFiles>
-      <files include="**" buildAction="None" copyToOutput="true" />
-    </contentFiles>
-    <dependencies>
-      <group targetFramework=".NETStandard2.0" />
-    </dependencies>
-    <projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>
-    <tags>azure service-fabric fabric-observer utility watchdog-service observability</tags>
-    <copyright>© Microsoft Corporation. All rights reserved.</copyright>
-  </metadata>
-  <files>
-    <file src="**" target="contentFiles\any\any" />
-    <file src="FabricObserverPkg\Code\FabricObserver.Extensibility.dll" target="lib\netstandard2.0" />
-    <file src="%ROOT_PATH%\icon.png" target="" />
-	<file src="%ROOT_PATH%\fonuget.md" target="" />
-  </files>
+	<metadata minClientVersion="3.3.0">
+		<id>%PACKAGE_ID%</id>
+		<version>3.2.1.831</version>
+		<releaseNotes>
+#### FabricObserver Changes (NOTE: Breaking ETW changes - Kusto queries will have to be modified.)
+- AppObserver: Updated ChildProcessInfo to include ProcessId of child process.
+- Bug fix: FO will no longer put itself into Warning with an infinite TTL health event when some observer does not complete within user-specified max run time.
+- Bug fix: AppObserver - Same named child processes will now be processed correctly.
+- Bug fix: FabricSystemObserver regression in reporting for some system services has been resolved.
+- DiskObserver: TelemetryData Property value is now "[drive] [Metric name]", e.g., on Windows, "C: Disk Space Usage (Percent)".
+- Performance improvements.
+- Updated ETW implementation.
+- New ETW payload format: Json-serialized instances of *TelemetryData or an anonymous types. This breaks existing KQL queries. See new ETW documentation for info.
+- Added ETW documentation with sample KQL.
+		</releaseNotes>
+		<authors>Microsoft</authors>
+		<license type="expression">MIT</license>
+		<requireLicenseAcceptance>true</requireLicenseAcceptance>
+		<title>Service Fabric FabricObserver Application</title>
+		<icon>icon.png</icon>
+		<readme>fonuget.md</readme>
+		<language>en-US</language>
+		<description>This package contains the FabricObserver Application (built for .NET Core 3.1, SF Runtime 8.0 and above), a highly configurable and extensible resource usage watchdog service that is designed to be run in Azure Service Fabric Windows and Linux clusters. This package contains the entire application and can be used to build .NET Standard 2.0 observer plugins.</description>
+		<contentFiles>
+			<files include="**" buildAction="None" copyToOutput="true" />
+		</contentFiles>
+		<dependencies>
+			<group targetFramework="netstandard2.0"></group>
+			<group targetFramework="netcoreapp3.1">
+				<dependency id="Microsoft.ServiceFabric.Services" version="5.0.516" />
+			</group>
+		</dependencies>
+		<projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>
+		<tags>azure service-fabric fabric-observer utility watchdog-service observability</tags>
+		<copyright>© Microsoft Corporation. All rights reserved.</copyright>
+	</metadata>
+	<files>
+		<file src="**" target="contentFiles\any\any" />
+		<file src="FabricObserverPkg\Code\FabricObserver.dll" target="lib\netcoreapp3.1" />
+		<file src="FabricObserverPkg\Code\FabricObserver.Extensibility.dll" target="lib\netstandard2.0" />
+		<file src="FabricObserverPkg\Code\TelemetryLib.dll" target="lib\netstandard2.0" />
+		<file src="%ROOT_PATH%\icon.png" target="" />
+		<file src="%ROOT_PATH%\fonuget.md" target="" />
+	</files>
 </package>

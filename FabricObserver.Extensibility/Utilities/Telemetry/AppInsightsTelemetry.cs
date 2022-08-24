@@ -5,7 +5,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Fabric;
 using System.Fabric.Health;
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -17,6 +16,7 @@ using Microsoft.ApplicationInsights.DataContracts;
 using Microsoft.ApplicationInsights.Extensibility;
 using FabricObserver.TelemetryLib;
 using Newtonsoft.Json;
+using System.Fabric;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
@@ -176,20 +176,24 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
-
                 var properties = new Dictionary<string, string>
                 {
-                    { "ClusterId", telemetryData.ClusterId ?? string.Empty },
-                    { "HealthState", telemetryData.HealthState ?? string.Empty },
+                    { "ClusterId", telemetryData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId },
+                    { "HealthState", Enum.GetName(typeof(HealthState), telemetryData.HealthState) },
                     { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
+                    { "ApplicationTypeName", telemetryData.ApplicationType ?? string.Empty },
                     { "ServiceName", telemetryData.ServiceName ?? string.Empty },
-                    { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
-                    { "ProcessId", telemetryData.ProcessId.ToString() },
+                    { "ReplicaRole", telemetryData.ReplicaRole.ToString() },
+                    { "ServiceKind", telemetryData.ServiceKind.ToString() },
+                    { "ServicePackageActivationMode", telemetryData.ServicePackageActivationMode?.ToString() ?? string.Empty },
+                    { "ProcessId", telemetryData.ProcessId == 0 ? string.Empty : telemetryData.ProcessId.ToString() },
+                    { "ProcessName", telemetryData.ProcessName },
+                    { "ProcessStartTime", telemetryData.ProcessStartTime },
                     { "ErrorCode", telemetryData.Code ?? string.Empty },
                     { "Description", telemetryData.Description ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
                     { "Value", telemetryData.Value.ToString() },
-                    { "PartitionId", telemetryData.PartitionId ?? string.Empty },
+                    { "PartitionId", telemetryData.PartitionId != null ? telemetryData.PartitionId.ToString() : string.Empty },
                     { "ReplicaId", telemetryData.ReplicaId.ToString() },
                     { "ObserverName", telemetryData.ObserverName },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
@@ -249,16 +253,26 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             {
                 var properties = new Dictionary<string, string>
                 {
-                    { "ClusterId", telemetryData.ClusterId ?? string.Empty },
+                    { "ClusterId", telemetryData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId },
+                    { "HealthState", Enum.GetName(typeof(HealthState), telemetryData.HealthState) },
                     { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
+                    { "ApplicationTypeName", telemetryData.ApplicationType ?? string.Empty },
                     { "ServiceName", telemetryData.ServiceName ?? string.Empty },
-                    { "ProcessId", telemetryData.ProcessId.ToString() },
-                    { "SystemServiceProcessName", telemetryData.SystemServiceProcessName ?? string.Empty },
-                    { "PartitionId", telemetryData.PartitionId },
+                    { "ReplicaRole", telemetryData.ReplicaRole.ToString() },
+                    { "ServiceKind", telemetryData.ServiceKind.ToString() },
+                    { "ServicePackageActivationMode", telemetryData.ServicePackageActivationMode?.ToString() ?? string.Empty },
+                    { "ProcessId", telemetryData.ProcessId == 0 ? string.Empty : telemetryData.ProcessId.ToString() },
+                    { "ProcessName", telemetryData.ProcessName },
+                    { "ProcessStartTime", telemetryData.ProcessStartTime },
+                    { "ErrorCode", telemetryData.Code ?? string.Empty },
+                    { "Description", telemetryData.Description ?? string.Empty },
+                    { "Metric", telemetryData.Metric ?? string.Empty },
+                    { "Value", telemetryData.Value.ToString() },
+                    { "PartitionId", telemetryData.PartitionId != null ? telemetryData.PartitionId.ToString() : string.Empty },
                     { "ReplicaId", telemetryData.ReplicaId.ToString() },
-                    { "Source", telemetryData.ObserverName },
+                    { "ObserverName", telemetryData.ObserverName },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
-                    { "OS", telemetryData.OS ?? string.Empty }
+                    { "OS", telemetryData.OS ?? string.Empty },
                 };
 
                 var metric = new Dictionary<string, double>
@@ -289,14 +303,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 return Task.CompletedTask;
             }
 
-            string clusterid = string.Empty;
-            
-            using (FabricClient fabClient = new FabricClient())
-            {
-                var (clusterId, _, _) = ClusterIdentificationUtility.TupleGetClusterIdAndTypeAsync(fabClient, cancellationToken).Result;
-                clusterid = clusterId;
-            }
-
             string OS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
 
             foreach (var telemData in telemetryDataList)
@@ -305,13 +311,14 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 {
                     var properties = new Dictionary<string, string>
                     {
-                        { "ClusterId", clusterid },
+                        { "ClusterId", ClusterInformation.ClusterInfoTuple.ClusterId },
                         { "ApplicationName", telemData.ApplicationName ?? string.Empty },
                         { "ServiceName", telemData.ServiceName ?? string.Empty },
                         { "ProcessId", telemData.ProcessId.ToString() },
+                        { "ProcessName", telemData.ProcessName },
                         { "ChildProcessInfo", JsonConvert.SerializeObject(telemData.ChildProcessInfo) },
                         { "PartitionId", telemData.PartitionId },
-                        { "ReplicaId", telemData.ReplicaId },
+                        { "ReplicaId", telemData.ReplicaId.ToString() },
                         { "Source", ObserverConstants.AppObserverName },
                         { "NodeName", telemData.NodeName },
                         { "OS", OS }
@@ -421,6 +428,96 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             return Task.CompletedTask;
         }
 
+        public Task ReportClusterUpgradeStatusAsync(ServiceFabricUpgradeEventData eventData, CancellationToken token)
+        {
+            if (!IsEnabled || eventData?.FabricUpgradeProgress == null || token.IsCancellationRequested)
+            {
+                return Task.CompletedTask;
+            }
+
+            try
+            {
+                IDictionary<string, string> eventProperties = new Dictionary<string, string>
+                {
+                    { "EventName", "ClusterUpgradeEvent" },
+                    { "TaskName", eventData.TaskName },
+                    { "ClusterId", eventData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId },
+                    { "Timestamp", DateTime.UtcNow.ToString("o") },
+                    { "OS", eventData.OS },
+                    { "UpgradeTargetCodeVersion", eventData.FabricUpgradeProgress.UpgradeDescription?.TargetCodeVersion },
+                    { "UpgradeTargetConfigVersion", eventData.FabricUpgradeProgress.UpgradeDescription?.TargetConfigVersion },
+                    { "UpgradeState", Enum.GetName(typeof(FabricUpgradeState), eventData.FabricUpgradeProgress.UpgradeState) },
+                    { "CurrentUpgradeDomain", eventData.FabricUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName },
+                    { "NextUpgradeDomain", eventData.FabricUpgradeProgress?.NextUpgradeDomain },
+                    { "UpgradeDuration", eventData.FabricUpgradeProgress?.CurrentUpgradeDomainDuration.ToString() },
+                    { "FailureReason", eventData.FabricUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.FabricUpgradeProgress.FailureReason.Value) : null }
+                };
+
+                telemetryClient.TrackEvent($"{eventData.TaskName}.ClusterUpgradeEvent", eventProperties);
+                telemetryClient.Flush();
+
+                // allow time for flushing
+                Thread.Sleep(1000);
+
+                eventProperties.Clear();
+                eventProperties = null;
+
+                return Task.CompletedTask;
+            }
+            catch (Exception e)
+            {
+                // Telemetry is non-critical and should not take down FH.
+                logger.LogWarning($"Failure in ReportClusterUpgradeStatus:{Environment.NewLine}{e}");
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public Task ReportApplicationUpgradeStatusAsync(ServiceFabricUpgradeEventData eventData, CancellationToken token)
+        {
+            if (!IsEnabled || eventData?.ApplicationUpgradeProgress == null || token.IsCancellationRequested)
+            {
+                return Task.CompletedTask;
+            }
+
+            try
+            {
+                IDictionary<string, string> eventProperties = new Dictionary<string, string>
+                {
+                    { "EventName", "ApplicationUpgradeEvent" },
+                    { "TaskName", eventData.TaskName },
+                    { "ClusterId", eventData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId },
+                    { "Timestamp", DateTime.UtcNow.ToString("o") },
+                    { "OS", eventData.OS },
+                    { "ApplicationName", eventData.ApplicationUpgradeProgress.ApplicationName?.OriginalString },
+                    { "UpgradeTargetTypeVersion", eventData.ApplicationUpgradeProgress.UpgradeDescription?.TargetApplicationTypeVersion },
+                    { "UpgradeState", Enum.GetName(typeof(ApplicationUpgradeState), eventData.ApplicationUpgradeProgress.UpgradeState) },
+                    { "CurrentUpgradeDomain", eventData.ApplicationUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName },
+                    { "NextUpgradeDomain", eventData.ApplicationUpgradeProgress?.NextUpgradeDomain },
+                    { "UpgradeDuration", eventData.ApplicationUpgradeProgress.CurrentUpgradeDomainDuration.ToString() },
+                    { "FailureReason", eventData.ApplicationUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.ApplicationUpgradeProgress.FailureReason.Value) : null }
+                };
+
+                telemetryClient.TrackEvent($"{eventData.TaskName}.ApplicationUpgradeEvent", eventProperties);
+                telemetryClient.Flush();
+
+                // allow time for flushing
+                Thread.Sleep(1000);
+
+                eventProperties.Clear();
+                eventProperties = null;
+
+                return Task.CompletedTask;
+            }
+            catch (Exception e)
+            {
+                // Telemetry is non-critical and should not take down FH.
+                logger.LogWarning($"Failure in ReportApplicationUpgradeStatus:{Environment.NewLine}{e}");
+            }
+
+            return Task.CompletedTask;
+        }
+
         /// <summary>
         /// Calls AI to report a metric.
         /// </summary>
@@ -456,7 +553,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                             long value,
                             CancellationToken cancellationToken)
         {
-            await ReportMetricAsync(role, id.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken).ConfigureAwait(true);
+            await ReportMetricAsync(role, id.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken);
         }
 
         /// <summary>

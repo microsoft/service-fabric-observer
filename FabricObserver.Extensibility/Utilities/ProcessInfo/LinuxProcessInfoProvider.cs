@@ -3,11 +3,11 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using System.CodeDom;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Fabric;
 using System.Linq;
+using System.Threading;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -15,7 +15,7 @@ namespace FabricObserver.Observers.Utilities
     {
         private const int MaxDescendants = 50;
 
-        public override float GetProcessWorkingSetMb(int processId, string procName = null, bool getPrivateWorkingSet = false)
+        public override float GetProcessWorkingSetMb(int processId, string procName, CancellationToken token, bool getPrivateWorkingSet = false)
         {
             if (LinuxProcFS.TryParseStatusFile(processId, out ParsedStatus status))
             {
@@ -26,18 +26,17 @@ namespace FabricObserver.Observers.Utilities
             return 0f;
         }
 
-        public override float GetProcessAllocatedHandles(int processId, StatelessServiceContext context = null, bool useProcessObject = false)
+        public override float GetProcessAllocatedHandles(int processId, string configPath)
         {
-            if (processId < 0 || context == null)
+            if (processId < 0 || string.IsNullOrWhiteSpace(configPath))
             {
                 return -1f;
             }
 
             // We need the full path to the currently deployed FO CodePackage, which is where our 
             // proxy binary lives.
-            string path = context.CodePackageActivationContext.GetCodePackageObject("Code").Path;
             string arg = processId.ToString();
-            string bin = $"{path}/elevated_proc_fd";
+            string bin = $"{configPath}/elevated_proc_fd";
             float result;
 
             ProcessStartInfo startInfo = new ProcessStartInfo
@@ -47,22 +46,43 @@ namespace FabricObserver.Observers.Utilities
                 UseShellExecute = false,
                 RedirectStandardInput = false,
                 RedirectStandardOutput = true,
-                RedirectStandardError = false,
+                RedirectStandardError = true,
                 CreateNoWindow = true
             };
 
-            using (Process process = Process.Start(startInfo))
-            {
-                var stdOut = process.StandardOutput;
-                string output = stdOut.ReadToEnd();
+            string error = string.Empty;
+            string output = string.Empty;
 
+            using (Process process = new Process())
+            {
+                process.ErrorDataReceived += (sender, e) => { error += e.Data; };
+                process.OutputDataReceived += (sender, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) { output += e.Data; } };
+                process.StartInfo = startInfo;
+                
+                if (!process.Start())
+                {
+                    return -1f;
+                }
+
+                // Start async reads.
+                process.BeginErrorReadLine();
+                process.BeginOutputReadLine();
                 process.WaitForExit();
 
-                result = float.TryParse(output, out float ret) ? ret : -42f;
+                result = float.TryParse(output, out float ret) ? ret : -1f;
 
-                if (process.ExitCode != 0)
+                if (process?.ExitCode != 0)
                 {
                     Logger.LogWarning($"elevated_proc_fd exited with: {process.ExitCode}");
+                    
+                    // Try and work around the unsetting of caps issues when SF runs a cluster upgrade.
+                    if (error.ToLower().Contains("permission denied"))
+                    {
+                        // Throwing LinuxPermissionException here will eventually take down FO (by design). The failure will be logged and telemetry will be emitted, then
+                        // the exception will be re-thrown by ObserverManager and the FO process will fail fast exit. Then, SF will create a new instance of FO on the offending node which
+                        // will run the setup bash script that ensures the elevated_proc_fd binary has the correct caps in place.
+                        throw new LinuxPermissionException($"Capabilities have been removed from elevated_proc_fd{Environment.NewLine}{error}");
+                    }
                     return -1f;
                 }
             }
@@ -70,7 +90,7 @@ namespace FabricObserver.Observers.Utilities
             return result;
         }
 
-        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid)
+        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot = null)
         {
             if (parentPid < 1)
             {
@@ -154,7 +174,7 @@ namespace FabricObserver.Observers.Utilities
             return childProcesses;
         }
 
-        public override double GetProcessKvsLvidsUsagePercentage(string procName, int procId = -1)
+        public override double GetProcessKvsLvidsUsagePercentage(string procName, CancellationToken token, int procId = -1)
         {
             // Not supported on Linux.
             return -1;

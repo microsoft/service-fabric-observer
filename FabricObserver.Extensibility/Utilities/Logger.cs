@@ -4,12 +4,13 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Diagnostics.Tracing;
+using System.Fabric.Health;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using FabricObserver.Observers.Interfaces;
 using FabricObserver.Observers.Utilities.Telemetry;
-using Newtonsoft.Json;
 using NLog;
 using NLog.Config;
 using NLog.Targets;
@@ -128,36 +129,34 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Logs EventSource events and automatically determines Level based on object (T data) content inspection.
+        /// Logs EventSource events as specified event name using T data as payload.
         /// </summary>
-        /// <typeparam name="T">Anonymous/generic type.</typeparam>
-        /// <param name="eventName">Name of the event.</param>
-        /// <param name="data">Anonymous object instance.</param>
-        public void LogEtw<T>(string eventName, T data)
+        /// <typeparam name="T">Generic type. Must be a class or struct attributed as EventData (EventSource.EventDataAttribute).</typeparam>
+        /// <param name="eventName">The name of the ETW event. This corresponds to the table name in Kusto.</param>
+        /// <param name="eventData">The data of generic type that will be the event Payload.</param>
+        public void LogEtw<T>(string eventName, T eventData)
         {
-            if (!EnableETWLogging)
+            if (!EnableETWLogging || eventData == null || string.IsNullOrWhiteSpace(eventName))
             {
                 return;
             }
 
-            // All FO ETW events are written as anonymous .NET types (anonymous object intances with fields/properties)
-            // housed in FabricObserverDataEvent events of FabricObserverETWProvider EventSource provider. This means they 
-            // are JSON serializable for use in content inspection.
-            string s = JsonConvert.SerializeObject(data);
-
-            if (!string.IsNullOrWhiteSpace(s) && s.Contains("Warning"))
+            if (!JsonHelper.TrySerializeObject(eventData, out string data))
             {
-                ServiceEventSource.Current.DataTypeWriteWarning(eventName, data);
                 return;
             }
 
-            if (!string.IsNullOrWhiteSpace(s) && s.Contains("Error"))
+            EventKeywords keywords = ServiceEventSource.Keywords.ResourceUsage;
+
+            if (eventData is TelemetryData telemData)
             {
-                ServiceEventSource.Current.DataTypeWriteError(eventName, data);
-                return;
+                if (telemData.HealthState == HealthState.Error || telemData.HealthState == HealthState.Warning)
+                {
+                    keywords = ServiceEventSource.Keywords.ErrorOrWarning;
+                }
             }
 
-            ServiceEventSource.Current.DataTypeWriteInfo(eventName, data);
+            ServiceEventSource.Current.Write(new { data }, eventName, keywords);
         }
 
         public bool TryWriteLogFile(string path, string content)
@@ -279,7 +278,6 @@ namespace FabricObserver.Observers.Utilities
                 var target = new FileTarget
                 {
                     Name = targetName,
-                    OptimizeBufferReuse = true,
                     ConcurrentWrites = true,
                     EnableFileDelete = true,
                     FileName = file,
