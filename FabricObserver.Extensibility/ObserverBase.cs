@@ -9,6 +9,8 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Health;
+using System.Fabric.Management.ServiceModel;
+using System.Fabric.Query;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -22,6 +24,7 @@ using FabricObserver.Observers.Utilities.Telemetry;
 using FabricObserver.TelemetryLib;
 using FabricObserver.Utilities.ServiceFabric;
 using Microsoft.Win32.SafeHandles;
+using static System.Fabric.Query.ReplicaStatus;
 using ConfigSettings = FabricObserver.Observers.Utilities.ConfigSettings;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
@@ -510,7 +513,7 @@ namespace FabricObserver.Observers
         /// <returns>true or false if the operation succeeded.</returns>
         public bool DumpWindowsServiceProcess(int processId, string procName, string metric)
         {
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (!IsWindows)
             {
                 return false;
             }
@@ -768,7 +771,7 @@ namespace FabricObserver.Observers
 
             string thresholdName = "Warning";
             bool warningOrError = false;
-            string id = null, appType = null, processStartTime = null;
+            string id = null, appType = null, processStartTime = null, appTypeVersion = null, serviceTypeName = null, serviceTypeVersion = null;
             int procId = processId;
             T threshold = thresholdWarning;
             HealthState healthState = HealthState.Ok;
@@ -782,7 +785,10 @@ namespace FabricObserver.Observers
                 {
                     appName = replicaOrInstance.ApplicationName;
                     appType = replicaOrInstance.ApplicationTypeName;
+                    appTypeVersion = replicaOrInstance.ApplicationTypeVersion;
                     serviceName = replicaOrInstance.ServiceName;
+                    serviceTypeName = replicaOrInstance.ServiceTypeName;
+                    serviceTypeVersion = replicaOrInstance.ServiceTypeVersion;
                     procId = (int)replicaOrInstance.HostProcessId;
 
                     // This doesn't apply to ContainerObserver.
@@ -875,6 +881,7 @@ namespace FabricObserver.Observers
                 {
                     ApplicationName = appName?.OriginalString ?? null,
                     ApplicationType = appType,
+                    ApplicationTypeVersion = appTypeVersion,
                     ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                     EntityType = entityType,
                     Metric = data.Property,
@@ -886,12 +893,14 @@ namespace FabricObserver.Observers
                     ProcessName = processName,
                     ProcessStartTime = processStartTime,
                     ReplicaId = replicaOrInstance != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
-                    ReplicaRole = replicaOrInstance != null ? replicaOrInstance.ReplicaRole : ReplicaRole.Unknown,
-                    RGEnabled = replicaOrInstance != null ? replicaOrInstance.RGEnabled : false,
+                    ReplicaRole = replicaOrInstance != null ? replicaOrInstance.ReplicaRole : ReplicaRole.None,
+                    RGEnabled = replicaOrInstance != null && replicaOrInstance.RGEnabled,
                     RGCpuCoresLimit = replicaOrInstance != null ? replicaOrInstance.RGCpuCoreLimit : 0,
                     RGMemoryLimitMb = replicaOrInstance != null ? replicaOrInstance.RGMemoryLimitMb : 0,
-                    ServiceKind = replicaOrInstance != null ? replicaOrInstance.ServiceKind : System.Fabric.Query.ServiceKind.Invalid,
+                    ServiceKind = replicaOrInstance != null ?  replicaOrInstance.ServiceKind : ServiceKind.Invalid,
                     ServiceName = serviceName?.OriginalString ?? null,
+                    ServiceTypeName = serviceTypeName,
+                    ServiceTypeVersion = serviceTypeVersion,
                     ServicePackageActivationMode = replicaOrInstance?.ServicePackageActivationMode,
                     Source = ObserverName,
                     Value = data.AverageDataValue
@@ -958,7 +967,7 @@ namespace FabricObserver.Observers
                 healthState = HealthState.Error;
 
                 // User service process dump. This is Windows-only today.
-                if (replicaOrInstance != null && dumpOnErrorOrWarning && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                if (replicaOrInstance != null && dumpOnErrorOrWarning && IsWindows)
                 {
                     if (!string.IsNullOrWhiteSpace(DumpsPath))
                     {
@@ -969,13 +978,14 @@ namespace FabricObserver.Observers
 
                         try
                         {
-                            int pid = (int)replicaOrInstance.HostProcessId;
-                            string procName = NativeMethods.GetProcessNameFromId(pid);
-
-                            // Only dump the process if it is still what we think it is..
-                            if (!string.IsNullOrWhiteSpace(procName) && data.Id.Contains($":{procName}{pid}"))
+                            if (data.Id.Contains($":{processName}{procId}"))
                             {
-                                _ = DumpWindowsServiceProcess(pid, procName, data.Property);
+                                // DumpWindowsServiceProcess does not log success, so doing that here.
+                                if (DumpWindowsServiceProcess(procId, processName, data.Property))
+                                {
+                                    ObserverLogger.LogInfo(
+                                     $"Successfully dumped {processName}({procId}) which exceeded Error threshold for {data.Property}.");
+                                }
                             }
                         }
                         catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)

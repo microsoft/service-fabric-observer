@@ -18,6 +18,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
+using System.Xml.XPath;
 using FabricObserver.Interfaces;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
@@ -372,20 +373,20 @@ namespace FabricObserver.Observers
                         ProcessChildProcs(AllAppMemDataMb, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
                     }
 
-                    // RG Report.
+                    // RG Report. Only MemoryLimitInMb is supported currently.
                     if (repOrInst.RGEnabled && repOrInst.RGMemoryLimitMb > 0)
                     {
                         ProcessResourceDataReportHealth(
                             parentFrud,
                             0,
-                            (float)(repOrInst.RGMemoryLimitMb * 0.90),
+                            (float)(repOrInst.RGMemoryLimitMb * 0.90), // 90% of limit threshold.
                             TTL,
                             EntityType.Service,
                             processName,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps,
                             processId,
-                            true);
+                            isRGReport: true);
                     }
 
                     ProcessResourceDataReportHealth(
@@ -1490,11 +1491,21 @@ namespace FabricObserver.Observers
                                 {
                                     if (dump)
                                     {
+                                        ObserverLogger.LogInfo($"Starting dump code path for {repOrInst.HostProcessName}/{childProcName}/{childPid}.");
                                         // Make sure the child process is still the one we're looking for.
                                         if (EnsureProcess(childProcName, childPid))
                                         {
-                                            _ = DumpWindowsServiceProcess(childPid, childProcName, prop);
+                                            // DumpWindowsServiceProcess logs failure. Log success here with parent/child info.
+                                            if (DumpWindowsServiceProcess(childPid, childProcName, prop))
+                                            {
+                                                ObserverLogger.LogInfo($"Successfully dumped {repOrInst.HostProcessName}/{childProcName}/{childPid}.");
+                                            }
                                         }
+                                        else
+                                        {
+                                            ObserverLogger.LogInfo($"Will not dump child process: {childProcName}({childPid}) is no longer running.");
+                                        }
+                                        ObserverLogger.LogInfo($"Completed dump code path for {repOrInst.HostProcessName}/{childProcName}/{childPid}.");
                                     }
                                 }
                             }
@@ -1633,8 +1644,7 @@ namespace FabricObserver.Observers
                                 return;
                             }
 
-                            parentProcName = parentProc.ProcessName;
-                            
+                            parentProcName = parentProc.ProcessName; 
                         }
                         else
                         {
@@ -2341,123 +2351,128 @@ namespace FabricObserver.Observers
                 switch (deployedReplica)
                 {
                     case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole == ReplicaRole.Primary || statefulReplica.ReplicaRole == ReplicaRole.ActiveSecondary:
+                    {
+                        if (filterList != null && filterType != ServiceFilterType.None)
                         {
-                            if (filterList != null && filterType != ServiceFilterType.None)
-                            {
-                                bool isInFilterList = filterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+                            bool isInFilterList = filterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
 
-                                switch (filterType)
-                                {
-                                    case ServiceFilterType.Include when !isInFilterList:
-                                    case ServiceFilterType.Exclude when isInFilterList:
-                                        return;
-                                }
+                            switch (filterType)
+                            {
+                                case ServiceFilterType.Include when !isInFilterList:
+                                case ServiceFilterType.Exclude when isInFilterList:
+                                    return;
                             }
-
-                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
-                            {
-                                ApplicationName = appName,
-                                ApplicationTypeName = appTypeName,
-                                HostProcessId = statefulReplica.HostProcessId,
-                                ReplicaOrInstanceId = statefulReplica.ReplicaId,
-                                PartitionId = statefulReplica.Partitionid,
-                                ReplicaRole = statefulReplica.ReplicaRole,
-                                ServiceKind = statefulReplica.ServiceKind,
-                                ServiceName = statefulReplica.ServiceName,
-                                ServiceTypeName = statefulReplica.ServiceTypeName,
-                                ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
-                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(statefulReplica.ServicePackageActivationId) ?
-                                                ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
-                                ReplicaStatus = statefulReplica.ReplicaStatus
-                            };
-
-                            /* In order to provide accurate resource usage of an SF service process we need to also account for
-                            any processes (children) that the service process (parent) created/spawned. */
-
-                            if (EnableChildProcessMonitoring && replicaInfo?.HostProcessId > 0)
-                            {
-                                // DEBUG
-                                //var sw = Stopwatch.StartNew();
-                                List<(string ProcName, int Pid)> childPids;
-
-                                if (IsWindows)
-                                {
-                                    childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, Win32HandleToProcessSnapshot);
-                                }
-                                else
-                                {
-                                    childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId);
-                                }
-
-                                if (childPids != null && childPids.Count > 0)
-                                {
-                                    replicaInfo.ChildProcesses = childPids;
-                                    ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
-                                }
-                                //sw.Stop();
-                                //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
-                            }
-                            break;
                         }
-                    case DeployedStatelessServiceInstance statelessInstance:
+
+                        replicaInfo = new ReplicaOrInstanceMonitoringInfo
                         {
-                            if (filterList != null && filterType != ServiceFilterType.None)
-                            {
-                                bool isInFilterList = filterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+                            ApplicationName = appName,
+                            ApplicationTypeName = appTypeName,
+                            HostProcessId = statefulReplica.HostProcessId,
+                            ReplicaOrInstanceId = statefulReplica.ReplicaId,
+                            PartitionId = statefulReplica.Partitionid,
+                            ReplicaRole = statefulReplica.ReplicaRole,
+                            ServiceKind = statefulReplica.ServiceKind,
+                            ServiceName = statefulReplica.ServiceName,
+                            ServiceManifestName = statefulReplica.ServiceManifestName,
+                            ServiceTypeName = statefulReplica.ServiceTypeName,
+                            ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
+                            ServicePackageActivationMode = string.IsNullOrWhiteSpace(statefulReplica.ServicePackageActivationId) ?
+                                            ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
+                            ReplicaStatus = statefulReplica.ReplicaStatus
+                        };
 
-                                switch (filterType)
-                                {
-                                    case ServiceFilterType.Include when !isInFilterList:
-                                    case ServiceFilterType.Exclude when isInFilterList:
-                                        return;
-                                }
+                        /* In order to provide accurate resource usage of an SF service process we need to also account for
+                        any processes (children) that the service process (parent) created/spawned. */
+
+                        if (EnableChildProcessMonitoring && replicaInfo?.HostProcessId > 0)
+                        {
+                            // DEBUG
+                            //var sw = Stopwatch.StartNew();
+                            List<(string ProcName, int Pid)> childPids;
+
+                            if (IsWindows)
+                            {
+                                childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, Win32HandleToProcessSnapshot);
+                            }
+                            else
+                            {
+                                childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId);
                             }
 
-                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
+                            if (childPids != null && childPids.Count > 0)
                             {
-                                ApplicationName = appName,
-                                ApplicationTypeName = appTypeName,
-                                HostProcessId = statelessInstance.HostProcessId,
-                                ReplicaOrInstanceId = statelessInstance.InstanceId,
-                                PartitionId = statelessInstance.Partitionid,
-                                ReplicaRole = ReplicaRole.None,
-                                ServiceKind = statelessInstance.ServiceKind,
-                                ServiceName = statelessInstance.ServiceName,
-                                ServiceTypeName = statelessInstance.ServiceTypeName,
-                                ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
-                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(statelessInstance.ServicePackageActivationId) ?
-                                                ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
-                                ReplicaStatus = statelessInstance.ReplicaStatus
-                            };
-
-                            if (EnableChildProcessMonitoring && replicaInfo?.HostProcessId > 0)
-                            {
-                                // DEBUG
-                                //var sw = Stopwatch.StartNew();
-                                List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, Win32HandleToProcessSnapshot);
-
-                                if (childPids != null && childPids.Count > 0)
-                                {
-                                    replicaInfo.ChildProcesses = childPids;
-                                    ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
-                                }
-                                //sw.Stop();
-                                //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
+                                replicaInfo.ChildProcesses = childPids;
+                                ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
                             }
-                            break;
-                        } 
+                            //sw.Stop();
+                            //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
+                        }
+                        break;
+                    }
+                    case DeployedStatelessServiceInstance statelessInstance:
+                    {
+                        if (filterList != null && filterType != ServiceFilterType.None)
+                        {
+                            bool isInFilterList = filterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+
+                            switch (filterType)
+                            {
+                                case ServiceFilterType.Include when !isInFilterList:
+                                case ServiceFilterType.Exclude when isInFilterList:
+                                    return;
+                            }
+                        }
+
+                        replicaInfo = new ReplicaOrInstanceMonitoringInfo
+                        {
+                            ApplicationName = appName,
+                            ApplicationTypeName = appTypeName,
+                            HostProcessId = statelessInstance.HostProcessId,
+                            ReplicaOrInstanceId = statelessInstance.InstanceId,
+                            PartitionId = statelessInstance.Partitionid,
+                            ReplicaRole = ReplicaRole.None,
+                            ServiceKind = statelessInstance.ServiceKind,
+                            ServiceName = statelessInstance.ServiceName,
+                            ServiceManifestName = statelessInstance.ServiceManifestName,
+                            ServiceTypeName = statelessInstance.ServiceTypeName,
+                            ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
+                            ServicePackageActivationMode = string.IsNullOrWhiteSpace(statelessInstance.ServicePackageActivationId) ?
+                                            ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
+                            ReplicaStatus = statelessInstance.ReplicaStatus
+                        };
+
+                        if (EnableChildProcessMonitoring && replicaInfo?.HostProcessId > 0)
+                        {
+                            // DEBUG
+                            //var sw = Stopwatch.StartNew();
+                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, Win32HandleToProcessSnapshot);
+
+                            if (childPids != null && childPids.Count > 0)
+                            {
+                                replicaInfo.ChildProcesses = childPids;
+                                ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
+                            }
+                            //sw.Stop();
+                            //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
+                        }
+                        break;
+                    } 
                 }
 
-                // RG
+                // ResourceGovernance/AppTypeVer/ServiceTypeVer.
                 ObserverLogger.LogInfo($"Starting RG configuration check for {replicaInfo.ServiceName.OriginalString}.");
                 try
                 {
-                    var appTypeList = FabricClientInstance.QueryManager.GetApplicationTypeListAsync(appTypeName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
+                    var appTypeList = 
+                        FabricClientInstance.QueryManager.GetApplicationTypeListAsync(appTypeName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
                   
                     if (appTypeList?.Count > 0)
                     {
                         string appTypeVersion = appTypeList[0].ApplicationTypeVersion;
+                        replicaInfo.ApplicationTypeVersion = appTypeVersion;
 
+                        // RG
                         if (!string.IsNullOrWhiteSpace(appTypeVersion))
                         {
                             string appManifest = FabricClientInstance.ApplicationManager.GetApplicationManifestAsync(
@@ -2465,8 +2480,19 @@ namespace FabricObserver.Observers
 
                             if (!string.IsNullOrWhiteSpace(appManifest))
                             {
-                                (replicaInfo.RGEnabled, replicaInfo.RGCpuCoreLimit, replicaInfo.RGMemoryLimitMb) = TupleGetResourceGovernanceInfo(appManifest);
+                                (replicaInfo.RGEnabled, replicaInfo.RGCpuCoreLimit, replicaInfo.RGMemoryLimitMb) = 
+                                    TupleGetResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName);
                             }
+                        }
+
+                        // ServiceTypeVersion
+                        var serviceTypeList = 
+                            FabricClientInstance.QueryManager.GetServiceTypeListAsync(
+                                appTypeName, appTypeVersion, replicaInfo.ServiceTypeName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
+
+                        if (serviceTypeList?.Count > 0)
+                        {
+                            replicaInfo.ServiceTypeVersion = serviceTypeList[0].ServiceManifestVersion;
                         }
                     }
                 }
@@ -2506,35 +2532,44 @@ namespace FabricObserver.Observers
             //ObserverLogger.LogInfo($"SetInstanceOrReplicaMonitoringList for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
         }
 
-        private (bool IsRGEnabled, double CpuCores, double MemoryLimitMb) TupleGetResourceGovernanceInfo(string appManifestXml)
+        private (bool IsRGEnabled, double CpuCores, double MemoryLimitMb) TupleGetResourceGovernanceInfo(string appManifestXml, string servicePkgName)
         {
             ObserverLogger.LogInfo("Starting TupleGetResourceGovernanceInfo.");
 
-            if (!string.IsNullOrWhiteSpace(appManifestXml))
+            if (string.IsNullOrWhiteSpace(appManifestXml))
             {
-                // Safe XML pattern - *Do not use LoadXml*.
-                var appManifestXdoc = new XmlDocument { XmlResolver = null };
-
-                using (var sreader = new StringReader(appManifestXml))
-                {
-                    using (var xreader = XmlReader.Create(sreader, new XmlReaderSettings { XmlResolver = null }))
-                    {
-                        lock (_lock)
-                        {
-                            appManifestXdoc?.Load(xreader);
-
-                            // Get values from cluster manifest, clusterId if it exists in either Paas or Diagnostics section.
-                            return TupleGetResourceGovernanceInfoFromAppManifest(ref appManifestXdoc);
-                        }
-                    }
-                }
+                ObserverLogger.LogInfo($"Invalid value for {nameof(appManifestXml)}: {appManifestXml}. Exiting TupleGetResourceGovernanceInfo.");
+                return (false, 0, 0);
             }
 
-            ObserverLogger.LogInfo("Completed TupleGetResourceGovernanceInfo.");
-            return (false, 0, 0);
+            if (string.IsNullOrWhiteSpace(servicePkgName))
+            {
+                ObserverLogger.LogInfo($"Invalid value for {nameof(servicePkgName)}: {servicePkgName}. Exiting TupleGetResourceGovernanceInfo.");
+                return (false, 0, 0);
+            }
+
+            // Don't waste cycles with XML parsing if you can easily get a hint first..
+            if (!appManifestXml.Contains("<ResourceGovernancePolicy "))
+            {
+                return (false, 0, 0);
+            }
+
+            // Safe XML pattern - *Do not use LoadXml*.
+            var appManifestXdoc = new XmlDocument { XmlResolver = null };
+
+            using (var sreader = new StringReader(appManifestXml))
+            {
+                using (var xreader = XmlReader.Create(sreader, new XmlReaderSettings { XmlResolver = null }))
+                {
+                    appManifestXdoc?.Load(xreader);
+
+                    ObserverLogger.LogInfo("Completed TupleGetResourceGovernanceInfo.");
+                    return TupleGetResourceGovernanceInfoFromAppManifest(ref appManifestXdoc, servicePkgName);
+                }
+            }
         }
 
-        private (bool IsRGEnabled, double CpuCores, double MemoryLimitMb) TupleGetResourceGovernanceInfoFromAppManifest(ref XmlDocument xDoc)
+        private (bool IsRGEnabled, double CpuCores, double MemoryLimitMb) TupleGetResourceGovernanceInfoFromAppManifest(ref XmlDocument xDoc, string servicePkgName)
         {
             ObserverLogger.LogInfo("Starting TupleGetResourceGovernanceInfoFromAppManifest.");
            
@@ -2546,16 +2581,38 @@ namespace FabricObserver.Observers
 
             try
             {
-                XmlNode rgNode = xDoc.DocumentElement?.SelectSingleNode("//*[local-name()='ResourceGovernancePolicy']");
+                // Ensure you get the correct manifest import for specified service package name. There will generally be multiple RG limits set per application (so, per service settings).
+                var sNode = 
+                    xDoc.DocumentElement?.SelectSingleNode(
+                        $"//*[local-name()='ServiceManifestImport'][*[local-name()='ServiceManifestRef' and @*[local-name()='ServiceManifestName' and . ='{servicePkgName}']]]");
                 
-                if (rgNode == null)
+                if (sNode == null)
                 {
-                    ObserverLogger.LogInfo("Completing TupleGetResourceGovernanceInfoFromAppManifest: RG is not enabled for specified application.");
+                    ObserverLogger.LogInfo($"Completing TupleGetResourceGovernanceInfoFromAppManifest: Missing ServiceManifestImport for {servicePkgName}.");
                     return (false, 0, 0);
                 }
 
-                XmlAttribute memAttr = rgNode.Attributes["MemoryInMBLimit"];
-                
+                XmlNodeList childNodes = sNode.ChildNodes;
+                XmlNode rgNode = null;
+
+                foreach (XmlNode node in childNodes)
+                {
+                    if (node.Name == "Policies")
+                    {
+                        foreach (XmlNode polNode in node.ChildNodes)
+                        {
+                            if (polNode.Name == "ResourceGovernancePolicy")
+                            {
+                                rgNode = polNode;
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
+
+                var memAttr = rgNode?.Attributes["MemoryInMBLimit"];
+
                 if (memAttr != null)
                 {
                     /*
@@ -2574,7 +2631,7 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                XmlAttribute cpuAttr = rgNode.Attributes["CpuCores"];
+                XmlAttribute cpuAttr = rgNode?.Attributes["CpuCores"];
 
                 if (cpuAttr != null)
                 {
@@ -2591,7 +2648,7 @@ namespace FabricObserver.Observers
                 ObserverLogger.LogInfo("Completed TupleGetResourceGovernanceInfoFromAppManifest: RG enabled.");
                 return (true, double.TryParse(cpuAttr?.Value, out double cpu) ? cpu : 0, double.TryParse(memAttr?.Value, out double mem) ? mem : 0);
             }
-            catch (System.Xml.XPath.XPathException xe)
+            catch (XPathException xe)
             {
                 ObserverLogger.LogWarning($"Failure in TupleGetResourceGovernanceInfoFromAppManifest: {xe.Message}");
                 return (false, 0, 0);

@@ -804,7 +804,7 @@ namespace ClusterObserver
         private async Task MonitorNodeStatusAsync(CancellationToken token, bool isTest = false)
         {
             // If a node's NodeStatus is Disabling, Disabled, or Down 
-            // for at or above the specified maximum time (in Settings.xml),
+            // for at or above the specified maximum time (in ApplicationManifest.xml, see MaxTimeNodeStatusNotOk),
             // then CO will emit a Warning signal.
             var nodeList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                     () =>

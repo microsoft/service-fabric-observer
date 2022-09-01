@@ -34,6 +34,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         [EventField]
+        public string ApplicationTypeVersion
+        {
+            get; set;
+        }
+
+        [EventField]
         public string Code
         {
             get; set;
@@ -170,6 +176,18 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
         [EventField]
         public string ServiceName
+        {
+            get; set;
+        }
+
+        [EventField]
+        public string ServiceTypeName
+        {
+            get; set;
+        }
+
+        [EventField]
+        public string ServiceTypeVersion
         {
             get; set;
         }
