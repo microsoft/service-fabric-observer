@@ -35,9 +35,9 @@ namespace FabricObserver.Observers
         private const int MaxSameNamedProcesses = 50;
         private readonly object _lock = new object();
 
-        // These are the concurrent data containers that hold all monitoring data for all application targets for specific metrics.
+        // These are the concurrent data structures that hold all monitoring data for all application service targets for specific metrics.
         // In the case where machine has capable CPU configuration and AppObserverEnableConcurrentMonitoring is enabled, these ConcurrentDictionaries
-        // will be read by and written to by multiple threads. In the case where concurrency is not possible (or not enabled), they will sort of act as "normal"
+        // will be read from and written to by multiple threads. In the case where concurrency is not possible (or not enabled), they will sort of act as "normal"
         // Dictionaries (not precisely) since the monitoring loop will always be sequential (exactly one thread, so no internal locking) and there will not be *any* concurrent reads/writes.
         // The modest cost in memory allocation in the sequential processing case is not an issue here.
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData;
@@ -2571,7 +2571,7 @@ namespace FabricObserver.Observers
 
                             if (!string.IsNullOrWhiteSpace(appManifest))
                             {
-                                (replicaInfo.RGEnabled, replicaInfo.RGCpuCoreLimit, replicaInfo.RGMemoryLimitMb) = 
+                                (replicaInfo.RGEnabled, replicaInfo.RGMemoryLimitMb) = 
                                     TupleGetResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName);
                             }
                         }
@@ -2623,26 +2623,26 @@ namespace FabricObserver.Observers
             //ObserverLogger.LogInfo($"SetInstanceOrReplicaMonitoringList for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
         }
 
-        private (bool IsRGEnabled, double CpuCores, double MemoryLimitMb) TupleGetResourceGovernanceInfo(string appManifestXml, string servicePkgName)
+        private (bool IsRGEnabled, double MemoryLimitMb) TupleGetResourceGovernanceInfo(string appManifestXml, string servicePkgName)
         {
             ObserverLogger.LogInfo("Starting TupleGetResourceGovernanceInfo.");
 
             if (string.IsNullOrWhiteSpace(appManifestXml))
             {
                 ObserverLogger.LogInfo($"Invalid value for {nameof(appManifestXml)}: {appManifestXml}. Exiting TupleGetResourceGovernanceInfo.");
-                return (false, 0, 0);
+                return (false, 0);
             }
 
             if (string.IsNullOrWhiteSpace(servicePkgName))
             {
                 ObserverLogger.LogInfo($"Invalid value for {nameof(servicePkgName)}: {servicePkgName}. Exiting TupleGetResourceGovernanceInfo.");
-                return (false, 0, 0);
+                return (false, 0);
             }
 
             // Don't waste cycles with XML parsing if you can easily get a hint first..
             if (!appManifestXml.Contains("<ResourceGovernancePolicy "))
             {
-                return (false, 0, 0);
+                return (false, 0);
             }
 
             // Safe XML pattern - *Do not use LoadXml*.
@@ -2660,14 +2660,14 @@ namespace FabricObserver.Observers
             }
         }
 
-        private (bool IsRGEnabled, double CpuCores, double MemoryLimitMb) TupleGetResourceGovernanceInfoFromAppManifest(ref XmlDocument xDoc, string servicePkgName)
+        private (bool IsRGEnabled, double MemoryLimitMb) TupleGetResourceGovernanceInfoFromAppManifest(ref XmlDocument xDoc, string servicePkgName)
         {
             ObserverLogger.LogInfo("Starting TupleGetResourceGovernanceInfoFromAppManifest.");
            
             if (xDoc == null)
             {
                 ObserverLogger.LogInfo("Completed TupleGetResourceGovernanceInfoFromAppManifest: xDoc == null.");
-                return (false, 0, 0);
+                return (false, 0);
             }
 
             try
@@ -2680,7 +2680,7 @@ namespace FabricObserver.Observers
                 if (sNode == null)
                 {
                     ObserverLogger.LogInfo($"Completing TupleGetResourceGovernanceInfoFromAppManifest: Missing ServiceManifestImport for {servicePkgName}.");
-                    return (false, 0, 0);
+                    return (false, 0);
                 }
 
                 XmlNodeList childNodes = sNode.ChildNodes;
@@ -2722,27 +2722,13 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                XmlAttribute cpuAttr = rgNode?.Attributes["CpuCores"];
-
-                if (cpuAttr != null)
-                {
-                    // App Parameter
-                    if (cpuAttr.Value != null && cpuAttr.Value.StartsWith("["))
-                    {
-                        XmlNode parametersNode = xDoc.DocumentElement?.SelectSingleNode("//*[local-name()='Parameters']");
-                        XmlNode parameterNode = parametersNode?.SelectSingleNode($"//*[local-name()='Parameter' and @Name='{cpuAttr.Value[1..^1]}']");
-                        XmlAttribute attr = parameterNode?.Attributes?["DefaultValue"];
-                        cpuAttr.Value = attr.Value;
-                    }
-                }
-
                 ObserverLogger.LogInfo("Completed TupleGetResourceGovernanceInfoFromAppManifest: RG enabled.");
-                return (true, double.TryParse(cpuAttr?.Value, out double cpu) ? cpu : 0, double.TryParse(memAttr?.Value, out double mem) ? mem : 0);
+                return (true, double.TryParse(memAttr?.Value, out double mem) ? mem : 0);
             }
             catch (XPathException xe)
             {
                 ObserverLogger.LogWarning($"Failure in TupleGetResourceGovernanceInfoFromAppManifest: {xe.Message}");
-                return (false, 0, 0);
+                return (false, 0);
             }
         }
 

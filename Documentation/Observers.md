@@ -169,18 +169,18 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 
 | Setting | Description |
 | :--- | :--- |
-| **targetApp** | App URI string to observe. Optional (Required if targetType not specified). | 
-| **targetAppType** | ApplicationType name (this is not a Uri format). FO will observe **all** app services belonging to it. Optional (Required if target not specified). | 
-| **appExcludeList** | This setting is only useful when targetApp is set to "*" or "All". A comma-separated list of app names (***URI format***) to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense) | 
-| **appIncludeList** | This setting is only useful when targetApp is set to "*" or "All". A comma-separated list of app names (***URI format***) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***.  | 
+| **targetApp** | App name to observe (either SF URI format or just the name. E.g., fabric:/FooApp or FooApp). Optional (Required if targetType not specified). | 
+| **targetAppType** | ApplicationType name. FO will observe **all** app services belonging to it. Optional (Required if target not specified). | 
+| **appExcludeList** | This setting is only useful when targetApp is set to "*" or "All". A comma-separated list of app names to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense) | 
+| **appIncludeList** | This setting is only useful when targetApp is set to "*" or "All". A comma-separated list of app names to ***include in observation***. Just omit the object or set value to "" to mean ***include all***.  | 
 | **serviceExcludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense) |
 | **serviceIncludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***. |  
-| **memoryErrorLimitMb** | Maximum service process Working Set (RAM) in Megabytes that should generate an Error. |  
-| **memoryWarningLimitMb**| Minimum service process Working Set (RAM) in Megabytes that should generate a Warning. | 
+| **memoryErrorLimitMb** | Maximum service process Working Set (RAM, physical memory) in Megabytes that should generate an Error. Default type is Private Working Set. You can change this in ApplicationManifest.xml if you want full Working Set (private + shared physical memory). |  
+| **memoryWarningLimitMb**| Minimum service process Working Set (RAM, physical memory) in Megabytes that should generate a Warning. Default type is Private Working Set. You can change this in ApplicationManifest.xml if you want full Working Set (private + shared physical memory). | 
 | **memoryErrorLimitPercent** | Maximum percentage of total physical memory (RAM) used by a service process that should generate an Error. |  
 | **memoryWarningLimitPercent** | Minimum percentage of total physical memory (RAM) used by a service process that should generate a Warning. | 
-| **cpuErrorLimitPercent** | Maximum CPU percentage that should generate an Error. |
-| **cpuWarningLimitPercent** | Minimum CPU percentage that should generate a Warning. |
+| **cpuErrorLimitPercent** | Maximum CPU usage by a service process as a percentage of total CPU that should generate an Error. |
+| **cpuWarningLimitPercent** | Minimum CPU usage by a service process as a percentage of total CPU that should generate a Warning. |
 | **dumpProcessOnError** | Instructs whether or not FabricObserver should dump your service process when service health is detected to be in an  Error (critical) state. |  
 | **networkErrorActivePorts** | Maximum number of established TCP ports in use by service process that will generate an Error. |
 | **networkWarningActivePorts** | Minimum number of established TCP ports in use by service process that will generate a Warning. |
@@ -192,8 +192,8 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **warningOpenFileHandles** | Minimum number of open file handles in use by service process that will generate a Warning. |  
 | **errorThreadCount** | Maximum number of threads in use by an service process that will generate an Error. |  
 | **warningThreadCount** | Minimum number of threads in use by service process that will generate a Warning. |  
-| **errorPrivateBytesMb** | Maximum amount of Private Bytes allocated (Virtual memory, Commit usage) in megabytes by service process that will generate an Error. |  
-| **warningPrivateBytesMb** | Minimum amount of Private Bytes allocated (Virtual memory, Commit usage) in megabytes by service process that will generate a Warning. |  
+| **errorPrivateBytesMb** | Maximum amount of Private Bytes (or Commit Charge) for a service process in megabytes that will generate an Error. Think of this as the total amount of private memory that the memory manager has committed for your service. |  
+| **warningPrivateBytesMb** | Minimum amount of Private Bytes (or Commit Charge) for a service process in megabytes that will generate a Warning. Think of this as the total amount of private memory that the memory manager has committed for your service. |  
 
 **Output** Local log text(Error/Warning/Info), Service entity Health Reports (Error/Warning/Ok), ETW (EventSource), Telemetry (AppInsights/LogAnalytics).
 
