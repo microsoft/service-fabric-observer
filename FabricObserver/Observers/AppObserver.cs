@@ -42,6 +42,7 @@ namespace FabricObserver.Observers
         // The modest cost in memory allocation in the sequential processing case is not an issue here.
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData;
         private ConcurrentDictionary<string, FabricResourceUsageData<float>> AllAppMemDataMb;
+        private ConcurrentDictionary<string, FabricResourceUsageData<float>> AllAppPrivateBytesDataMb;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppMemDataPercent;
         private ConcurrentDictionary<string, FabricResourceUsageData<int>> AllAppTotalActivePortsData;
         private ConcurrentDictionary<string, FabricResourceUsageData<int>> AllAppEphemeralPortsData;
@@ -147,6 +148,11 @@ namespace FabricObserver.Observers
         }
 
         public bool CheckPrivateWorkingSet
+        {
+            get; set;
+        }
+
+        public bool MonitorResourceGovernanceLimits
         {
             get; set;
         }
@@ -363,7 +369,7 @@ namespace FabricObserver.Observers
                             processId);
                 }
 
-                // Memory MB - Parent process
+                // Memory - Working Set MB - Parent process
                 if (AllAppMemDataMb.ContainsKey(id))
                 {
                     var parentFrud = AllAppMemDataMb[id];
@@ -371,6 +377,50 @@ namespace FabricObserver.Observers
                     if (hasChildProcs)
                     {
                         ProcessChildProcs(AllAppMemDataMb, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                    }
+
+                    ProcessResourceDataReportHealth(
+                            parentFrud,
+                            app.MemoryErrorLimitMb,
+                            app.MemoryWarningLimitMb,
+                            TTL,
+                            EntityType.Service,
+                            processName,
+                            repOrInst,
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            processId);
+                }
+
+                // Memory - Working Set Percent - Parent process
+                if (AllAppMemDataPercent.ContainsKey(id))
+                {
+                    var parentFrud = AllAppMemDataPercent[id];
+
+                    if (hasChildProcs)
+                    {
+                        ProcessChildProcs(AllAppMemDataPercent, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                    }
+
+                    ProcessResourceDataReportHealth(
+                            parentFrud,
+                            app.MemoryErrorLimitPercent,
+                            app.MemoryWarningLimitPercent,
+                            TTL,
+                            EntityType.Service,
+                            processName,
+                            repOrInst,
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            processId);
+                }
+
+                // Memory - Private Bytes MB - Parent process
+                if (AllAppPrivateBytesDataMb.ContainsKey(id))
+                {
+                    var parentFrud = AllAppPrivateBytesDataMb[id];
+
+                    if (hasChildProcs)
+                    {
+                        ProcessChildProcs(AllAppPrivateBytesDataMb, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
                     }
 
                     // RG Report. Only MemoryLimitInMb is supported currently.
@@ -391,30 +441,8 @@ namespace FabricObserver.Observers
 
                     ProcessResourceDataReportHealth(
                             parentFrud,
-                            app.MemoryErrorLimitMb,
-                            app.MemoryWarningLimitMb,
-                            TTL,
-                            EntityType.Service,
-                            processName,
-                            repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps,
-                            processId);
-                }
-
-                // Memory Percent - Parent process
-                if (AllAppMemDataPercent.ContainsKey(id))
-                {
-                    var parentFrud = AllAppMemDataPercent[id];
-
-                    if (hasChildProcs)
-                    {
-                        ProcessChildProcs(AllAppMemDataPercent, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
-                    }
-
-                    ProcessResourceDataReportHealth(
-                            parentFrud,
-                            app.MemoryErrorLimitPercent,
-                            app.MemoryWarningLimitPercent,
+                            app.ErrorPrivateBytesMb,
+                            app.WarningPrivateBytesMb,
                             TTL,
                             EntityType.Service,
                             processName,
@@ -828,11 +856,15 @@ namespace FabricObserver.Observers
                         existingAppConfig[j].ServiceExcludeList = string.IsNullOrWhiteSpace(existingAppConfig[j].ServiceExcludeList) && !string.IsNullOrWhiteSpace(application.ServiceExcludeList) ? application.ServiceExcludeList : existingAppConfig[j].ServiceExcludeList;
                         existingAppConfig[j].ServiceIncludeList = string.IsNullOrWhiteSpace(existingAppConfig[j].ServiceIncludeList) && !string.IsNullOrWhiteSpace(application.ServiceIncludeList) ? application.ServiceIncludeList : existingAppConfig[j].ServiceIncludeList;
 
-                        // Memory
+                        // Memory - Working Set
                         existingAppConfig[j].MemoryErrorLimitMb = existingAppConfig[j].MemoryErrorLimitMb == 0 && application.MemoryErrorLimitMb > 0 ? application.MemoryErrorLimitMb : existingAppConfig[j].MemoryErrorLimitMb;
                         existingAppConfig[j].MemoryWarningLimitMb = existingAppConfig[j].MemoryWarningLimitMb == 0 && application.MemoryWarningLimitMb > 0 ? application.MemoryWarningLimitMb : existingAppConfig[j].MemoryWarningLimitMb;
                         existingAppConfig[j].MemoryErrorLimitPercent = existingAppConfig[j].MemoryErrorLimitPercent == 0 && application.MemoryErrorLimitPercent > 0 ? application.MemoryErrorLimitPercent : existingAppConfig[j].MemoryErrorLimitPercent;
                         existingAppConfig[j].MemoryWarningLimitPercent = existingAppConfig[j].MemoryWarningLimitPercent == 0 && application.MemoryWarningLimitPercent > 0 ? application.MemoryWarningLimitPercent : existingAppConfig[j].MemoryWarningLimitPercent;
+
+                        // Memory - Private Bytes
+                        existingAppConfig[j].ErrorPrivateBytesMb = existingAppConfig[j].ErrorPrivateBytesMb == 0 && application.ErrorPrivateBytesMb > 0 ? application.ErrorPrivateBytesMb : existingAppConfig[j].ErrorPrivateBytesMb;
+                        existingAppConfig[j].WarningPrivateBytesMb = existingAppConfig[j].WarningPrivateBytesMb == 0 && application.WarningPrivateBytesMb > 0 ? application.WarningPrivateBytesMb : existingAppConfig[j].WarningPrivateBytesMb;
 
                         // CPU
                         existingAppConfig[j].CpuErrorLimitPercent = existingAppConfig[j].CpuErrorLimitPercent == 0 && application.CpuErrorLimitPercent > 0 ? application.CpuErrorLimitPercent : existingAppConfig[j].CpuErrorLimitPercent;
@@ -887,7 +919,9 @@ namespace FabricObserver.Observers
                         ErrorOpenFileHandles = application.ErrorOpenFileHandles,
                         WarningOpenFileHandles = application.WarningOpenFileHandles,
                         ErrorThreadCount = application.ErrorThreadCount,
-                        WarningThreadCount = application.WarningThreadCount
+                        WarningThreadCount = application.WarningThreadCount,
+                        ErrorPrivateBytesMb = application.ErrorPrivateBytesMb,
+                        WarningPrivateBytesMb = application.WarningPrivateBytesMb
                     };
 
                     _userTargetList.Add(appConfig);
@@ -1165,7 +1199,7 @@ namespace FabricObserver.Observers
             if (JsonConfigPath == null)
             {
                 JsonConfigPath =
-                    Path.Combine(ConfigPackage.Path, GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileName));
+                    Path.Combine(ConfigPackage.Path, GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileNameParameter));
 
                 ObserverLogger.LogInfo(JsonConfigPath);
             }
@@ -1173,9 +1207,17 @@ namespace FabricObserver.Observers
             ObserverLogger.LogInfo($"MonitorPrivateWorkingSet");
             // Private working set monitoring.
             if (bool.TryParse(
-                GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MonitorPrivateWorkingSet), out bool monitorWsPriv))
+                GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MonitorPrivateWorkingSetParameter), out bool monitorWsPriv))
             {
                 CheckPrivateWorkingSet = monitorWsPriv;
+            }
+
+            ObserverLogger.LogInfo($"MonitorResourceGovernanceLimits");
+            // Monitor RG limits.
+            if (bool.TryParse(
+                GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MonitorResourceGovernanceLimitsParameter), out bool monitorRG))
+            {
+                MonitorResourceGovernanceLimits = monitorRG;
             }
 
             ObserverLogger.LogInfo($"EnableChildProcessMonitoringParameter");
@@ -1230,7 +1272,7 @@ namespace FabricObserver.Observers
             ObserverLogger.LogInfo($"EnableConcurrentMonitoring");
             // Concurrency/Parallelism support. The minimum requirement is 4 logical processors, regardless of user setting.
             if (Environment.ProcessorCount >= 4 && bool.TryParse(
-                    GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
+                    GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoringParameter), out bool enableConcurrency))
             {
                 EnableConcurrentMonitoring = enableConcurrency;
             }
@@ -1247,7 +1289,7 @@ namespace FabricObserver.Observers
                 maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
                 
                 // If user configures MaxConcurrentTasks setting, then use that value instead.
-                if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasks), out int maxTasks))
+                if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasksParameter), out int maxTasks))
                 {
                     if (maxTasks > 0)
                     {
@@ -1451,6 +1493,13 @@ namespace FabricObserver.Observers
                                         }
                                         break;
 
+                                    case ErrorWarningProperty.PrivateBytesMb:
+                                        if (frud.Value.IsUnhealthy(app.ErrorPrivateBytesMb))
+                                        {
+                                            dump = true;
+                                        }
+                                        break;
+
                                     case ErrorWarningProperty.ActiveTcpPorts:
                                         if (frud.Value.IsUnhealthy(app.NetworkErrorActivePorts))
                                         {
@@ -1558,7 +1607,7 @@ namespace FabricObserver.Observers
         {
             try
             {
-                DumpsPath = Path.Combine(ObserverLogger.LogFolderBasePath, ObserverName, ObserverConstants.ProcessDumpFolderName);
+                DumpsPath = Path.Combine(ObserverLogger.LogFolderBasePath, ObserverName, ObserverConstants.ProcessDumpFolderNameParameter);
                 Directory.CreateDirectory(DumpsPath);
             }
             catch (Exception e) when (e is ArgumentException || e is IOException || e is NotSupportedException || e is UnauthorizedAccessException)
@@ -1576,6 +1625,7 @@ namespace FabricObserver.Observers
             var exceptions = new ConcurrentQueue<Exception>();
             AllAppCpuData ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
             AllAppMemDataMb ??= new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
+            AllAppPrivateBytesDataMb ??= new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
             AllAppMemDataPercent ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
             AllAppTotalActivePortsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
             AllAppEphemeralPortsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
@@ -1609,6 +1659,7 @@ namespace FabricObserver.Observers
                 bool checkCpu = false;
                 bool checkMemMb = false;
                 bool checkMemPct = false;
+                bool checkMemPrivateBytes = false;
                 bool checkAllPorts = false;
                 bool checkEphemeralPorts = false;
                 bool checkPercentageEphemeralPorts = false;
@@ -1790,7 +1841,7 @@ namespace FabricObserver.Observers
                         checkCpu = true;
                     }
 
-                    // Memory Mb
+                    // Memory - Working Set MB.
                     if (application.MemoryErrorLimitMb > 0 || application.MemoryWarningLimitMb > 0)
                     {
                         _ = AllAppMemDataMb.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.MemoryConsumptionMb, id, capacity, UseCircularBuffer, EnableConcurrentMonitoring));
@@ -1801,7 +1852,7 @@ namespace FabricObserver.Observers
                         checkMemMb = true;
                     }
 
-                    // Memory percent
+                    // Memory - Working Set Percent.
                     if (application.MemoryErrorLimitPercent > 0 || application.MemoryWarningLimitPercent > 0)
                     {
                         _ = AllAppMemDataPercent.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.MemoryConsumptionPercentage, id, capacity, UseCircularBuffer, EnableConcurrentMonitoring));
@@ -1810,6 +1861,17 @@ namespace FabricObserver.Observers
                     if (AllAppMemDataPercent.ContainsKey(id))
                     {
                         checkMemPct = true;
+                    }
+
+                    // Memory - Private Bytes MB.
+                    if (application.ErrorPrivateBytesMb > 0 || application.WarningPrivateBytesMb > 0 || MonitorResourceGovernanceLimits)
+                    {
+                        _ = AllAppPrivateBytesDataMb.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.PrivateBytesMb, id, 1, false, EnableConcurrentMonitoring));
+                    }
+
+                    if (AllAppPrivateBytesDataMb.ContainsKey(id))
+                    {
+                        checkMemPrivateBytes = true;
                     }
 
                     // Active TCP Ports
@@ -1879,8 +1941,8 @@ namespace FabricObserver.Observers
                         checkLvids = true;
                     }
 
-                    // Regardless of user setting, if there are more than 50 service processes with the same name, then FO will check Private + Shared (fast, efficient).
-                    bool checkPrivateWS = ReplicaOrInstanceList.Count(p => p.HostProcessName == parentProcName) < MaxSameNamedProcesses && CheckPrivateWorkingSet;
+                    // For Windows: Regardless of user setting, if there are more than 50 service processes with the same name, then FO will employ Win32 API (fast, lightweight).
+                    bool usePerfCounter = IsWindows && ReplicaOrInstanceList.Count(p => p.HostProcessName == parentProcName) < MaxSameNamedProcesses;
 
                     // Compute the resource usage of the family of processes (each proc in the family tree). This is also parallelized and has real perf benefits when 
                     // a service process has mulitple descendants.
@@ -1890,6 +1952,7 @@ namespace FabricObserver.Observers
                         checkCpu,
                         checkMemMb,
                         checkMemPct,
+                        checkMemPrivateBytes,
                         checkAllPorts,
                         checkEphemeralPorts,
                         checkPercentageEphemeralPorts,
@@ -1899,7 +1962,7 @@ namespace FabricObserver.Observers
                         procs,
                         id,
                         repOrInst,
-                        checkPrivateWS,
+                        usePerfCounter,
                         token);
                 }
                 catch (Exception e)
@@ -1926,6 +1989,7 @@ namespace FabricObserver.Observers
                             bool checkCpu,
                             bool checkMemMb,
                             bool checkMemPct,
+                            bool checkMemPrivateBytes,
                             bool checkAllPorts,
                             bool checkEphemeralPorts,
                             bool checkPercentageEphemeralPorts,
@@ -1935,7 +1999,7 @@ namespace FabricObserver.Observers
                             ConcurrentDictionary<int, string> processDictionary,
                             string id,
                             ReplicaOrInstanceMonitoringInfo repOrInst,
-                            bool checkPrivateWS,
+                            bool usePerfCounter,
                             CancellationToken token)
         {
             _ = Parallel.For (0, processDictionary.Count, _parallelOptions, (i, state) =>
@@ -2085,13 +2149,40 @@ namespace FabricObserver.Observers
 
                 // Memory \\
 
+                // Private Bytes.
+                if (checkMemPrivateBytes)
+                {
+                    if (procId == parentPid)
+                    {
+                        _ = ProcessInfoProvider.Instance.GetProcessPrivateBytesMb(procId);
+                        Thread.Sleep(100);
+                        AllAppPrivateBytesDataMb[id].AddData(ProcessInfoProvider.Instance.GetProcessPrivateBytesMb(procId));
+                    }
+                    else
+                    {
+                        _ = AllAppPrivateBytesDataMb.TryAdd(
+                                $"{id}:{procName}{procId}",
+                                new FabricResourceUsageData<float>(
+                                    ErrorWarningProperty.PrivateBytesMb,
+                                    $"{id}:{procName}{procId}",
+                                    capacity,
+                                    UseCircularBuffer,
+                                    EnableConcurrentMonitoring));
+
+                        _ = ProcessInfoProvider.Instance.GetProcessPrivateBytesMb(procId);
+                        Thread.Sleep(100);
+                        AllAppPrivateBytesDataMb[$"{id}:{procName}{procId}"].AddData(ProcessInfoProvider.Instance.GetProcessPrivateBytesMb(procId));
+                    }
+                }
+
+                // Working Set.
                 if (checkMemMb)
                 {
                     if (procId == parentPid)
                     {
-                        _ = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, checkPrivateWS);
+                        _ = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, usePerfCounter);
                         Thread.Sleep(100);
-                        AllAppMemDataMb[id].AddData(ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, checkPrivateWS));
+                        AllAppMemDataMb[id].AddData(ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, usePerfCounter));
                     }
                     else
                     {
@@ -2104,16 +2195,16 @@ namespace FabricObserver.Observers
                                     UseCircularBuffer,
                                     EnableConcurrentMonitoring));
 
-                        _ = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, checkPrivateWS);
+                        _ = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, usePerfCounter);
                         Thread.Sleep(100);
-                        AllAppMemDataMb[$"{id}:{procName}{procId}"].AddData(ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, checkPrivateWS));
+                        AllAppMemDataMb[$"{id}:{procName}{procId}"].AddData(ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, usePerfCounter));
                     }
                 }
 
                 // Process memory, percent in use (of machine total).
                 if (checkMemPct)
                 {
-                    float processMemMb = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, checkPrivateWS);
+                    float processMemMb = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, usePerfCounter);
                     var (TotalMemoryGb, _, _) = OSInfoProvider.Instance.TupleGetSystemMemoryInfo();
 
                     if (TotalMemoryGb > 0)

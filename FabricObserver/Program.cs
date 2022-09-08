@@ -20,7 +20,7 @@ namespace FabricObserver
         {
             try
             {
-                ServiceRuntime.RegisterServiceAsync("FabricObserverType", context => new FabricObserver(context)).GetAwaiter().GetResult();
+                ServiceRuntime.RegisterServiceAsync("FabricObserverServiceType", context => new FabricObserverService(context)).GetAwaiter().GetResult();
                 ServiceEventSource.Current?.ServiceTypeRegistered(Process.GetCurrentProcess().Id, nameof(FabricObserver));
 
                 // Prevents this host process from terminating so services keep running.

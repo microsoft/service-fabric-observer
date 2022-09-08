@@ -749,7 +749,7 @@ namespace FabricObserver.Observers
         /// <param name="entityType">Service Fabric Entity type. Note, only Application and Node types are supported by this function.</param>
         /// <param name="processName">For service reporting, you must provide a process name for the target service instance. Except for ContainerObserver, where this does not apply.</param>
         /// <param name="replicaOrInstance">Replica or Instance information contained in a type.</param>
-        /// <param name="dumpOnErrorOrWarning">Whether or not to dump process if Error threshold has been reached.</param>
+        /// <param name="dumpOnError">Whether or not to dump process if Error threshold has been reached.</param>
         /// <param name="processId">The id of the service process (AppObserver, FabricSystemObserver supply these, for example).</param>
         public void ProcessResourceDataReportHealth<T>(
                         FabricResourceUsageData<T> data,
@@ -759,7 +759,7 @@ namespace FabricObserver.Observers
                         EntityType entityType,
                         string processName = null,
                         ReplicaOrInstanceMonitoringInfo replicaOrInstance = null,
-                        bool dumpOnErrorOrWarning = false,
+                        bool dumpOnError = false,
                         int processId = 0,
                         bool isRGReport = false) where T : struct
         {
@@ -873,6 +873,12 @@ namespace FabricObserver.Observers
                 }
 
                 id = $"{NodeName}_{processName}_{data.Property.Replace(" ", string.Empty)}";
+                
+                // RG
+                if (replicaOrInstance != null && isRGReport)
+                {
+                    id += "_RGLimit";
+                }
 
                 // The health event description will be a serialized instance of telemetryData,
                 // so it should be completely constructed (filled with data) regardless
@@ -892,10 +898,10 @@ namespace FabricObserver.Observers
                     ProcessId = procId,
                     ProcessName = processName,
                     ProcessStartTime = processStartTime,
+                    Property = id,
                     ReplicaId = replicaOrInstance != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
                     ReplicaRole = replicaOrInstance != null ? replicaOrInstance.ReplicaRole : ReplicaRole.None,
                     RGEnabled = replicaOrInstance != null && replicaOrInstance.RGEnabled,
-                    RGCpuCoresLimit = replicaOrInstance != null ? replicaOrInstance.RGCpuCoreLimit : 0,
                     RGMemoryLimitMb = replicaOrInstance != null ? replicaOrInstance.RGMemoryLimitMb : 0,
                     ServiceKind = replicaOrInstance != null ?  replicaOrInstance.ServiceKind : ServiceKind.Invalid,
                     ServiceName = serviceName?.OriginalString ?? null,
@@ -905,6 +911,12 @@ namespace FabricObserver.Observers
                     Source = ObserverName,
                     Value = data.AverageDataValue
                 };
+
+                // RG - Memory.
+                if (replicaOrInstance != null && isRGReport && data.Property == ErrorWarningProperty.PrivateBytesMb)
+                {
+                    telemetryData.Metric = ErrorWarningProperty.RGMemoryLimitMb;
+                }
 
                 // Container
                 if (!string.IsNullOrWhiteSpace(replicaOrInstance?.ContainerId))
@@ -967,7 +979,7 @@ namespace FabricObserver.Observers
                 healthState = HealthState.Error;
 
                 // User service process dump. This is Windows-only today.
-                if (replicaOrInstance != null && dumpOnErrorOrWarning && IsWindows)
+                if (replicaOrInstance != null && dumpOnError && IsWindows)
                 {
                     if (!string.IsNullOrWhiteSpace(DumpsPath))
                     {
@@ -1154,6 +1166,12 @@ namespace FabricObserver.Observers
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorTotalOpenFileHandlesPercent : FOErrorWarningCodes.NodeWarningTotalOpenFileHandlesPercent;
                         break;
+
+                    // Process Private Bytes.
+                    case ErrorWarningProperty.PrivateBytesMb when entityType == EntityType.Application || entityType == EntityType.Service:
+                        errorWarningCode = (healthState == HealthState.Error) ?
+                            FOErrorWarningCodes.AppErrorPrivateBytesMb : FOErrorWarningCodes.AppWarningPrivateBytesMb;
+                        break;
                 }
 
                 var healthMessage = new StringBuilder();
@@ -1166,13 +1184,12 @@ namespace FabricObserver.Observers
                                    $"Their cumulative impact on {processName}'s resource usage has been applied.";
                 }
 
+                // RG
                 if (replicaOrInstance != null && isRGReport)
                 {
                     rgInfo =
-                        $"{replicaOrInstance.ServiceName.OriginalString} is approaching (90%) the specified Resource Governance limit 'MemoryLimitMb' " +
-                        $"({replicaOrInstance.RGMemoryLimitMb}). Current Memory usage: {data.AverageDataValue}MB";
-
-                    telemetryData.Property += "_RG";
+                        $"{replicaOrInstance.ServiceName.OriginalString} is at or exceeding 90% of the specified Resource Governance limit for 'MemoryInMBLimit' " +
+                        $"({replicaOrInstance.RGMemoryLimitMb}MB). Current Private Bytes usage: {data.AverageDataValue}MB";
                 }
 
                 if (rgInfo != string.Empty)
@@ -1235,7 +1252,7 @@ namespace FabricObserver.Observers
                     State = healthState,
                     NodeName = NodeName,
                     Observer = ObserverName,
-                    Property = entityType == EntityType.Disk ? $"{id} {data.Property}" : id,
+                    Property = telemetryData.Property,
                     ResourceUsageDataProperty = data.Property,
                     SourceId = $"{ObserverName}({errorWarningCode})"
                 };
@@ -1261,7 +1278,7 @@ namespace FabricObserver.Observers
             }
             else
             {
-                if (data.ActiveErrorOrWarning)
+                if (data.ActiveErrorOrWarning && !isRGReport)
                 {
                     telemetryData.Code = FOErrorWarningCodes.Ok;
 
@@ -1302,7 +1319,7 @@ namespace FabricObserver.Observers
                         State = HealthState.Ok,
                         NodeName = NodeName,
                         Observer = ObserverName,
-                        Property = entityType == EntityType.Disk ? $"{id} {data.Property}" : id,
+                        Property = telemetryData.Property,
                         ResourceUsageDataProperty = data.Property,
                         SourceId = $"{ObserverName}({data.ActiveErrorOrWarningCode})"
                     };
@@ -1409,7 +1426,7 @@ namespace FabricObserver.Observers
         {
             // Archive file lifetime - ObserverLogger files.
             if (int.TryParse(
-                GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.MaxArchivedLogFileLifetimeDays), out int maxFileArchiveLifetime))
+                GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.MaxArchivedLogFileLifetimeDaysParameter), out int maxFileArchiveLifetime))
             {
                 MaxLogArchiveFileLifetimeDays = maxFileArchiveLifetime;
             }
@@ -1507,14 +1524,14 @@ namespace FabricObserver.Observers
 
             // Archive file lifetime - CsvLogger files.
             if (int.TryParse(GetSettingParameterValue(
-                ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.MaxArchivedCsvFileLifetimeDays), out int maxCsvFileArchiveLifetime))
+                ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.MaxArchivedCsvFileLifetimeDaysParameter), out int maxCsvFileArchiveLifetime))
             {
                 MaxCsvArchiveFileLifetimeDays = maxCsvFileArchiveLifetime;
             }
 
             // Csv file write format - CsvLogger only.
             if (Enum.TryParse(GetSettingParameterValue(
-                ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.CsvFileWriteFormat), ignoreCase: true, out CsvFileWriteFormat csvWriteFormat))
+                ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.CsvFileWriteFormatParameter), ignoreCase: true, out CsvFileWriteFormat csvWriteFormat))
             {
                 CsvWriteFormat = csvWriteFormat;
             }

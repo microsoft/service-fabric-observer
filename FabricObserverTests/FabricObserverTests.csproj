@@ -50,9 +50,6 @@
 		<ProjectReference Include="..\FabricObserver\FabricObserver.csproj" />
 	</ItemGroup>
 	<ItemGroup>
-		<None Update="ApplicationManifest.xml">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
 		<None Update="clusterManifest.xml">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>

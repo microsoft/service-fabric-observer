@@ -167,7 +167,7 @@ namespace FabricObserver.Observers
                 logFolderBasePath = logFolderBase;
             }
 
-            if (int.TryParse(GetConfigSettingValue(ObserverConstants.MaxArchivedLogFileLifetimeDays, null), out int maxArchivedLogFileLifetimeDays))
+            if (int.TryParse(GetConfigSettingValue(ObserverConstants.MaxArchivedLogFileLifetimeDaysParameter, null), out int maxArchivedLogFileLifetimeDays))
             {
                 MaxArchivedLogFileLifetimeDays = maxArchivedLogFileLifetimeDays;
             }

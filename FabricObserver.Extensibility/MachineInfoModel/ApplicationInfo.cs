@@ -39,21 +39,43 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
+        /// <summary>
+        /// Working Set
+        /// </summary>
         public long MemoryWarningLimitMb
         {
             get; set;
         }
 
+        /// <summary>
+        /// Working Set
+        /// </summary>
         public long MemoryErrorLimitMb
         {
             get; set;
         }
 
+        public long WarningPrivateBytesMb
+        {
+            get; set;
+        }
+
+        public long ErrorPrivateBytesMb
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// Working Set
+        /// </summary>
         public double MemoryWarningLimitPercent
         {
             get; set;
         }
 
+        /// <summary>
+        /// Working Set
+        /// </summary>
         public double MemoryErrorLimitPercent
         {
             get; set;
@@ -146,6 +168,8 @@ namespace FabricObserver.Observers.MachineInfoModel
                                              $"ErrorOpenFileHandles: {ErrorOpenFileHandles}{Environment.NewLine}" +
                                              $"WarningOpenFileHandles: {WarningOpenFileHandles}{Environment.NewLine}" +
                                              $"ErrorThreadCount: {ErrorThreadCount}{Environment.NewLine}" +
-                                             $"WarningThreadCount: {WarningThreadCount}{Environment.NewLine}";
+                                             $"WarningThreadCount: {WarningThreadCount}{Environment.NewLine}" +
+                                             $"ErrorPrivateBytesMb: {ErrorPrivateBytesMb}{Environment.NewLine}" +
+                                             $"WarningPrivateBytesMb: {WarningPrivateBytesMb}{Environment.NewLine}";
     }
 }

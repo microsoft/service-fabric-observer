@@ -20,13 +20,13 @@ namespace FabricObserver
     /// <summary>
     /// An instance of this class is created for each service instance by the Service Fabric runtime.
     /// </summary>
-    internal sealed class FabricObserver : StatelessService
+    internal sealed class FabricObserverService : StatelessService
     {
         /// <summary>
         /// Initializes a new instance of the type.
         /// </summary>
         /// <param name="context">StatelessServiceContext instance.</param>
-        public FabricObserver(StatelessServiceContext context) : base(context)
+        public FabricObserverService(StatelessServiceContext context) : base(context)
         {
 
         }

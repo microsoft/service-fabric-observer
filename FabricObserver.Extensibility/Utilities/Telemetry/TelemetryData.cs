@@ -163,12 +163,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         [EventField]
-        public double RGCpuCoresLimit
-        {
-            get; set;
-        }
-
-        [EventField]
         public ServiceKind ServiceKind
         {
             get; set;

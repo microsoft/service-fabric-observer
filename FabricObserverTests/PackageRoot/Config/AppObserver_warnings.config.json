@@ -6,7 +6,8 @@
     "networkWarningEphemeralPorts": 1,
     "networkWarningEphemeralPortsPercent": 0.0010,
     "warningThreadCount": 12,
-    "warningOpenFileHandles": 50
+    "warningOpenFileHandles": 50,
+    "warningPrivateBytesMb": 15
   },
   {
     "targetAppType": "FabricObserverType",
