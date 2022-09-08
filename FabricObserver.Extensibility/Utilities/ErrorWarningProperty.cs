@@ -14,10 +14,12 @@ namespace FabricObserver.Observers.Utilities
         /// CPU Time (Percent)
         /// </summary>
         public const string CpuTime = "CPU Time (Percent)";
+        
         /// <summary>
         /// Memory Usage (MB)
         /// </summary>
         public const string MemoryConsumptionMb = "Memory Usage (MB)";
+        
         /// <summary>
         /// Memory Usage (Percent)
         /// </summary>
@@ -101,5 +103,15 @@ namespace FabricObserver.Observers.Utilities
         /// LVID Usage (Percent)
         /// </summary>
         public const string KvsLvidsPercent = "LVID Usage (Percent)";
+
+        /// <summary>
+        /// Process Private Bytes (MB)
+        /// </summary>
+        public const string PrivateBytesMb = "Private Bytes (MB)";
+
+        /// <summary>
+        /// Process RG Memory (MB). The value of this metric will be the same as what you would get for PrivateBytesMb, but explicitly related to RG memory limit monitoring.
+        /// </summary>
+        public const string RGMemoryLimitMb = "RG Memory Limit (MB)";
     }
 }

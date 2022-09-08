@@ -51,15 +51,15 @@ namespace FabricObserver.Observers.Utilities
         public const string DataCapacityParameter = "ResourceUsageDataCapacity";
         public const string UseCircularBufferParameter = "UseCircularBuffer";
         public const string MonitorDurationParameter = "MonitorDuration";
-        public const string MaxArchivedCsvFileLifetimeDays = "MaxArchivedCsvFileLifetimeDays";
-        public const string MaxArchivedLogFileLifetimeDays = "MaxArchivedLogFileLifetimeDays";
-        public const string CsvFileWriteFormat = "CsvFileWriteFormat";
-        public const string EnableConcurrentMonitoring = "EnableConcurrentMonitoring";
-        public const string MaxConcurrentTasks = "MaxConcurrentTasks";
+        public const string MaxArchivedCsvFileLifetimeDaysParameter = "MaxArchivedCsvFileLifetimeDays";
+        public const string MaxArchivedLogFileLifetimeDaysParameter = "MaxArchivedLogFileLifetimeDays";
+        public const string CsvFileWriteFormatParameter = "CsvFileWriteFormat";
+        public const string EnableConcurrentMonitoringParameter = "EnableConcurrentMonitoring";
+        public const string MaxConcurrentTasksParameter = "MaxConcurrentTasks";
         public const string EnableKvsLvidMonitoringParameter = "EnableKvsLvidMonitoring";
-        public const string MonitorPrivateWorkingSet = "MonitorPrivateWorkingSet";
-        public const string ConfigurationFileName = "ConfigurationFileName";
-        public const string ProcessDumpFolderName = "MemoryDumps";
+        public const string MonitorPrivateWorkingSetParameter = "MonitorPrivateWorkingSet";
+        public const string ConfigurationFileNameParameter = "ConfigurationFileName";
+        public const string ProcessDumpFolderNameParameter = "MemoryDumps";
 
         // AppObserver.
         public const string AppObserverName = "AppObserver";
@@ -72,6 +72,7 @@ namespace FabricObserver.Observers.Utilities
         public const string MaxDumpsParameter = "MaxDumps";
         public const string MaxDumpsTimeWindowParameter = "MaxDumpsTimeWindow";
         public const string SystemAppName = "fabric:/System";
+        public const string MonitorResourceGovernanceLimitsParameter = "MonitorResourceGovernanceLimits";
 
         // AzureStorageUploadObserver
         public const string AzureStorageUploadObserverName = "AzureStorageUploadObserver";
@@ -170,11 +171,5 @@ namespace FabricObserver.Observers.Utilities
         public const string Undefined = "Undefined";
         public const string ClusterTypePaasV1 = "PaasV1";
         public const string ClusterTypeStandalone = "Standalone";
-
-        // ETW
-        public const string PayloadNameChildProcessTelemetryData = "childProcessTelemetryData";
-        public const string PayloadNameTelemetryData = "telemetryData";
-        public const string PayloadNameMachineTelemetryData = "machineTelemetryData";
-        public const string PayloadNameAnonData = "anonData";
     }
 }

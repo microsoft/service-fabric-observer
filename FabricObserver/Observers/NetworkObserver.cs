@@ -322,7 +322,7 @@ namespace FabricObserver.Observers
             }
 
             var networkObserverConfigFileName =
-                Path.Combine(ConfigPackage.Path, GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileName));
+                Path.Combine(ConfigPackage.Path, GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileNameParameter));
 
             if (string.IsNullOrWhiteSpace(networkObserverConfigFileName))
             {

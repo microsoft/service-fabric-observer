@@ -27,6 +27,7 @@ using System.Xml;
 using FabricObserver.Observers.Utilities.Telemetry;
 using FabricObserver.Utilities.ServiceFabric;
 using Microsoft.Extensions.DependencyInjection;
+using NLog.Targets.Wrappers;
 
 /***PLEASE RUN ALL OF THESE TESTS ON YOUR LOCAL DEV MACHINE WITH A RUNNING SF CLUSTER BEFORE SUBMITTING A PULL REQUEST***/
 
@@ -175,7 +176,7 @@ namespace FabricObserverTests
             string packagePathZip = Path.Combine(Environment.CurrentDirectory, "HealthMetrics.zip");
             string serviceType1 = "BandActorServiceType";
             string serviceType2 = "DoctorActorServiceType";
-            string packagePath = Path.Combine(Environment.CurrentDirectory, "HealthMetricsApp", "pkg", "Debug");
+            string packagePath = Path.Combine(Environment.CurrentDirectory, "HealthMetricsApp", "HealthMetrics", "pkg", "Debug");
 
             // Unzip the compressed HealthMetrics app package.
             System.IO.Compression.ZipFile.ExtractToDirectory(packagePathZip, "HealthMetricsApp", true);
@@ -1009,7 +1010,8 @@ namespace FabricObserverTests
                 EnableConcurrentMonitoring = true,
                 IsEtwProviderEnabled = true,
                 EnableChildProcessMonitoring = true,
-                MaxChildProcTelemetryDataCount = 25
+                MaxChildProcTelemetryDataCount = 25,
+                MonitorResourceGovernanceLimits = true
             };
 
             await obs.ObserveAsync(Token);
@@ -2129,7 +2131,6 @@ namespace FabricObserverTests
                 Assert.IsTrue(t.ObserverName == ObserverConstants.AppObserverName);
                 Assert.IsTrue(t.Code == null);
                 Assert.IsTrue(t.Description == null);
-                Assert.IsTrue(t.Property == null);
                 Assert.IsTrue(t.Source == ObserverConstants.AppObserverName);
                 Assert.IsTrue(t.Value >= 0.0);
             }
@@ -2195,6 +2196,68 @@ namespace FabricObserverTests
                 Assert.IsTrue(t.Value > 0.0);
                 Assert.IsTrue(t.ObserverName == ObserverConstants.AppObserverName);
                 Assert.IsTrue(t.Source == $"{t.ObserverName}({t.Code})");
+            }
+        }
+
+        // RG
+        [TestMethod]
+        public async Task AppObserver_ETW_EventData_RGEnabled_MemoryLimitMBValuesNonZero()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
+            {
+                await DeployHealthMetricsAppAsync();
+            }
+
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+
+            await AppObserver_ObserveAsync_Successful_Observer_IsHealthy();
+
+            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+
+            Assert.IsNotNull(telemData);
+            Assert.IsTrue(telemData.Count > 0);
+
+            telemData = telemData.Where(t => t.ApplicationName == "fabric:/HealthMetrics").ToList();
+            Assert.IsTrue(telemData.Any());
+
+            foreach (var t in telemData)
+            {
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ApplicationName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ApplicationType));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeType));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ClusterId));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Metric));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ObserverName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ProcessName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ServiceName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.OS));
+                Assert.IsFalse(
+                    string.IsNullOrWhiteSpace(t.PartitionId?.ToString())
+                    && Guid.TryParse(t.PartitionId.ToString(), out Guid guid)
+                    && guid != Guid.Empty);
+
+                Assert.IsFalse(
+                    string.IsNullOrWhiteSpace(t.ProcessStartTime)
+                    && DateTime.TryParse(t.ProcessStartTime, out DateTime startDate)
+                    && startDate > DateTime.MinValue);
+
+                Assert.IsTrue(t.EntityType == EntityType.Service);
+                Assert.IsTrue(t.ServiceKind != System.Fabric.Query.ServiceKind.Invalid);
+                Assert.IsTrue(t.ServicePackageActivationMode == ServicePackageActivationMode.ExclusiveProcess
+                              || t.ServicePackageActivationMode == ServicePackageActivationMode.SharedProcess);
+                Assert.IsTrue(t.HealthState == HealthState.Invalid);
+                Assert.IsTrue(t.ReplicaId > 0);
+                Assert.IsTrue(t.ProcessId > 0);
+                Assert.IsTrue(t.ObserverName == ObserverConstants.AppObserverName);
+                Assert.IsTrue(t.Code == null);
+                Assert.IsTrue(t.Description == null);
+                Assert.IsTrue(t.Source == ObserverConstants.AppObserverName);
+                Assert.IsTrue(t.RGEnabled);
+                Assert.IsTrue(t.RGMemoryLimitMb == 350 || t.RGMemoryLimitMb == 500);
+                Assert.IsTrue(t.Value >= 0.0);
             }
         }
 
@@ -2308,7 +2371,6 @@ namespace FabricObserverTests
                 Assert.IsTrue(t.ObserverName == ObserverConstants.FabricSystemObserverName);
                 Assert.IsTrue(t.Code == null);
                 Assert.IsTrue(t.Description == null);
-                Assert.IsTrue(t.Property == null);
                 Assert.IsTrue(t.Source == ObserverConstants.FabricSystemObserverName);
                 Assert.IsTrue(t.Value >= 0.0);
             }

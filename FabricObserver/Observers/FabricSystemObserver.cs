@@ -702,7 +702,7 @@ namespace FabricObserver.Observers
             }
 
             /* Memory - Private or Full Working Set */
-            var privateWS = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MonitorPrivateWorkingSet);
+            var privateWS = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MonitorPrivateWorkingSetParameter);
             
             if (!string.IsNullOrWhiteSpace(privateWS))
             {

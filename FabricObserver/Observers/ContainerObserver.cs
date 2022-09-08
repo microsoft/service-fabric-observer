@@ -194,7 +194,7 @@ namespace FabricObserver.Observers
             // FabricObserver has on the resources it monitors and alerts on...
             // Concurrency/Parallelism support. The minimum requirement is 4 logical processors, regardless of user setting.
             if (Environment.ProcessorCount >= 4 && bool.TryParse(
-                    GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
+                    GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoringParameter), out bool enableConcurrency))
             {
                 EnableConcurrentMonitoring = enableConcurrency;
             }
@@ -210,7 +210,7 @@ namespace FabricObserver.Observers
                 maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
 
                 // If user configures MaxConcurrentTasks setting, then use that value instead.
-                if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasks), out int maxTasks))
+                if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasksParameter), out int maxTasks))
                 {
                     maxDegreeOfParallelism = maxTasks;
                 }
@@ -679,7 +679,7 @@ namespace FabricObserver.Observers
                 return true;
             }
 
-            string configFilename = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileName);
+            string configFilename = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileNameParameter);
 
             if (string.IsNullOrWhiteSpace(configFilename))
             {

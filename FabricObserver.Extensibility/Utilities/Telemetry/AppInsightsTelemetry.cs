@@ -195,6 +195,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "Value", telemetryData.Value.ToString() },
                     { "PartitionId", telemetryData.PartitionId != null ? telemetryData.PartitionId.ToString() : string.Empty },
                     { "ReplicaId", telemetryData.ReplicaId.ToString() },
+                    { "RGEnabled", telemetryData.RGEnabled.ToString() },
+                    { "RGMemoryLimitMb", telemetryData.RGMemoryLimitMb.ToString() },
                     { "ObserverName", telemetryData.ObserverName },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
                     { "OS", telemetryData.OS ?? string.Empty }
@@ -270,6 +272,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "Value", telemetryData.Value.ToString() },
                     { "PartitionId", telemetryData.PartitionId != null ? telemetryData.PartitionId.ToString() : string.Empty },
                     { "ReplicaId", telemetryData.ReplicaId.ToString() },
+                    { "RGEnabled", telemetryData.RGEnabled.ToString() },
+                    { "RGMemoryLimitMb", telemetryData.RGMemoryLimitMb.ToString() },
                     { "ObserverName", telemetryData.ObserverName },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
                     { "OS", telemetryData.OS ?? string.Empty },
