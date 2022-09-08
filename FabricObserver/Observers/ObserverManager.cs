@@ -267,8 +267,8 @@ namespace FabricObserver.Observers
 
                     // All observers have run at this point. Try and empty the trash now.
                     GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-                    GC.Collect(2, GCCollectionMode.Default, true, true);
-                    await Task.Delay(TimeSpan.FromSeconds(15), token);
+                    GC.Collect(2, GCCollectionMode.Forced, true, true);
+                    await Task.Delay(TimeSpan.FromSeconds(5), token);
                 }
             }
             catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)

@@ -2914,6 +2914,12 @@ namespace FabricObserver.Observers
                 AllAppKvsLvidsData = null;
             }
 
+            if (AllAppPrivateBytesDataMb != null && AllAppPrivateBytesDataMb.All(frud => !frud.Value.ActiveErrorOrWarning))
+            {
+                AllAppPrivateBytesDataMb?.Clear();
+                AllAppPrivateBytesDataMb = null;
+            }
+
             if (IsWindows)
             {
                 _handleToProcSnapshot?.Dispose();
