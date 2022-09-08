@@ -26,6 +26,11 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
+        public string ApplicationTypeVersion
+        {
+            get; set;
+        }
+
         public string ContainerId
         {
             get; set;
@@ -66,7 +71,17 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
+        public string ServiceManifestName
+        {
+            get; set;
+        }
+
         public string ServiceTypeName
+        {
+            get; set;
+        }
+
+        public string ServiceTypeVersion
         {
             get; set;
         }
@@ -81,12 +96,27 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
-        public ReplicaRole ReplicaRole 
-        { 
-            get; set; 
+        public ReplicaRole ReplicaRole
+        {
+            get; set;
         }
 
         public ServicePackageActivationMode ServicePackageActivationMode
+        {
+            get; set;
+        }
+
+        public bool RGEnabled
+        {
+            get; set;
+        }
+
+        public double RGMemoryLimitMb
+        {
+            get; set;
+        }
+
+        public double RGCpuCoreLimit
         {
             get; set;
         }

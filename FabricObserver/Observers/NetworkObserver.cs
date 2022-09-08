@@ -30,7 +30,7 @@ namespace FabricObserver.Observers
     /// The output (a local file) is used by the API service and the HTML frontend (https://[domain:[port]]/api/ObserverManager).
     /// Health Report processor will also emit diagnostic telemetry if configured in Settings.xml.
     /// </summary>
-    public sealed class NetworkObserver : ObserverBase
+    public class NetworkObserver : ObserverBase
     {
         private const int MaxTcpConnTestRetries = 5;
         private readonly List<NetworkObserverConfig> defaultConfig = new List<NetworkObserverConfig>
@@ -99,10 +99,10 @@ namespace FabricObserver.Observers
 
             Token = token;
             stopwatch.Start();
-            
+
             // Run conn tests.
             Retry.Do(InternetConnectionStateIsConnected, TimeSpan.FromSeconds(10), token);
-            await ReportAsync(token).ConfigureAwait(false);
+            await ReportAsync(token);
 
             // The time it took to run this observer.
             stopwatch.Stop();
@@ -321,7 +321,7 @@ namespace FabricObserver.Observers
             }
 
             var networkObserverConfigFileName =
-                Path.Combine(ConfigPackage.Path, GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileName));
+                Path.Combine(ConfigPackage.Path, GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileNameParameter));
 
             if (string.IsNullOrWhiteSpace(networkObserverConfigFileName))
             {
@@ -564,9 +564,9 @@ namespace FabricObserver.Observers
             else
             {
                 if (connectionStatus.Any(
-                        conn =>
-                            conn.HostName == endpoint.HostName && conn.TargetApp == targetApp &&
-                            conn.Health == HealthState.Warning))
+                    conn =>
+                        conn.HostName == endpoint.HostName && conn.TargetApp == targetApp &&
+                        conn.Health == HealthState.Warning))
                 {
                     return;
                 }

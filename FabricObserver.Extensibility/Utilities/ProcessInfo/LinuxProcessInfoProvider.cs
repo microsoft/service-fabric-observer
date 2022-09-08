@@ -26,6 +26,12 @@ namespace FabricObserver.Observers.Utilities
             return 0f;
         }
 
+        // TODO..
+        public override float GetProcessPrivateBytesMb(int processId)
+        {
+            return GetProcessWorkingSetMb(processId, null, CancellationToken.None);
+        }
+
         public override float GetProcessAllocatedHandles(int processId, string configPath)
         {
             if (processId < 0 || string.IsNullOrWhiteSpace(configPath))

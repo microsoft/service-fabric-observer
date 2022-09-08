@@ -23,5 +23,25 @@
         "protocol": "tcp"
       }
     ]
+  },
+  {
+    "targetApp": "fabric:/FabricObserver",
+    "endpoints": [
+      {
+        "hostname": "bing.com",
+        "port": 443,
+        "protocol": "http"
+      },
+      {
+        "hostname": "google.com",
+        "port": 443,
+        "protocol": "http"
+      },
+      {
+        "hostname": "xkkjshruwos42__x98.com",
+        "port": 443,
+        "protocol": "http"
+      }
+    ]
   }
 ]

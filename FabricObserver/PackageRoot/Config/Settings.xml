@@ -196,6 +196,7 @@
 
 	<!-- Optional: monitor private working set only for target service processes (versus full working set, which is private + shared). The default setting in ApplicationManifest.xml is true. -->
     <Parameter Name="MonitorPrivateWorkingSet" Value="" MustOverride="true" />
+    <Parameter Name="MonitorResourceGovernanceLimits" Value="" MustOverride="true" />
   </Section>
   <Section Name="CertificateObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />

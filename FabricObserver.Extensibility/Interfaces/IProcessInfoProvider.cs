@@ -16,9 +16,17 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         /// <param name="processId">The id of the process.</param>
         /// <param name="procName">Optional: The name of the process. This value is required if you supply true for getPrivateWorkingSet.</param>
+        /// <param name="token">CancellationToken instance.</param>
         /// <param name="getPrivateWorkingSet">Optional: return data for Private working set only.</param>
         /// <returns>The amount, in megabytes, of Working Set memory for a specified process (total or active private, depending on how the function is called).</returns>
         float GetProcessWorkingSetMb(int processId, string procName, CancellationToken token, bool getPrivateWorkingSet = false);
+
+        /// <summary>
+        ///  Gets the amount, in megabytes, of private memory allocated for a specified process.
+        /// </summary>
+        /// <param name="processId">The id of the process.</param>
+        /// <returns></returns>
+        float GetProcessPrivateBytesMb(int processId);
 
         /// <summary>
         /// Gets the number of allocated (in use) file handles for a specified process.
