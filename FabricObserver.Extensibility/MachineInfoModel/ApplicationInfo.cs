@@ -146,6 +146,12 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
+        // RG monitoring.
+        public double WarningRGMemoryLimitPercent
+        {
+            get; set;
+        }
+
         public override string ToString() => $"ApplicationName: {TargetApp ?? string.Empty}{Environment.NewLine}" +
                                              $"ApplicationTypeName: {TargetAppType ?? string.Empty}{Environment.NewLine}" +
                                              $"AppExcludeList: {AppExcludeList ?? string.Empty}{Environment.NewLine}" +
@@ -170,6 +176,7 @@ namespace FabricObserver.Observers.MachineInfoModel
                                              $"ErrorThreadCount: {ErrorThreadCount}{Environment.NewLine}" +
                                              $"WarningThreadCount: {WarningThreadCount}{Environment.NewLine}" +
                                              $"ErrorPrivateBytesMb: {ErrorPrivateBytesMb}{Environment.NewLine}" +
-                                             $"WarningPrivateBytesMb: {WarningPrivateBytesMb}{Environment.NewLine}";
+                                             $"WarningPrivateBytesMb: {WarningPrivateBytesMb}{Environment.NewLine}" +
+                                             $"WarningRGMemoryLimitPercent: {WarningRGMemoryLimitPercent}{Environment.NewLine}";
     }
 }

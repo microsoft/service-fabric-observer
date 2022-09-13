@@ -1,0 +1,12 @@
+﻿[
+  {
+    "targetApp": "HealthMetrics",
+    "cpuWarningLimitPercent": 85,
+    "memoryWarningLimitMb": 1024,
+    "networkWarningEphemeralPorts": 7000,
+    "networkWarningEphemeralPortsPercent": 30,
+    "warningThreadCount": 500,
+    "warningOpenFileHandles": 7000,
+    "warningRGMemoryLimitPercent": 10
+  }
+]

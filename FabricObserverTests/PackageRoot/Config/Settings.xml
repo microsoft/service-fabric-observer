@@ -46,6 +46,7 @@
 		<Parameter Name="MaxDumps" Value="4" />
 		<Parameter Name="MaxDumpsTimeWindow" Value="00:04:00" />
 		<Parameter Name="MonitorPrivateWorkingSet" Value="false" />
+		<Parameter Name="MonitorResourceGovernanceLimits" Value="true" />
 	</Section>
 	<Section Name="CertificateObserverConfiguration">
 		<Parameter Name="Enabled" Value="true" />

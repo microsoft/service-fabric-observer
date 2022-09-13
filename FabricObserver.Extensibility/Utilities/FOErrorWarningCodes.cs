@@ -215,6 +215,10 @@ namespace FabricObserver.Observers.Utilities
         /// FO049  Private Bytes usage (Commit) is at or exceeding Warning threshold for an app service process.
         /// </summary>
         public const string AppWarningPrivateBytesMb = "FO049";
+        /// <summary>
+        /// FO050  At or exceeding default (90%) or configured percentage of Resource Governance limit 'MemoryInMBLimit' for a service code package.
+        /// </summary>
+        public const string AppWarningRGMemoryLimitPercent = "FO050";
 
         /// <summary>
         /// AppErrorCodesDictionary dictionary.

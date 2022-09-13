@@ -115,10 +115,5 @@ namespace FabricObserver.Observers.MachineInfoModel
         {
             get; set;
         }
-
-        public double RGCpuCoreLimit
-        {
-            get; set;
-        }
     }
 }
