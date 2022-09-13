@@ -358,15 +358,15 @@ namespace FabricObserver.Observers
 
                     // Parent's and aggregated (summed) descendant process data (if any).
                     ProcessResourceDataReportHealth(
-                            parentFrud,
-                            app.CpuErrorLimitPercent,
-                            app.CpuWarningLimitPercent,
-                            TTL,
-                            EntityType.Service,
-                            processName,
-                            repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps,
-                            processId);
+                        parentFrud,
+                        app.CpuErrorLimitPercent,
+                        app.CpuWarningLimitPercent,
+                        TTL,
+                        EntityType.Service,
+                        processName,
+                        repOrInst,
+                        app.DumpProcessOnError && EnableProcessDumps,
+                        processId);
                 }
 
                 // Memory - Working Set MB - Parent process
@@ -380,15 +380,15 @@ namespace FabricObserver.Observers
                     }
 
                     ProcessResourceDataReportHealth(
-                            parentFrud,
-                            app.MemoryErrorLimitMb,
-                            app.MemoryWarningLimitMb,
-                            TTL,
-                            EntityType.Service,
-                            processName,
-                            repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps,
-                            processId);
+                        parentFrud,
+                        app.MemoryErrorLimitMb,
+                        app.MemoryWarningLimitMb,
+                        TTL,
+                        EntityType.Service,
+                        processName,
+                        repOrInst,
+                        app.DumpProcessOnError && EnableProcessDumps,
+                        processId);
                 }
 
                 // Memory - Working Set Percent - Parent process
@@ -402,15 +402,15 @@ namespace FabricObserver.Observers
                     }
 
                     ProcessResourceDataReportHealth(
-                            parentFrud,
-                            app.MemoryErrorLimitPercent,
-                            app.MemoryWarningLimitPercent,
-                            TTL,
-                            EntityType.Service,
-                            processName,
-                            repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps,
-                            processId);
+                        parentFrud,
+                        app.MemoryErrorLimitPercent,
+                        app.MemoryWarningLimitPercent,
+                        TTL,
+                        EntityType.Service,
+                        processName,
+                        repOrInst,
+                        app.DumpProcessOnError && EnableProcessDumps,
+                        processId);
                 }
 
                 // Memory - Private Bytes MB - Parent process
@@ -423,23 +423,43 @@ namespace FabricObserver.Observers
                         ProcessChildProcs(AllAppPrivateBytesDataMb, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
                     }
 
-                    // RG Report. Only MemoryLimitInMb is supported currently.
-                    if (repOrInst.RGEnabled && repOrInst.RGMemoryLimitMb > 0)
+                    // RG Report. Only MemoryInMbLimit is supported (CPU is TODO). Private Bytes FRUD is float data type.
+                    if (MonitorResourceGovernanceLimits && repOrInst.RGEnabled && repOrInst.RGMemoryLimitMb > 0)
                     {
+                        // Default: Private Bytes (Mb) that will generate a specific RG-related Warning when it reaches 90% of specified RG Memory Limit.
+                        float rgMemLimitMb = (float)(repOrInst.RGMemoryLimitMb * 0.90);
+                        double warningRGLimitPct = app.WarningRGMemoryLimitPercent;
+
+                        // User has specified a custom warning limit percentage (overrides the default) as percentage value (e.g., 80, representing 80 percent);
+                        if (warningRGLimitPct >= 1.0)
+                        {
+                            double pct = warningRGLimitPct / 100; // decimal
+                            rgMemLimitMb = (float)(repOrInst.RGMemoryLimitMb * pct);
+                        }
+                        else if (warningRGLimitPct > 0 && warningRGLimitPct < 1) // percentage specified as decimal value (e.g., 0.80)
+                        {
+                            rgMemLimitMb = (float)(repOrInst.RGMemoryLimitMb * warningRGLimitPct);
+                        }
+
+                        // Private Bytes (RG).
                         ProcessResourceDataReportHealth(
                             parentFrud,
-                            0,
-                            (float)(repOrInst.RGMemoryLimitMb * 0.90), // 90% of limit threshold.
+                            0, // Only Warning Threshold is supported.
+                            rgMemLimitMb,
                             TTL,
                             EntityType.Service,
                             processName,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps,
                             processId,
-                            isRGReport: true);
+                            isRGReport: true,
+                            warningRGLimitPct);
                     }
 
-                    ProcessResourceDataReportHealth(
+                    // Private Bytes.
+                    if (app.WarningPrivateBytesMb > 0 || app.ErrorPrivateBytesMb > 0)
+                    {
+                        ProcessResourceDataReportHealth(
                             parentFrud,
                             app.ErrorPrivateBytesMb,
                             app.WarningPrivateBytesMb,
@@ -449,6 +469,7 @@ namespace FabricObserver.Observers
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps,
                             processId);
+                    }
                 }
 
                 // TCP Ports - Active - Parent process
@@ -462,15 +483,15 @@ namespace FabricObserver.Observers
                     }
 
                     ProcessResourceDataReportHealth(
-                            parentFrud,
-                            app.NetworkErrorActivePorts,
-                            app.NetworkWarningActivePorts,
-                            TTL,
-                            EntityType.Service,
-                            processName,
-                            repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps,
-                            processId);
+                        parentFrud,
+                        app.NetworkErrorActivePorts,
+                        app.NetworkWarningActivePorts,
+                        TTL,
+                        EntityType.Service,
+                        processName,
+                        repOrInst,
+                        app.DumpProcessOnError && EnableProcessDumps,
+                        processId);
                 }
 
                 // TCP Ports Total - Ephemeral (port numbers fall in the dynamic range) - Parent process
@@ -484,15 +505,15 @@ namespace FabricObserver.Observers
                     }
 
                     ProcessResourceDataReportHealth(
-                            parentFrud,
-                            app.NetworkErrorEphemeralPorts,
-                            app.NetworkWarningEphemeralPorts,
-                            TTL,
-                            EntityType.Service,
-                            processName,
-                            repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps,
-                            processId);
+                        parentFrud,
+                        app.NetworkErrorEphemeralPorts,
+                        app.NetworkWarningEphemeralPorts,
+                        TTL,
+                        EntityType.Service,
+                        processName,
+                        repOrInst,
+                        app.DumpProcessOnError && EnableProcessDumps,
+                        processId);
                 }
 
                 // TCP Ports Percentage - Ephemeral (port numbers fall in the dynamic range) - Parent process
@@ -506,15 +527,15 @@ namespace FabricObserver.Observers
                     }
 
                     ProcessResourceDataReportHealth(
-                            parentFrud,
-                            app.NetworkErrorEphemeralPortsPercent,
-                            app.NetworkWarningEphemeralPortsPercent,
-                            TTL,
-                            EntityType.Service,
-                            processName,
-                            repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps,
-                            processId);
+                        parentFrud,
+                        app.NetworkErrorEphemeralPortsPercent,
+                        app.NetworkWarningEphemeralPortsPercent,
+                        TTL,
+                        EntityType.Service,
+                        processName,
+                        repOrInst,
+                        app.DumpProcessOnError && EnableProcessDumps,
+                        processId);
                 }
 
                 // Allocated (in use) Handles - Parent process
@@ -528,15 +549,15 @@ namespace FabricObserver.Observers
                     }
 
                     ProcessResourceDataReportHealth(
-                            parentFrud,
-                            app.ErrorOpenFileHandles,
-                            app.WarningOpenFileHandles,
-                            TTL,
-                            EntityType.Service,
-                            processName,
-                            repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps,
-                            processId);
+                        parentFrud,
+                        app.ErrorOpenFileHandles,
+                        app.WarningOpenFileHandles,
+                        TTL,
+                        EntityType.Service,
+                        processName,
+                        repOrInst,
+                        app.DumpProcessOnError && EnableProcessDumps,
+                        processId);
                 }
 
                 // Threads - Parent process
@@ -550,15 +571,15 @@ namespace FabricObserver.Observers
                     }
 
                     ProcessResourceDataReportHealth(
-                            parentFrud,
-                            app.ErrorThreadCount,
-                            app.WarningThreadCount,
-                            TTL,
-                            EntityType.Service,
-                            processName,
-                            repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps,
-                            processId);
+                        parentFrud,
+                        app.ErrorThreadCount,
+                        app.WarningThreadCount,
+                        TTL,
+                        EntityType.Service,
+                        processName,
+                        repOrInst,
+                        app.DumpProcessOnError && EnableProcessDumps,
+                        processId);
                 }
 
                 // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
@@ -573,15 +594,15 @@ namespace FabricObserver.Observers
 
                     // FO will warn if the stateful (Actor, for example) service process has used 75% or greater of available LVIDs. This is not configurable (and a temporary feature).
                     ProcessResourceDataReportHealth(
-                            parentFrud,
-                            0,
-                            KvsLvidsWarningPercentage,
-                            TTL,
-                            EntityType.Service,
-                            processName,
-                            repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps,
-                            processId);
+                        parentFrud,
+                        0,
+                        KvsLvidsWarningPercentage,
+                        TTL,
+                        EntityType.Service,
+                        processName,
+                        repOrInst,
+                        app.DumpProcessOnError && EnableProcessDumps,
+                        processId);
                 }           
 
                 // Child proc info telemetry.
@@ -891,6 +912,8 @@ namespace FabricObserver.Observers
                         existingAppConfig[j].ErrorThreadCount = existingAppConfig[j].ErrorThreadCount == 0 && application.ErrorThreadCount > 0 ? application.ErrorThreadCount : existingAppConfig[j].ErrorThreadCount;
                         existingAppConfig[j].WarningThreadCount = existingAppConfig[j].WarningThreadCount == 0 && application.WarningThreadCount > 0 ? application.WarningThreadCount : existingAppConfig[j].WarningThreadCount;
 
+                        // RGMemoryLimitPercent
+                        existingAppConfig[j].WarningRGMemoryLimitPercent = existingAppConfig[j].WarningRGMemoryLimitPercent == 0 && application.WarningRGMemoryLimitPercent > 0 ? application.WarningRGMemoryLimitPercent : existingAppConfig[j].WarningRGMemoryLimitPercent;
                     }
                 }
                 else
@@ -921,7 +944,8 @@ namespace FabricObserver.Observers
                         ErrorThreadCount = application.ErrorThreadCount,
                         WarningThreadCount = application.WarningThreadCount,
                         ErrorPrivateBytesMb = application.ErrorPrivateBytesMb,
-                        WarningPrivateBytesMb = application.WarningPrivateBytesMb
+                        WarningPrivateBytesMb = application.WarningPrivateBytesMb,
+                        WarningRGMemoryLimitPercent = application.WarningRGMemoryLimitPercent
                     };
 
                     _userTargetList.Add(appConfig);
@@ -2209,7 +2233,7 @@ namespace FabricObserver.Observers
 
                     if (TotalMemoryGb > 0)
                     {
-                        double usedPct = (double)(processMemMb * 100) / (TotalMemoryGb * 1024);
+                        double usedPct = (float)(processMemMb * 100) / (TotalMemoryGb * 1024);
 
                         if (procId == parentPid)
                         {

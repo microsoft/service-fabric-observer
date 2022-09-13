@@ -96,9 +96,9 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
-        public ReplicaRole ReplicaRole
-        {
-            get; set;
+        public ReplicaRole ReplicaRole 
+        { 
+            get; set; 
         }
 
         public ServicePackageActivationMode ServicePackageActivationMode
@@ -112,11 +112,6 @@ namespace FabricObserver.Observers.MachineInfoModel
         }
 
         public double RGMemoryLimitMb
-        {
-            get; set;
-        }
-
-        public double RGCpuCoreLimit
         {
             get; set;
         }

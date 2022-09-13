@@ -28,6 +28,7 @@ using FabricObserver.Observers.Utilities.Telemetry;
 using FabricObserver.Utilities.ServiceFabric;
 using Microsoft.Extensions.DependencyInjection;
 using NLog.Targets.Wrappers;
+using System.Collections.Specialized;
 
 /***PLEASE RUN ALL OF THESE TESTS ON YOUR LOCAL DEV MACHINE WITH A RUNNING SF CLUSTER BEFORE SUBMITTING A PULL REQUEST***/
 
@@ -188,7 +189,11 @@ namespace FabricObserverTests
             await FabricClient.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
 
             // Create HealthMetrics app instance.
-            ApplicationDescription appDesc = new ApplicationDescription(new Uri(appName), appType, appVersion);
+            /* override app params..
+            NameValueCollection nameValueCollection = new NameValueCollection();
+            nameValueCollection.Add("foo", "bar");
+            */
+            ApplicationDescription appDesc = new ApplicationDescription(new Uri(appName), appType, appVersion/*, nameValueCollection */);
             await FabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
 
             // Create the HealthMetrics service descriptions.
@@ -420,7 +425,7 @@ namespace FabricObserverTests
             // Remove any files generated.
             try
             {
-                var outputFolder = Path.Combine(Environment.CurrentDirectory, "fabric_observer_logs");
+                var outputFolder = Path.Combine(Environment.CurrentDirectory, "fabric_logs");
 
                 if (Directory.Exists(outputFolder))
                 {
@@ -993,7 +998,7 @@ namespace FabricObserverTests
         /* ObserveAsync/ReportAsync */
 
         [TestMethod]
-        public async Task AppObserver_ObserveAsync_Successful_Observer_IsHealthy()
+        public async Task AppObserver_ObserveAsync_Successful_IsHealthy()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1027,7 +1032,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task AppObserver_ObserveAsync_Successful_Observer_WarningsGenerated()
+        public async Task AppObserver_ObserveAsync_Successful_WarningsGenerated()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1059,7 +1064,45 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task AppObserver_ObserveAsync_OldConfigStyle_Successful_Observer_WarningsGenerated()
+        public async Task AppObserver_ObserveAsync_Successful_RGLimitWarningGenerated()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+            
+            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
+            {
+                await DeployHealthMetricsAppAsync();
+            }
+
+            var startDateTime = DateTime.Now;
+
+            ObserverManager.FabricServiceContext = TestServiceContext;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            using var obs = new AppObserver(TestServiceContext)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_rg_warning.config.json"),
+                CheckPrivateWorkingSet = true,
+                EnableConcurrentMonitoring = true,
+                MonitorResourceGovernanceLimits = true,
+                IsEtwProviderEnabled = false
+            };
+
+            await obs.ObserveAsync(Token);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected warning conditions.
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+        }
+
+        [TestMethod]
+        public async Task AppObserver_ObserveAsync_OldConfigStyle_Successful_WarningsGenerated()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1089,7 +1132,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task AppObserver_ObserveAsync_OldConfigStyle_Successful_Observer_NoWarningsGenerated()
+        public async Task AppObserver_ObserveAsync_OldConfigStyle_Successful_NoWarningsGenerated()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1119,7 +1162,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task ContainerObserver_ObserveAsync_Successful_Observer_IsHealthy()
+        public async Task ContainerObserver_ObserveAsync_Successful_IsHealthy()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1148,7 +1191,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task ClusterObserver_ObserveAsync_Successful_Observer_IsHealthy()
+        public async Task ClusterObserver_ObserveAsync_Successful_IsHealthy()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1387,7 +1430,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task OSObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
+        public async Task OSObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1429,7 +1472,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task DiskObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
+        public async Task DiskObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1477,7 +1520,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task DiskObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrors()
+        public async Task DiskObserver_ObserveAsync_Successful_IsHealthy_WarningsOrErrors()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1551,14 +1594,9 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task NetworkObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
+        public async Task NetworkObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
-            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
-            {
-                await DeployHealthMetricsAppAsync();
-            }
 
             var startDateTime = DateTime.Now;
 
@@ -1582,7 +1620,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task NetworkObserver_ObserveAsync_Successful_Observer_WritesLocalFile_ObsWebDeployed()
+        public async Task NetworkObserver_ObserveAsync_Successful_WritesLocalFile_ObsWebDeployed()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1623,7 +1661,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task NodeObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrorsDetected()
+        public async Task NodeObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrorsDetected()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1657,7 +1695,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task NodeObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrorsDetected()
+        public async Task NodeObserver_ObserveAsync_Successful_IsHealthy_WarningsOrErrorsDetected()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1690,7 +1728,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task SFConfigurationObserver_ObserveAsync_Successful_Observer_IsHealthy()
+        public async Task SFConfigurationObserver_ObserveAsync_Successful_IsHealthy()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1732,7 +1770,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
+        public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1777,7 +1815,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_MemoryWarningsOrErrorsDetected()
+        public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_MemoryWarningsOrErrorsDetected()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1808,7 +1846,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_ActiveTcpPortsWarningsOrErrorsDetected()
+        public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_ActiveTcpPortsWarningsOrErrorsDetected()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1846,7 +1884,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_EphemeralPortsWarningsOrErrorsDetected()
+        public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_EphemeralPortsWarningsOrErrorsDetected()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1884,7 +1922,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_HandlesWarningsOrErrorsDetected()
+        public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_HandlesWarningsOrErrorsDetected()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -2042,7 +2080,7 @@ namespace FabricObserverTests
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
-            await AppObserver_ObserveAsync_Successful_Observer_IsHealthy();
+            await AppObserver_ObserveAsync_Successful_IsHealthy();
 
             List<List<ChildProcessTelemetryData>> childProcessTelemetryData = foEtwListener.foEtwConverter.ChildProcessTelemetry;
             
@@ -2097,7 +2135,7 @@ namespace FabricObserverTests
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
-            await AppObserver_ObserveAsync_Successful_Observer_IsHealthy();
+            await AppObserver_ObserveAsync_Successful_IsHealthy();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
             
@@ -2156,7 +2194,7 @@ namespace FabricObserverTests
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
-            await AppObserver_ObserveAsync_Successful_Observer_WarningsGenerated();
+            await AppObserver_ObserveAsync_Successful_WarningsGenerated();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
             
@@ -2217,7 +2255,7 @@ namespace FabricObserverTests
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
-            await AppObserver_ObserveAsync_Successful_Observer_IsHealthy();
+            await AppObserver_ObserveAsync_Successful_IsHealthy();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
 
@@ -2275,7 +2313,7 @@ namespace FabricObserverTests
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
-            await DiskObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors();
+            await DiskObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
             
@@ -2308,7 +2346,7 @@ namespace FabricObserverTests
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
-            await DiskObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrors();
+            await DiskObserver_ObserveAsync_Successful_IsHealthy_WarningsOrErrors();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
             
@@ -2347,7 +2385,7 @@ namespace FabricObserverTests
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
-            await FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors();
+            await FabricSystemObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
             
@@ -2388,7 +2426,7 @@ namespace FabricObserverTests
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
-            await FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_MemoryWarningsOrErrorsDetected();
+            await FabricSystemObserver_ObserveAsync_Successful_IsHealthy_MemoryWarningsOrErrorsDetected();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
             
@@ -2435,7 +2473,7 @@ namespace FabricObserverTests
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
-            await NodeObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrorsDetected();
+            await NodeObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrorsDetected();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
             
@@ -2469,7 +2507,7 @@ namespace FabricObserverTests
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
-            await NodeObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrorsDetected();
+            await NodeObserver_ObserveAsync_Successful_IsHealthy_WarningsOrErrorsDetected();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
             
@@ -2509,7 +2547,7 @@ namespace FabricObserverTests
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
-            await OSObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors();
+            await OSObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors();
 
             MachineTelemetryData machineTelemetryData = foEtwListener.foEtwConverter.MachineTelemetryData;
             

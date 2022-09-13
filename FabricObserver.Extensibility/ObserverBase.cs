@@ -761,7 +761,8 @@ namespace FabricObserver.Observers
                         ReplicaOrInstanceMonitoringInfo replicaOrInstance = null,
                         bool dumpOnError = false,
                         int processId = 0,
-                        bool isRGReport = false) where T : struct
+                        bool isRGReport = false,
+                        double rgWarningLimitPct = 0) where T : struct
         {
             if (data == null)
             {
@@ -1187,9 +1188,18 @@ namespace FabricObserver.Observers
                 // RG
                 if (replicaOrInstance != null && isRGReport)
                 {
+                    string rgLimit = "90";
+
+                    if (rgWarningLimitPct > 0)
+                    {
+                        rgLimit = rgWarningLimitPct >= 1 ? rgWarningLimitPct.ToString() : (rgWarningLimitPct * 100).ToString();
+                    }
+
                     rgInfo =
-                        $"{replicaOrInstance.ServiceName.OriginalString} is at or exceeding 90% of the specified Resource Governance limit for 'MemoryInMBLimit' " +
+                        $"{replicaOrInstance.ServiceName.OriginalString} is at or exceeding {rgLimit}% of the specified Resource Governance limit for 'MemoryInMBLimit' " +
                         $"({replicaOrInstance.RGMemoryLimitMb}MB). Current Private Bytes usage: {data.AverageDataValue}MB";
+
+                    errorWarningCode = FOErrorWarningCodes.AppWarningRGMemoryLimitPercent;
                 }
 
                 if (rgInfo != string.Empty)
@@ -1278,6 +1288,8 @@ namespace FabricObserver.Observers
             }
             else
             {
+                // RG reports will just expire if the percentage of current memory limit usage falls below threshold. 
+                // This is because Private Bytes monitoring and RG monitoring share the same FRUD (because both are measuring the same metric..).
                 if (data.ActiveErrorOrWarning && !isRGReport)
                 {
                     telemetryData.Code = FOErrorWarningCodes.Ok;

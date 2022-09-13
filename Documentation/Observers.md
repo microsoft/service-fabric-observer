@@ -193,7 +193,8 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **errorThreadCount** | Maximum number of threads in use by an service process that will generate an Error. |  
 | **warningThreadCount** | Minimum number of threads in use by service process that will generate a Warning. |  
 | **errorPrivateBytesMb** | Maximum amount of Private Bytes (or Commit Charge) for a service process in megabytes that will generate an Error. Think of this as the total amount of private memory that the memory manager has committed for your service. |  
-| **warningPrivateBytesMb** | Minimum amount of Private Bytes (or Commit Charge) for a service process in megabytes that will generate a Warning. Think of this as the total amount of private memory that the memory manager has committed for your service. |  
+| **warningPrivateBytesMb** | Minimum amount of Private Bytes (or Commit Charge) for a service process in megabytes that will generate a Warning. Think of this as the total amount of private memory that the memory manager has committed for your service. | 
+| **warningRGMemoryLimitPercent** | Percentage of Resource Governance 'MemoryInMBLimit' value currently in use that will trigger a Warning for a service code package. This is how you override the default 90% threshold that AppObserver uses. You can override this value for specific or all services like any other AppObserver threshold. |  
 
 **Output** Local log text(Error/Warning/Info), Service entity Health Reports (Error/Warning/Ok), ETW (EventSource), Telemetry (AppInsights/LogAnalytics).
 
