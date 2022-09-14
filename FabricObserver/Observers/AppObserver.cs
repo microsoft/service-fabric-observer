@@ -2191,11 +2191,13 @@ namespace FabricObserver.Observers
                 // Private Bytes.
                 if (checkMemPrivateBytes)
                 {
+                    float memPb = ProcessInfoProvider.Instance.GetProcessPrivateBytesMb(procId);
+
                     if (procId == parentPid)
                     {
-                        float memPb = ProcessInfoProvider.Instance.GetProcessPrivateBytesMb(procId);
                         AllAppPrivateBytesDataMb[id].AddData(memPb);
 
+                        // RG
                         if (MonitorResourceGovernanceLimits && repOrInst.RGEnabled && repOrInst.RGMemoryLimitMb > 0)
                         {
                             AllAppRGMemoryUsageMb[id].AddData(memPb);
@@ -2203,31 +2205,30 @@ namespace FabricObserver.Observers
                     }
                     else
                     {
-                        if (AllAppPrivateBytesDataMb.TryAdd(
+                        _ = AllAppPrivateBytesDataMb.TryAdd(
                                $"{id}:{procName}{procId}",
                                new FabricResourceUsageData<float>(
                                        ErrorWarningProperty.PrivateBytesMb,
                                        $"{id}:{procName}{procId}",
                                        capacity,
                                        UseCircularBuffer,
-                                       EnableConcurrentMonitoring)))
-                        {
-                            AllAppPrivateBytesDataMb[$"{id}:{procName}{procId}"].AddData(ProcessInfoProvider.Instance.GetProcessPrivateBytesMb(procId));
-                        }
-
+                                       EnableConcurrentMonitoring));
+                        
+                        AllAppPrivateBytesDataMb[$"{id}:{procName}{procId}"].AddData(memPb);
+                        
+                        // RG
                         if (MonitorResourceGovernanceLimits && repOrInst.RGEnabled && repOrInst.RGMemoryLimitMb > 0)
                         {
-                            if (AllAppRGMemoryUsageMb.TryAdd(
+                            AllAppRGMemoryUsageMb.TryAdd(
                                 $"{id}:{procName}{procId}",
                                 new FabricResourceUsageData<float>(
-                                        ErrorWarningProperty.PrivateBytesMb,
+                                        ErrorWarningProperty.RGMemoryLimitMb,
                                         $"{id}:{procName}{procId}",
                                         capacity,
                                         UseCircularBuffer,
-                                        EnableConcurrentMonitoring)))
-                            {
-                                AllAppRGMemoryUsageMb[$"{id}:{procName}{procId}"].AddData(ProcessInfoProvider.Instance.GetProcessPrivateBytesMb(procId));
-                            }
+                                        EnableConcurrentMonitoring));
+                            
+                            AllAppRGMemoryUsageMb[$"{id}:{procName}{procId}"].AddData(memPb);
                         }
                     }
                 }
