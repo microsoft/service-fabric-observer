@@ -37,7 +37,12 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                return TryDerializeObject<T>(text, out _);
+                JsonSerializerSettings jsonSerializerSettings = new JsonSerializerSettings 
+                { 
+                    MissingMemberHandling = MissingMemberHandling.Ignore
+                };
+
+                return TryDerializeObject<T>(text, out _, jsonSerializerSettings);
             }
             catch (JsonException)
             {
@@ -81,7 +86,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="obj">Json string representing an instance of type T.</param>
         /// <param name="data">out: an instance of type T.</param>
         /// <returns>An instance of the specified type T or null if the string can't be deserialized into the specified type T. Note: Missing members are treated as Error.</returns>
-        public static bool TryDerializeObject<T>(string obj, out T data)
+        public static bool TryDerializeObject<T>(string obj, out T data, JsonSerializerSettings jsonSerializerSettings = null)
         {
             if (string.IsNullOrWhiteSpace(obj))
             {
@@ -91,7 +96,12 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                data = JsonConvert.DeserializeObject<T>(obj, new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Error });
+                if (jsonSerializerSettings == null)
+                {
+                    jsonSerializerSettings = new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Error };
+                }
+
+                data = JsonConvert.DeserializeObject<T>(obj, jsonSerializerSettings);
                 return true;
             }
             catch (JsonException)
@@ -117,10 +127,10 @@ namespace FabricObserver.Observers.Utilities
         public static T ReadFromJsonStream<T>(Stream stream)
         {
             var data = (T)JsonMediaTypeFormatter.ReadFromStreamAsync(
-                typeof(T),
-                stream,
-                null,
-                null).Result;
+                            typeof(T),
+                            stream,
+                            null,
+                            null).Result;
 
             return data;
         }
