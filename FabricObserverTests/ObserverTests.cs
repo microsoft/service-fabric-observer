@@ -2165,9 +2165,9 @@ namespace FabricObserverTests
                     && startDate > DateTime.MinValue);
 
                 Assert.IsTrue(t.EntityType == EntityType.Service);
-                Assert.IsTrue(t.ServiceKind != System.Fabric.Query.ServiceKind.Invalid);
-                Assert.IsTrue(t.ServicePackageActivationMode == ServicePackageActivationMode.ExclusiveProcess
-                              || t.ServicePackageActivationMode == ServicePackageActivationMode.SharedProcess);
+                Assert.IsTrue(t.ServiceKind != "Invalid");
+                Assert.IsTrue(t.ServicePackageActivationMode == "ExclusiveProcess"
+                              || t.ServicePackageActivationMode == "SharedProcess");
                 Assert.IsTrue(t.HealthState == HealthState.Invalid);
                 Assert.IsTrue(t.ReplicaId > 0);
                 Assert.IsTrue(t.ProcessId > 0);
@@ -2230,9 +2230,9 @@ namespace FabricObserverTests
                     && startDate > DateTime.MinValue);
 
                 Assert.IsTrue(t.EntityType == EntityType.Service);
-                Assert.IsTrue(t.ServiceKind != System.Fabric.Query.ServiceKind.Invalid);
-                Assert.IsTrue(t.ServicePackageActivationMode == ServicePackageActivationMode.ExclusiveProcess
-                              || t.ServicePackageActivationMode == ServicePackageActivationMode.SharedProcess);
+                Assert.IsTrue(t.ServiceKind != "Invalid");
+                Assert.IsTrue(t.ServicePackageActivationMode == "ExclusiveProcess"
+                              || t.ServicePackageActivationMode == "SharedProcess");
                 Assert.IsTrue(t.HealthState == HealthState.Warning);
                 Assert.IsTrue(t.ReplicaId > 0);
                 Assert.IsTrue(t.ProcessId > 0);
@@ -2288,9 +2288,9 @@ namespace FabricObserverTests
                     && startDate > DateTime.MinValue);
 
                 Assert.IsTrue(t.EntityType == EntityType.Service);
-                Assert.IsTrue(t.ServiceKind != System.Fabric.Query.ServiceKind.Invalid);
-                Assert.IsTrue(t.ServicePackageActivationMode == ServicePackageActivationMode.ExclusiveProcess
-                              || t.ServicePackageActivationMode == ServicePackageActivationMode.SharedProcess);
+                Assert.IsTrue(t.ServiceKind != "Invalid");
+                Assert.IsTrue(t.ServicePackageActivationMode == "ExclusiveProcess"
+                              || t.ServicePackageActivationMode == "SharedProcess");
                 Assert.IsTrue(t.HealthState == HealthState.Invalid);
                 Assert.IsTrue(t.ReplicaId > 0);
                 Assert.IsTrue(t.ProcessId > 0);
