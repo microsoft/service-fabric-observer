@@ -145,7 +145,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         [EventField]
-        public ReplicaRole ReplicaRole
+        public string ReplicaRole
         {
             get; set;
         }
@@ -163,7 +163,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         [EventField]
-        public ServiceKind ServiceKind
+        public string ServiceKind
         {
             get; set;
         }
@@ -187,7 +187,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         [EventField]
-        public ServicePackageActivationMode? ServicePackageActivationMode
+        public string ServicePackageActivationMode
         {
             get; set;
         }

@@ -874,12 +874,6 @@ namespace FabricObserver.Observers
                 }
 
                 id = $"{NodeName}_{processName}_{data.Property.Replace(" ", string.Empty)}";
-                
-                // RG
-                if (replicaOrInstance != null && isRGReport)
-                {
-                    id += "_RGLimit";
-                }
 
                 // The health event description will be a serialized instance of telemetryData,
                 // so it should be completely constructed (filled with data) regardless
@@ -901,14 +895,14 @@ namespace FabricObserver.Observers
                     ProcessStartTime = processStartTime,
                     Property = id,
                     ReplicaId = replicaOrInstance != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
-                    ReplicaRole = replicaOrInstance != null ? replicaOrInstance.ReplicaRole : ReplicaRole.None,
+                    ReplicaRole = replicaOrInstance?.ReplicaRole.ToString(),
                     RGEnabled = replicaOrInstance != null && replicaOrInstance.RGEnabled,
                     RGMemoryLimitMb = replicaOrInstance != null ? replicaOrInstance.RGMemoryLimitMb : 0,
-                    ServiceKind = replicaOrInstance != null ?  replicaOrInstance.ServiceKind : ServiceKind.Invalid,
+                    ServiceKind = replicaOrInstance?.ServiceKind.ToString(),
                     ServiceName = serviceName?.OriginalString ?? null,
                     ServiceTypeName = serviceTypeName,
                     ServiceTypeVersion = serviceTypeVersion,
-                    ServicePackageActivationMode = replicaOrInstance?.ServicePackageActivationMode,
+                    ServicePackageActivationMode = replicaOrInstance?.ServicePackageActivationMode.ToString(),
                     Source = ObserverName,
                     Value = data.AverageDataValue
                 };
@@ -1185,7 +1179,7 @@ namespace FabricObserver.Observers
                                    $"Their cumulative impact on {processName}'s resource usage has been applied.";
                 }
 
-                // RG
+                // RG - Memory
                 if (replicaOrInstance != null && isRGReport)
                 {
                     string rgLimit = "90";
@@ -1288,9 +1282,7 @@ namespace FabricObserver.Observers
             }
             else
             {
-                // RG reports will just expire if the percentage of current memory limit usage falls below threshold. 
-                // This is because Private Bytes monitoring and RG monitoring share the same FRUD (because both are measuring the same metric..).
-                if (data.ActiveErrorOrWarning && !isRGReport)
+                if (data.ActiveErrorOrWarning)
                 {
                     telemetryData.Code = FOErrorWarningCodes.Ok;
 
@@ -1346,12 +1338,7 @@ namespace FabricObserver.Observers
                 }
             }
 
-            // This is to protect against clearing out the data used for the non-RG (memory,cpu) reports. The same FRUD instance is used for both reports (non-RG and RG)
-            // RG report runs first, so the data will be cleared by the non-RG call.
-            if (!isRGReport)
-            {
-                data.ClearData();
-            }
+            data.ClearData();
         }
 
         /// <summary>
