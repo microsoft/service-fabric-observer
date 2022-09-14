@@ -146,6 +146,58 @@ So, based on the above configuration, when the number of open file handles held 
 ]
 ```
 
+**Resource Governance - Memory**  
+
+***Problem:*** I want FabricObserver to warn me when one of my RG-enabled (MemoryInMbLimit) services is approaching the absolute limit (that you specified in Megabytes, as required by SF RG configuration).  
+
+***Solution:*** AppObserver is your friend. 
+
+You need to first enable the global setting for RG Monitoring in AppObserver's ApplicationManifest Application Parameters section: 
+
+```XML
+    <!-- AppObserver can monitor services with resource governance limits set and put related services into Warning if they reach 90% of the specified limit (only Memory limit is supported in this release). 
+         If you set RG Memory limits for your service code packages, then you should consider enabling this feature. Else, don't. -->
+    <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="true" />
+```
+
+The above setting is a big on/off switch for the feature. If this is not set to true, then it doesn't matter what you configure in the AppObserver configuration (Json) below. This is useful because, like all Application Parameters in FabricObserver,
+you can modify them with a versionless, parameter-only Application Upgrade versus a redeployment or a Configuration Upgrade (Config and Code versions must change).
+
+Now, as the XML comment above makes clear, by default, when you enable this feature FabricObserver will warn when you have reached 90% or more of your specified MemoryInMbLimit that you set in the target app's ApplicationManifest (ResourceGovernancePolicy element for the related service code package). If you are fine with that 
+for all of your services that have RG enabled for Memory limiting, then you don't need to worry about the following information. Your work is done. If you do want to control this value - and also be able to specify different thresholds for different services - well, read on. 
+
+You can override FabricObserver's default 90% value by specifying a ```warningRGMemoryLimitPercent``` property in your AppObserver.config.json file for some RG-enabled app. Note that the below example also includes multiple overrides that are per service for an application named Voting. This is done to show you how 
+to accomplish such a thing, which is probably useful for many. You can also just simply override the global setting (object with "targetApp": "*") like below (so, 80 instead of 90) and this will be applied to all of your memory allocation limited (RG) services. The other objects show how to employ serviceIncludeList so narrow down the service scope for this particular threshold override.
+
+```JSON
+[
+  {
+    "targetApp": "*",
+    "cpuWarningLimitPercent": 85,
+    "memoryWarningLimitMb": 1024,
+    "networkWarningEphemeralPortsPercent": 30,
+    "warningThreadCount": 500,
+    "warningOpenFileHandles": 7000,
+    "warningPrivateBytesMb": 1280,
+    "warningRGMemoryLimitPercent": 80
+  },
+  {
+    "targetApp": "Voting",
+    "serviceIncludeList": "VotingData",
+    "warningRGMemoryLimitPercent": 75
+  },
+  {
+    "targetApp": "Voting",
+    "serviceIncludeList": "VotingWeb",
+    "warningRGMemoryLimitPercent": 105
+  }
+]
+```  
+
+Note that 105 value for VotingWeb. Huh? Well, that is actually very useful because it effectively means "don't put VotingWeb into Warning when it approaches the memory limit I set for its code package in ApplicationManifest.xml". This is because VotingWeb will have already OOM'd and crashed (or not, perhaps you force a GC and get out of the problem in user code or you have a design bug where you catch and ignore OOMs (you can do this in .NET. ***Don't do that!***)).
+So, set the value higher than 100% and you are telling FO to effectively ignore the service with respect to RG limit warning. As always, it's all up to you! 
+
+
 **Disk Usage - Space**  
 
 ***Problem:*** I want to know when my local disks are filling up well before my cluster goes down, along with the VM.
@@ -169,7 +221,7 @@ Example Output in SFX (Warning):
 ![alt text](/Documentation/Images/DiskObsWarn.png "DiskObserver Warning output example.")  
 
 
-**Memory Usage - Private Working Set as Percentage of Total Physical Memory** 
+**Memory Usage - Private Working Set - Percentage of Total Physical Memory** 
 
 ***Problem:*** I want to know how much memory some or all of my services are using and warn when they hit some meaningful percent-used thresold.  
 
@@ -197,7 +249,7 @@ The third one scopes to all services _but_ 3 and asks AppObserver to warn when a
 ]
 ```   
 
-**Memory Usage - Private Working Set - MB in Use** 
+**Memory Usage - Private Working Set - Absolute value in Megabytes** 
 
 ***Problem:*** I want to know how much memory some or all of my services are using and warn when they hit some meaningful Megabytes in use thresold.  
 
@@ -211,7 +263,7 @@ The third one scopes to all services _but_ 3 and asks AppObserver to warn when a
 [
   {
     "targetApp": "fabric:/MyApp",
-    "memoryWarningLimitMb": 300
+    "memoryWarningLimitPercent": 300
   },
   {
     "targetApp": "fabric:/AnotherApp",
@@ -225,6 +277,29 @@ The third one scopes to all services _but_ 3 and asks AppObserver to warn when a
 ]
 ```   
 
+**Memory Usage - Private Bytes - Absolute value in Megabytes** 
+
+***Problem:*** I want to know how much virtual memory some or all of my services are ***comitting*** and warn when they hit some meaningful Megabytes in use thresold.  
+
+***Solution:*** AppObserver is your friend.  
+
+```JSON
+[
+  {
+    "targetApp": "fabric:/MyApp",
+    "warningPrivateBytes": 800
+  },
+  {
+    "targetApp": "fabric:/AnotherApp",
+    "warningPrivateBytes": 500
+  },
+  {
+    "targetApp": "fabric:/SomeOtherApp",
+    "serviceExcludeList": "WhoNeedsMemoryService, NoMemoryNoProblemService, Service42",
+    "warningPrivateBytes": 2048
+  }
+]
+``` 
 
 **Different thresholds for different services belonging to the same app**  
 
@@ -576,7 +651,7 @@ $appParams = @{ "FabricSystemObserverEnabled" = "true"; "FabricSystemObserverMem
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.2.1.960 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.2.2.960 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```  
 
 **Important**: This action will overwrite previous changes that were made this way. If you want to preserve any earlier changes, then you will need to
