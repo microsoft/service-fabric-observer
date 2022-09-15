@@ -110,8 +110,8 @@ namespace FabricObserver.Observers.Utilities
         public const string PrivateBytesMb = "Private Bytes (MB)";
 
         /// <summary>
-        /// Process RG Memory (MB). The value of this metric will be the same as what you would get for PrivateBytesMb, but explicitly related to RG memory limit monitoring.
+        /// Process RG Memory (Percent)
         /// </summary>
-        public const string RGMemoryLimitMb = "RG Memory Limit (MB)";
+        public const string RGMemoryUsagePercent = "RG Memory Usage (Percent)";
     }
 }
