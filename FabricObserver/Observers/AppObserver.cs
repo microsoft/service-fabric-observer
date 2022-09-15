@@ -43,7 +43,7 @@ namespace FabricObserver.Observers
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData;
         private ConcurrentDictionary<string, FabricResourceUsageData<float>> AllAppMemDataMb;
         private ConcurrentDictionary<string, FabricResourceUsageData<float>> AllAppPrivateBytesDataMb;
-        private ConcurrentDictionary<string, FabricResourceUsageData<float>> AllAppRGMemoryUsageMb;
+        private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppRGMemoryUsagePercent;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppMemDataPercent;
         private ConcurrentDictionary<string, FabricResourceUsageData<int>> AllAppTotalActivePortsData;
         private ConcurrentDictionary<string, FabricResourceUsageData<int>> AllAppEphemeralPortsData;
@@ -347,7 +347,7 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                // CPU - Parent process
+                // CPU Time - Percent
                 if (AllAppCpuData.ContainsKey(id))
                 {
                     var parentFrud = AllAppCpuData[id];
@@ -370,7 +370,7 @@ namespace FabricObserver.Observers
                         processId);
                 }
 
-                // Memory - Working Set MB - Parent process
+                // Memory - Working Set MB
                 if (AllAppMemDataMb.ContainsKey(id))
                 {
                     var parentFrud = AllAppMemDataMb[id];
@@ -392,7 +392,7 @@ namespace FabricObserver.Observers
                         processId);
                 }
 
-                // Memory - Working Set Percent - Parent process
+                // Memory - Working Set Percent
                 if (AllAppMemDataPercent.ContainsKey(id))
                 {
                     var parentFrud = AllAppMemDataPercent[id];
@@ -414,7 +414,7 @@ namespace FabricObserver.Observers
                         processId);
                 }
 
-                // Memory - Private Bytes MB - Parent process
+                // Memory - Private Bytes MB
                 if (AllAppPrivateBytesDataMb.ContainsKey(id))
                 {
                     var parentFrud = AllAppPrivateBytesDataMb[id];
@@ -424,7 +424,6 @@ namespace FabricObserver.Observers
                         ProcessChildProcs(AllAppPrivateBytesDataMb, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
                     }
 
-                    // Private Bytes.
                     if (app.WarningPrivateBytesMb > 0 || app.ErrorPrivateBytesMb > 0)
                     {
                         ProcessResourceDataReportHealth(
@@ -440,47 +439,29 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                // Memory (Private Bytes) - RG monitoring.
-                if (AllAppRGMemoryUsageMb.ContainsKey(id))
+                // RG Memory - Percent
+                if (AllAppRGMemoryUsagePercent.ContainsKey(id))
                 {
-                    var parentFrud = AllAppRGMemoryUsageMb[id];
+                    var parentFrud = AllAppRGMemoryUsagePercent[id];
 
                     if (hasChildProcs)
                     {
-                        ProcessChildProcs(AllAppRGMemoryUsageMb, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                        ProcessChildProcs(AllAppRGMemoryUsagePercent, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
                     }
-
-                    // Default: Private Bytes (Mb) that will generate a specific RG-related Warning when it reaches 90% of specified RG Memory Limit.
-                    float rgMemLimitMb = (float)(repOrInst.RGMemoryLimitMb * 0.90);
-                    double warningRGLimitPct = app.WarningRGMemoryLimitPercent;
-
-                    // User has specified a custom warning limit percentage (overrides the default) as percentage value (e.g., 80, representing 80 percent);
-                    if (warningRGLimitPct >= 1.0)
-                    {
-                        double pct = warningRGLimitPct / 100; // decimal
-                        rgMemLimitMb = (float)(repOrInst.RGMemoryLimitMb * pct);
-                    }
-                    else if (warningRGLimitPct > 0 && warningRGLimitPct < 1) // percentage specified as decimal value (e.g., 0.80)
-                    {
-                        rgMemLimitMb = (float)(repOrInst.RGMemoryLimitMb * warningRGLimitPct);
-                    }
-
-                    // Private Bytes (RG).
+             
                     ProcessResourceDataReportHealth(
                         parentFrud,
-                        0, // Only Warning Threshold is supported.
-                        rgMemLimitMb,
+                        thresholdError: 0, // Only Warning Threshold is supported for RG reporting.
+                        thresholdWarning: app.WarningRGMemoryLimitPercent > 0 ? app.WarningRGMemoryLimitPercent : 90, // Default: 90%
                         TTL,
                         EntityType.Service,
                         processName,
                         repOrInst,
                         app.DumpProcessOnError && EnableProcessDumps,
-                        processId,
-                        isRGReport: true,
-                        warningRGLimitPct);
+                        processId);
                 }
 
-                // TCP Ports - Active - Parent process
+                // TCP Ports - Active
                 if (AllAppTotalActivePortsData.ContainsKey(id))
                 {
                     var parentFrud = AllAppTotalActivePortsData[id];
@@ -502,7 +483,7 @@ namespace FabricObserver.Observers
                         processId);
                 }
 
-                // TCP Ports Total - Ephemeral (port numbers fall in the dynamic range) - Parent process
+                // TCP Ports Total - Ephemeral (port numbers fall in the dynamic range)
                 if (AllAppEphemeralPortsData.ContainsKey(id))
                 {
                     var parentFrud = AllAppEphemeralPortsData[id];
@@ -524,7 +505,7 @@ namespace FabricObserver.Observers
                         processId);
                 }
 
-                // TCP Ports Percentage - Ephemeral (port numbers fall in the dynamic range) - Parent process
+                // TCP Ports Percentage - Ephemeral (port numbers fall in the dynamic range)
                 if (AllAppEphemeralPortsDataPercent.ContainsKey(id))
                 {
                     var parentFrud = AllAppEphemeralPortsDataPercent[id];
@@ -546,7 +527,7 @@ namespace FabricObserver.Observers
                         processId);
                 }
 
-                // Allocated (in use) Handles - Parent process
+                // Allocated (in use) Handles
                 if (AllAppHandlesData.ContainsKey(id))
                 {
                     var parentFrud = AllAppHandlesData[id];
@@ -568,7 +549,7 @@ namespace FabricObserver.Observers
                         processId);
                 }
 
-                // Threads - Parent process
+                // Threads
                 if (AllAppThreadsData.ContainsKey(id))
                 {
                     var parentFrud = AllAppThreadsData[id];
@@ -1664,7 +1645,7 @@ namespace FabricObserver.Observers
             AllAppEphemeralPortsDataPercent ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
             AllAppHandlesData ??= new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
             AllAppThreadsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
-            AllAppRGMemoryUsageMb ??= new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
+            AllAppRGMemoryUsagePercent ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
 
             // Windows-only LVID usage monitoring for Stateful KVS-based services (e.g., Actors).
             if (EnableKvsLvidMonitoring)
@@ -1704,6 +1685,7 @@ namespace FabricObserver.Observers
                                     !string.IsNullOrWhiteSpace(app?.TargetAppType) &&
                                     app.TargetAppType?.ToLower() == repOrInst.ApplicationTypeName?.ToLower());
                 
+                double rgMemoryPercentThreshold = 0.0;
                 ConcurrentDictionary<int, string> procs;
 
                 if (application?.TargetApp == null && application?.TargetAppType == null)
@@ -1910,7 +1892,24 @@ namespace FabricObserver.Observers
                     // Memory - RG monitoring.
                     if (MonitorResourceGovernanceLimits && repOrInst.RGEnabled && repOrInst.RGMemoryLimitMb > 0)
                     {
-                        _ = AllAppRGMemoryUsageMb.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.RGMemoryLimitMb, id, 1, false, EnableConcurrentMonitoring));
+                        _ = AllAppRGMemoryUsagePercent.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.RGMemoryUsagePercent, id, 1, false, EnableConcurrentMonitoring));
+                    }
+
+                    if (AllAppRGMemoryUsagePercent.ContainsKey(id))
+                    {
+                        rgMemoryPercentThreshold = application.WarningRGMemoryLimitPercent;
+
+                        if (rgMemoryPercentThreshold > 0)
+                        {
+                            if (rgMemoryPercentThreshold < 1)
+                            {
+                                rgMemoryPercentThreshold = application.WarningRGMemoryLimitPercent / 100; // decimal to double.
+                            }
+                        }
+                        else
+                        {
+                            rgMemoryPercentThreshold = 90; // Default: 90%.
+                        }
                     }
 
                     // Active TCP Ports
@@ -2002,6 +2001,7 @@ namespace FabricObserver.Observers
                         id,
                         repOrInst,
                         usePerfCounter,
+                        rgMemoryPercentThreshold,
                         token);
                 }
                 catch (Exception e)
@@ -2039,6 +2039,7 @@ namespace FabricObserver.Observers
                         string id,
                         ReplicaOrInstanceMonitoringInfo repOrInst,
                         bool usePerfCounter,
+                        double rgMemoryPercentThreshold,
                         CancellationToken token)
         {
             _ = Parallel.For (0, processDictionary.Count, _parallelOptions, (i, state) =>
@@ -2192,15 +2193,16 @@ namespace FabricObserver.Observers
                 if (checkMemPrivateBytes)
                 {
                     float memPb = ProcessInfoProvider.Instance.GetProcessPrivateBytesMb(procId);
-
+                    
                     if (procId == parentPid)
                     {
                         AllAppPrivateBytesDataMb[id].AddData(memPb);
 
                         // RG
-                        if (MonitorResourceGovernanceLimits && repOrInst.RGEnabled && repOrInst.RGMemoryLimitMb > 0)
+                        if (rgMemoryPercentThreshold > 0 && repOrInst.RGMemoryLimitMb > 0)
                         {
-                            AllAppRGMemoryUsageMb[id].AddData(memPb);
+                            double pct = ((double)memPb / repOrInst.RGMemoryLimitMb) * 100;
+                            AllAppRGMemoryUsagePercent[id].AddData(pct);
                         }
                     }
                     else
@@ -2217,18 +2219,19 @@ namespace FabricObserver.Observers
                         AllAppPrivateBytesDataMb[$"{id}:{procName}{procId}"].AddData(memPb);
                         
                         // RG
-                        if (MonitorResourceGovernanceLimits && repOrInst.RGEnabled && repOrInst.RGMemoryLimitMb > 0)
+                        if (rgMemoryPercentThreshold > 0 && repOrInst.RGMemoryLimitMb > 0)
                         {
-                            AllAppRGMemoryUsageMb.TryAdd(
+                            _ = AllAppRGMemoryUsagePercent.TryAdd(
                                 $"{id}:{procName}{procId}",
-                                new FabricResourceUsageData<float>(
-                                        ErrorWarningProperty.RGMemoryLimitMb,
+                                new FabricResourceUsageData<double>(
+                                        ErrorWarningProperty.RGMemoryUsagePercent,
                                         $"{id}:{procName}{procId}",
                                         capacity,
                                         UseCircularBuffer,
                                         EnableConcurrentMonitoring));
                             
-                            AllAppRGMemoryUsageMb[$"{id}:{procName}{procId}"].AddData(memPb);
+                            double pct = ((double)memPb / repOrInst.RGMemoryLimitMb) * 100;
+                            AllAppRGMemoryUsagePercent[$"{id}:{procName}{procId}"].AddData(pct);
                         }
                     }
                 }
@@ -2974,10 +2977,10 @@ namespace FabricObserver.Observers
                 AllAppPrivateBytesDataMb = null;
             }
 
-            if (AllAppRGMemoryUsageMb != null && AllAppRGMemoryUsageMb.All(frud => !frud.Value.ActiveErrorOrWarning))
+            if (AllAppRGMemoryUsagePercent != null && AllAppRGMemoryUsagePercent.All(frud => !frud.Value.ActiveErrorOrWarning))
             {
-                AllAppRGMemoryUsageMb?.Clear();
-                AllAppRGMemoryUsageMb = null;
+                AllAppRGMemoryUsagePercent?.Clear();
+                AllAppRGMemoryUsagePercent = null;
             }
 
             if (IsWindows)

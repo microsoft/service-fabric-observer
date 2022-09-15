@@ -23,6 +23,7 @@ using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 using FabricObserver.TelemetryLib;
 using FabricObserver.Utilities.ServiceFabric;
+using Microsoft.ApplicationInsights;
 using Microsoft.Win32.SafeHandles;
 using static System.Fabric.Query.ReplicaStatus;
 using ConfigSettings = FabricObserver.Observers.Utilities.ConfigSettings;
@@ -760,9 +761,7 @@ namespace FabricObserver.Observers
                         string processName = null,
                         ReplicaOrInstanceMonitoringInfo replicaOrInstance = null,
                         bool dumpOnError = false,
-                        int processId = 0,
-                        bool isRGReport = false,
-                        double rgWarningLimitPct = 0) where T : struct
+                        int processId = 0) where T : struct
         {
             if (data == null)
             {
@@ -906,12 +905,6 @@ namespace FabricObserver.Observers
                     Source = ObserverName,
                     Value = data.AverageDataValue
                 };
-
-                // RG - Memory.
-                if (replicaOrInstance != null && isRGReport && data.Property == ErrorWarningProperty.PrivateBytesMb)
-                {
-                    telemetryData.Metric = ErrorWarningProperty.RGMemoryLimitMb;
-                }
 
                 // Container
                 if (!string.IsNullOrWhiteSpace(replicaOrInstance?.ContainerId))
@@ -1167,11 +1160,17 @@ namespace FabricObserver.Observers
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorPrivateBytesMb : FOErrorWarningCodes.AppWarningPrivateBytesMb;
                         break;
+
+                    // RG Memory Limit Percent. Only Warning is supported.
+                    case ErrorWarningProperty.RGMemoryUsagePercent when entityType == EntityType.Application || entityType == EntityType.Service:
+                        errorWarningCode = FOErrorWarningCodes.AppWarningRGMemoryLimitPercent;
+                        break;
                 }
 
                 var healthMessage = new StringBuilder();
                 string childProcMsg = string.Empty;
                 string rgInfo = string.Empty;
+                string drive = string.Empty;
 
                 if (replicaOrInstance != null && replicaOrInstance.ChildProcesses != null)
                 {
@@ -1179,40 +1178,20 @@ namespace FabricObserver.Observers
                                    $"Their cumulative impact on {processName}'s resource usage has been applied.";
                 }
 
-                // RG - Memory
-                if (replicaOrInstance != null && isRGReport)
+                if (replicaOrInstance != null && data.Property == ErrorWarningProperty.RGMemoryUsagePercent)
                 {
-                    string rgLimit = "90";
-
-                    if (rgWarningLimitPct > 0)
-                    {
-                        rgLimit = rgWarningLimitPct >= 1 ? rgWarningLimitPct.ToString() : (rgWarningLimitPct * 100).ToString();
-                    }
-
-                    rgInfo =
-                        $"{replicaOrInstance.ServiceName.OriginalString} is at or exceeding {rgLimit}% of the specified Resource Governance limit for 'MemoryInMBLimit' " +
-                        $"({replicaOrInstance.RGMemoryLimitMb}MB). Current Private Bytes usage: {data.AverageDataValue}MB";
-
-                    errorWarningCode = FOErrorWarningCodes.AppWarningRGMemoryLimitPercent;
+                    rgInfo = $" of {replicaOrInstance.RGMemoryLimitMb}MB";
                 }
 
-                if (rgInfo != string.Empty)
-                {
-                    _ = healthMessage.Append(rgInfo);
-                }
-                else
-                {
-                    string drive = string.Empty;
-                    string metric = data.Property.Contains("(Percent)") ? data.Property.Replace(" (Percent)", string.Empty) : data.Property.Replace(" (MB)", string.Empty);
+                string metric = data.Property.Contains("(Percent)") ? data.Property.Replace(" (Percent)", string.Empty) : data.Property.Replace(" (MB)", string.Empty);
 
-                    if (entityType == EntityType.Disk)
-                    {
-                        drive = $" on drive {id}";
-                    }
-
-                    _ = healthMessage.Append($"{metric}{dynamicRange} has exceeded the specified {thresholdName} limit ({threshold}{data.Units}){drive}");
-                    _ = healthMessage.Append($" - {metric}: {data.AverageDataValue}{data.Units}{totalPorts}"); 
+                if (entityType == EntityType.Disk)
+                {
+                    drive = $" on drive {id}";
                 }
+
+                _ = healthMessage.Append($"{metric}{dynamicRange} has exceeded the specified {thresholdName} threshold ({threshold}{data.Units}{rgInfo}){drive}");
+                _ = healthMessage.Append($" - {metric}: {data.AverageDataValue}{data.Units}{rgInfo}{totalPorts}"); 
                 
                 if (childProcMsg != string.Empty)
                 {
