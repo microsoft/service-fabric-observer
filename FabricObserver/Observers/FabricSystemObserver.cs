@@ -1233,6 +1233,7 @@ namespace FabricObserver.Observers
                         procName,
                         null,
                         false,
+                        false,
                         procId);
                 }
                 catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)

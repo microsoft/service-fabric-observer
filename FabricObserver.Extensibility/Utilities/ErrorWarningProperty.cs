@@ -110,6 +110,11 @@ namespace FabricObserver.Observers.Utilities
         public const string PrivateBytesMb = "Private Bytes (MB)";
 
         /// <summary>
+        /// Process Private Bytes (MB)
+        /// </summary>
+        public const string PrivateBytesPercent = "Private Bytes (Percent)";
+
+        /// <summary>
         /// Process RG Memory (Percent)
         /// </summary>
         public const string RGMemoryUsagePercent = "RG Memory Usage (Percent)";

@@ -181,7 +181,8 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **memoryWarningLimitPercent** | Minimum percentage of total physical memory (RAM) used by a service process that should generate a Warning. | 
 | **cpuErrorLimitPercent** | Maximum CPU usage by a service process as a percentage of total CPU that should generate an Error. |
 | **cpuWarningLimitPercent** | Minimum CPU usage by a service process as a percentage of total CPU that should generate a Warning. |
-| **dumpProcessOnError** | Instructs whether or not FabricObserver should dump your service process when service health is detected to be in an  Error (critical) state. |  
+| **dumpProcessOnError** | Instructs FabricObserver to dump a user service process when any related ***Error*** threshold has been reached. This is only supported on Windows today. |  
+| **dumpProcessOnWarning** | Instructs FabricObserver to dump a user service process when any related ***Warning*** threshold has been reached. This is only supported on Windows today. |  
 | **networkErrorActivePorts** | Maximum number of established TCP ports in use by service process that will generate an Error. |
 | **networkWarningActivePorts** | Minimum number of established TCP ports in use by service process that will generate a Warning. |
 | **networkErrorEphemeralPorts** | Maximum number of ephemeral TCP ports (within a dynamic port range) in use by service process that will generate an Error. |
@@ -192,9 +193,11 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **warningOpenFileHandles** | Minimum number of open file handles in use by service process that will generate a Warning. |  
 | **errorThreadCount** | Maximum number of threads in use by an service process that will generate an Error. |  
 | **warningThreadCount** | Minimum number of threads in use by service process that will generate a Warning. |  
-| **errorPrivateBytesMb** | Maximum amount of Private Bytes (or Commit Charge) for a service process in megabytes that will generate an Error. Think of this as the total amount of private memory that the memory manager has committed for your service. |  
-| **warningPrivateBytesMb** | Minimum amount of Private Bytes (or Commit Charge) for a service process in megabytes that will generate a Warning. Think of this as the total amount of private memory that the memory manager has committed for your service. | 
-| **warningRGMemoryLimitPercent** | Percentage of Resource Governance 'MemoryInMBLimit' value currently in use that will trigger a Warning for a service code package. This is how you override the default 90% threshold that AppObserver uses. You can override this value for specific or all services like any other AppObserver threshold. |  
+| **errorPrivateBytesMb** | Windows-only. Maximum amount of Private Bytes (or Commit Charge) for a service process in megabytes that will generate an Error. Think of this as the total amount of private memory that the memory manager has committed for your service. |  
+| **warningPrivateBytesMb** | Windows-only. Minimum amount of Private Bytes (or Commit Charge) for a service process in megabytes that will generate a Warning. Think of this as the total amount of private memory that the memory manager has committed for your service. | 
+| **errorPrivateBytesPercent** | Windows-only. Maximum percentage of Private Bytes (or Commit Charge) for a service process that will generate an Error. Think of this as the total amount of private memory that the memory manager has committed for your service as a percentage of available commit. |  
+| **warningPrivateBytesPercent** | Windows-only. Minimum percentage of Private Bytes (or Commit Charge) for a service process that will generate a Warning. Think of this as the total amount of private memory that the memory manager has committed for your service as a percentage of available commit. | 
+| **warningRGMemoryLimitPercent** | Windows-only. Percentage of Resource Governance 'MemoryInMBLimit' value currently in use that will trigger a Warning for a service code package. This is how you override the default 90% threshold that AppObserver uses. You can override this value for specific or all services like any other AppObserver threshold. |  
 
 **Output** Local log text(Error/Warning/Info), Service entity Health Reports (Error/Warning/Ok), ETW (EventSource), Telemetry (AppInsights/LogAnalytics).
 

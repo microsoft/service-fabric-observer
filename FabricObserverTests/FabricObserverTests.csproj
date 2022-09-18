@@ -106,5 +106,8 @@
 	<None Update="PackageRoot\Config\ContainerObserver.config.json">
 		<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	</None>
+	<None Update="VotingApp.zip">
+	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</None>
   </ItemGroup>
 </Project>

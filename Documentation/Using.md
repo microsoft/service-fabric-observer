@@ -4,7 +4,7 @@
 > You can learn all about the currently implemeted Observers and their supported resource properties [***here***](/Documentation/Observers.md). 
 
 
-**CPU Usage - CPU Time**  
+**CPU Usage - CPU Time (percent), all cores**  
 
 
 ***Problem***: I want to know how much CPU my App is using and emit a warning when a specified threshold is reached... 
@@ -426,12 +426,12 @@ The configuration below specifies that AppObserver is to monitor and report thre
 ]
 ``` 
 
-**Advanced Debugging - Windows Process Dumps**  
+**Advanced Debugging - Windows Process Dumps (Linux support TBD)**  
 
-***Problem:*** I want to dump any of my SF service processes that are eating too much memory on Windows. (This is not supported on Linux yet).
+***Problem:*** I want to dump any of my Windows SF service processes that are eating too much memory.
 
 ***Solution:*** AppObserver is your friend.  Note, you can specify all app targets using either "*" or "All"(case doesn't matter). 
-In this case, AppObserver will initiate a mini dump (MiniPlus by default) of an offending process running on Windows. You can configure [AzureStorageUploadObserver](/Documentation/Observers.md#azurestorageuploadobserver) to ship the dmp (compressed to zip file) to a blob in your Azure storage account.
+In this case, AppObserver will initiate a mini dump (MiniPlus by default) of an offending process running on Windows and only if the specified Error threshold has been breached (so, only Memory has an Error threshold specified, thus only that metric will be used to initiate a dump). You can configure [AzureStorageUploadObserver](/Documentation/Observers.md#azurestorageuploadobserver) to ship the dmp (compressed to zip file) to a blob in your Azure storage account.
 Please see [Observers documentation](/Documentation/Observers.md), specifically App and AzureStorageUpload observer sections for details on this process dump and upload feature.
 
 ```JSON
@@ -446,9 +446,37 @@ Please see [Observers documentation](/Documentation/Observers.md), specifically 
   }
 ```
 
-> You can learn all about the currently implemeted Observers and their supported resource properties [***here***](/Documentation/Observers.md). 
+***Problem:*** I want to dump only services that belong to one application when any of them are consuming too much of any specified resource metric, but I *don't* want to put any service entities into Error state because I don't like the consequences of doing so (blocking Repair Jobs, blocking upgrades, etc..).
+
+***Solution:*** AppObserver to the rescue. ```dumpProcessOnWarning``` is the droid you're looking for, specifically.
+
+The configuration below below demonstrates how to add specific properties to one application that extend the global ("*") settings, which are applied to all application services. The specified targetApp in the second Json object will have all the settings applied that are specified in the first Json object plus the dumpProcessOnWarning setting.
+This means that if any of the Voting app's services have reached or exceeded any of the specified Warning level thresholds, then they will be dumped. 
+
+```JSON
+[
+  {
+    "targetApp": "*",
+    "cpuWarningLimitPercent": 85,
+    "memoryWarningLimitMb": 1024,
+    "networkWarningEphemeralPorts": 10000,
+    "warningThreadCount": 600
+  },
+  {
+    "targetApp": "Voting",
+    "dumpProcessOnWarning": true
+  }
+]
+```
+
+> You can learn all about the currently implemeted Observers and their supported resource properties [***here***](/Documentation/Observers.md).  
+> 
 
 
+***NOTE***: Unlike applying an Error threshold to a single metric in a list of only Warning thresholds, you will need to use dumpProcessOnWarning carefully (so, do not specify it in a global setting object if you DO NOT want FO to dump ANY service process that hits ANY specified Warning threshold. That is probably not something you want to do..)
+
+Also, FO will *not* dump a Resource Governed process that is put into Warning for crossing the specified ```warningRGMemoryLimitPercent``` threshold.
+Put another way, don't apply this setting in the global config Json object ("targetApp": "*" block). Just target specific apps only. That said, as always, you are free to do whatever makes sense for your specific needs.
 
 **What about the state of the Machine, as a whole?** 
 

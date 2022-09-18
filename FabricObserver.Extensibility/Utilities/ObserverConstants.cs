@@ -171,5 +171,11 @@ namespace FabricObserver.Observers.Utilities
         public const string Undefined = "Undefined";
         public const string ClusterTypePaasV1 = "PaasV1";
         public const string ClusterTypeStandalone = "Standalone";
+
+        // RG
+        public const string PoliciesNodeName = "Policies";
+        public const string RGMemoryInMB = "MemoryInMB";
+        public const string RGMemoryInMBLimit = "MemoryInMBLimit";
+        public const string RGPolicyNodeName = "ResourceGovernancePolicy";
     }
 }

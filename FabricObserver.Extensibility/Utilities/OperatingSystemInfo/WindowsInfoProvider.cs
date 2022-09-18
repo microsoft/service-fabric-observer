@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Management;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -128,7 +129,7 @@ namespace FabricObserver.Observers.Utilities
             return -1;
         }
 
-        public override (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetSystemMemoryInfo()
+        public override (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetSystemPhysicalMemoryInfo()
         {
             try
             {
@@ -136,8 +137,7 @@ namespace FabricObserver.Observers.Utilities
                 ulong totalMemoryBytes = memoryInfo.ullTotalPhys;
                 ulong availableMemoryBytes = memoryInfo.ullAvailPhys;
                 ulong inUse = totalMemoryBytes - availableMemoryBytes;
-                float used = (float)inUse / totalMemoryBytes;
-                float usedPct = used * 100;
+                double usedPct = memoryInfo.dwMemoryLoad;
 
                 return ((long)totalMemoryBytes / 1024 / 1024 / 1024, (long)inUse / 1024 / 1024, usedPct);
             }
@@ -148,6 +148,35 @@ namespace FabricObserver.Observers.Utilities
 
             return (0, 0, 0);
         }
+
+        public override (long TotalCommitGb, long CommittedInUseMb) TupleGetSystemCommittedMemoryInfo()
+        {
+            try
+            {
+                NativeMethods.PerformanceInformation pi = new NativeMethods.PerformanceInformation();
+                
+                if (!NativeMethods.GetPerformanceInfo(ref pi))
+                {
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                }
+
+                long pageSize = pi.PageSize.ToInt64();
+                
+                // virtual memory, committed
+                long commitLimit = pi.CommitLimit.ToInt64() * pageSize;
+                long availableCommit = commitLimit - pi.CommitTotal.ToInt64() * pageSize;
+                long committed = commitLimit - availableCommit;
+
+                return (commitLimit / 1024 / 1024 / 1024, committed / 1024 / 1024);
+            }
+            catch (Win32Exception we)
+            {
+                Logger.LogWarning($"TupleGetSystemVirtualMemoryInfo: Failure (native) computing memory data:{Environment.NewLine}{we.Message}");
+            }
+
+            return (0, 0);
+        }
+
 
         public override (int LowPort, int HighPort) TupleGetDynamicPortRange()
         {

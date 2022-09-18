@@ -46,10 +46,16 @@ namespace FabricObserver.Observers.Utilities
         } = new Logger("OSUtilities");
 
         /// <summary>
-        /// 
+        /// Gets OS physical memory information.
         /// </summary>
         /// <returns></returns>
-        public abstract (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetSystemMemoryInfo();
+        public abstract (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetSystemPhysicalMemoryInfo();
+
+        /// <summary>
+        /// Gets OS virtual memory information. Note, this is not yet implemented for Linux. Linux calls will just get TupleGetSystemPhysicalMemoryInfo() result for now.
+        /// </summary>
+        /// <returns>Tuple of total available to commit in gigabytes and currenty committed in megabytes.</returns>
+        public abstract (long TotalCommitGb, long CommittedInUseMb) TupleGetSystemCommittedMemoryInfo();
 
         /// <summary>
         /// Compute count of active TCP ports.
