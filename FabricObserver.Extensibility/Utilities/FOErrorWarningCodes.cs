@@ -204,7 +204,7 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public const string NodeErrorActiveEphemeralPortsPercent = "FO046";
         /// <summary>
-        /// Percentage of active Ephemeral TCP ports in use is at or exceeding configured Error threshold for a machine.
+        /// FO047   Percentage of active Ephemeral TCP ports in use is at or exceeding configured Error threshold for a machine.
         /// </summary>
         public const string NodeWarningActiveEphemeralPortsPercent = "FO047";
         /// <summary>
@@ -216,9 +216,17 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public const string AppWarningPrivateBytesMb = "FO049";
         /// <summary>
-        /// FO050  At or exceeding default (90%) or configured percentage of Resource Governance limit 'MemoryInMBLimit' for a service code package.
+        /// FO049  Private Bytes usage (Commit) is at or exceeding Error threshold for an app service process.
         /// </summary>
-        public const string AppWarningRGMemoryLimitPercent = "FO050";
+        public const string AppErrorPrivateBytesPercent = "FO050";
+        /// <summary>
+        /// FO051  Private Bytes usage (Commit) is at or exceeding Warning threshold for an app service process.
+        /// </summary>
+        public const string AppWarningPrivateBytesPercent = "FO051";
+        /// <summary>
+        /// FO052  At or exceeding default (90%) or configured percentage of Resource Governance limit 'MemoryInMBLimit' for a service code package.
+        /// </summary>
+        public const string AppWarningRGMemoryLimitPercent = "FO052";
 
         /// <summary>
         /// AppErrorCodesDictionary dictionary.
@@ -249,7 +257,10 @@ namespace FabricObserver.Observers.Utilities
                 { AppWarningTooManyThreads, "AppWarningTooManyThreads" },
                 { AppWarningKvsLvidsPercentUsed, "AppWarningKvsLvidsPercentUsed"},
                 { AppErrorPrivateBytesMb, "AppErrorPrivateBytesMb"},
-                { AppWarningPrivateBytesMb, "AppWarningPrivateBytesMb"}
+                { AppWarningPrivateBytesMb, "AppWarningPrivateBytesMb"},
+                { AppErrorPrivateBytesPercent, "AppErrorPrivateBytesPercent" },
+                { AppWarningPrivateBytesPercent, "AppWarningPrivateBytesPercent" },
+                { AppWarningRGMemoryLimitPercent, "AppWarningRGMemoryLimitPercent" }
             };
 
         /// <summary>

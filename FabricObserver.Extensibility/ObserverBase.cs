@@ -761,6 +761,7 @@ namespace FabricObserver.Observers
                         string processName = null,
                         ReplicaOrInstanceMonitoringInfo replicaOrInstance = null,
                         bool dumpOnError = false,
+                        bool dumpOnWarning = false,
                         int processId = 0) where T : struct
         {
             if (data == null)
@@ -966,7 +967,7 @@ namespace FabricObserver.Observers
                 warningOrError = true;
                 healthState = HealthState.Error;
 
-                // User service process dump. This is Windows-only today.
+                // User service process dump - Error. This is Windows-only today.
                 if (replicaOrInstance != null && dumpOnError && IsWindows)
                 {
                     if (!string.IsNullOrWhiteSpace(DumpsPath))
@@ -1008,6 +1009,35 @@ namespace FabricObserver.Observers
             {
                 warningOrError = true;
                 healthState = HealthState.Warning;
+
+                // User service process dump - Warning. This is Windows-only today.
+                if (replicaOrInstance != null && dumpOnWarning && IsWindows)
+                {
+                    if (!string.IsNullOrWhiteSpace(DumpsPath))
+                    {
+                        if (ServiceDumpCountDictionary == null)
+                        {
+                            ServiceDumpCountDictionary = new ConcurrentDictionary<string, (int DumpCount, DateTime LastDump)>();
+                        }
+
+                        try
+                        {
+                            if (data.Id.Contains($":{processName}{procId}"))
+                            {
+                                // DumpWindowsServiceProcess does not log success, so doing that here.
+                                if (DumpWindowsServiceProcess(procId, processName, data.Property))
+                                {
+                                    ObserverLogger.LogInfo(
+                                     $"Successfully dumped {processName}({procId}) which exceeded Warning threshold for {data.Property}.");
+                                }
+                            }
+                        }
+                        catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+                        {
+                            ObserverLogger.LogWarning($"Unable to generate dmp file:{Environment.NewLine}{e}");
+                        }
+                    }
+                }
 
                 // FO emits a health report each time it detects a Warning threshold breach for some metric for some supported entity (target).
                 // Don't increment this internal counter if the target is already in warning for the same metric.
@@ -1155,10 +1185,16 @@ namespace FabricObserver.Observers
                             FOErrorWarningCodes.NodeErrorTotalOpenFileHandlesPercent : FOErrorWarningCodes.NodeWarningTotalOpenFileHandlesPercent;
                         break;
 
-                    // Process Private Bytes.
+                    // Process Private Bytes (MB).
                     case ErrorWarningProperty.PrivateBytesMb when entityType == EntityType.Application || entityType == EntityType.Service:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorPrivateBytesMb : FOErrorWarningCodes.AppWarningPrivateBytesMb;
+                        break;
+
+                    // Process Private Bytes (Persent).
+                    case ErrorWarningProperty.PrivateBytesPercent when entityType == EntityType.Application || entityType == EntityType.Service:
+                        errorWarningCode = (healthState == HealthState.Error) ?
+                            FOErrorWarningCodes.AppErrorPrivateBytesPercent : FOErrorWarningCodes.AppWarningPrivateBytesPercent;
                         break;
 
                     // RG Memory Limit Percent. Only Warning is supported.
@@ -1183,7 +1219,7 @@ namespace FabricObserver.Observers
                     rgInfo = $" of {replicaOrInstance.RGMemoryLimitMb}MB";
                 }
 
-                string metric = data.Property.Contains("(Percent)") ? data.Property.Replace(" (Percent)", string.Empty) : data.Property.Replace(" (MB)", string.Empty);
+                string metric = data.Property;
 
                 if (entityType == EntityType.Disk)
                 {

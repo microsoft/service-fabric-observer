@@ -45,7 +45,7 @@
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Include="PackageRoot\Config\AppObserver.config.json">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Include="PackageRoot\Config\NetworkObserver.config.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -55,6 +55,15 @@
 		</None>
 		<None Update="HealthMetrics.zip">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="PackageRoot\Config\AppObserver_errors_dmps.config.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="PackageRoot\Config\AppObserver_PrivateBytes_warning.config.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="PackageRoot\Config\AppObserver_warnings_dmps.config.json">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="TestApp42.zip">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
@@ -106,6 +115,9 @@
 		</None>
 		<None Update="PackageRoot\Config\ContainerObserver.config.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="VotingApp.zip">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>
 </Project>
