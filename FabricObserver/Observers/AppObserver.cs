@@ -1310,7 +1310,7 @@ namespace FabricObserver.Observers
             }
 
             ObserverLogger.LogInfo($"EnableProcessDumpsParameter");
-            /* dumpProcessOnError config */
+            /* dumpProcessOnError/dumpProcessOnWarning config */
             if (bool.TryParse(
                 GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableProcessDumpsParameter), out bool enableDumps))
             {
@@ -2320,7 +2320,7 @@ namespace FabricObserver.Observers
 
                 // Memory \\
 
-                // Private Bytes (MB) - Windows only for now.
+                // Private Bytes (MB) - *Windows only*.
                 if (IsWindows && checkMemPrivateBytes)
                 {
                     float memPb = ProcessInfoProvider.Instance.GetProcessPrivateBytesMb(procId);
@@ -2431,7 +2431,7 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                // Private Bytes (Percent) - *Windows only for now*.
+                // Private Bytes (Percent) - *Windows only*.
                 if (IsWindows && checkMemPrivateBytesPct)
                 {
                     float processPrivateBytesMb = ProcessInfoProvider.Instance.GetProcessPrivateBytesMb(procId);
@@ -2604,9 +2604,10 @@ namespace FabricObserver.Observers
                             {
                                 _deployedTargetList.AddRange(targets);
                             }
+
+                            replicasOrInstances.Clear();
                         }
 
-                        replicasOrInstances.Clear();
                         replicasOrInstances = null;
                     }
                     catch (Exception e) when (e is ArgumentException || e is FabricException || e is Win32Exception)
@@ -2639,21 +2640,31 @@ namespace FabricObserver.Observers
 
             //ObserverLogger.LogInfo($"QueryManager.GetDeployedReplicaListAsync for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
             var replicaMonitoringList = new ConcurrentQueue<ReplicaOrInstanceMonitoringInfo>();
+            string appType = appTypeName;
 
-            try
+            if (string.IsNullOrWhiteSpace(appType))
             {
-                SetInstanceOrReplicaMonitoringList(
-                   appName,
-                   appTypeName ?? _deployedApps.First(app => app.ApplicationName == appName).ApplicationTypeName,
-                   serviceFilterList,
-                   filterType,
-                   deployedReplicaList,
-                   replicaMonitoringList);
-            }
-            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
-            {
+                try
+                {
+                    if (_deployedApps.Any(app => app.ApplicationName == appName))
+                    {
+                        appType = _deployedApps.First(app => app.ApplicationName == appName).ApplicationTypeName;
+                    }
+                }
+                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                {
 
+                }
             }
+
+            SetInstanceOrReplicaMonitoringList(
+                          appName,
+                          appType,
+                          serviceFilterList,
+                          filterType,
+                          deployedReplicaList,
+                          replicaMonitoringList);
+
             ObserverLogger.LogInfo("Completed GetDeployedPrimaryReplicaAsync.");
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"GetDeployedPrimaryReplicaAsync for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
@@ -2837,15 +2848,33 @@ namespace FabricObserver.Observers
         {
             // ResourceGovernance/AppTypeVer/ServiceTypeVer.
             ObserverLogger.LogInfo($"Starting ProcessServiceConfiguration check for {replicaInfo.ServiceName.OriginalString}.");
+
+            if (string.IsNullOrWhiteSpace(appTypeName))
+            {
+                return;
+            }
+
             try
             {
-                var appTypeList =
-                    FabricClientInstance.QueryManager.GetApplicationTypeListAsync(appTypeName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
+                string appTypeVersion = null;
 
-                if (appTypeList?.Count > 0)
+                var appList =
+                    FabricClientInstance.QueryManager.GetApplicationListAsync(replicaInfo.ApplicationName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
+
+                if (appList?.Count > 0)
                 {
-                    string appTypeVersion = appTypeList[0].ApplicationTypeVersion;
-                    replicaInfo.ApplicationTypeVersion = appTypeVersion;
+                    try
+                    {
+                        if (appList.Any(app => app.ApplicationTypeName == appTypeName))
+                        {
+                            appTypeVersion = appList.First(app => app.ApplicationTypeName == appTypeName).ApplicationTypeVersion;
+                            replicaInfo.ApplicationTypeVersion = appTypeVersion;
+                        }
+                    }
+                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                    {
+                        
+                    }
 
                     // RG
                     if (!string.IsNullOrWhiteSpace(appTypeVersion))
@@ -2858,16 +2887,16 @@ namespace FabricObserver.Observers
                             (replicaInfo.RGEnabled, replicaInfo.RGMemoryLimitMb) =
                                 TupleGetResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName);
                         }
-                    }
 
-                    // ServiceTypeVersion
-                    var serviceTypeList =
-                        FabricClientInstance.QueryManager.GetServiceTypeListAsync(
-                            appTypeName, appTypeVersion, replicaInfo.ServiceTypeName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
+                        // ServiceTypeVersion
+                        var serviceTypeList =
+                            FabricClientInstance.QueryManager.GetServiceTypeListAsync(
+                                appTypeName, appTypeVersion, replicaInfo.ServiceTypeName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
 
-                    if (serviceTypeList?.Count > 0)
-                    {
-                        replicaInfo.ServiceTypeVersion = serviceTypeList[0].ServiceManifestVersion;
+                        if (serviceTypeList?.Count > 0)
+                        {
+                            replicaInfo.ServiceTypeVersion = serviceTypeList[0].ServiceManifestVersion;
+                        }
                     }
                 }
             }
@@ -2879,7 +2908,11 @@ namespace FabricObserver.Observers
             ObserverLogger.LogInfo($"Completed ProcessServiceConfiguration for {replicaInfo.ServiceName.OriginalString}.");
         }
 
-        private void ProcessMultipleHelperCodePackages(Uri appName, string appTypeName, DeployedServiceReplica deployedReplica, ref ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> repsOrInstancesInfo)
+        private void ProcessMultipleHelperCodePackages(
+                        Uri appName,
+                        string appTypeName,
+                        DeployedServiceReplica deployedReplica,
+                        ref ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> repsOrInstancesInfo)
         {
             try
             {
@@ -3018,7 +3051,7 @@ namespace FabricObserver.Observers
             }
 
             // Don't waste cycles with XML parsing if you can easily get a hint first..
-            if (!appManifestXml.Contains($"<{ObserverConstants.RGPolicyNodeName} "))
+            if (!appManifestXml.Contains($"<{ObserverConstants.RGPolicyNodeName} ") && !appManifestXml.Contains("<ServicePackageResourceGovernancePolicy"))
             {
                 return (false, 0);
             }
@@ -3054,7 +3087,7 @@ namespace FabricObserver.Observers
                 // There will generally be multiple RG limits set per application (so, per service settings).
                 var sNode = 
                     xDoc.DocumentElement?.SelectSingleNode(
-                        $"//*[local-name()='ServiceManifestImport'][*[local-name()='ServiceManifestRef' and @*[local-name()='ServiceManifestName' and . ='{servicePkgName}']]]");
+                        $"//*[local-name()='{ObserverConstants.ServiceManifestImport}'][*[local-name()='{ObserverConstants.ServiceManifestRef}' and @*[local-name()='{ObserverConstants.ServiceManifestName}' and . ='{servicePkgName}']]]");
                 
                 if (sNode == null)
                 {
@@ -3078,8 +3111,7 @@ namespace FabricObserver.Observers
                             continue;
                         }
 
-                        XmlAttribute memAttr = null;
-                        string codePackageRef = polNode.Attributes["CodePackageRef"]?.Value;
+                        string codePackageRef = polNode.Attributes[ObserverConstants.CodePackageRef]?.Value;
 
                         if (codePackageRef != codepackageName)
                         {
@@ -3087,6 +3119,8 @@ namespace FabricObserver.Observers
                         }
 
                         // Get the rg policy memory attribute. It can only be either "MemoryInMB" or "MemoryInMBLimit"
+                        XmlAttribute memAttr = null;
+
                         if (polNode.Attributes[ObserverConstants.RGMemoryInMB] != null)
                         {
                             memAttr = polNode.Attributes[ObserverConstants.RGMemoryInMB];
@@ -3105,9 +3139,9 @@ namespace FabricObserver.Observers
                         // App Parameter support: This means user has specified the absolute memory value in an Application Parameter.
                         if (memAttr.Value.StartsWith("["))
                         {
-                            XmlNode parametersNode = xDoc.DocumentElement?.SelectSingleNode("//*[local-name()='Parameters']");
-                            XmlNode parameterNode = parametersNode?.SelectSingleNode($"//*[local-name()='Parameter' and @Name='{memAttr.Value[1..^1]}']");
-                            XmlAttribute attr = parameterNode?.Attributes?["DefaultValue"];
+                            XmlNode parametersNode = xDoc.DocumentElement?.SelectSingleNode($"//*[local-name()='{ObserverConstants.Parameters}']");
+                            XmlNode parameterNode = parametersNode?.SelectSingleNode($"//*[local-name()='{ObserverConstants.Parameter}' and @Name='{memAttr.Value[1..^1]}']");
+                            XmlAttribute attr = parameterNode?.Attributes?[ObserverConstants.DefaultValue];
                             memAttr.Value = attr.Value;
                         }
 

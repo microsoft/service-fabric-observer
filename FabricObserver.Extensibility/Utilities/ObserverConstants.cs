@@ -177,5 +177,12 @@ namespace FabricObserver.Observers.Utilities
         public const string RGMemoryInMB = "MemoryInMB";
         public const string RGMemoryInMBLimit = "MemoryInMBLimit";
         public const string RGPolicyNodeName = "ResourceGovernancePolicy";
+        public const string CodePackageRef = "CodePackageRef";
+        public const string ServiceManifestImport = "ServiceManifestImport";
+        public const string ServiceManifestName = "ServiceManifestName";
+        public const string ServiceManifestRef = "ServiceManifestRef";
+        public const string DefaultValue = "DefaultValue";
+        public const string Parameter = "Parameter";
+        public const string Parameters = "Parameters";
     }
 }
