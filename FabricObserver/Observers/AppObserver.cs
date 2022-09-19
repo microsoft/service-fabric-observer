@@ -3051,7 +3051,7 @@ namespace FabricObserver.Observers
             }
 
             // Don't waste cycles with XML parsing if you can easily get a hint first..
-            if (!appManifestXml.Contains($"<{ObserverConstants.RGPolicyNodeName} ") && !appManifestXml.Contains("<ServicePackageResourceGovernancePolicy"))
+            if (!appManifestXml.Contains($"<{ObserverConstants.RGPolicyNodeName} "))
             {
                 return (false, 0);
             }
