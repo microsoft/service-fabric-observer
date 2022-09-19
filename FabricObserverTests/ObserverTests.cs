@@ -37,9 +37,12 @@ namespace FabricObserverTests
     [TestClass]
     public class ObserverTests
     {
-        // Change these to suit your env.
+        // Change this to suit your test env.
         private const string NodeName = "_Node_0";
+
+        // Change this to suit your test env.
         private const string EtwTestsLogFolder = @"C:\temp\FOTests";
+
         private static readonly Uri TestServiceName = new Uri("fabric:/app/service");
         private static readonly bool IsSFRuntimePresentOnTestMachine = IsLocalSFRuntimePresent();
         private static readonly CancellationToken Token = new CancellationToken();
@@ -1131,13 +1134,44 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
+        public async Task AppObserver_ObserveAsync_PrivateBytes_Successful_WarningsGenerated()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            var startDateTime = DateTime.Now;
+
+            ObserverManager.FabricServiceContext = TestServiceContext;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = true;
+
+            using var obs = new AppObserver(TestServiceContext)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_PrivateBytes_warning.config.json"),
+                IsEtwProviderEnabled = true,
+                EnableConcurrentMonitoring = false
+            };
+
+            await obs.ObserveAsync(Token);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected warning conditions.
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+        }
+
+        [TestMethod]
         public async Task AppObserver_ObserveAsync_Successful_RGLimitWarningGenerated()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
             
-            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
+            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
             {
-                await DeployHealthMetricsAppAsync();
+                await DeployVotingAppAsync();
             }
 
             var startDateTime = DateTime.Now;
@@ -1149,11 +1183,7 @@ namespace FabricObserverTests
             using var obs = new AppObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_rg_warning.config.json"),
-                CheckPrivateWorkingSet = true,
-                EnableConcurrentMonitoring = true,
-                MonitorResourceGovernanceLimits = true,
-                IsEtwProviderEnabled = false
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_rg_warning.config.json")
             };
 
             await obs.ObserveAsync(Token);
@@ -1227,6 +1257,95 @@ namespace FabricObserverTests
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
         }
+
+        #region Dump Tests
+
+        [TestMethod]
+        public async Task AppObserver_DumpProcessOnWarning_SuccessfulDumpCreation()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
+            {
+                await DeployVotingAppAsync();
+            }
+
+            var startDateTime = DateTime.Now;
+
+            ObserverManager.FabricServiceContext = TestServiceContext;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            using var obs = new AppObserver(TestServiceContext)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_warnings_dmps.config.json"),
+                DumpsPath = Path.Combine(EtwTestsLogFolder, "AppObserver", "MemoryDumps")
+            };
+
+            await obs.ObserveAsync(Token);
+
+            var dmps = Directory.GetFiles(obs.DumpsPath, "*.dmp");
+
+            // VotingData has 3 processes associated with it (1 service pacakge, 2 helper code packages). The config file targets one threshold, so 3 * 1 = 3.
+            Assert.IsTrue(dmps.Length == 3 && dmps.All(d => d.Contains("VotingData") || d.Contains("ConsoleApp6") | d.Contains("ConsoleApp7")));
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no warning conditions.
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            // Clean up.
+            Directory.Delete(obs.DumpsPath, true);
+        }
+
+        [TestMethod]
+        public async Task AppObserver_DumpProcessOnError_SuccessfulDumpCreation()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
+            {
+                await DeployVotingAppAsync();
+            }
+
+            var startDateTime = DateTime.Now;
+
+            ObserverManager.FabricServiceContext = TestServiceContext;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            using var obs = new AppObserver(TestServiceContext)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_errors_dmps.config.json"),
+                DumpsPath = Path.Combine(EtwTestsLogFolder, "AppObserver", "MemoryDumps")
+            };
+
+            await obs.ObserveAsync(Token);
+
+            var dmps = Directory.GetFiles(obs.DumpsPath, "*.dmp");
+
+            // VotingData has 3 processes associated with it (1 service pacakge, 2 helper code packages). The config file targets one threshold, so 3 * 1 = 3.
+            Assert.IsTrue(dmps.Length == 3 && dmps.All(d => d.Contains("VotingData") || d.Contains("ConsoleApp6") | d.Contains("ConsoleApp7")));
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no warning conditions.
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            // Clean up.
+            Directory.Delete(obs.DumpsPath, true);
+        }
+        #endregion
 
         [TestMethod]
         public async Task ContainerObserver_ObserveAsync_Successful_IsHealthy()
@@ -2351,6 +2470,30 @@ namespace FabricObserverTests
             }
         }
 
+        [TestMethod]
+        public async Task AppObserver_ETW_PrivateBytes_ValuesAreNonZero_Warnings_MB_Percent()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
+            {
+                await DeployVotingAppAsync();
+            }
+
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+            await AppObserver_ObserveAsync_PrivateBytes_Successful_WarningsGenerated();
+            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+
+            Assert.IsNotNull(telemData);
+            Assert.IsTrue(telemData.Count > 0);
+
+            telemData = telemData.Where(
+                t => t.ApplicationName == "fabric:/Voting" && t.HealthState == HealthState.Warning).ToList();
+
+            // 2 services + 2 helper code packages (VotingData) * 2 metrics = 8 warnings...
+            Assert.IsTrue(telemData.Any() && telemData.Count == 8);
+        }
+
         // DiskObserver: TelemetryData \\
 
         [TestMethod]
@@ -2593,9 +2736,7 @@ namespace FabricObserverTests
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
-
             await OSObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors();
-
             MachineTelemetryData machineTelemetryData = foEtwListener.foEtwConverter.MachineTelemetryData;
             
             Assert.IsNotNull(machineTelemetryData);

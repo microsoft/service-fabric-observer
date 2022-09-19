@@ -853,7 +853,7 @@ namespace FabricObserver.Observers.Utilities
         private static extern int PssWalkMarkerFree(IntPtr WalkMarkerHandle);
 
         [return: MarshalAs(UnmanagedType.Bool)]
-        [DllImport("psapi.dll", CharSet = CharSet.Auto, EntryPoint = "GetPerformanceInfo", SetLastError = true)]
+        [DllImport("psapi.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern bool GetPerformanceInfo(ref PerformanceInformation pi, uint cb);
 
         // Impls/Helpers \\
@@ -864,9 +864,9 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="pi">Instance of <see cref="PerformanceInformation"/> structure to populate</param>
         /// <returns>true if the function call was successful, false otherwise. Check <see cref="Marshal.GetLastWin32Error"/>
         /// for additional error information.</returns>
-        public static bool GetPerformanceInfo(ref PerformanceInformation pi)
+        public static bool GetSytemPerformanceInfo(ref PerformanceInformation pi)
         {
-            pi.cb = (uint)Marshal.SizeOf(pi.GetType());
+            pi.cb = (uint)Marshal.SizeOf(typeof(PerformanceInformation));
             var ret = GetPerformanceInfo(ref pi, pi.cb);
             return ret;
         }

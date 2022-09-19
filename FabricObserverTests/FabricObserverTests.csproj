@@ -55,6 +55,18 @@
 	<None Update="HealthMetrics.zip">
 		<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	</None>
+	<None Update="PackageRoot\Config\AppObserver_errors_dmps.config.json">
+	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</None>
+	<None Update="PackageRoot\Config\AppObserver_PrivateBytes_warning.config.json">
+	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</None>
+	<None Update="PackageRoot\Config\AppObserver_rg_warning.config.json">
+	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</None>
+	<None Update="PackageRoot\Config\AppObserver_warnings_dmps.config.json">
+	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</None>
 	<None Update="TestApp42.zip">
 		<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	</None>
@@ -95,9 +107,6 @@
 		<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	</None>
 	<None Update="PackageRoot\Config\AppObserver.config.targetAppMalformed.json">
-		<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-	</None>
-	<None Update="PackageRoot\Config\AppObserver_rg_warning.config.json">
 		<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	</None>
 	<None Update="PackageRoot\Config\AppObserver_warnings.config.json">

@@ -1,38 +1,38 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <ServiceManifest Name="ClusterObserverPkg"
-                 Version="2.2.0.960"
+                 Version="2.2.1.960"
                  xmlns="http://schemas.microsoft.com/2011/01/fabric"
                  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
-  <ServiceTypes>
-    <!-- This is the name of your ServiceType. 
+	<ServiceTypes>
+		<!-- This is the name of your ServiceType. 
          This name must match the string used in RegisterServiceType call in Program.cs. -->
-    <StatelessServiceType ServiceTypeName="ClusterObserverType" />
-  </ServiceTypes>
+		<StatelessServiceType ServiceTypeName="ClusterObserverType" />
+	</ServiceTypes>
 
-  <!-- Code package is your service executable. -->
-  <CodePackage Name="Code" Version="2.2.0.960">
-    <EntryPoint>
-      <ExeHost>
-        <Program>ClusterObserver</Program>
-      </ExeHost>
-    </EntryPoint>
-  </CodePackage>
+	<!-- Code package is your service executable. -->
+	<CodePackage Name="Code" Version="2.2.1.960">
+		<EntryPoint>
+			<ExeHost>
+				<Program>ClusterObserver</Program>
+			</ExeHost>
+		</EntryPoint>
+	</CodePackage>
 
-  <!-- Config package is the contents of the Config directory under PackageRoot that contains an 
+	<!-- Config package is the contents of the Config directory under PackageRoot that contains an 
        independently-updateable and versioned set of custom configuration settings for your service. -->
-  <ConfigPackage Name="Config" Version="2.2.0.960" />
+	<ConfigPackage Name="Config" Version="2.2.1.960" />
 
-  <!-- Config package is the contents of the Config directory under PackageRoot that contains an 
+	<!-- Config package is the contents of the Config directory under PackageRoot that contains an 
 	   independently-updateable and versioned set of custom configuration settings for your service. -->
-  <DataPackage Name="Data" Version="2.2.0.960" />
+	<DataPackage Name="Data" Version="2.2.1.960" />
 
-  <Resources>
-    <Endpoints>
-      <!-- This endpoint is used by the communication listener to obtain the port on which to 
+	<Resources>
+		<Endpoints>
+			<!-- This endpoint is used by the communication listener to obtain the port on which to 
            listen. Please note that if your service is partitioned, this port is shared with 
            replicas of different partitions that are placed in your code. -->
-      <Endpoint Name="ServiceEndpoint" />
-    </Endpoints>
-  </Resources>
+			<Endpoint Name="ServiceEndpoint" />
+		</Endpoints>
+	</Resources>
 </ServiceManifest>

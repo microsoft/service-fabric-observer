@@ -155,9 +155,10 @@ namespace FabricObserver.Observers.Utilities
             {
                 NativeMethods.PerformanceInformation pi = new NativeMethods.PerformanceInformation();
                 
-                if (!NativeMethods.GetPerformanceInfo(ref pi))
+                if (!NativeMethods.GetSytemPerformanceInfo(ref pi))
                 {
-                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                    Logger.LogWarning($"NativeMethods.GetPerformanceInfo failure: {Marshal.GetLastWin32Error()}");
+                    return (0, 0);
                 }
 
                 long pageSize = pi.PageSize.ToInt64();

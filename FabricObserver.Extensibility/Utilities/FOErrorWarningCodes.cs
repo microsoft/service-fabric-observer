@@ -204,7 +204,7 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public const string NodeErrorActiveEphemeralPortsPercent = "FO046";
         /// <summary>
-        /// Percentage of active Ephemeral TCP ports in use is at or exceeding configured Error threshold for a machine.
+        /// FO047   Percentage of active Ephemeral TCP ports in use is at or exceeding configured Error threshold for a machine.
         /// </summary>
         public const string NodeWarningActiveEphemeralPortsPercent = "FO047";
         /// <summary>
@@ -258,8 +258,8 @@ namespace FabricObserver.Observers.Utilities
                 { AppWarningKvsLvidsPercentUsed, "AppWarningKvsLvidsPercentUsed"},
                 { AppErrorPrivateBytesMb, "AppErrorPrivateBytesMb"},
                 { AppWarningPrivateBytesMb, "AppWarningPrivateBytesMb"},
-                { AppErrorPrivateBytesMb, "AppErrorPrivateBytesMb" },
-                { AppWarningPrivateBytesMb, "AppWarningPrivateBytesMb" },
+                { AppErrorPrivateBytesPercent, "AppErrorPrivateBytesPercent" },
+                { AppWarningPrivateBytesPercent, "AppWarningPrivateBytesPercent" },
                 { AppWarningRGMemoryLimitPercent, "AppWarningRGMemoryLimitPercent" }
             };
 

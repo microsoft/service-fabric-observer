@@ -469,14 +469,45 @@ This means that if any of the Voting app's services have reached or exceeded any
 ]
 ```
 
+***Problem:*** I want to dump only specific services that belong to one application when any of them are consuming too much of any specified resource metric, but I *don't* want to put any service entities into Error state because I don't like the consequences of doing so (blocking Repair Jobs, blocking upgrades, etc..).
+
+***Solution:*** AppObserver to the rescue. ```dumpProcessOnWarning``` is the droid you're looking for, specifically.
+
+The configuration below below demonstrates how to add specific properties to one application that extend the global ("\*") settings, which are applied to all application services. The specified targetApp in the second Json object will have all the settings applied that are specified in the first Json object plus the dumpProcessOnWarning setting
+and **only** for the specified service in the serviceIncludeList property. Note that this setting means that any other service that belongs to the application will not be monitored (since they are effectively excluded). The work around is to add new objects for each of the those services. See below for an example.
+The third section (with serviceIncludeList for "Web") means that the included service will be monitored based on the global ("\*") config block. However, it's process will not be dumped if it goes into Warning. 
+
+```JSON
+[
+  {
+    "targetApp": "*",
+    "cpuWarningLimitPercent": 85,
+    "memoryWarningLimitMb": 1024,
+    "networkWarningEphemeralPorts": 10000,
+    "warningThreadCount": 600
+  },
+  {
+    "targetApp": "Voting",
+    "serviceIncludeList": "Data",
+    "dumpProcessOnWarning": true
+  },
+  {
+    "targetApp": "Voting",
+    "serviceIncludeList": "Web",
+    "dumpProcessOnWarning": false
+  }
+]
+```
+
+
 > You can learn all about the currently implemeted Observers and their supported resource properties [***here***](/Documentation/Observers.md).  
 > 
 
 
 ***NOTE***: Unlike applying an Error threshold to a single metric in a list of only Warning thresholds, you will need to use dumpProcessOnWarning carefully (so, do not specify it in a global setting object if you DO NOT want FO to dump ANY service process that hits ANY specified Warning threshold. That is probably not something you want to do..)
+Put another way, do not apply this setting in the global config Json object ("targetApp": "\*" block). Just target specific apps only. As always, you are free to do whatever makes sense for your specific needs, but tread carefully here.
 
 Also, FO will *not* dump a Resource Governed process that is put into Warning for crossing the specified ```warningRGMemoryLimitPercent``` threshold.
-Put another way, don't apply this setting in the global config Json object ("targetApp": "*" block). Just target specific apps only. That said, as always, you are free to do whatever makes sense for your specific needs.
 
 **What about the state of the Machine, as a whole?** 
 

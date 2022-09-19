@@ -7,6 +7,6 @@
     "networkWarningEphemeralPortsPercent": 30,
     "warningThreadCount": 500,
     "warningOpenFileHandles": 7000,
-    "warningRGMemoryLimitPercent": 10
+    "warningRGMemoryLimitPercent": 1
   }
 ]
