@@ -1288,7 +1288,7 @@ namespace FabricObserverTests
             var dmps = Directory.GetFiles(obs.DumpsPath, "*.dmp");
 
             // VotingData has 3 processes associated with it (1 service pacakge, 2 helper code packages). The config file targets one threshold, so 3 * 1 = 3.
-            Assert.IsTrue(dmps.Length == 3 && dmps.All(d => d.Contains("VotingData") || d.Contains("ConsoleApp6") | d.Contains("ConsoleApp7")));
+            Assert.IsTrue(dmps.Length == 3 && dmps.All(d => d.Contains("VotingData") || d.Contains("ConsoleApp6") || d.Contains("ConsoleApp7")));
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1331,7 +1331,7 @@ namespace FabricObserverTests
             var dmps = Directory.GetFiles(obs.DumpsPath, "*.dmp");
 
             // VotingData has 3 processes associated with it (1 service pacakge, 2 helper code packages). The config file targets one threshold, so 3 * 1 = 3.
-            Assert.IsTrue(dmps.Length == 3 && dmps.All(d => d.Contains("VotingData") || d.Contains("ConsoleApp6") | d.Contains("ConsoleApp7")));
+            Assert.IsTrue(dmps.Length == 3 && dmps.All(d => d.Contains("VotingData") || d.Contains("ConsoleApp6") || d.Contains("ConsoleApp7")));
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
