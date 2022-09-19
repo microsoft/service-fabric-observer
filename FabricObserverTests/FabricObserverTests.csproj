@@ -108,7 +108,7 @@
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Update="PackageRoot\Config\AppObserver_rg_warning.config.json">
-		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="PackageRoot\Config\AppObserver_warnings.config.json">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

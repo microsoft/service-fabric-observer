@@ -1169,9 +1169,9 @@ namespace FabricObserverTests
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
             
-            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
+            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
             {
-                await DeployHealthMetricsAppAsync();
+                await DeployVotingAppAsync();
             }
 
             var startDateTime = DateTime.Now;
@@ -2470,6 +2470,7 @@ namespace FabricObserverTests
             }
         }
 
+        // Private Bytes
         [TestMethod]
         public async Task AppObserver_ETW_PrivateBytes_ValuesAreNonZero_Warnings_MB_Percent()
         {
@@ -2490,8 +2491,33 @@ namespace FabricObserverTests
             telemData = telemData.Where(
                 t => t.ApplicationName == "fabric:/Voting" && t.HealthState == HealthState.Warning).ToList();
 
-            // 2 services + 2 helper code packages (VotingData) * 2 metrics = 8 warnings...
+            // 2 service code packages + 2 helper code packages (VotingData) * 2 metrics = 8 warnings...
             Assert.IsTrue(telemData.Any() && telemData.Count == 8);
+        }
+
+        // RG - warningRGMemoryLimitPercent
+        [TestMethod]
+        public async Task AppObserver_ETW_RGMemoryLimitPercent_Warning()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
+            {
+                await DeployVotingAppAsync();
+            }
+
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+            await AppObserver_ObserveAsync_Successful_RGLimitWarningGenerated();
+            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+
+            Assert.IsNotNull(telemData);
+            Assert.IsTrue(telemData.Count > 0);
+
+            telemData = telemData.Where(
+                t => t.ApplicationName == "fabric:/Voting" && t.HealthState == HealthState.Warning).ToList();
+
+            // 2 service code packages + 2 helper code packages (VotingData) * 1 metric = 4 warnings...
+            Assert.IsTrue(telemData.All(t => t.Metric == ErrorWarningProperty.RGMemoryUsagePercent) && telemData.Count == 4);
         }
 
         // DiskObserver: TelemetryData \\
@@ -2774,7 +2800,7 @@ namespace FabricObserverTests
         // Tests for ensuring ServiceManifests that specify multiple code packages are correctly handled by AppObserver. \\
 
         [TestMethod]
-        public async Task VerifyAppObserverDetectsMultipleCodePackagesForVotingDataService()
+        public async Task AppObserver_Detects_Monitors_Multiple_Helper_CodePackages()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
