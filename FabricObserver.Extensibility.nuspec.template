@@ -4,8 +4,10 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.2</version>
 		<releaseNotes>
-- Support for Service Fabric Resource Governance memory limit monitoring by AppObserver.
-- Support for monitoring Private Bytes (Commit/Charge) usage by service processes.
+- Support for Service Fabric Resource Governance memory limit monitoring by AppObserver (Windows-only).
+- Support for monitoring Private Bytes (Commit/Charge) usage by service processes (Windows-only).
+- Support for monitoring multiple service code packages.
+- Support for dumping service processes in Warning.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
