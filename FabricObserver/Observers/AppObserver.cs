@@ -2658,12 +2658,12 @@ namespace FabricObserver.Observers
             }
 
             SetInstanceOrReplicaMonitoringList(
-                          appName,
-                          appType,
-                          serviceFilterList,
-                          filterType,
-                          deployedReplicaList,
-                          replicaMonitoringList);
+                appName,
+                appType,
+                serviceFilterList,
+                filterType,
+                deployedReplicaList,
+                replicaMonitoringList);
 
             ObserverLogger.LogInfo("Completed GetDeployedPrimaryReplicaAsync.");
             //stopwatch.Stop();
@@ -2876,19 +2876,23 @@ namespace FabricObserver.Observers
                         
                     }
 
-                    // RG
+                    // RG - Windows-only. Linux is not supported yet.
                     if (!string.IsNullOrWhiteSpace(appTypeVersion))
                     {
-                        string appManifest = FabricClientInstance.ApplicationManager.GetApplicationManifestAsync(
-                                                appTypeName, appTypeVersion, ConfigurationSettings.AsyncTimeout, Token)?.Result;
-
-                        if (!string.IsNullOrWhiteSpace(appManifest))
+                        if (IsWindows)
                         {
-                            (replicaInfo.RGEnabled, replicaInfo.RGMemoryLimitMb) =
-                                TupleGetResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName);
+                            string appManifest = FabricClientInstance.ApplicationManager.GetApplicationManifestAsync(
+                                                    appTypeName, appTypeVersion, ConfigurationSettings.AsyncTimeout, Token)?.Result;
+
+                            if (!string.IsNullOrWhiteSpace(appManifest))
+                            {
+                                (replicaInfo.RGEnabled, replicaInfo.RGMemoryLimitMb) =
+                                    TupleGetResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName);
+                            }
                         }
 
                         // ServiceTypeVersion
+                        // TODO: This should probably call GetServiceList instead.
                         var serviceTypeList =
                             FabricClientInstance.QueryManager.GetServiceTypeListAsync(
                                 appTypeName, appTypeVersion, replicaInfo.ServiceTypeName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
