@@ -26,7 +26,7 @@
 	</Section>
 	<Section Name="AppObserverConfiguration">
 		<Parameter Name="Enabled" Value="true" />
-		<Parameter Name="EnableConcurrentMonitoring" Value="false" />
+		<Parameter Name="EnableConcurrentMonitoring" Value="true" />
 		<Parameter Name="MaxConcurrentTasks" Value="" />
 		<Parameter Name="EnableTelemetry" Value="false" />
 		<Parameter Name="EnableEtw" Value="true" />

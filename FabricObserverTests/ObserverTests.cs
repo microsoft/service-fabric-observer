@@ -1148,8 +1148,7 @@ namespace FabricObserverTests
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_PrivateBytes_warning.config.json"),
-                IsEtwProviderEnabled = true,
-                EnableConcurrentMonitoring = false
+                IsEtwProviderEnabled = true
             };
 
             await obs.ObserveAsync(Token);
@@ -1183,7 +1182,7 @@ namespace FabricObserverTests
             using var obs = new AppObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_rg_warning.config.json")
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_rg_warning.config.json"),
             };
 
             await obs.ObserveAsync(Token);
@@ -1287,7 +1286,7 @@ namespace FabricObserverTests
 
             var dmps = Directory.GetFiles(obs.DumpsPath, "*.dmp");
 
-            // VotingData has 3 processes associated with it (1 service pacakge, 2 helper code packages). The config file targets one threshold, so 3 * 1 = 3.
+            // VotingData has 3 processes associated with it (1 service package, 2 helper code packages). The config file targets one threshold, so 3 * 1 = 3.
             Assert.IsTrue(dmps.Length == 3 && dmps.All(d => d.Contains("VotingData") || d.Contains("ConsoleApp6") || d.Contains("ConsoleApp7")));
 
             // observer ran to completion with no errors.
@@ -2472,7 +2471,7 @@ namespace FabricObserverTests
 
         // Private Bytes
         [TestMethod]
-        public async Task AppObserver_ETW_PrivateBytes_ValuesAreNonZero_Warnings_MB_Percent()
+        public async Task AppObserver_ETW_PrivateBytes_Multiple_CodePackages_ValuesAreNonZero_Warnings_MB_Percent()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -2518,6 +2517,47 @@ namespace FabricObserverTests
 
             // 2 service code packages + 2 helper code packages (VotingData) * 1 metric = 4 warnings...
             Assert.IsTrue(telemData.All(t => t.Metric == ErrorWarningProperty.RGMemoryUsagePercent) && telemData.Count == 4);
+        }
+
+        [TestMethod]
+        public async Task AppObserver_ETW_PrivateBytes_Warning_ChildProcesses()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            if (!await EnsureTestServicesExistAsync("fabric:/TestApp42"))
+            {
+                await DeployTestApp42Async();
+                await Task.Delay(TimeSpan.FromSeconds(15));
+            }
+
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+            await AppObserver_ObserveAsync_PrivateBytes_Successful_WarningsGenerated();
+            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            List<List<ChildProcessTelemetryData>> childProcessTelemetryData = foEtwListener.foEtwConverter.ChildProcessTelemetry;
+
+            Assert.IsNotNull(telemData);
+            Assert.IsTrue(telemData.Count > 0);
+            Assert.IsNotNull(childProcessTelemetryData);
+            Assert.IsTrue(childProcessTelemetryData.Count > 0);
+
+            // We only care about the launched test app, fabric:/TestApp42, and one metric, Private Bytes (MB).
+            childProcessTelemetryData =
+                childProcessTelemetryData.Where(
+                    c => c.Find(cti => cti.ApplicationName == "fabric:/TestApp42").Metric == ErrorWarningProperty.PrivateBytesMb).ToList();
+            
+            // Ensure parent service is put into warning.
+            telemData = telemData.Where(
+                t => t.ApplicationName == "fabric:/TestApp42" && t.HealthState == HealthState.Warning).ToList();
+
+            // TestApp42 service launches 3 child processes.
+            Assert.IsTrue(childProcessTelemetryData[0][0].ChildProcessInfo.Count == 3);
+
+            // 1 service code package (with 2 children) * 1 metric = 1 warning (parent).
+            Assert.IsTrue(telemData.Count(t => t.ApplicationName == "fabric:/TestApp42" && t.Metric == ErrorWarningProperty.PrivateBytesMb) == 1);
+
+            // All children should definitely have more than 0 bytes committed.
+            Assert.IsTrue(childProcessTelemetryData.All(
+                c => c.TrueForAll(ct => ct.ApplicationName == "fabric:/TestApp42" && ct.Value > 0)));
         }
 
         // DiskObserver: TelemetryData \\
