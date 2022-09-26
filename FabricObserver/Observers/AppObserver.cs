@@ -1723,12 +1723,12 @@ namespace FabricObserver.Observers
                 AllAppPrivateBytesDataMb ??= new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
                 AllAppPrivateBytesDataPercent ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
                 AllAppRGMemoryUsagePercent ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
-            }
 
-            // Windows-only LVID usage monitoring for Stateful KVS-based services (e.g., Actors).
-            if (EnableKvsLvidMonitoring)
-            {
-                AllAppKvsLvidsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
+                // LVID usage monitoring for Stateful KVS-based services (e.g., Actors).
+                if (EnableKvsLvidMonitoring)
+                {
+                    AllAppKvsLvidsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
+                }
             }
 
             _processInfoDictionary ??= new ConcurrentDictionary<int, string>();
@@ -2851,11 +2851,14 @@ namespace FabricObserver.Observers
                         }
                     }
 
-                    replicaMonitoringList.Enqueue(replicaInfo);
+                    if (replicaInfo.HostProcessName != "Fabric")
+                    {
+                        replicaMonitoringList.Enqueue(replicaInfo);
+                    }
                 }
 
                 // Multiple code packages (initial impl: supports only helper code packages, the canonical case).
-                ProcessMultipleHelperCodePackages(appName, appTypeName, deployedReplica, ref replicaMonitoringList);
+                ProcessMultipleHelperCodePackages(appName, appTypeName, deployedReplica, ref replicaMonitoringList, replicaInfo.HostProcessName == "Fabric");
             });
             ObserverLogger.LogInfo("Completed SetInstanceOrReplicaMonitoringList.");
             //stopwatch.Stop();
@@ -2910,14 +2913,25 @@ namespace FabricObserver.Observers
                         }
 
                         // ServiceTypeVersion
-                        // TODO: This should probably call GetServiceList instead.
-                        var serviceTypeList =
-                            FabricClientInstance.QueryManager.GetServiceTypeListAsync(
-                                appTypeName, appTypeVersion, replicaInfo.ServiceTypeName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
+                        var serviceList =
+                            FabricClientInstance.QueryManager.GetServiceListAsync(
+                                replicaInfo.ApplicationName, replicaInfo.ServiceName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
 
-                        if (serviceTypeList?.Count > 0)
+                        if (serviceList?.Count > 0)
                         {
-                            replicaInfo.ServiceTypeVersion = serviceTypeList[0].ServiceManifestVersion;
+                            try
+                            {
+                                Uri serviceName = replicaInfo.ServiceName;
+
+                                if (serviceList.Any(s => s.ServiceName == serviceName))
+                                {
+                                    replicaInfo.ServiceTypeVersion = serviceList.First(s => s.ServiceName == serviceName).ServiceManifestVersion;
+                                }
+                            }
+                            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                            {
+
+                            }
                         }
                     }
                 }
@@ -2934,24 +2948,23 @@ namespace FabricObserver.Observers
                         Uri appName,
                         string appTypeName,
                         DeployedServiceReplica deployedReplica,
-                        ref ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> repsOrInstancesInfo)
+                        ref ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> repsOrInstancesInfo,
+                        bool isHostedByFabric)
         {
             try
             {
-                // Handle the case where servicemanifests have multiple code packages specified.
-                var codepackages = FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(
-                                            NodeName,
-                                            appName,
-                                            deployedReplica.ServiceManifestName,
-                                            null,
-                                            ConfigurationSettings.AsyncTimeout,
-                                            Token), Token).Result;
+                DeployedCodePackageList codepackages = FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(
+                                                        NodeName,
+                                                        appName,
+                                                        deployedReplica.ServiceManifestName,
+                                                        null,
+                                                        ConfigurationSettings.AsyncTimeout,
+                                                        Token).Result;
 
                 ReplicaOrInstanceMonitoringInfo replicaInfo = null;
 
-                // Check for multiple code packages (helper binary, for example, which is the 99.99% case where there are multiple CodePackages specified in ServiceManifest.xml).
-                if (codepackages.Count > 1)
+                // Check for multiple code packages or GuestExecutable service (so, Fabric is host).
+                if (codepackages.Count > 1 || isHostedByFabric)
                 {
                     foreach (var codepackage in codepackages)
                     {
@@ -3345,32 +3358,33 @@ namespace FabricObserver.Observers
                 AllAppThreadsData = null;
             }
 
-            if (AllAppKvsLvidsData != null && AllAppKvsLvidsData.All(frud => !frud.Value.ActiveErrorOrWarning))
-            {
-                AllAppKvsLvidsData?.Clear();
-                AllAppKvsLvidsData = null;
-            }
-
-            if (AllAppPrivateBytesDataMb != null && AllAppPrivateBytesDataMb.All(frud => !frud.Value.ActiveErrorOrWarning))
-            {
-                AllAppPrivateBytesDataMb?.Clear();
-                AllAppPrivateBytesDataMb = null;
-            }
-
-            if (AllAppPrivateBytesDataPercent != null && AllAppPrivateBytesDataPercent.All(frud => !frud.Value.ActiveErrorOrWarning))
-            {
-                AllAppPrivateBytesDataPercent?.Clear();
-                AllAppPrivateBytesDataPercent = null;
-            }
-
-            if (AllAppRGMemoryUsagePercent != null && AllAppRGMemoryUsagePercent.All(frud => !frud.Value.ActiveErrorOrWarning))
-            {
-                AllAppRGMemoryUsagePercent?.Clear();
-                AllAppRGMemoryUsagePercent = null;
-            }
-
+            // Windows-only cleanup.
             if (IsWindows)
             {
+                if (AllAppKvsLvidsData != null && AllAppKvsLvidsData.All(frud => !frud.Value.ActiveErrorOrWarning))
+                {
+                    AllAppKvsLvidsData?.Clear();
+                    AllAppKvsLvidsData = null;
+                }
+
+                if (AllAppPrivateBytesDataMb != null && AllAppPrivateBytesDataMb.All(frud => !frud.Value.ActiveErrorOrWarning))
+                {
+                    AllAppPrivateBytesDataMb?.Clear();
+                    AllAppPrivateBytesDataMb = null;
+                }
+
+                if (AllAppPrivateBytesDataPercent != null && AllAppPrivateBytesDataPercent.All(frud => !frud.Value.ActiveErrorOrWarning))
+                {
+                    AllAppPrivateBytesDataPercent?.Clear();
+                    AllAppPrivateBytesDataPercent = null;
+                }
+
+                if (AllAppRGMemoryUsagePercent != null && AllAppRGMemoryUsagePercent.All(frud => !frud.Value.ActiveErrorOrWarning))
+                {
+                    AllAppRGMemoryUsagePercent?.Clear();
+                    AllAppRGMemoryUsagePercent = null;
+                }
+
                 _handleToProcSnapshot?.Dispose();
                 GC.KeepAlive(_handleToProcSnapshot);
                 _handleToProcSnapshot = null;
