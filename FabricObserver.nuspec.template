@@ -4,10 +4,12 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.2.831</version>
 		<releaseNotes>
-- Support for Service Fabric Resource Governance memory limit monitoring by AppObserver (Windows-only).
+- Bug Fix: AppObserver now monitors Guest Executable services.
+- Support for Service Fabric Resource Governance memory limit monitoring (Windows-only).
 - Support for monitoring Private Bytes (Commit/Charge) usage by service processes (Windows-only).
 - Support for monitoring multiple service code packages.
 - Support for dumping service processes in Warning.
+- New unit tests and supporting config/app packages.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
