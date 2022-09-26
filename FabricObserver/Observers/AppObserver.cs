@@ -3203,90 +3203,152 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            // CPU Time
-            if (AllAppCpuData.ContainsKey(appName))
+            try
             {
-                CsvFileLogger.LogData(
-                    _fileName,
-                    appName,
-                    ErrorWarningProperty.CpuTime,
-                    "Average",
-                    Math.Round(AllAppCpuData.First(x => x.Key == appName).Value.AverageDataValue));
+                // CPU Time
+                if (AllAppCpuData != null && AllAppCpuData.ContainsKey(appName))
+                {
+                    CsvFileLogger.LogData(
+                        _fileName,
+                        appName,
+                        ErrorWarningProperty.CpuTime,
+                        "Average",
+                        Math.Round(AllAppCpuData.First(x => x.Key == appName).Value.AverageDataValue));
 
-                CsvFileLogger.LogData(
-                    _fileName,
-                    appName,
-                    ErrorWarningProperty.CpuTime,
-                    "Peak",
-                    Math.Round(AllAppCpuData.First(x => x.Key == appName).Value.MaxDataValue));
-            }
+                    CsvFileLogger.LogData(
+                        _fileName,
+                        appName,
+                        ErrorWarningProperty.CpuTime,
+                        "Peak",
+                        Math.Round(AllAppCpuData.First(x => x.Key == appName).Value.MaxDataValue));
+                }
 
-            // Memory - MB
-            if (AllAppMemDataMb.ContainsKey(appName))
-            {
-                CsvFileLogger.LogData(
-                    _fileName,
-                    appName,
-                    ErrorWarningProperty.MemoryConsumptionMb,
-                    "Average",
-                    Math.Round(AllAppMemDataMb.First(x => x.Key == appName).Value.AverageDataValue));
+                // Memory - Working set \\
 
-                CsvFileLogger.LogData(
-                    _fileName,
-                    appName,
-                    ErrorWarningProperty.MemoryConsumptionMb,
-                    "Peak",
-                    Math.Round(Convert.ToDouble(AllAppMemDataMb.First(x => x.Key == appName).Value.MaxDataValue)));
-            }
+                if (AllAppMemDataMb != null && AllAppMemDataMb.ContainsKey(appName))
+                {
+                    CsvFileLogger.LogData(
+                        _fileName,
+                        appName,
+                        ErrorWarningProperty.MemoryConsumptionMb,
+                        "Average",
+                        Math.Round(AllAppMemDataMb.First(x => x.Key == appName).Value.AverageDataValue));
 
-            if (AllAppMemDataPercent.ContainsKey(appName))
-            {
-                CsvFileLogger.LogData(
-                   _fileName,
-                   appName,
-                   ErrorWarningProperty.MemoryConsumptionPercentage,
-                   "Average",
-                   Math.Round(AllAppMemDataPercent.First(x => x.Key == appName).Value.AverageDataValue));
+                    CsvFileLogger.LogData(
+                        _fileName,
+                        appName,
+                        ErrorWarningProperty.MemoryConsumptionMb,
+                        "Peak",
+                        Math.Round(Convert.ToDouble(AllAppMemDataMb.First(x => x.Key == appName).Value.MaxDataValue)));
+                }
 
-                CsvFileLogger.LogData(
-                    _fileName,
-                    appName,
-                    ErrorWarningProperty.MemoryConsumptionPercentage,
-                    "Peak",
-                    Math.Round(Convert.ToDouble(AllAppMemDataPercent.FirstOrDefault(x => x.Key == appName).Value.MaxDataValue)));
-            }
+                if (AllAppMemDataPercent != null && AllAppMemDataPercent.ContainsKey(appName))
+                {
+                    CsvFileLogger.LogData(
+                       _fileName,
+                       appName,
+                       ErrorWarningProperty.MemoryConsumptionPercentage,
+                       "Average",
+                       Math.Round(AllAppMemDataPercent.First(x => x.Key == appName).Value.AverageDataValue));
 
-            if (AllAppTotalActivePortsData.ContainsKey(appName))
-            {
-                // Network
-                CsvFileLogger.LogData(
-                    _fileName,
-                    appName,
-                    ErrorWarningProperty.ActiveTcpPorts,
-                    "Total",
-                    Math.Round(Convert.ToDouble(AllAppTotalActivePortsData.First(x => x.Key == appName).Value.MaxDataValue)));
-            }
+                    CsvFileLogger.LogData(
+                        _fileName,
+                        appName,
+                        ErrorWarningProperty.MemoryConsumptionPercentage,
+                        "Peak",
+                        Math.Round(Convert.ToDouble(AllAppMemDataPercent.FirstOrDefault(x => x.Key == appName).Value.MaxDataValue)));
+                }
 
-            if (AllAppEphemeralPortsData.ContainsKey(appName))
-            {
-                // Network
-                CsvFileLogger.LogData(
-                    _fileName,
-                    appName,
-                    ErrorWarningProperty.ActiveEphemeralPorts,
-                    "Total",
-                    Math.Round(Convert.ToDouble(AllAppEphemeralPortsData.First(x => x.Key == appName).Value.MaxDataValue)));
-            }
+                // Memory - Private Bytes \\
 
-            if (AllAppHandlesData.ContainsKey(appName))
-            {
+                if (IsWindows)
+                {
+                    if (AllAppPrivateBytesDataMb != null && AllAppPrivateBytesDataMb.ContainsKey(appName))
+                    {
+                        if (AllAppPrivateBytesDataMb.Any(x => x.Key == appName))
+                        {
+                            CsvFileLogger.LogData(
+                                _fileName,
+                                appName,
+                                ErrorWarningProperty.PrivateBytesMb,
+                                "Average",
+                                Math.Round(AllAppPrivateBytesDataMb.First(x => x.Key == appName).Value.AverageDataValue));
+
+                            CsvFileLogger.LogData(
+                                _fileName,
+                                appName,
+                                ErrorWarningProperty.PrivateBytesMb,
+                                "Peak",
+                                Math.Round(Convert.ToDouble(AllAppPrivateBytesDataMb.First(x => x.Key == appName).Value.MaxDataValue)));
+                        }
+                    }
+
+                    if (AllAppPrivateBytesDataPercent != null && AllAppPrivateBytesDataPercent.ContainsKey(appName))
+                    {
+                        if (AllAppPrivateBytesDataPercent.Any(x => x.Key == appName))
+                        {
+                            CsvFileLogger.LogData(
+                               _fileName,
+                               appName,
+                               ErrorWarningProperty.PrivateBytesPercent,
+                               "Average",
+                               Math.Round(AllAppPrivateBytesDataPercent.First(x => x.Key == appName).Value.AverageDataValue));
+
+                            CsvFileLogger.LogData(
+                                _fileName,
+                                appName,
+                                ErrorWarningProperty.PrivateBytesPercent,
+                                "Peak",
+                                Math.Round(Convert.ToDouble(AllAppPrivateBytesDataPercent.FirstOrDefault(x => x.Key == appName).Value.MaxDataValue)));
+                        }
+                    }
+                }
+
+                // Ports \\
+
+                if (AllAppTotalActivePortsData != null && AllAppTotalActivePortsData.ContainsKey(appName))
+                {
+                    if (AllAppTotalActivePortsData.Any(x => x.Key == appName))
+                    {
+                        CsvFileLogger.LogData(
+                            _fileName,
+                            appName,
+                            ErrorWarningProperty.ActiveTcpPorts,
+                            "Total",
+                            Math.Round(Convert.ToDouble(AllAppTotalActivePortsData.First(x => x.Key == appName).Value.MaxDataValue)));
+                    }
+                }
+
+                if (AllAppEphemeralPortsData != null && AllAppEphemeralPortsData.ContainsKey(appName))
+                {
+                    if (AllAppEphemeralPortsData.Any(x => x.Key == appName))
+                    {
+                        CsvFileLogger.LogData(
+                            _fileName,
+                            appName,
+                            ErrorWarningProperty.ActiveEphemeralPorts,
+                            "Total",
+                            Math.Round(Convert.ToDouble(AllAppEphemeralPortsData.First(x => x.Key == appName).Value.MaxDataValue)));
+                    }
+                }
+
                 // Handles
-                CsvFileLogger.LogData(
-                     _fileName,
-                     appName,
-                     ErrorWarningProperty.AllocatedFileHandles,
-                     "Total",
-                     AllAppHandlesData.First(x => x.Key == appName).Value.MaxDataValue);
+                if (AllAppHandlesData != null && AllAppHandlesData.ContainsKey(appName))
+                {
+                    if (AllAppHandlesData.Any(x => x.Key == appName))
+                    {
+                        CsvFileLogger.LogData(
+                             _fileName,
+                             appName,
+                             ErrorWarningProperty.AllocatedFileHandles,
+                             "Total",
+                             AllAppHandlesData.First(x => x.Key == appName).Value.MaxDataValue);
+                    }
+                }
+            }
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+            {
+                ObserverLogger.LogWarning($"Failure generating CSV data: {e.Message}");
             }
 
             DataTableFileLogger.Flush();
