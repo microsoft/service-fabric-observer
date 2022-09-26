@@ -9,8 +9,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Health;
-using System.Fabric.Management.ServiceModel;
-using System.Fabric.Query;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -23,9 +21,7 @@ using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 using FabricObserver.TelemetryLib;
 using FabricObserver.Utilities.ServiceFabric;
-using Microsoft.ApplicationInsights;
 using Microsoft.Win32.SafeHandles;
-using static System.Fabric.Query.ReplicaStatus;
 using ConfigSettings = FabricObserver.Observers.Utilities.ConfigSettings;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 

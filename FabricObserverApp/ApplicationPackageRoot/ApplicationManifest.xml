@@ -107,9 +107,9 @@
     <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="false" />
     <!-- The maximum number of child process data items to include in a sorted list of top n consumers for some metric, where n is the value of this setting. -->
     <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
-    <!-- Service process dumps (dumpProcessOnError setting).
-         You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError to true in AppObserver.config.json
-         if you want AppObserver to dump service processes when an Error threshold has been breached for some observed metric (e.g., memoryErrorLimitPercent). -->
+    <!-- Service process dumps (dumpProcessOnError/dumpProcessOnWarning setting).
+         You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError or dumpProcessOnWarning to true in AppObserver.config.json
+         if you want AppObserver to dump service processes when an Error or Warning threshold has been breached for some observed metric (e.g., memoryErrorLimitPercent/memoryWarningLimitPercent). -->
     <Parameter Name="AppObserverEnableProcessDumps" DefaultValue="false" />
     <!-- Supported values are: Mini, MiniPlus, Full. -->
     <Parameter Name="AppObserverProcessDumpType" DefaultValue="MiniPlus" />
@@ -136,7 +136,7 @@
          NOTE: If you have *several* service processes of the **same name**, setting this to true will add *significant* time-to-completion and increased CPU usage (small, but more than necessary) to AppObserver. 
          FO will automatically compute Shared + Private memory usage if it detects 50 or more same-named service processes, regardless of this setting.-->
     <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
-    <!-- Windows-only: AppObserver can monitor services with resource governance limits set and put related services into Warning if they reach 90% of the specified limit (only Memory limit is supported in this release). 
+    <!-- Windows-only. AppObserver can monitor services with resource governance limits set and put related services into Warning if they reach 90% of the specified limit (only Memory limit is supported in this release). 
          If you set RG Memory limits for your service code packages, then you should consider enabling this feature. Else, don't. -->
     <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="false" />
     <!-- CertificateObserver-->

@@ -5,7 +5,7 @@
   </Parameters>
   <Services>
     <Service Name="FabricObserverService" ServicePackageActivationMode="ExclusiveProcess">
-      <StatelessService ServiceTypeName="FabricObserverServiceType" InstanceCount="[FabricObserver_InstanceCount]">
+      <StatelessService ServiceTypeName="FabricObserverType" InstanceCount="[FabricObserver_InstanceCount]">
         <SingletonPartition />
       </StatelessService>
     </Service>

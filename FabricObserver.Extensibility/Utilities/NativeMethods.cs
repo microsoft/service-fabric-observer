@@ -1202,7 +1202,7 @@ namespace FabricObserver.Observers.Utilities
                 {
                     try
                     {
-                        if (procEntry.th32ProcessID == 0 || ignoreProcessList.Any(f => f == procEntry.szExeFile) || ignoreFabricSystemServicesList.Any(f => f == procEntry.szExeFile))
+                        if (procEntry.th32ProcessID == 0 || FindInStringArray(ignoreProcessList, procEntry.szExeFile) || FindInStringArray(ignoreFabricSystemServicesList, procEntry.szExeFile))
                         {
                             continue;
                         }
@@ -1330,18 +1330,19 @@ namespace FabricObserver.Observers.Utilities
 
         private static readonly string[] ignoreProcessList = new string[]
         {
-            "conhost.exe", "csrss.exe","fontdrvhost.exe", "lsass.exe", "backgroundTaskHost.exe",
-            "LsaIso.exe", "services.exe", "smss.exe", "svchost.exe", "taskhostw.exe",
-            "wininit.exe", "winlogon.exe", "WUDFHost.exe", "WmiPrvSE.exe",
-            "TextInputHost.exe", "vmcompute.exe", "vmms.exe", "vmwp.exe", "vmmem",
-            "System", "System interrupts", "Secure System", "Registry"
+            "AggregatorHost.exe", "backgroundTaskHost.exe", "CcmExec.exe", "com.docker.service",
+            "conhost.exe", "csrss.exe", "dwm.exe", "esif_uf.exe", "fontdrvhost.exe",
+            "lsass.exe", "LsaIso.exe", "services.exe", "smss.exe", "svchost.exe",
+            "System", "System interrupts", "Secure System", "Registry",
+            "taskhostw.exe", "TextInputHost.exe", "wininit.exe", "winlogon.exe",
+            "WmiPrvSE.exe", "WUDFHost.exe", "vmcompute.exe", "vmms.exe", "vmwp.exe", "vmmem"
         };
 
         private static readonly string[] ignoreFabricSystemServicesList = new string[]
         {
             "Fabric.exe", "FabricHost.exe", "FabricApplicationGateway.exe", "FabricCAS.exe",
             "FabricDCA.exe", "FabricDnsService.exe", "FabricFAS.exe", "FabricGateway.exe",
-            "FabricHost.exe", "FabricIS.exe", "FabricRM.exe", "FabricUS.exe",
+            "FabricHost.exe", "FabricIS.exe", "FabricRM.exe", "FabricUS.exe"
         };
 
         private static string GetProcessNameFromId(uint pid)
@@ -1432,6 +1433,26 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
+        private static bool FindInStringArray(string[] arr, string s)
+        {
+            if (arr == null || arr.Length == 0 || string.IsNullOrWhiteSpace(s))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < arr.Length; i++)
+            {
+                if (string.IsNullOrWhiteSpace(arr[i]) || arr[i] != s)
+                { 
+                    continue;
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+        
         // Cleanup \\
 
         private static bool TryReleaseHandle(IntPtr handle)

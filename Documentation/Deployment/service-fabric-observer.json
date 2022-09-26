@@ -28,7 +28,7 @@
     "applicationTypeNameFabricObserver": "FabricObserverType",
     "applicationNameFabricObserver": "FabricObserver",
     "serviceNameFabricObserver": "[concat(variables('applicationNameFabricObserver'), '~FabricObserverService')]",
-    "serviceTypeNameFabricObserver": "FabricObserverServiceType",
+    "serviceTypeNameFabricObserver": "FabricObserverType",
     "sfrpApiVersion": "2021-06-01"
   },
   "resources": [
