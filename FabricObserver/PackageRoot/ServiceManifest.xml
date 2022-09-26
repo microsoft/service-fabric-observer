@@ -7,7 +7,7 @@
   <ServiceTypes>
     <!-- This is the name of your ServiceType. 
          This name must match the string used in RegisterServiceType call in Program.cs. -->
-    <StatelessServiceType ServiceTypeName="FabricObserverServiceType" />
+    <StatelessServiceType ServiceTypeName="FabricObserverType" />
   </ServiceTypes>
   <CodePackage Name="Code" Version="3.2.2.960">
 	<SetupEntryPoint>

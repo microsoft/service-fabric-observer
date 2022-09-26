@@ -135,7 +135,7 @@ New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -Applicatio
 
 #Create the Service instances (-1 means all nodes, which is what is required for FO):  
 
-New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName fabric:/FabricObserver -ServiceName fabric:/FabricObserver/FabricObserverService -ServiceTypeName FabricObserverServiceType -InstanceCount -1
+New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName fabric:/FabricObserver -ServiceName fabric:/FabricObserver/FabricObserverService -ServiceTypeName FabricObserverType -InstanceCount -1
 
 #OR if updating existing version:  
 

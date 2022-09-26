@@ -2955,12 +2955,13 @@ namespace FabricObserver.Observers
                 {
                     foreach (var codepackage in codepackages)
                     {
-                        // The code package does not belong to a deployed replica, so this is the droid we're looking for (a helper code package..)
+                        // The code package does not belong to a deployed replica, so this is the droid we're looking for (a helper code package or guest executable).
                         if (codepackage.CodePackageName != deployedReplica.CodePackageName)
                         {
-                            int procId = (int)codepackage.EntryPoint.ProcessId; // The actual process id of the helper binary.
+                            int procId = (int)codepackage.EntryPoint.ProcessId; // The actual process id of the helper or guest executable binary.
                             string procName = null;
 
+                            // Process class is a CPU bottleneck on Windows.
                             if (IsWindows)
                             {
                                 procName = NativeMethods.GetProcessNameFromId(procId);
@@ -2986,9 +2987,9 @@ namespace FabricObserver.Observers
                                 continue;
                             }
 
-                            // It doesn't matter that the helper CodePackage does not have any replicas. This basic construct ReplicaOrInstanceMonitoringInfo is used in several places.
-                            // The key information for the helper binary case is the ServiceManifestName, the parent's ServiceName/Type, helper's HostProcessId and helper's HostProcessName.
-                            // This ensures that support for multiple CodePackages fits naturally into AppObserver's implementation.
+                            // It doesn't matter that the helper CodePackage or guest executable does not have any replicas (not hosted by Fabric). This basic construct ReplicaOrInstanceMonitoringInfo is used in several places.
+                            // The key information for the helper/guest executable binary case is the ServiceManifestName, the parent's ServiceName/Type, its HostProcessId and its HostProcessName.
+                            // This ensures that support for multiple CodePackages and guest executable services fit naturally into AppObserver's *existing* implementation.
                             replicaInfo = new ReplicaOrInstanceMonitoringInfo
                             {
                                 ApplicationName = appName,

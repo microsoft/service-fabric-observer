@@ -110,7 +110,7 @@
     <!-- Service process dumps (dumpProcessOnError/dumpProcessOnWarning setting).
          You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError or dumpProcessOnWarning to true in AppObserver.config.json
          if you want AppObserver to dump service processes when an Error or Warning threshold has been breached for some observed metric (e.g., memoryErrorLimitPercent/memoryWarningLimitPercent). -->
-    <Parameter Name="AppObserverEnableProcessDumps" DefaultValue="true" />
+    <Parameter Name="AppObserverEnableProcessDumps" DefaultValue="false" />
     <!-- Supported values are: Mini, MiniPlus, Full. -->
     <Parameter Name="AppObserverProcessDumpType" DefaultValue="MiniPlus" />
     <!-- Max number of dumps to generate per service, per observed metric, within a supplied TimeSpan window. See AppObserverMaxDumpsTimeWindow. -->
