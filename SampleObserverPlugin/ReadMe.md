@@ -49,7 +49,7 @@ namespace FabricObserver.Observers
 When you reference the FabricObserver.Extensibility nuget package, you will have access to all of the public code that native FabricObserver observers consume. That is, you will have the same capabilities 
 that all other observers have. The world is your oyster when it comes to creating your custom observer to do whatever the underlying platform affords. 
 
-### Note: make sure you know if .NET Core 3.1 (for FO 3.2.1.831) or .NET 6 (for FO 3.2.1.960, which only runs on SF version 9 and above) is installed on the target server. If it is not, then you must use the SelfContained package. This is very important.
+### Note: make sure you know if .NET Core 3.1 (for FO 3.2.2.831) or .NET 6 (for FO 3.2.1.960, which only runs on SF version 9 and above) is installed on the target server. If it is not, then you must use the SelfContained package. This is very important.
 
 As you can see in this project, there are two key files:
 
@@ -87,8 +87,8 @@ var healthReport = new HealthReport
     NodeName = NodeName,
     Observer = ObserverName,
     Property = "SomeUniquePropertyForMyHealthEvent",
-    EntityType = EntityType.Node, // this is an FO 3.2.1.831 required change.
-    //ReportType = HealthReportType.Node, // this is gone in FO 3.2.1.831.
+    EntityType = EntityType.Node, // this is an FO 3.2.2.831 required change.
+    //ReportType = HealthReportType.Node, // this is gone in FO 3.2.2.831.
     State = HealthState.Ok
 };
 
@@ -138,7 +138,7 @@ If you consume the full FabricObserver nupkg (versus just the FabricObserver.Ext
 $path = "[sourcedir]\MyObserverPlugin\bin\release\netstandard2.0\[target os platform, e.g., win-x64 or linux-x64]"
 Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FabricObserverV32831 -TimeoutSec 1800
 Register-ServiceFabricApplicationType -ApplicationPathInImageStore FabricObserverV32831
-New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.2.1.831
+New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.2.2.831
 New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName fabric:/FabricObserver -ServiceName fabric:/FabricObserver/FabricObserverService -ServiceTypeName FabricObserverType -InstanceCount -1
 ```  
 

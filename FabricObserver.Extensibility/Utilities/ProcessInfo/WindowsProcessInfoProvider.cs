@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using Microsoft.Win32.SafeHandles;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -31,19 +32,35 @@ namespace FabricObserver.Observers.Utilities
 
         public override float GetProcessWorkingSetMb(int processId, string procName, CancellationToken token, bool getPrivateWorkingSet = false)
         {
-            if (string.IsNullOrWhiteSpace(procName) || processId < 0)
+            if (string.IsNullOrWhiteSpace(procName) || processId <= 0)
             {
-                return 0;
+                return 0F;
             }
 
             if (getPrivateWorkingSet)
             {
                 // Private Working Set from Perf Counter (Working Set - Private). Very slow when there are lots of *same-named* processes.
-                return GetPrivateWorkingSetMbPerfCounter(procName, processId, token);
+                return GetProcessMemoryMbPerfCounter(procName, processId, token);
             }
 
             // Full Working Set (Private + Shared) from psapi.dll. Very fast.
-            return GetProcessWorkingSetMbWin32(processId);
+            return GetProcessMemoryMbWin32(processId);
+        }
+
+        /// <summary>
+        /// Gets the specified process's private memory usage, defined as the Commit Charge value in bytes for the process with the specified processId. 
+        /// Commit Charge is the total amount of private memory that the memory manager has committed for a running process.)
+        /// </summary>
+        /// <param name="processId">The id of the process.</param>
+        /// <returns>Current Private Bytes usage in Megabytes.</returns>
+        public override float GetProcessPrivateBytesMb(int processId)
+        {
+            if (processId <= 0)
+            {
+                return 0F;
+            }
+
+            return GetProcessMemoryMbWin32(processId, getPrivateBytes:true);
         }
 
         public override float GetProcessAllocatedHandles(int processId, string configPath = null)
@@ -302,7 +319,14 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        private float GetProcessWorkingSetMbWin32(int processId)
+        /// <summary>
+        /// Gets memory usage for a process with specified processId. 
+        /// </summary>
+        /// <param name="processId">The id of the process.</param>
+        /// <param name="getPrivateBytes">Whether or not to return Private Bytes (The Commit Charge value in bytes for this process. 
+        /// Commit Charge is the total amount of private memory that the memory manager has committed for a running process.)</param>
+        /// <returns>Process memory usage expressed as Megabytes.</returns>
+        private float GetProcessMemoryMbWin32(int processId, bool getPrivateBytes = false)
         {
             if (processId < 1)
             {
@@ -323,6 +347,11 @@ namespace FabricObserver.Observers.Utilities
                     throw new Win32Exception($"GetProcessMemoryInfo failed with Win32 error {Marshal.GetLastWin32Error()}");
                 }
 
+                if (getPrivateBytes)
+                {
+                    return memoryCounters.PrivateUsage.ToUInt64() / 1024 / 1024;
+                }
+
                 return memoryCounters.WorkingSetSize.ToUInt64() / 1024 / 1024;
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
@@ -337,11 +366,11 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        private float GetPrivateWorkingSetMbPerfCounter(string procName, int procId, CancellationToken token)
+        private float GetProcessMemoryMbPerfCounter(string procName, int procId, CancellationToken token, string perfCounterName = "Working Set - Private")
         {
             if (string.IsNullOrWhiteSpace(procName) || procId < 1)
             {
-                Logger.LogWarning($"GetPrivateWorkingSetMbPerfCounter: Unsupported process information provided ({procName ?? "null"}, {procId})");
+                Logger.LogWarning($"GetProcessMemoryMbPerfCounter: Unsupported process information provided ({procName ?? "null"}, {procId})");
                 return 0F;
             }
 
@@ -350,7 +379,7 @@ namespace FabricObserver.Observers.Utilities
                 // The related Observer will have logged any privilege related failure.
                 if (Marshal.GetLastWin32Error() != 5)
                 {
-                    Logger.LogWarning($"GetPrivateWorkingSetMbPerfCounter: The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for. " +
+                    Logger.LogWarning($"GetProcessMemoryMbPerfCounter: The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for. " +
                                       $"Error Code: {Marshal.GetLastWin32Error()}");
                 }
 
@@ -378,7 +407,7 @@ namespace FabricObserver.Observers.Utilities
                         }
                     }
                 }
-                return GetProcessWorkingSetMbWin32(procId);
+                return GetProcessMemoryMbWin32(procId);
             }
 
             string internalProcName;
@@ -401,7 +430,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 // Most likely the process isn't the one we are looking for (current procId no longer maps to internal procName as contained in the same-named proc data cache).
 
-                Logger.LogWarning($"GetPrivateWorkingSetMbPerfCounter (Returning 0): Handled Exception from GetInternalProcessName.{Environment.NewLine}" +
+                Logger.LogWarning($"GetProcessMemoryMbPerfCounter (Returning 0): Handled Exception from GetInternalProcessName.{Environment.NewLine}" +
                                   $"The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for: {e.Message}");
 #endif
                 return 0F;
@@ -409,19 +438,19 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                using (PerformanceCounter perfCounter = new PerformanceCounter("Process", "Working Set - Private", internalProcName, true))
+                using (PerformanceCounter perfCounter = new PerformanceCounter("Process", perfCounterName, internalProcName, true))
                 {
                     return perfCounter.NextValue() / 1024 / 1024;
                 }
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is UnauthorizedAccessException || e is Win32Exception)
             {
-                Logger.LogWarning($"Handled exception in GetPrivateWorkingSetMbPerfCounter: Returning 0.{Environment.NewLine}{e.Message}");
+                Logger.LogWarning($"Handled exception in GetProcessMemoryMbPerfCounter: Returning 0.{Environment.NewLine}{e.Message}");
             }
             catch (Exception e)
             {
                 // Log the full error (including stack trace) for debugging purposes.
-                Logger.LogWarning($"Unhandled exception in GetPrivateWorkingSetMbPerfCounter:{Environment.NewLine}{e}");
+                Logger.LogWarning($"Unhandled exception in GetProcessMemoryMbPerfCounter:{Environment.NewLine}{e}");
                 throw;
             }
 

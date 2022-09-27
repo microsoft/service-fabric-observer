@@ -14,7 +14,7 @@ namespace FabricObserver.Observers.Utilities
 {
     public class LinuxInfoProvider : OSInfoProvider
     {
-        public override (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetSystemMemoryInfo()
+        public override (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetSystemPhysicalMemoryInfo()
         {
             Dictionary<string, ulong> memInfo = LinuxProcFS.ReadMemInfo();
 
@@ -23,11 +23,33 @@ namespace FabricObserver.Observers.Utilities
             long availableMem = (long)memInfo[MemInfoConstants.MemAvailable];
 
             // Divide by 1048576 to convert total memory from KB to GB.
+            long totalMemGb = totalMemory / 1048576;
+            double pctUsed = ((double)(totalMemory - availableMem - freeMem)) / totalMemory * 100;
+            long memUsed = (totalMemory - availableMem - freeMem) / 1024;
+
+            return (totalMemGb, memUsed, Math.Round(pctUsed, 2));
+        }
+
+        // TODO...
+        public override (long TotalCommitGb, long CommittedInUseMb) TupleGetSystemCommittedMemoryInfo()
+        {
+            var (TotalMemoryGb, MemoryInUseMb, _) = TupleGetSystemPhysicalMemoryInfo();
+            return (TotalMemoryGb, MemoryInUseMb);
+
+            /*
+            Dictionary<string, ulong> memInfo = LinuxProcFS.ReadMemInfo();
+
+            long totalMemory = (long)memInfo[MemInfoConstants.VmallocTotal];
+            long freeMem = totalMemory - (long)memInfo[MemInfoConstants.VmallocUsed];
+            long availableMem = freeMem + (long)memInfo[MemInfoConstants.SwapFree];
+
+            // Divide by 1048576 to convert total memory from KB to GB.
             long totalMem = totalMemory / 1048576;
             double pctUsed = ((double)(totalMemory - availableMem - freeMem)) / totalMemory * 100;
             long memUsed = (totalMemory - availableMem - freeMem) / 1024;
 
             return (totalMem, memUsed, Math.Round(pctUsed, 2));
+            */
         }
 
         public override int GetActiveTcpPortCount(int processId = -1, string configPath = null)

@@ -67,14 +67,6 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public const string NodeWarningDiskAverageQueueLength = "FO012";
         /// <summary>
-        /// FO042	Folder size (MB) has exceeded configured Error threshold
-        /// </summary>
-        public const string NodeErrorFolderSizeMB = "FO042";
-        /// <summary>
-        /// FO043	Folder size (MB) has exceeded configured Warning threshold
-        /// </summary>
-        public const string NodeWarningFolderSizeMB = "FO043";
-        /// <summary>
         /// FO013	Percentage of total physical memory usage has exceeded configured Error threshold for an app service process.
         /// </summary>
         public const string AppErrorMemoryPercent = "FO013";
@@ -155,22 +147,6 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public const string NodeWarningTooManyActiveEphemeralPorts = "FO032";
         /// <summary>
-        /// FO044	Percentage of active Ephemeral TCP ports in use is at or exceeding configured Error threshold for an app service process.
-        /// </summary>
-        public const string AppErrorActiveEphemeralPortsPercent = "FO044";
-        /// <summary>
-        /// FO045	Percentage of active Ephemeral TCP ports in use is at or exceeding configured Error threshold for an app service process.
-        /// </summary>
-        public const string AppWarningActiveEphemeralPortsPercent = "FO045";
-        /// <summary>
-        /// FO046	Percentage of active Ephemeral TCP ports in use is at or exceeding configured Error threshold for a machine.
-        /// </summary>
-        public const string NodeErrorActiveEphemeralPortsPercent = "FO046";
-        /// <summary>
-        /// Percentage of active Ephemeral TCP ports in use is at or exceeding configured Error threshold for a machine.
-        /// </summary>
-        public const string NodeWarningActiveEphemeralPortsPercent = "FO047";
-        /// <summary>
         /// FO033	Number of allocated File Handles is at or exceeding configured Error threshold for an app service process.
         /// </summary>
         public const string AppErrorTooManyOpenFileHandles = "FO033";
@@ -207,6 +183,50 @@ namespace FabricObserver.Observers.Utilities
         /// The related threshold is non-configurable and Windows-only.
         /// </summary>
         public const string AppWarningKvsLvidsPercentUsed = "FO041";
+        /// <summary>
+        /// FO042	Folder size (MB) has exceeded configured Error threshold
+        /// </summary>
+        public const string NodeErrorFolderSizeMB = "FO042";
+        /// <summary>
+        /// FO043	Folder size (MB) has exceeded configured Warning threshold
+        /// </summary>
+        public const string NodeWarningFolderSizeMB = "FO043";
+        /// <summary>
+        /// FO044	Percentage of active Ephemeral TCP ports in use is at or exceeding configured Error threshold for an app service process.
+        /// </summary>
+        public const string AppErrorActiveEphemeralPortsPercent = "FO044";
+        /// <summary>
+        /// FO045	Percentage of active Ephemeral TCP ports in use is at or exceeding configured Error threshold for an app service process.
+        /// </summary>
+        public const string AppWarningActiveEphemeralPortsPercent = "FO045";
+        /// <summary>
+        /// FO046	Percentage of active Ephemeral TCP ports in use is at or exceeding configured Error threshold for a machine.
+        /// </summary>
+        public const string NodeErrorActiveEphemeralPortsPercent = "FO046";
+        /// <summary>
+        /// FO047   Percentage of active Ephemeral TCP ports in use is at or exceeding configured Error threshold for a machine.
+        /// </summary>
+        public const string NodeWarningActiveEphemeralPortsPercent = "FO047";
+        /// <summary>
+        /// FO048  Private Bytes usage (Commit) is at or exceeding Error threshold for an app service process.
+        /// </summary>
+        public const string AppErrorPrivateBytesMb = "FO048";
+        /// <summary>
+        /// FO049  Private Bytes usage (Commit) is at or exceeding Warning threshold for an app service process.
+        /// </summary>
+        public const string AppWarningPrivateBytesMb = "FO049";
+        /// <summary>
+        /// FO049  Private Bytes usage (Commit) is at or exceeding Error threshold for an app service process.
+        /// </summary>
+        public const string AppErrorPrivateBytesPercent = "FO050";
+        /// <summary>
+        /// FO051  Private Bytes usage (Commit) is at or exceeding Warning threshold for an app service process.
+        /// </summary>
+        public const string AppWarningPrivateBytesPercent = "FO051";
+        /// <summary>
+        /// FO052  At or exceeding default (90%) or configured percentage of Resource Governance limit 'MemoryInMBLimit' for a service code package.
+        /// </summary>
+        public const string AppWarningRGMemoryLimitPercent = "FO052";
 
         /// <summary>
         /// AppErrorCodesDictionary dictionary.
@@ -235,7 +255,12 @@ namespace FabricObserver.Observers.Utilities
                 { AppWarningTooManyOpenFileHandles, "AppWarningTooManyOpenFileHandles" },
                 { AppErrorTooManyThreads, "AppErrorTooManyThreads" },
                 { AppWarningTooManyThreads, "AppWarningTooManyThreads" },
-                { AppWarningKvsLvidsPercentUsed, "AppWarningKvsLvidsPercentUsed"}
+                { AppWarningKvsLvidsPercentUsed, "AppWarningKvsLvidsPercentUsed"},
+                { AppErrorPrivateBytesMb, "AppErrorPrivateBytesMb"},
+                { AppWarningPrivateBytesMb, "AppWarningPrivateBytesMb"},
+                { AppErrorPrivateBytesPercent, "AppErrorPrivateBytesPercent" },
+                { AppWarningPrivateBytesPercent, "AppWarningPrivateBytesPercent" },
+                { AppWarningRGMemoryLimitPercent, "AppWarningRGMemoryLimitPercent" }
             };
 
         /// <summary>

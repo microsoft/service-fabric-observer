@@ -39,21 +39,33 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
+        /// <summary>
+        /// Working Set
+        /// </summary>
         public long MemoryWarningLimitMb
         {
             get; set;
         }
 
+        /// <summary>
+        /// Working Set
+        /// </summary>
         public long MemoryErrorLimitMb
         {
             get; set;
         }
 
+        /// <summary>
+        /// Working Set
+        /// </summary>
         public double MemoryWarningLimitPercent
         {
             get; set;
         }
 
+        /// <summary>
+        /// Working Set
+        /// </summary>
         public double MemoryErrorLimitPercent
         {
             get; set;
@@ -104,6 +116,11 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
+        public bool DumpProcessOnWarning
+        {
+            get; set;
+        }
+
         public int ErrorOpenFileHandles 
         { 
             get; set; 
@@ -120,6 +137,34 @@ namespace FabricObserver.Observers.MachineInfoModel
         }
 
         public int WarningThreadCount
+        {
+            get; set;
+        }
+
+        // Private Bytes \\
+
+        public long WarningPrivateBytesMb
+        {
+            get; set;
+        }
+
+        public long ErrorPrivateBytesMb
+        {
+            get; set;
+        }
+
+        public double WarningPrivateBytesPercent
+        {
+            get; set;
+        }
+
+        public double ErrorPrivateBytesPercent
+        {
+            get; set;
+        }
+
+        // RG monitoring.
+        public double WarningRGMemoryLimitPercent
         {
             get; set;
         }
@@ -143,9 +188,15 @@ namespace FabricObserver.Observers.MachineInfoModel
                                              $"NetworkErrorEphemeralPortsPercent: {NetworkErrorEphemeralPortsPercent}{Environment.NewLine}" +
                                              $"NetworkWarningEphemeralPortsPercent: {NetworkWarningEphemeralPortsPercent}{Environment.NewLine}" +
                                              $"DumpProcessOnError: {DumpProcessOnError}{Environment.NewLine}" +
+                                             $"DumpProcessOnWarning: {DumpProcessOnWarning}{Environment.NewLine}" +
                                              $"ErrorOpenFileHandles: {ErrorOpenFileHandles}{Environment.NewLine}" +
                                              $"WarningOpenFileHandles: {WarningOpenFileHandles}{Environment.NewLine}" +
                                              $"ErrorThreadCount: {ErrorThreadCount}{Environment.NewLine}" +
-                                             $"WarningThreadCount: {WarningThreadCount}{Environment.NewLine}";
+                                             $"WarningThreadCount: {WarningThreadCount}{Environment.NewLine}" +
+                                             $"ErrorPrivateBytesMb: {ErrorPrivateBytesMb}{Environment.NewLine}" +
+                                             $"WarningPrivateBytesMb: {WarningPrivateBytesMb}{Environment.NewLine}" +
+                                             $"ErrorPrivateBytesPercent: {ErrorPrivateBytesPercent}{Environment.NewLine}" +
+                                             $"WarningPrivateBytesPercent: {WarningPrivateBytesPercent}{Environment.NewLine}" +
+                                             $"WarningRGMemoryLimitPercent: {WarningRGMemoryLimitPercent}{Environment.NewLine}";
     }
 }

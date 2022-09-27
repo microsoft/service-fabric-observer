@@ -120,7 +120,7 @@ namespace FabricObserver.Observers.Utilities
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        internal struct PROCESS_MEMORY_COUNTERS_EX
+        public struct PROCESS_MEMORY_COUNTERS_EX
         {
             public uint cb;
             public uint PageFaultCount;
@@ -136,7 +136,7 @@ namespace FabricObserver.Observers.Utilities
         }
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
-        internal class MEMORYSTATUSEX
+        public class MEMORYSTATUSEX
         {
             /// <summary>
             /// Size of the structure, in bytes. You must set this member before calling GlobalMemoryStatusEx.
@@ -192,8 +192,64 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        public struct PerformanceInformation
+        {
+            /// <summary>The size of this structure, in bytes.</summary>
+            public uint cb;
+
+            /// <summary>The number of pages currently committed by the system. Note that committing
+            /// pages (using VirtualAlloc with MEM_COMMIT) changes this value immediately; however,
+            /// the physical memory is not charged until the pages are accessed.</summary>
+            public IntPtr CommitTotal;
+
+            /// <summary>The current maximum number of pages that can be committed by the system
+            /// without extending the paging file(s). This number can change if memory is added
+            /// or deleted, or if pagefiles have grown, shrunk, or been added. If the paging
+            /// file can be extended, this is a soft limit.</summary>
+            public IntPtr CommitLimit;
+
+            /// <summary>The maximum number of pages that were simultaneously in the committed state
+            /// since the last system reboot.</summary>
+            public IntPtr CommitPeak;
+
+            /// <summary>The amount of actual physical memory, in pages.</summary>
+            public IntPtr PhysicalTotal;
+
+            /// <summary>The amount of physical memory currently available, in pages. This is the
+            /// amount of physical memory that can be immediately reused without having to write
+            /// its contents to disk first. It is the sum of the size of the standby, free, and
+            /// zero lists.</summary>
+            public IntPtr PhysicalAvailable;
+
+            /// <summary>The amount of system cache memory, in pages. This is the size of the
+            /// standby list plus the system working set.</summary>
+            public IntPtr SystemCache;
+
+            /// <summary>The sum of the memory currently in the paged and nonpaged kernel pools, in pages.</summary>
+            public IntPtr KernelTotal;
+
+            /// <summary>The memory currently in the paged kernel pool, in pages.</summary>
+            public IntPtr KernelPaged;
+
+            /// <summary>The memory currently in the nonpaged kernel pool, in pages.</summary>
+            public IntPtr KernelNonpaged;
+
+            /// <summary>The size of a page, in bytes.</summary>
+            public IntPtr PageSize;
+
+            /// <summary>The current number of open handles.</summary>
+            public uint HandleCount;
+
+            /// <summary>The current number of processes.</summary>
+            public uint ProcessCount;
+
+            /// <summary>The current number of threads.</summary>
+            public uint ThreadCount;
+        }
+
         [Flags]
-        internal enum ProcessAccessFlags : uint
+        public enum ProcessAccessFlags : uint
         {
             All = 0x001F0FFF,
             Terminate = 0x00000001,
@@ -213,7 +269,7 @@ namespace FabricObserver.Observers.Utilities
         // Networking \\
         // Credit: http://pinvoke.net/default.aspx/iphlpapi/GetExtendedTcpTable.html
 
-        internal enum TCP_TABLE_CLASS
+        public enum TCP_TABLE_CLASS
         {
             TCP_TABLE_BASIC_LISTENER,
             TCP_TABLE_BASIC_CONNECTIONS,
@@ -227,7 +283,7 @@ namespace FabricObserver.Observers.Utilities
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        internal struct MIB_TCP6TABLE_OWNER_PID
+        public struct MIB_TCP6TABLE_OWNER_PID
         {
             public uint dwNumEntries;
 
@@ -235,7 +291,7 @@ namespace FabricObserver.Observers.Utilities
             public MIB_TCP6ROW_OWNER_PID[] table;
         }
 
-        internal enum MIB_TCP_STATE
+        public enum MIB_TCP_STATE
         {
             MIB_TCP_STATE_CLOSED = 1,
             MIB_TCP_STATE_LISTEN = 2,
@@ -252,7 +308,7 @@ namespace FabricObserver.Observers.Utilities
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        internal struct MIB_TCP6ROW_OWNER_PID
+        public struct MIB_TCP6ROW_OWNER_PID
         {
             [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
             public byte[] localAddr;
@@ -336,7 +392,7 @@ namespace FabricObserver.Observers.Utilities
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        internal struct MIB_TCPTABLE_OWNER_PID
+        public struct MIB_TCPTABLE_OWNER_PID
         {
             public uint dwNumEntries;
 
@@ -345,7 +401,7 @@ namespace FabricObserver.Observers.Utilities
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        internal struct MIB_TCPROW_OWNER_PID
+        public struct MIB_TCPROW_OWNER_PID
         {
             public uint state;
             public uint localAddr;
@@ -727,29 +783,29 @@ namespace FabricObserver.Observers.Utilities
 
         [DllImport("psapi.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool GetProcessMemoryInfo(SafeProcessHandle hProcess, [Out] out PROCESS_MEMORY_COUNTERS_EX counters, [In] uint size);
+        public static extern bool GetProcessMemoryInfo(SafeProcessHandle hProcess, [Out] out PROCESS_MEMORY_COUNTERS_EX counters, [In] uint size);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool GetProcessHandleCount(SafeProcessHandle hProcess, out uint pdwHandleCount);
+        public static extern bool GetProcessHandleCount(SafeProcessHandle hProcess, out uint pdwHandleCount);
 
         // Process dump support.
         [DllImport("dbghelp.dll", EntryPoint = "MiniDumpWriteDump", CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Unicode, ExactSpelling = true, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool MiniDumpWriteDump(SafeProcessHandle hProcess, uint processId, SafeHandle hFile, MINIDUMP_TYPE dumpType, IntPtr expParam, IntPtr userStreamParam, IntPtr callbackParam);
+        public static extern bool MiniDumpWriteDump(SafeProcessHandle hProcess, uint processId, SafeHandle hFile, MINIDUMP_TYPE dumpType, IntPtr expParam, IntPtr userStreamParam, IntPtr callbackParam);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        internal static extern SafeProcessHandle OpenProcess(uint processAccess, bool bInheritHandle,uint processId);
+        public static extern SafeProcessHandle OpenProcess(uint processAccess, bool bInheritHandle,uint processId);
 
         [DllImport("psapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        internal static extern uint GetModuleBaseName(SafeProcessHandle hProcess, [Optional] IntPtr hModule, [MarshalAs(UnmanagedType.LPTStr)] StringBuilder lpBaseName, uint nSize);
+        public static extern uint GetModuleBaseName(SafeProcessHandle hProcess, [Optional] IntPtr hModule, [MarshalAs(UnmanagedType.LPTStr)] StringBuilder lpBaseName, uint nSize);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool GetProcessTimes(SafeProcessHandle ProcessHandle, out FILETIME CreationTime, out FILETIME ExitTime, out FILETIME KernelTime, out FILETIME UserTime);
+        public static extern bool GetProcessTimes(SafeProcessHandle ProcessHandle, out FILETIME CreationTime, out FILETIME ExitTime, out FILETIME KernelTime, out FILETIME UserTime);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        internal static extern bool GetSystemTimes(out FILETIME lpIdleTime, out FILETIME lpKernelTime, out FILETIME lpUserTime);
+        public static extern bool GetSystemTimes(out FILETIME lpIdleTime, out FILETIME lpKernelTime, out FILETIME lpUserTime);
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -796,7 +852,24 @@ namespace FabricObserver.Observers.Utilities
         [DllImport("kernel32.dll", SetLastError = false)]
         private static extern int PssWalkMarkerFree(IntPtr WalkMarkerHandle);
 
+        [return: MarshalAs(UnmanagedType.Bool)]
+        [DllImport("psapi.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern bool GetPerformanceInfo(ref PerformanceInformation pi, uint cb);
+
         // Impls/Helpers \\
+
+        /// <summary>
+        /// Gets System performance information.
+        /// </summary>
+        /// <param name="pi">Instance of <see cref="PerformanceInformation"/> structure to populate</param>
+        /// <returns>true if the function call was successful, false otherwise. Check <see cref="Marshal.GetLastWin32Error"/>
+        /// for additional error information.</returns>
+        public static bool GetSytemPerformanceInfo(ref PerformanceInformation pi)
+        {
+            pi.cb = (uint)Marshal.SizeOf(typeof(PerformanceInformation));
+            var ret = GetPerformanceInfo(ref pi, pi.cb);
+            return ret;
+        }
 
         /// <summary>
         /// Gets the number of execution threads started by the process with supplied pid.
@@ -1058,12 +1131,17 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        internal static SafeProcessHandle GetSafeProcessHandle(uint id)
+        /// <summary>
+        /// Returns a SafeProcessHandle for a process with the specificed process id.
+        /// </summary>
+        /// <param name="id">Process id.</param>
+        /// <returns>SafeProcessHandle instance.</returns>
+        public static SafeProcessHandle GetSafeProcessHandle(uint id)
         {
             return OpenProcess((uint)ProcessAccessFlags.All, false, id);
         }
 
-        internal static MEMORYSTATUSEX GetSystemMemoryInfo()
+        public static MEMORYSTATUSEX GetSystemMemoryInfo()
         {
             MEMORYSTATUSEX memory = new MEMORYSTATUSEX();
 
@@ -1082,7 +1160,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="handleToSnapshot">Handle to process snapshot (created using NativeMethods.CreateToolhelp32Snapshot).</param>
         /// <returns>A List of tuple (string procName,  int procId) representing each child process.</returns>
         /// <exception cref="Win32Exception">A Win32 Error Code will be present in the exception Message.</exception>
-        internal static List<(string procName, int procId)> GetChildProcesses(int parentpid, SafeObjectHandle handleToSnapshot = null)
+        public static List<(string procName, int procId)> GetChildProcesses(int parentpid, SafeObjectHandle handleToSnapshot = null)
         {
             if (parentpid < 1)
             {
@@ -1124,7 +1202,7 @@ namespace FabricObserver.Observers.Utilities
                 {
                     try
                     {
-                        if (procEntry.th32ProcessID == 0 || ignoreProcessList.Any(f => f == procEntry.szExeFile) || ignoreFabricSystemServicesList.Any(f => f == procEntry.szExeFile))
+                        if (procEntry.th32ProcessID == 0 || FindInStringArray(ignoreProcessList, procEntry.szExeFile) || FindInStringArray(ignoreFabricSystemServicesList, procEntry.szExeFile))
                         {
                             continue;
                         }
@@ -1171,17 +1249,17 @@ namespace FabricObserver.Observers.Utilities
         /// Gets a list of TCP (v4) connection info objects for use in determining TCP ports in use per process or machine-wide.
         /// </summary>
         /// <returns>List of MIB_TCPROW_OWNER_PID objects.</returns>
-        internal static List<MIB_TCPROW_OWNER_PID> GetAllTcpConnections()
+        public static List<MIB_TCPROW_OWNER_PID> GetAllTcpConnections()
         {
             return GetTCPConnections<MIB_TCPROW_OWNER_PID, MIB_TCPTABLE_OWNER_PID>(AF_INET);
         }
 
-        internal static List<MIB_TCP6ROW_OWNER_PID> GetAllTcpIpv6Connections()
+        public static List<MIB_TCP6ROW_OWNER_PID> GetAllTcpIpv6Connections()
         {
             return GetTCPConnections<MIB_TCP6ROW_OWNER_PID, MIB_TCP6TABLE_OWNER_PID>(AF_INET6);
         }
 
-        internal static List<IPR> GetTCPConnections<IPR, IPT>(int ipVersion)//IPR = Row Type, IPT = Table Type
+        private static List<IPR> GetTCPConnections<IPR, IPT>(int ipVersion)//IPR = Row Type, IPT = Table Type
         {
             IPR[] tableRows;
             int buffSize = 0;
@@ -1252,18 +1330,19 @@ namespace FabricObserver.Observers.Utilities
 
         private static readonly string[] ignoreProcessList = new string[]
         {
-            "conhost.exe", "csrss.exe","fontdrvhost.exe", "lsass.exe", "backgroundTaskHost.exe",
-            "LsaIso.exe", "services.exe", "smss.exe", "svchost.exe", "taskhostw.exe",
-            "wininit.exe", "winlogon.exe", "WUDFHost.exe", "WmiPrvSE.exe",
-            "TextInputHost.exe", "vmcompute.exe", "vmms.exe", "vmwp.exe", "vmmem",
-            "System", "System interrupts", "Secure System", "Registry"
+            "AggregatorHost.exe", "backgroundTaskHost.exe", "CcmExec.exe", "com.docker.service",
+            "conhost.exe", "csrss.exe", "dwm.exe", "esif_uf.exe", "fontdrvhost.exe",
+            "lsass.exe", "LsaIso.exe", "services.exe", "smss.exe", "svchost.exe",
+            "System", "System interrupts", "Secure System", "Registry",
+            "taskhostw.exe", "TextInputHost.exe", "wininit.exe", "winlogon.exe",
+            "WmiPrvSE.exe", "WUDFHost.exe", "vmcompute.exe", "vmms.exe", "vmwp.exe", "vmmem"
         };
 
         private static readonly string[] ignoreFabricSystemServicesList = new string[]
         {
             "Fabric.exe", "FabricHost.exe", "FabricApplicationGateway.exe", "FabricCAS.exe",
             "FabricDCA.exe", "FabricDnsService.exe", "FabricFAS.exe", "FabricGateway.exe",
-            "FabricHost.exe", "FabricIS.exe", "FabricRM.exe", "FabricUS.exe",
+            "FabricHost.exe", "FabricIS.exe", "FabricRM.exe", "FabricUS.exe"
         };
 
         private static string GetProcessNameFromId(uint pid)
@@ -1354,6 +1433,26 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
+        private static bool FindInStringArray(string[] arr, string s)
+        {
+            if (arr == null || arr.Length == 0 || string.IsNullOrWhiteSpace(s))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < arr.Length; i++)
+            {
+                if (string.IsNullOrWhiteSpace(arr[i]) || arr[i] != s)
+                { 
+                    continue;
+                }
+
+                return true;
+            }
+
+            return false;
+        }
+        
         // Cleanup \\
 
         private static bool TryReleaseHandle(IntPtr handle)

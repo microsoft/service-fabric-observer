@@ -2,18 +2,14 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
 	<metadata minClientVersion="3.3.0">
 		<id>%PACKAGE_ID%</id>
-		<version>3.2.1.831</version>
+		<version>3.2.2.831</version>
 		<releaseNotes>
-#### FabricObserver Changes (NOTE: Breaking ETW changes - Kusto queries will have to be modified.)
-- AppObserver: Updated ChildProcessInfo to include ProcessId of child process.
-- Bug fix: FO will no longer put itself into Warning with an infinite TTL health event when some observer does not complete within user-specified max run time.
-- Bug fix: AppObserver - Same named child processes will now be processed correctly.
-- Bug fix: FabricSystemObserver regression in reporting for some system services has been resolved.
-- DiskObserver: TelemetryData Property value is now "[drive] [Metric name]", e.g., on Windows, "C: Disk Space Usage (Percent)".
-- Performance improvements.
-- Updated ETW implementation.
-- New ETW payload format: Json-serialized instances of *TelemetryData or an anonymous types. This breaks existing KQL queries. See new ETW documentation for info.
-- Added ETW documentation with sample KQL.
+- Bug Fix: AppObserver now monitors Guest Executable services.
+- Support for Service Fabric Resource Governance memory limit monitoring (Windows-only).
+- Support for monitoring Private Bytes (Commit/Charge) usage by service processes (Windows-only).
+- Support for monitoring multiple service code packages.
+- Support for dumping service processes in Warning.
+- New unit tests and supporting config/app packages.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

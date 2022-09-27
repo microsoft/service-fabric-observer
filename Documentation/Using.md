@@ -4,7 +4,7 @@
 > You can learn all about the currently implemeted Observers and their supported resource properties [***here***](/Documentation/Observers.md). 
 
 
-**CPU Usage - CPU Time**  
+**CPU Usage - CPU Time (percent), all cores**  
 
 
 ***Problem***: I want to know how much CPU my App is using and emit a warning when a specified threshold is reached... 
@@ -146,6 +146,58 @@ So, based on the above configuration, when the number of open file handles held 
 ]
 ```
 
+**Resource Governance - Memory**  
+
+***Problem:*** I want FabricObserver to warn me when one of my RG-enabled (MemoryInMbLimit) services is approaching the absolute limit (that you specified in Megabytes, as required by SF RG configuration).  
+
+***Solution:*** AppObserver is your friend. 
+
+You need to first enable the global setting for RG Monitoring in AppObserver's ApplicationManifest Application Parameters section: 
+
+```XML
+    <!-- AppObserver can monitor services with resource governance limits set and put related services into Warning if they reach 90% of the specified limit (only Memory limit is supported in this release). 
+         If you set RG Memory limits for your service code packages, then you should consider enabling this feature. Else, don't. -->
+    <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="true" />
+```
+
+The above setting is a big on/off switch for the feature. If this is not set to true, then it doesn't matter what you configure in the AppObserver configuration (Json) below. This is useful because, like all Application Parameters in FabricObserver,
+you can modify them with a versionless, parameter-only Application Upgrade versus a redeployment or a Configuration Upgrade (Config and Code versions must change).
+
+Now, as the XML comment above makes clear, by default, when you enable this feature FabricObserver will warn when you have reached 90% or more of your specified MemoryInMbLimit that you set in the target app's ApplicationManifest (ResourceGovernancePolicy element for the related service code package). If you are fine with that 
+for all of your services that have RG enabled for Memory limiting, then you don't need to worry about the following information. Your work is done. If you do want to control this value - and also be able to specify different thresholds for different services - well, read on. 
+
+You can override FabricObserver's default 90% value by specifying a ```warningRGMemoryLimitPercent``` property in your AppObserver.config.json file for some RG-enabled app. Note that the below example also includes multiple overrides that are per service for an application named Voting. This is done to show you how 
+to accomplish such a thing, which is probably useful for many. You can also just simply override the global setting (object with "targetApp": "*") like below (so, 80 instead of 90) and this will be applied to all of your memory allocation limited (RG) services. The other objects show how to employ serviceIncludeList so narrow down the service scope for this particular threshold override.
+
+```JSON
+[
+  {
+    "targetApp": "*",
+    "cpuWarningLimitPercent": 85,
+    "memoryWarningLimitMb": 1024,
+    "networkWarningEphemeralPortsPercent": 30,
+    "warningThreadCount": 500,
+    "warningOpenFileHandles": 7000,
+    "warningPrivateBytesMb": 1280,
+    "warningRGMemoryLimitPercent": 80
+  },
+  {
+    "targetApp": "Voting",
+    "serviceIncludeList": "VotingData",
+    "warningRGMemoryLimitPercent": 75
+  },
+  {
+    "targetApp": "Voting",
+    "serviceIncludeList": "VotingWeb",
+    "warningRGMemoryLimitPercent": 105
+  }
+]
+```  
+
+Note that 105 value for VotingWeb. Huh? Well, that is actually very useful because it effectively means "don't put VotingWeb into Warning when it approaches the memory limit I set for its code package in ApplicationManifest.xml". This is because VotingWeb will have already OOM'd and crashed (or not, perhaps you force a GC and get out of the problem in user code or you have a design bug where you catch and ignore OOMs (you can do this in .NET. ***Don't do that!***)).
+So, set the value higher than 100% and you are telling FO to effectively ignore the service with respect to RG limit warning. As always, it's all up to you! 
+
+
 **Disk Usage - Space**  
 
 ***Problem:*** I want to know when my local disks are filling up well before my cluster goes down, along with the VM.
@@ -169,7 +221,7 @@ Example Output in SFX (Warning):
 ![alt text](/Documentation/Images/DiskObsWarn.png "DiskObserver Warning output example.")  
 
 
-**Memory Usage - Private Working Set as Percentage of Total Physical Memory** 
+**Memory Usage - Private Working Set - Percentage of Total Physical Memory** 
 
 ***Problem:*** I want to know how much memory some or all of my services are using and warn when they hit some meaningful percent-used thresold.  
 
@@ -197,7 +249,7 @@ The third one scopes to all services _but_ 3 and asks AppObserver to warn when a
 ]
 ```   
 
-**Memory Usage - Private Working Set - MB in Use** 
+**Memory Usage - Private Working Set - Absolute value in Megabytes** 
 
 ***Problem:*** I want to know how much memory some or all of my services are using and warn when they hit some meaningful Megabytes in use thresold.  
 
@@ -211,7 +263,7 @@ The third one scopes to all services _but_ 3 and asks AppObserver to warn when a
 [
   {
     "targetApp": "fabric:/MyApp",
-    "memoryWarningLimitMb": 300
+    "memoryWarningLimitPercent": 300
   },
   {
     "targetApp": "fabric:/AnotherApp",
@@ -225,6 +277,29 @@ The third one scopes to all services _but_ 3 and asks AppObserver to warn when a
 ]
 ```   
 
+**Memory Usage - Private Bytes - Absolute value in Megabytes** 
+
+***Problem:*** I want to know how much virtual memory some or all of my services are ***comitting*** and warn when they hit some meaningful Megabytes in use thresold.  
+
+***Solution:*** AppObserver is your friend.  
+
+```JSON
+[
+  {
+    "targetApp": "fabric:/MyApp",
+    "warningPrivateBytes": 800
+  },
+  {
+    "targetApp": "fabric:/AnotherApp",
+    "warningPrivateBytes": 500
+  },
+  {
+    "targetApp": "fabric:/SomeOtherApp",
+    "serviceExcludeList": "WhoNeedsMemoryService, NoMemoryNoProblemService, Service42",
+    "warningPrivateBytes": 2048
+  }
+]
+``` 
 
 **Different thresholds for different services belonging to the same app**  
 
@@ -351,12 +426,12 @@ The configuration below specifies that AppObserver is to monitor and report thre
 ]
 ``` 
 
-**Advanced Debugging - Windows Process Dumps**  
+**Advanced Debugging - Windows Process Dumps (Linux support TBD)**  
 
-***Problem:*** I want to dump any of my SF service processes that are eating too much memory on Windows. (This is not supported on Linux yet).
+***Problem:*** I want to dump any of my Windows SF service processes that are eating too much memory.
 
 ***Solution:*** AppObserver is your friend.  Note, you can specify all app targets using either "*" or "All"(case doesn't matter). 
-In this case, AppObserver will initiate a mini dump (MiniPlus by default) of an offending process running on Windows. You can configure [AzureStorageUploadObserver](/Documentation/Observers.md#azurestorageuploadobserver) to ship the dmp (compressed to zip file) to a blob in your Azure storage account.
+In this case, AppObserver will initiate a mini dump (MiniPlus by default) of an offending process running on Windows and only if the specified Error threshold has been breached (so, only Memory has an Error threshold specified, thus only that metric will be used to initiate a dump). You can configure [AzureStorageUploadObserver](/Documentation/Observers.md#azurestorageuploadobserver) to ship the dmp (compressed to zip file) to a blob in your Azure storage account.
 Please see [Observers documentation](/Documentation/Observers.md), specifically App and AzureStorageUpload observer sections for details on this process dump and upload feature.
 
 ```JSON
@@ -371,9 +446,68 @@ Please see [Observers documentation](/Documentation/Observers.md), specifically 
   }
 ```
 
-> You can learn all about the currently implemeted Observers and their supported resource properties [***here***](/Documentation/Observers.md). 
+***Problem:*** I want to dump only services that belong to one application when any of them are consuming too much of any specified resource metric, but I *don't* want to put any service entities into Error state because I don't like the consequences of doing so (blocking Repair Jobs, blocking upgrades, etc..).
+
+***Solution:*** AppObserver to the rescue. ```dumpProcessOnWarning``` is the droid you're looking for, specifically.
+
+The configuration below below demonstrates how to add specific properties to one application that extend the global ("*") settings, which are applied to all application services. The specified targetApp in the second Json object will have all the settings applied that are specified in the first Json object plus the dumpProcessOnWarning setting.
+This means that if any of the Voting app's services have reached or exceeded any of the specified Warning level thresholds, then they will be dumped. 
+
+```JSON
+[
+  {
+    "targetApp": "*",
+    "cpuWarningLimitPercent": 85,
+    "memoryWarningLimitMb": 1024,
+    "networkWarningEphemeralPorts": 10000,
+    "warningThreadCount": 600
+  },
+  {
+    "targetApp": "Voting",
+    "dumpProcessOnWarning": true
+  }
+]
+```
+
+***Problem:*** I want to dump only specific services that belong to one application when any of them are consuming too much of any specified resource metric, but I *don't* want to put any service entities into Error state because I don't like the consequences of doing so (blocking Repair Jobs, blocking upgrades, etc..).
+
+***Solution:*** AppObserver to the rescue. ```dumpProcessOnWarning``` is the droid you're looking for, specifically.
+
+The configuration below below demonstrates how to add specific properties to one application that extend the global ("\*") settings, which are applied to all application services. The specified targetApp in the second Json object will have all the settings applied that are specified in the first Json object plus the dumpProcessOnWarning setting
+and **only** for the specified service in the serviceIncludeList property. Note that this setting means that any other service that belongs to the application will not be monitored (since they are effectively excluded). The work around is to add new objects for each of the those services. See below for an example.
+The third section (with serviceIncludeList for "Web") means that the included service will be monitored based on the global ("\*") config block. However, it's process will not be dumped if it goes into Warning. 
+
+```JSON
+[
+  {
+    "targetApp": "*",
+    "cpuWarningLimitPercent": 85,
+    "memoryWarningLimitMb": 1024,
+    "networkWarningEphemeralPorts": 10000,
+    "warningThreadCount": 600
+  },
+  {
+    "targetApp": "Voting",
+    "serviceIncludeList": "Data",
+    "dumpProcessOnWarning": true
+  },
+  {
+    "targetApp": "Voting",
+    "serviceIncludeList": "Web",
+    "dumpProcessOnWarning": false
+  }
+]
+```
 
 
+> You can learn all about the currently implemeted Observers and their supported resource properties [***here***](/Documentation/Observers.md).  
+> 
+
+
+***NOTE***: Unlike applying an Error threshold to a single metric in a list of only Warning thresholds, you will need to use dumpProcessOnWarning carefully (so, do not specify it in a global setting object if you DO NOT want FO to dump ANY service process that hits ANY specified Warning threshold. That is probably not something you want to do..)
+Put another way, do not apply this setting in the global config Json object ("targetApp": "\*" block). Just target specific apps only. As always, you are free to do whatever makes sense for your specific needs, but tread carefully here.
+
+Also, FO will *not* dump a Resource Governed process that is put into Warning for crossing the specified ```warningRGMemoryLimitPercent``` threshold.
 
 **What about the state of the Machine, as a whole?** 
 
@@ -576,7 +710,7 @@ $appParams = @{ "FabricSystemObserverEnabled" = "true"; "FabricSystemObserverMem
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.2.1.960 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.2.2.960 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```  
 
 **Important**: This action will overwrite previous changes that were made this way. If you want to preserve any earlier changes, then you will need to

@@ -34,6 +34,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         [EventField]
+        public string ApplicationTypeVersion
+        {
+            get; set;
+        }
+
+        [EventField]
         public string Code
         {
             get; set;
@@ -139,13 +145,25 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         [EventField]
-        public ReplicaRole ReplicaRole
+        public string ReplicaRole
         {
             get; set;
         }
 
         [EventField]
-        public ServiceKind ServiceKind
+        public bool RGEnabled
+        {
+            get; set;
+        }
+
+        [EventField]
+        public double RGMemoryLimitMb
+        {
+            get; set;
+        }
+
+        [EventField]
+        public string ServiceKind
         {
             get; set;
         }
@@ -157,7 +175,19 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         }
 
         [EventField]
-        public ServicePackageActivationMode? ServicePackageActivationMode
+        public string ServiceTypeName
+        {
+            get; set;
+        }
+
+        [EventField]
+        public string ServiceTypeVersion
+        {
+            get; set;
+        }
+
+        [EventField]
+        public string ServicePackageActivationMode
         {
             get; set;
         }

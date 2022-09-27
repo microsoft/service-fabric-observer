@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Fabric;
+using System.Fabric.Description;
 using System.Fabric.Health;
 using System.Fabric.Query;
 using System.IO;
@@ -16,6 +17,8 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
+using System.Xml.XPath;
 using FabricObserver.Interfaces;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
@@ -29,12 +32,13 @@ namespace FabricObserver.Observers
     public sealed class AppObserver : ObserverBase
     {
         private const double KvsLvidsWarningPercentage = 75.0;
+        private const double MaxRGMemoryInUsePercent = 90.0;
         private const int MaxSameNamedProcesses = 50;
         private readonly object _lock = new object();
 
-        // These are the concurrent data containers that hold all monitoring data for all application targets for specific metrics.
+        // These are the concurrent data structures that hold all monitoring data for all application service targets for specific metrics.
         // In the case where machine has capable CPU configuration and AppObserverEnableConcurrentMonitoring is enabled, these ConcurrentDictionaries
-        // will be read by and written to by multiple threads. In the case where concurrency is not possible (or not enabled), they will sort of act as "normal"
+        // will be read from and written to by multiple threads. In the case where concurrency is not possible (or not enabled), they will sort of act as "normal"
         // Dictionaries (not precisely) since the monitoring loop will always be sequential (exactly one thread, so no internal locking) and there will not be *any* concurrent reads/writes.
         // The modest cost in memory allocation in the sequential processing case is not an issue here.
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData;
@@ -46,6 +50,13 @@ namespace FabricObserver.Observers
         private ConcurrentDictionary<string, FabricResourceUsageData<float>> AllAppHandlesData;
         private ConcurrentDictionary<string, FabricResourceUsageData<int>> AllAppThreadsData;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppKvsLvidsData;
+
+        // Windows-only
+        private ConcurrentDictionary<string, FabricResourceUsageData<float>> AllAppPrivateBytesDataMb;
+        private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppPrivateBytesDataPercent;
+
+        // Windows-only for now.
+        private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppRGMemoryUsagePercent;
 
         // Stores process id (key) / process name pairs for all monitored service processes.
         private ConcurrentDictionary<int, string> _processInfoDictionary;
@@ -148,6 +159,11 @@ namespace FabricObserver.Observers
             get; set;
         }
 
+        public bool MonitorResourceGovernanceLimits
+        {
+            get; set;
+        }
+
         /// <summary>
         /// Creates a new instance of the type.
         /// </summary>
@@ -159,7 +175,7 @@ namespace FabricObserver.Observers
 
         public override async Task ObserveAsync(CancellationToken token)
         {
-            ObserverLogger.LogInfo($"Started ObserveAsync...");
+            ObserverLogger.LogInfo($"Started ObserveAsync.");
 
             if (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
@@ -209,7 +225,7 @@ namespace FabricObserver.Observers
 
             CleanUp();
             _stopwatch.Reset();
-            ObserverLogger.LogInfo($"Completed ObserveAsync...");
+            ObserverLogger.LogInfo($"Completed ObserveAsync.");
             LastRunDateTime = DateTime.Now;
         }
        
@@ -220,7 +236,7 @@ namespace FabricObserver.Observers
                 return Task.CompletedTask;
             }
 
-            ObserverLogger.LogInfo($"Started ReportAsync...");
+            ObserverLogger.LogInfo($"Started ReportAsync.");
 
             //DEBUG
             //var stopwatch = Stopwatch.StartNew();
@@ -337,7 +353,7 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                // CPU - Parent process
+                // CPU Time (Percent)
                 if (AllAppCpuData.ContainsKey(id))
                 {
                     var parentFrud = AllAppCpuData[id];
@@ -349,18 +365,19 @@ namespace FabricObserver.Observers
 
                     // Parent's and aggregated (summed) descendant process data (if any).
                     ProcessResourceDataReportHealth(
-                            parentFrud,
-                            app.CpuErrorLimitPercent,
-                            app.CpuWarningLimitPercent,
-                            TTL,
-                            EntityType.Service,
-                            processName,
-                            repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps,
-                            processId);
+                        parentFrud,
+                        app.CpuErrorLimitPercent,
+                        app.CpuWarningLimitPercent,
+                        TTL,
+                        EntityType.Service,
+                        processName,
+                        repOrInst,
+                        app.DumpProcessOnError && EnableProcessDumps,
+                        app.DumpProcessOnWarning && EnableProcessDumps,
+                        processId);
                 }
 
-                // Memory MB - Parent process
+                // Working Set (MB)
                 if (AllAppMemDataMb.ContainsKey(id))
                 {
                     var parentFrud = AllAppMemDataMb[id];
@@ -371,18 +388,19 @@ namespace FabricObserver.Observers
                     }
 
                     ProcessResourceDataReportHealth(
-                            parentFrud,
-                            app.MemoryErrorLimitMb,
-                            app.MemoryWarningLimitMb,
-                            TTL,
-                            EntityType.Service,
-                            processName,
-                            repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps,
-                            processId);
+                        parentFrud,
+                        app.MemoryErrorLimitMb,
+                        app.MemoryWarningLimitMb,
+                        TTL,
+                        EntityType.Service,
+                        processName,
+                        repOrInst,
+                        app.DumpProcessOnError && EnableProcessDumps,
+                        app.DumpProcessOnWarning && EnableProcessDumps,
+                        processId);
                 }
 
-                // Memory Percent - Parent process
+                // Working Set (Percent)
                 if (AllAppMemDataPercent.ContainsKey(id))
                 {
                     var parentFrud = AllAppMemDataPercent[id];
@@ -393,18 +411,94 @@ namespace FabricObserver.Observers
                     }
 
                     ProcessResourceDataReportHealth(
+                        parentFrud,
+                        app.MemoryErrorLimitPercent,
+                        app.MemoryWarningLimitPercent,
+                        TTL,
+                        EntityType.Service,
+                        processName,
+                        repOrInst,
+                        app.DumpProcessOnError && EnableProcessDumps,
+                        app.DumpProcessOnWarning && EnableProcessDumps,
+                        processId);
+                }
+
+                // Private Bytes (MB)
+                if (AllAppPrivateBytesDataMb.ContainsKey(id))
+                {
+                    var parentFrud = AllAppPrivateBytesDataMb[id];
+
+                    if (hasChildProcs)
+                    {
+                        ProcessChildProcs(AllAppPrivateBytesDataMb, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                    }
+
+                    if (app.WarningPrivateBytesMb > 0 || app.ErrorPrivateBytesMb > 0)
+                    {
+                        ProcessResourceDataReportHealth(
                             parentFrud,
-                            app.MemoryErrorLimitPercent,
-                            app.MemoryWarningLimitPercent,
+                            app.ErrorPrivateBytesMb,
+                            app.WarningPrivateBytesMb,
                             TTL,
                             EntityType.Service,
                             processName,
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps,
+                            app.DumpProcessOnWarning && EnableProcessDumps,
                             processId);
+                    }
                 }
 
-                // TCP Ports - Active - Parent process
+                // Private Bytes (Percent)
+                if (AllAppPrivateBytesDataPercent.ContainsKey(id))
+                {
+                    var parentFrud = AllAppPrivateBytesDataPercent[id];
+
+                    if (hasChildProcs)
+                    {
+                        ProcessChildProcs(AllAppPrivateBytesDataPercent, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                    }
+
+                    if (app.WarningPrivateBytesPercent > 0 || app.ErrorPrivateBytesPercent > 0)
+                    {
+                        ProcessResourceDataReportHealth(
+                            parentFrud,
+                            app.ErrorPrivateBytesPercent,
+                            app.WarningPrivateBytesPercent,
+                            TTL,
+                            EntityType.Service,
+                            processName,
+                            repOrInst,
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            app.DumpProcessOnWarning && EnableProcessDumps,
+                            processId);
+                    }
+                }
+
+                // RG Memory Monitoring (Private Bytes Percent)
+                if (AllAppRGMemoryUsagePercent.ContainsKey(id))
+                {
+                    var parentFrud = AllAppRGMemoryUsagePercent[id];
+
+                    if (hasChildProcs)
+                    {
+                        ProcessChildProcs(AllAppRGMemoryUsagePercent, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                    }
+             
+                    ProcessResourceDataReportHealth(
+                        parentFrud,
+                        thresholdError: 0, // Only Warning Threshold is supported for RG reporting.
+                        thresholdWarning: app.WarningRGMemoryLimitPercent > 0 ? app.WarningRGMemoryLimitPercent : MaxRGMemoryInUsePercent, // Default: 90%
+                        TTL,
+                        EntityType.Service,
+                        processName,
+                        repOrInst,
+                        false, // Not supported
+                        false, // Not supported
+                        processId);
+                }
+
+                // TCP Ports - Active
                 if (AllAppTotalActivePortsData.ContainsKey(id))
                 {
                     var parentFrud = AllAppTotalActivePortsData[id];
@@ -415,18 +509,19 @@ namespace FabricObserver.Observers
                     }
 
                     ProcessResourceDataReportHealth(
-                            parentFrud,
-                            app.NetworkErrorActivePorts,
-                            app.NetworkWarningActivePorts,
-                            TTL,
-                            EntityType.Service,
-                            processName,
-                            repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps,
-                            processId);
+                        parentFrud,
+                        app.NetworkErrorActivePorts,
+                        app.NetworkWarningActivePorts,
+                        TTL,
+                        EntityType.Service,
+                        processName,
+                        repOrInst,
+                        app.DumpProcessOnError && EnableProcessDumps,
+                        app.DumpProcessOnWarning && EnableProcessDumps,
+                        processId);
                 }
 
-                // TCP Ports Total - Ephemeral (port numbers fall in the dynamic range) - Parent process
+                // TCP Ports Total - Ephemeral (port numbers fall in the dynamic range)
                 if (AllAppEphemeralPortsData.ContainsKey(id))
                 {
                     var parentFrud = AllAppEphemeralPortsData[id];
@@ -437,18 +532,19 @@ namespace FabricObserver.Observers
                     }
 
                     ProcessResourceDataReportHealth(
-                            parentFrud,
-                            app.NetworkErrorEphemeralPorts,
-                            app.NetworkWarningEphemeralPorts,
-                            TTL,
-                            EntityType.Service,
-                            processName,
-                            repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps,
-                            processId);
+                        parentFrud,
+                        app.NetworkErrorEphemeralPorts,
+                        app.NetworkWarningEphemeralPorts,
+                        TTL,
+                        EntityType.Service,
+                        processName,
+                        repOrInst,
+                        app.DumpProcessOnError && EnableProcessDumps,
+                        app.DumpProcessOnWarning && EnableProcessDumps,
+                        processId);
                 }
 
-                // TCP Ports Percentage - Ephemeral (port numbers fall in the dynamic range) - Parent process
+                // TCP Ports Percentage - Ephemeral (port numbers fall in the dynamic range)
                 if (AllAppEphemeralPortsDataPercent.ContainsKey(id))
                 {
                     var parentFrud = AllAppEphemeralPortsDataPercent[id];
@@ -459,18 +555,19 @@ namespace FabricObserver.Observers
                     }
 
                     ProcessResourceDataReportHealth(
-                            parentFrud,
-                            app.NetworkErrorEphemeralPortsPercent,
-                            app.NetworkWarningEphemeralPortsPercent,
-                            TTL,
-                            EntityType.Service,
-                            processName,
-                            repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps,
-                            processId);
+                        parentFrud,
+                        app.NetworkErrorEphemeralPortsPercent,
+                        app.NetworkWarningEphemeralPortsPercent,
+                        TTL,
+                        EntityType.Service,
+                        processName,
+                        repOrInst,
+                        app.DumpProcessOnError && EnableProcessDumps,
+                        app.DumpProcessOnWarning && EnableProcessDumps,
+                        processId);
                 }
 
-                // Allocated (in use) Handles - Parent process
+                // Allocated (in use) Handles
                 if (AllAppHandlesData.ContainsKey(id))
                 {
                     var parentFrud = AllAppHandlesData[id];
@@ -481,18 +578,19 @@ namespace FabricObserver.Observers
                     }
 
                     ProcessResourceDataReportHealth(
-                            parentFrud,
-                            app.ErrorOpenFileHandles,
-                            app.WarningOpenFileHandles,
-                            TTL,
-                            EntityType.Service,
-                            processName,
-                            repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps,
-                            processId);
+                        parentFrud,
+                        app.ErrorOpenFileHandles,
+                        app.WarningOpenFileHandles,
+                        TTL,
+                        EntityType.Service,
+                        processName,
+                        repOrInst,
+                        app.DumpProcessOnError && EnableProcessDumps,
+                        app.DumpProcessOnWarning && EnableProcessDumps,
+                        processId);
                 }
 
-                // Threads - Parent process
+                // Threads
                 if (AllAppThreadsData.ContainsKey(id))
                 {
                     var parentFrud = AllAppThreadsData[id];
@@ -503,15 +601,16 @@ namespace FabricObserver.Observers
                     }
 
                     ProcessResourceDataReportHealth(
-                            parentFrud,
-                            app.ErrorThreadCount,
-                            app.WarningThreadCount,
-                            TTL,
-                            EntityType.Service,
-                            processName,
-                            repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps,
-                            processId);
+                        parentFrud,
+                        app.ErrorThreadCount,
+                        app.WarningThreadCount,
+                        TTL,
+                        EntityType.Service,
+                        processName,
+                        repOrInst,
+                        app.DumpProcessOnError && EnableProcessDumps,
+                        app.DumpProcessOnWarning && EnableProcessDumps,
+                        processId);
                 }
 
                 // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
@@ -526,15 +625,16 @@ namespace FabricObserver.Observers
 
                     // FO will warn if the stateful (Actor, for example) service process has used 75% or greater of available LVIDs. This is not configurable (and a temporary feature).
                     ProcessResourceDataReportHealth(
-                            parentFrud,
-                            0,
-                            KvsLvidsWarningPercentage,
-                            TTL,
-                            EntityType.Service,
-                            processName,
-                            repOrInst,
-                            app.DumpProcessOnError && EnableProcessDumps,
-                            processId);
+                        parentFrud,
+                        0,
+                        KvsLvidsWarningPercentage,
+                        TTL,
+                        EntityType.Service,
+                        processName,
+                        repOrInst,
+                        app.DumpProcessOnError && EnableProcessDumps,
+                        app.DumpProcessOnWarning && EnableProcessDumps,
+                        processId);
                 }           
 
                 // Child proc info telemetry.
@@ -554,7 +654,7 @@ namespace FabricObserver.Observers
 
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"ReportAsync run duration with parallel: {stopwatch.Elapsed}");
-            ObserverLogger.LogInfo($"Completed ReportAsync...");
+            ObserverLogger.LogInfo($"Completed ReportAsync.");
             return Task.CompletedTask;
         }
 
@@ -562,7 +662,7 @@ namespace FabricObserver.Observers
         // be up to date.
         public async Task<bool> InitializeAsync()
         {
-            ObserverLogger.LogInfo($"Initializing...");
+            ObserverLogger.LogInfo($"Initializing AppObserver.");
             ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
             _userTargetList = new List<ApplicationInfo>();
             _deployedTargetList = new List<ApplicationInfo>();
@@ -571,7 +671,7 @@ namespace FabricObserver.Observers
             _client = new FabricClientUtilities(NodeName);
             _deployedApps = await _client.GetAllDeployedAppsAsync(Token);
 
-            // DEBUG
+            // DEBUG - Perf
             //var stopwatch = Stopwatch.StartNew();
 
             // Set properties with Application Parameter settings (housed in ApplicationManifest.xml) for this run.
@@ -741,7 +841,7 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            ObserverLogger.LogInfo($"Started processing of global (*/all) settings from appObserver.config.json...");
+            ObserverLogger.LogInfo($"Started processing of global (*/all) settings from appObserver.config.json.");
 
             ApplicationInfo application = _userTargetList.First(app => app.TargetApp?.ToLower() == "all" || app.TargetApp == "*");
 
@@ -779,6 +879,16 @@ namespace FabricObserver.Observers
                     continue;
                 }
 
+                // Multiple code packages
+                if (codepackages.Count > 1)
+                {
+                    foreach (var codepackage in codepackages)
+                    {
+                        int procId = (int)codepackage.EntryPoint.ProcessId;
+                        string procName = NativeMethods.GetProcessNameFromId(procId);
+                    }
+                }
+
                 // App filtering: AppExcludeList, AppIncludeList. This is only useful when you are observing All/* applications for a range of thresholds.
                 if (!string.IsNullOrWhiteSpace(application.AppExcludeList) && application.AppExcludeList.Contains(app.ApplicationName.OriginalString.Replace("fabric:/", string.Empty)))
                 {
@@ -809,11 +919,21 @@ namespace FabricObserver.Observers
                         existingAppConfig[j].ServiceExcludeList = string.IsNullOrWhiteSpace(existingAppConfig[j].ServiceExcludeList) && !string.IsNullOrWhiteSpace(application.ServiceExcludeList) ? application.ServiceExcludeList : existingAppConfig[j].ServiceExcludeList;
                         existingAppConfig[j].ServiceIncludeList = string.IsNullOrWhiteSpace(existingAppConfig[j].ServiceIncludeList) && !string.IsNullOrWhiteSpace(application.ServiceIncludeList) ? application.ServiceIncludeList : existingAppConfig[j].ServiceIncludeList;
 
-                        // Memory
+                        // Memory - Working Set (MB)
                         existingAppConfig[j].MemoryErrorLimitMb = existingAppConfig[j].MemoryErrorLimitMb == 0 && application.MemoryErrorLimitMb > 0 ? application.MemoryErrorLimitMb : existingAppConfig[j].MemoryErrorLimitMb;
                         existingAppConfig[j].MemoryWarningLimitMb = existingAppConfig[j].MemoryWarningLimitMb == 0 && application.MemoryWarningLimitMb > 0 ? application.MemoryWarningLimitMb : existingAppConfig[j].MemoryWarningLimitMb;
+
+                        // Memory - Working Set (Percent)
                         existingAppConfig[j].MemoryErrorLimitPercent = existingAppConfig[j].MemoryErrorLimitPercent == 0 && application.MemoryErrorLimitPercent > 0 ? application.MemoryErrorLimitPercent : existingAppConfig[j].MemoryErrorLimitPercent;
                         existingAppConfig[j].MemoryWarningLimitPercent = existingAppConfig[j].MemoryWarningLimitPercent == 0 && application.MemoryWarningLimitPercent > 0 ? application.MemoryWarningLimitPercent : existingAppConfig[j].MemoryWarningLimitPercent;
+
+                        // Memory - Private Bytes (MB)
+                        existingAppConfig[j].ErrorPrivateBytesMb = existingAppConfig[j].ErrorPrivateBytesMb == 0 && application.ErrorPrivateBytesMb > 0 ? application.ErrorPrivateBytesMb : existingAppConfig[j].ErrorPrivateBytesMb;
+                        existingAppConfig[j].WarningPrivateBytesMb = existingAppConfig[j].WarningPrivateBytesMb == 0 && application.WarningPrivateBytesMb > 0 ? application.WarningPrivateBytesMb : existingAppConfig[j].WarningPrivateBytesMb;
+
+                        // Memory - Private Bytes (Percent)
+                        existingAppConfig[j].ErrorPrivateBytesPercent = existingAppConfig[j].ErrorPrivateBytesPercent == 0 && application.ErrorPrivateBytesPercent > 0 ? application.ErrorPrivateBytesPercent : existingAppConfig[j].ErrorPrivateBytesPercent;
+                        existingAppConfig[j].WarningPrivateBytesPercent = existingAppConfig[j].WarningPrivateBytesPercent == 0 && application.WarningPrivateBytesPercent > 0 ? application.WarningPrivateBytesPercent : existingAppConfig[j].WarningPrivateBytesPercent;
 
                         // CPU
                         existingAppConfig[j].CpuErrorLimitPercent = existingAppConfig[j].CpuErrorLimitPercent == 0 && application.CpuErrorLimitPercent > 0 ? application.CpuErrorLimitPercent : existingAppConfig[j].CpuErrorLimitPercent;
@@ -832,6 +952,9 @@ namespace FabricObserver.Observers
                         // DumpOnError
                         existingAppConfig[j].DumpProcessOnError = application.DumpProcessOnError == existingAppConfig[j].DumpProcessOnError ? application.DumpProcessOnError : existingAppConfig[j].DumpProcessOnError;
 
+                        // DumpOnWarning
+                        existingAppConfig[j].DumpProcessOnWarning = application.DumpProcessOnWarning == existingAppConfig[j].DumpProcessOnWarning ? application.DumpProcessOnWarning : existingAppConfig[j].DumpProcessOnWarning;
+
                         // Handles
                         existingAppConfig[j].ErrorOpenFileHandles = existingAppConfig[j].ErrorOpenFileHandles == 0 && application.ErrorOpenFileHandles > 0 ? application.ErrorOpenFileHandles : existingAppConfig[j].ErrorOpenFileHandles;
                         existingAppConfig[j].WarningOpenFileHandles = existingAppConfig[j].WarningOpenFileHandles == 0 && application.WarningOpenFileHandles > 0 ? application.WarningOpenFileHandles : existingAppConfig[j].WarningOpenFileHandles;
@@ -840,6 +963,8 @@ namespace FabricObserver.Observers
                         existingAppConfig[j].ErrorThreadCount = existingAppConfig[j].ErrorThreadCount == 0 && application.ErrorThreadCount > 0 ? application.ErrorThreadCount : existingAppConfig[j].ErrorThreadCount;
                         existingAppConfig[j].WarningThreadCount = existingAppConfig[j].WarningThreadCount == 0 && application.WarningThreadCount > 0 ? application.WarningThreadCount : existingAppConfig[j].WarningThreadCount;
 
+                        // RGMemoryLimitPercent
+                        existingAppConfig[j].WarningRGMemoryLimitPercent = existingAppConfig[j].WarningRGMemoryLimitPercent == 0 && application.WarningRGMemoryLimitPercent > 0 ? application.WarningRGMemoryLimitPercent : existingAppConfig[j].WarningRGMemoryLimitPercent;
                     }
                 }
                 else
@@ -865,10 +990,16 @@ namespace FabricObserver.Observers
                         NetworkErrorEphemeralPortsPercent = application.NetworkErrorEphemeralPortsPercent,
                         NetworkWarningEphemeralPortsPercent = application.NetworkWarningEphemeralPortsPercent,
                         DumpProcessOnError = application.DumpProcessOnError,
+                        DumpProcessOnWarning = application.DumpProcessOnWarning,
                         ErrorOpenFileHandles = application.ErrorOpenFileHandles,
                         WarningOpenFileHandles = application.WarningOpenFileHandles,
                         ErrorThreadCount = application.ErrorThreadCount,
-                        WarningThreadCount = application.WarningThreadCount
+                        WarningThreadCount = application.WarningThreadCount,
+                        ErrorPrivateBytesMb = application.ErrorPrivateBytesMb,
+                        WarningPrivateBytesMb = application.WarningPrivateBytesMb,
+                        ErrorPrivateBytesPercent = application.ErrorPrivateBytesPercent,
+                        WarningPrivateBytesPercent = application.WarningPrivateBytesPercent,
+                        WarningRGMemoryLimitPercent = application.WarningRGMemoryLimitPercent
                     };
 
                     _userTargetList.Add(appConfig);
@@ -877,12 +1008,12 @@ namespace FabricObserver.Observers
 
             // Remove the All/* config item.
              _ = _userTargetList.Remove(application);
-            ObserverLogger.LogInfo($"Completed processing of global (*/all) settings from appObserver.config.json...");
+            ObserverLogger.LogInfo($"Completed processing of global (*/all) settings from appObserver.config.json.");
         }
 
         private void FilterTargetAppFormat()
         {
-            ObserverLogger.LogInfo($"Evaluating targetApp format. Will attempt to correct malformed values, if any...");
+            ObserverLogger.LogInfo($"Evaluating targetApp format. Will attempt to correct malformed values, if any.");
             for (int i = 0; i < _userTargetList.Count; i++)
             {
                 var target = _userTargetList[i];
@@ -971,12 +1102,12 @@ namespace FabricObserver.Observers
 
                 }
             }
-            ObserverLogger.LogInfo($"Completed targetApp evaluation...");
+            ObserverLogger.LogInfo($"Completed targetApp evaluation.");
         }
 
         private async Task<bool> ProcessJSONConfigAsync()
         {
-            ObserverLogger.LogInfo($"Processing Json configuration...");
+            ObserverLogger.LogInfo($"Processing Json configuration.");
             if (!File.Exists(JsonConfigPath))
             {
                 string message = $"Will not observe resource consumption on node {NodeName} as no configuration file has been supplied.";
@@ -1130,7 +1261,7 @@ namespace FabricObserver.Observers
                 IsUnhealthy = true;
                 return false;
             }
-            ObserverLogger.LogInfo($"Completed processing Json configuration...");
+            ObserverLogger.LogInfo($"Completed processing Json configuration.");
             return true;
         }
 
@@ -1139,14 +1270,14 @@ namespace FabricObserver.Observers
         /// </summary>
         private void SetPropertiesFromApplicationSettings()
         {
-            ObserverLogger.LogInfo($"Setting properties from application parameters...");
+            ObserverLogger.LogInfo($"Setting properties from application parameters.");
             
             // TODO Right another TEST....
             // Config path.
             if (JsonConfigPath == null)
             {
                 JsonConfigPath =
-                    Path.Combine(ConfigPackage.Path, GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileName));
+                    Path.Combine(ConfigPackage.Path, GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileNameParameter));
 
                 ObserverLogger.LogInfo(JsonConfigPath);
             }
@@ -1154,9 +1285,17 @@ namespace FabricObserver.Observers
             ObserverLogger.LogInfo($"MonitorPrivateWorkingSet");
             // Private working set monitoring.
             if (bool.TryParse(
-                GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MonitorPrivateWorkingSet), out bool monitorWsPriv))
+                GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MonitorPrivateWorkingSetParameter), out bool monitorWsPriv))
             {
                 CheckPrivateWorkingSet = monitorWsPriv;
+            }
+
+            ObserverLogger.LogInfo($"MonitorResourceGovernanceLimits");
+            // Monitor RG limits. Windows-only.
+            if (bool.TryParse(
+                GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MonitorResourceGovernanceLimitsParameter), out bool monitorRG))
+            {
+                MonitorResourceGovernanceLimits = IsWindows && monitorRG;
             }
 
             ObserverLogger.LogInfo($"EnableChildProcessMonitoringParameter");
@@ -1175,7 +1314,7 @@ namespace FabricObserver.Observers
             }
 
             ObserverLogger.LogInfo($"EnableProcessDumpsParameter");
-            /* dumpProcessOnError config */
+            /* dumpProcessOnError/dumpProcessOnWarning config */
             if (bool.TryParse(
                 GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableProcessDumpsParameter), out bool enableDumps))
             {
@@ -1211,7 +1350,7 @@ namespace FabricObserver.Observers
             ObserverLogger.LogInfo($"EnableConcurrentMonitoring");
             // Concurrency/Parallelism support. The minimum requirement is 4 logical processors, regardless of user setting.
             if (Environment.ProcessorCount >= 4 && bool.TryParse(
-                    GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
+                    GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoringParameter), out bool enableConcurrency))
             {
                 EnableConcurrentMonitoring = enableConcurrency;
             }
@@ -1228,7 +1367,7 @@ namespace FabricObserver.Observers
                 maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
                 
                 // If user configures MaxConcurrentTasks setting, then use that value instead.
-                if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasks), out int maxTasks))
+                if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasksParameter), out int maxTasks))
                 {
                     if (maxTasks > 0)
                     {
@@ -1253,7 +1392,7 @@ namespace FabricObserver.Observers
                 // Observers that monitor LVIDs should ensure the static ObserverManager.CanInstallLvidCounter is true before attempting to monitor LVID usage.
                 EnableKvsLvidMonitoring = enableLvidMonitoring && ObserverManager.IsLvidCounterEnabled;
             }
-            ObserverLogger.LogInfo($"Completed setting properties from application parameters...");
+            ObserverLogger.LogInfo($"Completed setting properties from application parameters.");
         }
 
         private void ProcessChildProcs<T>(
@@ -1271,7 +1410,7 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            ObserverLogger.LogInfo($"Started ProcessChildProcs...");
+            ObserverLogger.LogInfo($"Started ProcessChildProcs.");
             try
             { 
                 var (childProcInfo, Sum) = TupleProcessChildFruds(childFruds, repOrInst, appInfo, token);
@@ -1294,7 +1433,7 @@ namespace FabricObserver.Observers
             {
                 ObserverLogger.LogWarning($"ProcessChildProcs - Failure processing descendants:{Environment.NewLine}{e}");
             }
-            ObserverLogger.LogInfo($"Completed ProcessChildProcs...");
+            ObserverLogger.LogInfo($"Completed ProcessChildProcs.");
         }
 
         private (ChildProcessTelemetryData childProcInfo, double Sum) TupleProcessChildFruds<T>(
@@ -1303,7 +1442,7 @@ namespace FabricObserver.Observers
                                                                          ApplicationInfo app,
                                                                          CancellationToken token) where T : struct
         {
-            ObserverLogger.LogInfo($"Started TupleProcessChildFruds...");
+            ObserverLogger.LogInfo($"Started TupleProcessChildFruds.");
             var childProcs = repOrInst.ChildProcesses;
 
             if (childProcs == null || childProcs.Count == 0 || token.IsCancellationRequested)
@@ -1403,7 +1542,7 @@ namespace FabricObserver.Observers
 
                             // Windows process dump support for descendant/child processes \\
 
-                            if (IsWindows && app.DumpProcessOnError && EnableProcessDumps)
+                            if (IsWindows && EnableProcessDumps && (app.DumpProcessOnError || app.DumpProcessOnWarning))
                             {
                                 string prop = frud.Value.Property;
                                 bool dump = false;
@@ -1411,57 +1550,71 @@ namespace FabricObserver.Observers
                                 switch (prop)
                                 {
                                     case ErrorWarningProperty.CpuTime:
-                                        // Test error threshold breach for supplied metric.
-                                        if (frud.Value.IsUnhealthy(app.CpuErrorLimitPercent))
+                                        // Test error/warning threshold breach for supplied metric.
+                                        if (frud.Value.IsUnhealthy(app.CpuErrorLimitPercent) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.CpuWarningLimitPercent)))
                                         {
                                             dump = true;
                                         }
                                         break;
 
                                     case ErrorWarningProperty.MemoryConsumptionMb:
-                                        if (frud.Value.IsUnhealthy(app.MemoryErrorLimitMb))
+                                        if (frud.Value.IsUnhealthy(app.MemoryErrorLimitMb) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.MemoryWarningLimitMb)))
                                         {
                                             dump = true;
                                         }
                                         break;
 
                                     case ErrorWarningProperty.MemoryConsumptionPercentage:
-                                        if (frud.Value.IsUnhealthy(app.MemoryErrorLimitPercent))
+                                        if (frud.Value.IsUnhealthy(app.MemoryErrorLimitPercent) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.MemoryWarningLimitPercent)))
+                                        {
+                                            dump = true;
+                                        }
+                                        break;
+
+                                    case ErrorWarningProperty.PrivateBytesMb:
+                                        if (frud.Value.IsUnhealthy(app.ErrorPrivateBytesMb) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.WarningPrivateBytesMb)))
+                                        {
+                                            dump = true;
+                                        }
+                                        break;
+
+                                    case ErrorWarningProperty.PrivateBytesPercent:
+                                        if (frud.Value.IsUnhealthy(app.ErrorPrivateBytesPercent) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.WarningPrivateBytesPercent)))
                                         {
                                             dump = true;
                                         }
                                         break;
 
                                     case ErrorWarningProperty.ActiveTcpPorts:
-                                        if (frud.Value.IsUnhealthy(app.NetworkErrorActivePorts))
+                                        if (frud.Value.IsUnhealthy(app.NetworkErrorActivePorts) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.NetworkWarningActivePorts)))
                                         {
                                             dump = true;
                                         }
                                         break;
 
                                     case ErrorWarningProperty.ActiveEphemeralPorts:
-                                        if (frud.Value.IsUnhealthy(app.NetworkErrorEphemeralPorts))
+                                        if (frud.Value.IsUnhealthy(app.NetworkErrorEphemeralPorts) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.NetworkWarningEphemeralPorts)))
                                         {
                                             dump = true;
                                         }
                                         break;
 
                                     case ErrorWarningProperty.ActiveEphemeralPortsPercentage:
-                                        if (frud.Value.IsUnhealthy(app.NetworkErrorEphemeralPortsPercent))
+                                        if (frud.Value.IsUnhealthy(app.NetworkErrorEphemeralPortsPercent) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.NetworkWarningEphemeralPortsPercent)))
                                         {
                                             dump = true;
                                         }
                                         break;
 
                                     case ErrorWarningProperty.AllocatedFileHandles:
-                                        if (frud.Value.IsUnhealthy(app.ErrorOpenFileHandles))
+                                        if (frud.Value.IsUnhealthy(app.ErrorOpenFileHandles) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.WarningOpenFileHandles)))
                                         {
                                             dump = true;
                                         }
                                         break;
 
                                     case ErrorWarningProperty.ThreadCount:
-                                        if (frud.Value.IsUnhealthy(app.ErrorThreadCount))
+                                        if (frud.Value.IsUnhealthy(app.ErrorThreadCount) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.WarningThreadCount)))
                                         {
                                             dump = true;
                                         }
@@ -1472,11 +1625,21 @@ namespace FabricObserver.Observers
                                 {
                                     if (dump)
                                     {
+                                        ObserverLogger.LogInfo($"Starting dump code path for {repOrInst.HostProcessName}/{childProcName}/{childPid}.");
                                         // Make sure the child process is still the one we're looking for.
                                         if (EnsureProcess(childProcName, childPid))
                                         {
-                                            _ = DumpWindowsServiceProcess(childPid, childProcName, prop);
+                                            // DumpWindowsServiceProcess logs failure. Log success here with parent/child info.
+                                            if (DumpWindowsServiceProcess(childPid, childProcName, prop))
+                                            {
+                                                ObserverLogger.LogInfo($"Successfully dumped {repOrInst.HostProcessName}/{childProcName}/{childPid}.");
+                                            }
                                         }
+                                        else
+                                        {
+                                            ObserverLogger.LogInfo($"Will not dump child process: {childProcName}({childPid}) is no longer running.");
+                                        }
+                                        ObserverLogger.LogInfo($"Completed dump code path for {repOrInst.HostProcessName}/{childProcName}/{childPid}.");
                                     }
                                 }
                             }
@@ -1514,7 +1677,7 @@ namespace FabricObserver.Observers
                 ObserverLogger.LogWarning($"TupleProcessChildFruds - Failure processing descendants:{Environment.NewLine}{ae.Message}");
             }
 
-            ObserverLogger.LogInfo($"Completed TupleProcessChildFruds with Warning...");
+            ObserverLogger.LogInfo($"Completed TupleProcessChildFruds with Warning.");
             return (null, 0);
         }
 
@@ -1529,7 +1692,7 @@ namespace FabricObserver.Observers
         {
             try
             {
-                DumpsPath = Path.Combine(ObserverLogger.LogFolderBasePath, ObserverName, ObserverConstants.ProcessDumpFolderName);
+                DumpsPath = Path.Combine(ObserverLogger.LogFolderBasePath, ObserverName, ObserverConstants.ProcessDumpFolderNameParameter);
                 Directory.CreateDirectory(DumpsPath);
             }
             catch (Exception e) when (e is ArgumentException || e is IOException || e is NotSupportedException || e is UnauthorizedAccessException)
@@ -1542,7 +1705,7 @@ namespace FabricObserver.Observers
         private Task<ParallelLoopResult> MonitorDeployedAppsAsync(CancellationToken token)
         {
             Stopwatch execTimer = Stopwatch.StartNew();
-            ObserverLogger.LogInfo("Starting MonitorDeployedAppsAsync...");
+            ObserverLogger.LogInfo("Starting MonitorDeployedAppsAsync.");
             int capacity = ReplicaOrInstanceList.Count;
             var exceptions = new ConcurrentQueue<Exception>();
             AllAppCpuData ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
@@ -1553,16 +1716,24 @@ namespace FabricObserver.Observers
             AllAppEphemeralPortsDataPercent ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
             AllAppHandlesData ??= new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
             AllAppThreadsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<int>>();
-            
-            // Windows-only LVID usage monitoring for Stateful KVS-based services (e.g., Actors).
-            if (EnableKvsLvidMonitoring)
+
+            // Windows only.
+            if (IsWindows)
             {
-                AllAppKvsLvidsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
+                AllAppPrivateBytesDataMb ??= new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
+                AllAppPrivateBytesDataPercent ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
+                AllAppRGMemoryUsagePercent ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
+
+                // LVID usage monitoring for Stateful KVS-based services (e.g., Actors).
+                if (EnableKvsLvidMonitoring)
+                {
+                    AllAppKvsLvidsData ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
+                }
             }
 
             _processInfoDictionary ??= new ConcurrentDictionary<int, string>();
 
-            // DEBUG
+            // DEBUG - Perf
             //var threadData = new ConcurrentQueue<int>();
 
             ParallelLoopResult result = Parallel.For (0, ReplicaOrInstanceList.Count, _parallelOptions, (i, state) =>
@@ -1572,7 +1743,7 @@ namespace FabricObserver.Observers
                     state.Stop();
                 }
 
-                // DEBUG
+                // DEBUG - Perf
                 //threadData.Enqueue(Thread.CurrentThread.ManagedThreadId);
                 var repOrInst = ReplicaOrInstanceList[i];
                 var timer = new Stopwatch();
@@ -1580,6 +1751,8 @@ namespace FabricObserver.Observers
                 bool checkCpu = false;
                 bool checkMemMb = false;
                 bool checkMemPct = false;
+                bool checkMemPrivateBytesPct = false;
+                bool checkMemPrivateBytes = false;
                 bool checkAllPorts = false;
                 bool checkEphemeralPorts = false;
                 bool checkPercentageEphemeralPorts = false;
@@ -1591,6 +1764,7 @@ namespace FabricObserver.Observers
                                     !string.IsNullOrWhiteSpace(app?.TargetAppType) &&
                                     app.TargetAppType?.ToLower() == repOrInst.ApplicationTypeName?.ToLower());
                 
+                double rgMemoryPercentThreshold = 0.0;
                 ConcurrentDictionary<int, string> procs;
 
                 if (application?.TargetApp == null && application?.TargetAppType == null)
@@ -1615,8 +1789,7 @@ namespace FabricObserver.Observers
                                 return;
                             }
 
-                            parentProcName = parentProc.ProcessName;
-                            
+                            parentProcName = parentProc.ProcessName; 
                         }
                         else
                         {
@@ -1762,7 +1935,7 @@ namespace FabricObserver.Observers
                         checkCpu = true;
                     }
 
-                    // Memory Mb
+                    // Memory - Working Set MB.
                     if (application.MemoryErrorLimitMb > 0 || application.MemoryWarningLimitMb > 0)
                     {
                         _ = AllAppMemDataMb.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.MemoryConsumptionMb, id, capacity, UseCircularBuffer, EnableConcurrentMonitoring));
@@ -1773,7 +1946,7 @@ namespace FabricObserver.Observers
                         checkMemMb = true;
                     }
 
-                    // Memory percent
+                    // Memory - Working Set Percent.
                     if (application.MemoryErrorLimitPercent > 0 || application.MemoryWarningLimitPercent > 0)
                     {
                         _ = AllAppMemDataPercent.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.MemoryConsumptionPercentage, id, capacity, UseCircularBuffer, EnableConcurrentMonitoring));
@@ -1782,6 +1955,51 @@ namespace FabricObserver.Observers
                     if (AllAppMemDataPercent.ContainsKey(id))
                     {
                         checkMemPct = true;
+                    }
+
+                    // Memory - Private Bytes MB. Windows-only.
+                    if (IsWindows && application.ErrorPrivateBytesMb > 0 || application.WarningPrivateBytesMb > 0)
+                    {
+                        _ = AllAppPrivateBytesDataMb.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.PrivateBytesMb, id, 1, false, EnableConcurrentMonitoring));
+                    }
+
+                    if (IsWindows && AllAppPrivateBytesDataMb != null && AllAppPrivateBytesDataMb.ContainsKey(id))
+                    {
+                        checkMemPrivateBytes = true;
+                    }
+
+                    // Memory - Private Bytes (Percent). Windows-only.
+                    if (IsWindows && application.ErrorPrivateBytesPercent > 0 || application.WarningPrivateBytesPercent > 0)
+                    {
+                        _ = AllAppPrivateBytesDataPercent.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.PrivateBytesPercent, id, 1, false, EnableConcurrentMonitoring));
+                    }
+
+                    if (IsWindows && AllAppPrivateBytesDataPercent != null && AllAppPrivateBytesDataPercent.ContainsKey(id))
+                    {
+                        checkMemPrivateBytesPct = true;
+                    }
+
+                    // Memory - RG monitoring. Windows-only for now.
+                    if (MonitorResourceGovernanceLimits && repOrInst.RGEnabled && repOrInst.RGMemoryLimitMb > 0)
+                    {
+                        _ = AllAppRGMemoryUsagePercent.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.RGMemoryUsagePercent, id, 1, false, EnableConcurrentMonitoring));
+                    }
+
+                    if (IsWindows && AllAppRGMemoryUsagePercent != null && AllAppRGMemoryUsagePercent.ContainsKey(id))
+                    {
+                        rgMemoryPercentThreshold = application.WarningRGMemoryLimitPercent;
+
+                        if (rgMemoryPercentThreshold > 0)
+                        {
+                            if (rgMemoryPercentThreshold < 1)
+                            {
+                                rgMemoryPercentThreshold = application.WarningRGMemoryLimitPercent * 100.0; // decimal to double.
+                            }
+                        }
+                        else
+                        {
+                            rgMemoryPercentThreshold = MaxRGMemoryInUsePercent; // Default: 90%.
+                        }
                     }
 
                     // Active TCP Ports
@@ -1851,8 +2069,8 @@ namespace FabricObserver.Observers
                         checkLvids = true;
                     }
 
-                    // Regardless of user setting, if there are more than 50 service processes with the same name, then FO will check Private + Shared (fast, efficient).
-                    bool checkPrivateWS = ReplicaOrInstanceList.Count(p => p.HostProcessName == parentProcName) < MaxSameNamedProcesses && CheckPrivateWorkingSet;
+                    // For Windows: Regardless of user setting, if there are more than 50 service processes with the same name, then FO will employ Win32 API (fast, lightweight).
+                    bool usePerfCounter = IsWindows && ReplicaOrInstanceList.Count(p => p.HostProcessName == parentProcName) < MaxSameNamedProcesses;
 
                     // Compute the resource usage of the family of processes (each proc in the family tree). This is also parallelized and has real perf benefits when 
                     // a service process has mulitple descendants.
@@ -1862,6 +2080,8 @@ namespace FabricObserver.Observers
                         checkCpu,
                         checkMemMb,
                         checkMemPct,
+                        checkMemPrivateBytesPct,
+                        checkMemPrivateBytes,
                         checkAllPorts,
                         checkEphemeralPorts,
                         checkPercentageEphemeralPorts,
@@ -1871,7 +2091,8 @@ namespace FabricObserver.Observers
                         procs,
                         id,
                         repOrInst,
-                        checkPrivateWS,
+                        usePerfCounter,
+                        rgMemoryPercentThreshold,
                         token);
                 }
                 catch (Exception e)
@@ -1885,30 +2106,33 @@ namespace FabricObserver.Observers
                 throw new AggregateException(exceptions);
             }
 
-            // DEBUG 
+            // DEBUG - Perf 
             //int threadcount = threadData.Distinct().Count();
-            ObserverLogger.LogInfo("Completed MonitorDeployedAppsAsync...");
+            ObserverLogger.LogInfo("Completed MonitorDeployedAppsAsync.");
             ObserverLogger.LogInfo($"MonitorDeployedAppsAsync Execution time: {execTimer.Elapsed}"); //Threads: {threadcount}");
             return Task.FromResult(result);
         }
 
         private void ComputeResourceUsage(
-                            int capacity,
-                            int parentPid,
-                            bool checkCpu,
-                            bool checkMemMb,
-                            bool checkMemPct,
-                            bool checkAllPorts,
-                            bool checkEphemeralPorts,
-                            bool checkPercentageEphemeralPorts,
-                            bool checkHandles,
-                            bool checkThreads,
-                            bool checkLvids,
-                            ConcurrentDictionary<int, string> processDictionary,
-                            string id,
-                            ReplicaOrInstanceMonitoringInfo repOrInst,
-                            bool checkPrivateWS,
-                            CancellationToken token)
+                        int capacity,
+                        int parentPid,
+                        bool checkCpu,
+                        bool checkMemMb,
+                        bool checkMemPct,
+                        bool checkMemPrivateBytesPct,
+                        bool checkMemPrivateBytes,
+                        bool checkAllPorts,
+                        bool checkEphemeralPorts,
+                        bool checkPercentageEphemeralPorts,
+                        bool checkHandles,
+                        bool checkThreads,
+                        bool checkLvids,
+                        ConcurrentDictionary<int, string> processDictionary,
+                        string id,
+                        ReplicaOrInstanceMonitoringInfo repOrInst,
+                        bool usePerfCounter,
+                        double rgMemoryPercentThreshold,
+                        CancellationToken token)
         {
             _ = Parallel.For (0, processDictionary.Count, _parallelOptions, (i, state) =>
             {
@@ -1947,7 +2171,15 @@ namespace FabricObserver.Observers
                         }
                         else
                         {
-                            _ = AllAppHandlesData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<float>(ErrorWarningProperty.AllocatedFileHandles, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
+                            _ = AllAppHandlesData.TryAdd(
+                                    $"{id}:{procName}{procId}",
+                                    new FabricResourceUsageData<float>(
+                                        ErrorWarningProperty.AllocatedFileHandles,
+                                        $"{id}:{procName}{procId}", 
+                                        capacity,
+                                        false,
+                                        EnableConcurrentMonitoring));
+
                             AllAppHandlesData[$"{id}:{procName}{procId}"].AddData(handles);
                         }
                     }
@@ -1978,7 +2210,15 @@ namespace FabricObserver.Observers
                         }
                         else // Child proc spawned by the parent service process.
                         {
-                            _ = AllAppThreadsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<int>(ErrorWarningProperty.ThreadCount, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
+                            _ = AllAppThreadsData.TryAdd(
+                                    $"{id}:{procName}{procId}",
+                                    new FabricResourceUsageData<int>(
+                                        ErrorWarningProperty.ThreadCount,
+                                        $"{id}:{procName}{procId}",
+                                        capacity,
+                                        false,
+                                        EnableConcurrentMonitoring));
+
                             AllAppThreadsData[$"{id}:{procName}{procId}"].AddData(threads);
                         }
                     }
@@ -1994,7 +2234,15 @@ namespace FabricObserver.Observers
                     }
                     else // Child proc spawned by the parent service process.
                     {
-                        _ = AllAppTotalActivePortsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveTcpPorts, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
+                        _ = AllAppTotalActivePortsData.TryAdd(
+                            $"{id}:{procName}{procId}",
+                            new FabricResourceUsageData<int>(
+                                ErrorWarningProperty.ActiveTcpPorts,
+                                $"{id}:{procName}{procId}",
+                                capacity,
+                                false,
+                                EnableConcurrentMonitoring));
+
                         AllAppTotalActivePortsData[$"{id}:{procName}{procId}"].AddData(OSInfoProvider.Instance.GetActiveTcpPortCount(procId, CodePackage?.Path));
                     }
                 }
@@ -2008,7 +2256,15 @@ namespace FabricObserver.Observers
                     }
                     else
                     {
-                        _ = AllAppEphemeralPortsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveEphemeralPorts, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
+                        _ = AllAppEphemeralPortsData.TryAdd(
+                                $"{id}:{procName}{procId}",
+                                new FabricResourceUsageData<int>(
+                                    ErrorWarningProperty.ActiveEphemeralPorts,
+                                    $"{id}:{procName}{procId}",
+                                    capacity,
+                                    false,
+                                    EnableConcurrentMonitoring));
+
                         AllAppEphemeralPortsData[$"{id}:{procName}{procId}"].AddData(OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, CodePackage?.Path));
                     }
                 }
@@ -2024,7 +2280,15 @@ namespace FabricObserver.Observers
                     }
                     else
                     {
-                        _ = AllAppEphemeralPortsDataPercent.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.ActiveEphemeralPortsPercentage, $"{id}:{procName}{procId}", capacity, false, EnableConcurrentMonitoring));
+                        _ = AllAppEphemeralPortsDataPercent.TryAdd(
+                                $"{id}:{procName}{procId}",
+                                new FabricResourceUsageData<double>(
+                                    ErrorWarningProperty.ActiveEphemeralPortsPercentage,
+                                    $"{id}:{procName}{procId}",
+                                    capacity,
+                                    false,
+                                    EnableConcurrentMonitoring));
+
                         AllAppEphemeralPortsDataPercent[$"{id}:{procName}{procId}"].AddData(usedPct);
                     }
                 }
@@ -2043,7 +2307,15 @@ namespace FabricObserver.Observers
                         }
                         else
                         {
-                            _ = AllAppKvsLvidsData.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.KvsLvidsPercent, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
+                            _ = AllAppKvsLvidsData.TryAdd(
+                                    $"{id}:{procName}{procId}", 
+                                    new FabricResourceUsageData<double>(
+                                        ErrorWarningProperty.KvsLvidsPercent, 
+                                        $"{id}:{procName}{procId}", 
+                                        capacity, 
+                                        UseCircularBuffer, 
+                                        EnableConcurrentMonitoring));
+
                             AllAppKvsLvidsData[$"{id}:{procName}{procId}"].AddData(lvidPct);
                         }
                     }
@@ -2057,40 +2329,105 @@ namespace FabricObserver.Observers
 
                 // Memory \\
 
+                // Private Bytes (MB) - Windows only.
+                if (IsWindows && checkMemPrivateBytes)
+                {
+                    float memPb = ProcessInfoProvider.Instance.GetProcessPrivateBytesMb(procId);
+                    
+                    if (procId == parentPid)
+                    {
+                        AllAppPrivateBytesDataMb[id].AddData(memPb);
+                    }
+                    else
+                    {
+                        _ = AllAppPrivateBytesDataMb.TryAdd(
+                               $"{id}:{procName}{procId}",
+                               new FabricResourceUsageData<float>(
+                                       ErrorWarningProperty.PrivateBytesMb,
+                                       $"{id}:{procName}{procId}",
+                                       capacity,
+                                       UseCircularBuffer,
+                                       EnableConcurrentMonitoring));
+                        
+                        AllAppPrivateBytesDataMb[$"{id}:{procName}{procId}"].AddData(memPb);
+                    }
+                }
+
+                // RG Memory (Percent) Monitoring - Windows-only.
+                if (MonitorResourceGovernanceLimits && rgMemoryPercentThreshold > 0)
+                {
+                    float memPb = ProcessInfoProvider.Instance.GetProcessPrivateBytesMb(procId);
+
+                    if (procId == parentPid)
+                    {
+                        if (repOrInst.RGMemoryLimitMb > 0)
+                        {
+                            double pct = ((double)memPb / repOrInst.RGMemoryLimitMb) * 100;
+                            AllAppRGMemoryUsagePercent[id].AddData(pct);
+                        }
+                    }
+                    else
+                    {
+                        if (repOrInst.RGMemoryLimitMb > 0)
+                        {
+                            _ = AllAppRGMemoryUsagePercent.TryAdd(
+                                    $"{id}:{procName}{procId}",
+                                    new FabricResourceUsageData<double>(
+                                            ErrorWarningProperty.RGMemoryUsagePercent,
+                                            $"{id}:{procName}{procId}",
+                                            capacity,
+                                            UseCircularBuffer,
+                                            EnableConcurrentMonitoring));
+
+                            double pct = ((double)memPb / repOrInst.RGMemoryLimitMb) * 100;
+                            AllAppRGMemoryUsagePercent[$"{id}:{procName}{procId}"].AddData(pct);
+                        }
+                    }
+                }
+
+                // Working Set.
                 if (checkMemMb)
                 {
                     if (procId == parentPid)
                     {
-                        _ = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, checkPrivateWS);
-                        Thread.Sleep(100);
-                        AllAppMemDataMb[id].AddData(ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, checkPrivateWS));
+                        if (usePerfCounter)
+                        {
+                            _ = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, usePerfCounter);
+                            Thread.Sleep(100);
+                        }
+
+                        AllAppMemDataMb[id].AddData(ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, usePerfCounter));
                     }
                     else
                     {
                         _ = AllAppMemDataMb.TryAdd(
                                 $"{id}:{procName}{procId}",
                                 new FabricResourceUsageData<float>(
-                                    ErrorWarningProperty.MemoryConsumptionMb,
-                                    $"{id}:{procName}{procId}",
-                                    capacity,
-                                    UseCircularBuffer,
-                                    EnableConcurrentMonitoring));
+                                        ErrorWarningProperty.MemoryConsumptionMb,
+                                        $"{id}:{procName}{procId}",
+                                        capacity,
+                                        UseCircularBuffer,
+                                        EnableConcurrentMonitoring));
 
-                        _ = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, checkPrivateWS);
-                        Thread.Sleep(100);
-                        AllAppMemDataMb[$"{id}:{procName}{procId}"].AddData(ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, checkPrivateWS));
+                        if (usePerfCounter)
+                        {
+                            _ = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, usePerfCounter);
+                            Thread.Sleep(100);
+                        }
+
+                        AllAppMemDataMb[$"{id}:{procName}{procId}"].AddData(ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, usePerfCounter));
                     }
                 }
 
-                // Process memory, percent in use (of machine total).
+                // Working Set (Percent).
                 if (checkMemPct)
                 {
-                    float processMemMb = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, checkPrivateWS);
-                    var (TotalMemoryGb, _, _) = OSInfoProvider.Instance.TupleGetSystemMemoryInfo();
+                    float processMemMb = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, usePerfCounter);
+                    var (TotalMemoryGb, _, _) = OSInfoProvider.Instance.TupleGetSystemPhysicalMemoryInfo();
 
                     if (TotalMemoryGb > 0)
                     {
-                        double usedPct = (double)(processMemMb * 100) / (TotalMemoryGb * 1024);
+                        double usedPct = (float)(processMemMb * 100) / (TotalMemoryGb * 1024);
 
                         if (procId == parentPid)
                         {
@@ -2098,8 +2435,46 @@ namespace FabricObserver.Observers
                         }
                         else
                         {
-                            _ = AllAppMemDataPercent.TryAdd($"{id}:{procName}{procId}", new FabricResourceUsageData<double>(ErrorWarningProperty.MemoryConsumptionPercentage, $"{id}:{procName}{procId}", capacity, UseCircularBuffer, EnableConcurrentMonitoring));
+                            _ = AllAppMemDataPercent.TryAdd(
+                                    $"{id}:{procName}{procId}",
+                                    new FabricResourceUsageData<double>(
+                                        ErrorWarningProperty.MemoryConsumptionPercentage,
+                                        $"{id}:{procName}{procId}",
+                                        capacity,
+                                        UseCircularBuffer,
+                                        EnableConcurrentMonitoring));
+
                             AllAppMemDataPercent[$"{id}:{procName}{procId}"].AddData(Math.Round(usedPct, 2));
+                        }
+                    }
+                }
+
+                // Private Bytes (Percent) - Windows only.
+                if (IsWindows && checkMemPrivateBytesPct)
+                {
+                    float processPrivateBytesMb = ProcessInfoProvider.Instance.GetProcessPrivateBytesMb(procId);
+                    var (CommitLimitGb, _) = OSInfoProvider.Instance.TupleGetSystemCommittedMemoryInfo();
+
+                    if (CommitLimitGb > 0)
+                    {
+                        double usedPct = (float)(processPrivateBytesMb * 100) / (CommitLimitGb * 1024);
+
+                        if (procId == parentPid)
+                        {
+                            AllAppPrivateBytesDataPercent[id].AddData(Math.Round(usedPct, 2));
+                        }
+                        else
+                        {
+                            _ = AllAppPrivateBytesDataPercent.TryAdd(
+                                    $"{id}:{procName}{procId}",
+                                    new FabricResourceUsageData<double>(
+                                        ErrorWarningProperty.PrivateBytesPercent,
+                                        $"{id}:{procName}{procId}",
+                                        capacity,
+                                        UseCircularBuffer,
+                                        EnableConcurrentMonitoring));
+
+                            AllAppPrivateBytesDataPercent[$"{id}:{procName}{procId}"].AddData(Math.Round(usedPct, 2));
                         }
                     }
                 }
@@ -2141,10 +2516,12 @@ namespace FabricObserver.Observers
                         {
                             _ = AllAppCpuData.TryAdd(
                                     $"{id}:{procName}{procId}",
-                                    new FabricResourceUsageData<double>(ErrorWarningProperty.CpuTime, $"{id}:{procName}{procId}",
-                                    capacity,
-                                    UseCircularBuffer,
-                                    EnableConcurrentMonitoring));
+                                    new FabricResourceUsageData<double>(
+                                        ErrorWarningProperty.CpuTime,
+                                        $"{id}:{procName}{procId}",
+                                        capacity,
+                                        UseCircularBuffer,
+                                        EnableConcurrentMonitoring));
 
                             AllAppCpuData[$"{id}:{procName}{procId}"].AddData(cpu);
                         }
@@ -2160,12 +2537,11 @@ namespace FabricObserver.Observers
 
         private async Task SetDeployedApplicationReplicaOrInstanceListAsync(Uri applicationNameFilter = null, string applicationType = null)
         {
-            ObserverLogger.LogInfo("Starting SetDeployedApplicationReplicaOrInstanceListAsync...");
+            ObserverLogger.LogInfo("Starting SetDeployedApplicationReplicaOrInstanceListAsync.");
             List<DeployedApplication> deployedApps = _deployedApps;
 
-            // DEBUG
+            // DEBUG - Perf
             //var stopwatch = Stopwatch.StartNew();
-
             try
             {
                 if (applicationNameFilter != null)
@@ -2246,9 +2622,10 @@ namespace FabricObserver.Observers
                             {
                                 _deployedTargetList.AddRange(targets);
                             }
+
+                            replicasOrInstances.Clear();
                         }
 
-                        replicasOrInstances.Clear();
                         replicasOrInstances = null;
                     }
                     catch (Exception e) when (e is ArgumentException || e is FabricException || e is Win32Exception)
@@ -2261,7 +2638,7 @@ namespace FabricObserver.Observers
 
             deployedApps.Clear();
             deployedApps = null;
-            ObserverLogger.LogInfo("Completed SetDeployedApplicationReplicaOrInstanceListAsync...");
+            ObserverLogger.LogInfo("Completed SetDeployedApplicationReplicaOrInstanceListAsync.");
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"SetDeployedApplicationReplicaOrInstanceListAsync for {applicationNameFilter?.OriginalString} run duration: {stopwatch.Elapsed}");
         }
@@ -2272,8 +2649,8 @@ namespace FabricObserver.Observers
                                                                      ServiceFilterType filterType = ServiceFilterType.None,
                                                                      string appTypeName = null)
         {
-            ObserverLogger.LogInfo("Starting GetDeployedPrimaryReplicaAsync...");
-            // DEBUG
+            ObserverLogger.LogInfo("Starting GetDeployedPrimaryReplicaAsync.");
+            // DEBUG - Perf
             //var stopwatch = Stopwatch.StartNew();
             var deployedReplicaList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                                 () => FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, appName, null, null, ConfigurationSettings.AsyncTimeout, Token),
@@ -2281,22 +2658,32 @@ namespace FabricObserver.Observers
 
             //ObserverLogger.LogInfo($"QueryManager.GetDeployedReplicaListAsync for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
             var replicaMonitoringList = new ConcurrentQueue<ReplicaOrInstanceMonitoringInfo>();
+            string appType = appTypeName;
 
-            try
+            if (string.IsNullOrWhiteSpace(appType))
             {
-                SetInstanceOrReplicaMonitoringList(
-                   appName,
-                   appTypeName ?? _deployedApps.First(app => app.ApplicationName == appName).ApplicationTypeName,
-                   serviceFilterList,
-                   filterType,
-                   deployedReplicaList,
-                   replicaMonitoringList);
-            }
-            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
-            {
+                try
+                {
+                    if (_deployedApps.Any(app => app.ApplicationName == appName))
+                    {
+                        appType = _deployedApps.First(app => app.ApplicationName == appName).ApplicationTypeName;
+                    }
+                }
+                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                {
 
+                }
             }
-            ObserverLogger.LogInfo("Completed GetDeployedPrimaryReplicaAsync...");
+
+            SetInstanceOrReplicaMonitoringList(
+                appName,
+                appType,
+                serviceFilterList,
+                filterType,
+                deployedReplicaList,
+                replicaMonitoringList);
+
+            ObserverLogger.LogInfo("Completed GetDeployedPrimaryReplicaAsync.");
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"GetDeployedPrimaryReplicaAsync for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
             return replicaMonitoringList.ToList();
@@ -2310,8 +2697,8 @@ namespace FabricObserver.Observers
                         DeployedServiceReplicaList deployedReplicaList,
                         ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList)
         {
-            ObserverLogger.LogInfo("Starting SetInstanceOrReplicaMonitoringList...");
-            // DEBUG
+            ObserverLogger.LogInfo("Starting SetInstanceOrReplicaMonitoringList.");
+            // DEBUG - Perf
             //var stopwatch = Stopwatch.StartNew();
             _ = Parallel.For (0, deployedReplicaList.Count, _parallelOptions, (i, state) =>
             {
@@ -2323,113 +2710,125 @@ namespace FabricObserver.Observers
                 switch (deployedReplica)
                 {
                     case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole == ReplicaRole.Primary || statefulReplica.ReplicaRole == ReplicaRole.ActiveSecondary:
+                    {
+                        if (filterList != null && filterType != ServiceFilterType.None)
                         {
-                            if (filterList != null && filterType != ServiceFilterType.None)
-                            {
-                                bool isInFilterList = filterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+                            bool isInFilterList = filterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
 
-                                switch (filterType)
-                                {
-                                    case ServiceFilterType.Include when !isInFilterList:
-                                    case ServiceFilterType.Exclude when isInFilterList:
-                                        return;
-                                }
+                            switch (filterType)
+                            {
+                                case ServiceFilterType.Include when !isInFilterList:
+                                case ServiceFilterType.Exclude when isInFilterList:
+                                    return;
                             }
-
-                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
-                            {
-                                ApplicationName = appName,
-                                ApplicationTypeName = appTypeName,
-                                HostProcessId = statefulReplica.HostProcessId,
-                                ReplicaOrInstanceId = statefulReplica.ReplicaId,
-                                PartitionId = statefulReplica.Partitionid,
-                                ReplicaRole = statefulReplica.ReplicaRole,
-                                ServiceKind = statefulReplica.ServiceKind,
-                                ServiceName = statefulReplica.ServiceName,
-                                ServiceTypeName = statefulReplica.ServiceTypeName,
-                                ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
-                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(statefulReplica.ServicePackageActivationId) ?
-                                    System.Fabric.Description.ServicePackageActivationMode.SharedProcess : System.Fabric.Description.ServicePackageActivationMode.ExclusiveProcess,
-                                ReplicaStatus = statefulReplica.ReplicaStatus
-                            };
-
-                            /* In order to provide accurate resource usage of an SF service process we need to also account for
-                            any processes (children) that the service process (parent) created/spawned. */
-
-                            if (EnableChildProcessMonitoring && replicaInfo?.HostProcessId > 0)
-                            {
-                                // DEBUG
-                                //var sw = Stopwatch.StartNew();
-                                List<(string ProcName, int Pid)> childPids;
-
-                                if (IsWindows)
-                                {
-                                    childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, Win32HandleToProcessSnapshot);
-                                }
-                                else
-                                {
-                                    childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId);
-                                }
-
-                                if (childPids != null && childPids.Count > 0)
-                                {
-                                    replicaInfo.ChildProcesses = childPids;
-                                    ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
-                                }
-                                //sw.Stop();
-                                //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
-                            }
-                            break;
                         }
+
+                        replicaInfo = new ReplicaOrInstanceMonitoringInfo
+                        {
+                            ApplicationName = appName,
+                            ApplicationTypeName = appTypeName,
+                            HostProcessId = statefulReplica.HostProcessId,
+                            ReplicaOrInstanceId = statefulReplica.ReplicaId,
+                            PartitionId = statefulReplica.Partitionid,
+                            ReplicaRole = statefulReplica.ReplicaRole,
+                            ServiceKind = statefulReplica.ServiceKind,
+                            ServiceName = statefulReplica.ServiceName,
+                            ServiceManifestName = statefulReplica.ServiceManifestName,
+                            ServiceTypeName = statefulReplica.ServiceTypeName,
+                            ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
+                            ServicePackageActivationMode = string.IsNullOrWhiteSpace(statefulReplica.ServicePackageActivationId) ?
+                                            ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
+                            ReplicaStatus = statefulReplica.ReplicaStatus
+                        };
+
+                        /* In order to provide accurate resource usage of an SF service process we need to also account for
+                        any processes (children) that the service process (parent) created/spawned. */
+
+                        if (EnableChildProcessMonitoring && replicaInfo?.HostProcessId > 0)
+                        {
+                            // DEBUG - Perf
+                            //var sw = Stopwatch.StartNew();
+                            List<(string ProcName, int Pid)> childPids;
+
+                            if (IsWindows)
+                            {
+                                childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, Win32HandleToProcessSnapshot);
+                            }
+                            else
+                            {
+                                childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId);
+                            }
+
+                            if (childPids != null && childPids.Count > 0)
+                            {
+                                replicaInfo.ChildProcesses = childPids;
+                                ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
+                            }
+                            //sw.Stop();
+                            //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
+                        }
+                        break;
+                    }
                     case DeployedStatelessServiceInstance statelessInstance:
+                    {
+                        if (filterList != null && filterType != ServiceFilterType.None)
                         {
-                            if (filterList != null && filterType != ServiceFilterType.None)
-                            {
-                                bool isInFilterList = filterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+                            bool isInFilterList = filterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
 
-                                switch (filterType)
-                                {
-                                    case ServiceFilterType.Include when !isInFilterList:
-                                    case ServiceFilterType.Exclude when isInFilterList:
-                                        return;
-                                }
+                            switch (filterType)
+                            {
+                                case ServiceFilterType.Include when !isInFilterList:
+                                case ServiceFilterType.Exclude when isInFilterList:
+                                    return;
                             }
-
-                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
-                            {
-                                ApplicationName = appName,
-                                ApplicationTypeName = appTypeName,
-                                HostProcessId = statelessInstance.HostProcessId,
-                                ReplicaOrInstanceId = statelessInstance.InstanceId,
-                                PartitionId = statelessInstance.Partitionid,
-                                ReplicaRole = ReplicaRole.None,
-                                ServiceKind = statelessInstance.ServiceKind,
-                                ServiceName = statelessInstance.ServiceName,
-                                ServiceTypeName = statelessInstance.ServiceTypeName,
-                                ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
-                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(statelessInstance.ServicePackageActivationId) ?
-                                    System.Fabric.Description.ServicePackageActivationMode.SharedProcess : System.Fabric.Description.ServicePackageActivationMode.ExclusiveProcess,
-                                ReplicaStatus = statelessInstance.ReplicaStatus
-                            };
-
-                            if (EnableChildProcessMonitoring && replicaInfo?.HostProcessId > 0)
-                            {
-                                // DEBUG
-                                //var sw = Stopwatch.StartNew();
-                                List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, Win32HandleToProcessSnapshot);
-
-                                if (childPids != null && childPids.Count > 0)
-                                {
-                                    replicaInfo.ChildProcesses = childPids;
-                                    ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
-                                }
-                                //sw.Stop();
-                                //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
-                            }
-                            break;
                         }
+
+                        replicaInfo = new ReplicaOrInstanceMonitoringInfo
+                        {
+                            ApplicationName = appName,
+                            ApplicationTypeName = appTypeName,
+                            HostProcessId = statelessInstance.HostProcessId,
+                            ReplicaOrInstanceId = statelessInstance.InstanceId,
+                            PartitionId = statelessInstance.Partitionid,
+                            ReplicaRole = ReplicaRole.None,
+                            ServiceKind = statelessInstance.ServiceKind,
+                            ServiceName = statelessInstance.ServiceName,
+                            ServiceManifestName = statelessInstance.ServiceManifestName,
+                            ServiceTypeName = statelessInstance.ServiceTypeName,
+                            ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
+                            ServicePackageActivationMode = string.IsNullOrWhiteSpace(statelessInstance.ServicePackageActivationId) ?
+                                            ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
+                            ReplicaStatus = statelessInstance.ReplicaStatus
+                        };
+
+                        if (EnableChildProcessMonitoring && replicaInfo?.HostProcessId > 0)
+                        {
+                            // DEBUG - Perf
+                            //var sw = Stopwatch.StartNew();
+                            List<(string ProcName, int Pid)> childPids;
+
+                            if (IsWindows)
+                            {
+                                childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, Win32HandleToProcessSnapshot);
+                            }
+                            else
+                            {
+                                childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId);
+                            }
+
+                            if (childPids != null && childPids.Count > 0)
+                            {
+                                replicaInfo.ChildProcesses = childPids;
+                                ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
+                            }
+                            //sw.Stop();
+                            //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
+                        }
+                        break;
+                    }
                 }
-                
+
+                ProcessServiceConfiguration(appTypeName, deployedReplica.CodePackageName, ref replicaInfo);
 
                 if (replicaInfo?.HostProcessId > 0 && !ReplicaOrInstanceList.Any(r => r.ServiceName == replicaInfo.ServiceName))
                 {
@@ -2437,7 +2836,7 @@ namespace FabricObserver.Observers
                     {
                         replicaInfo.HostProcessName = NativeMethods.GetProcessNameFromId((int)replicaInfo.HostProcessId);
                     }
-                    else
+                    else // Linux
                     {
                         try
                         {
@@ -2452,12 +2851,349 @@ namespace FabricObserver.Observers
                         }
                     }
 
-                    replicaMonitoringList.Enqueue(replicaInfo);
+                    if (replicaInfo.HostProcessName != "Fabric")
+                    {
+                        replicaMonitoringList.Enqueue(replicaInfo);
+                    }
                 }
+
+                // Multiple code packages (initial impl: supports only helper code packages, the canonical case).
+                ProcessMultipleHelperCodePackages(appName, appTypeName, deployedReplica, ref replicaMonitoringList, replicaInfo.HostProcessName == "Fabric");
             });
-            ObserverLogger.LogInfo("Completed SetInstanceOrReplicaMonitoringList...");
+            ObserverLogger.LogInfo("Completed SetInstanceOrReplicaMonitoringList.");
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"SetInstanceOrReplicaMonitoringList for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
+        }
+
+        private void ProcessServiceConfiguration(string appTypeName, string codepackageName, ref ReplicaOrInstanceMonitoringInfo replicaInfo)
+        {
+            // ResourceGovernance/AppTypeVer/ServiceTypeVer.
+            ObserverLogger.LogInfo($"Starting ProcessServiceConfiguration check for {replicaInfo.ServiceName.OriginalString}.");
+
+            if (string.IsNullOrWhiteSpace(appTypeName))
+            {
+                return;
+            }
+
+            try
+            {
+                string appTypeVersion = null;
+
+                var appList =
+                    FabricClientInstance.QueryManager.GetApplicationListAsync(replicaInfo.ApplicationName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
+
+                if (appList?.Count > 0)
+                {
+                    try
+                    {
+                        if (appList.Any(app => app.ApplicationTypeName == appTypeName))
+                        {
+                            appTypeVersion = appList.First(app => app.ApplicationTypeName == appTypeName).ApplicationTypeVersion;
+                            replicaInfo.ApplicationTypeVersion = appTypeVersion;
+                        }
+                    }
+                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                    {
+                        
+                    }
+
+                    // RG - Windows-only. Linux is not supported yet.
+                    if (!string.IsNullOrWhiteSpace(appTypeVersion))
+                    {
+                        if (IsWindows)
+                        {
+                            string appManifest = FabricClientInstance.ApplicationManager.GetApplicationManifestAsync(
+                                                    appTypeName, appTypeVersion, ConfigurationSettings.AsyncTimeout, Token)?.Result;
+
+                            if (!string.IsNullOrWhiteSpace(appManifest))
+                            {
+                                (replicaInfo.RGEnabled, replicaInfo.RGMemoryLimitMb) =
+                                    TupleGetResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName);
+                            }
+                        }
+
+                        // ServiceTypeVersion
+                        var serviceList =
+                            FabricClientInstance.QueryManager.GetServiceListAsync(
+                                replicaInfo.ApplicationName, replicaInfo.ServiceName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
+
+                        if (serviceList?.Count > 0)
+                        {
+                            try
+                            {
+                                Uri serviceName = replicaInfo.ServiceName;
+
+                                if (serviceList.Any(s => s.ServiceName == serviceName))
+                                {
+                                    replicaInfo.ServiceTypeVersion = serviceList.First(s => s.ServiceName == serviceName).ServiceManifestVersion;
+                                }
+                            }
+                            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                            {
+
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is TimeoutException || e is XmlException)
+            {
+                ObserverLogger.LogWarning($"Handled: Failed to process Service configuration for {replicaInfo.ServiceName.OriginalString} with exception '{e.Message}'");
+                // move along
+            }
+            ObserverLogger.LogInfo($"Completed ProcessServiceConfiguration for {replicaInfo.ServiceName.OriginalString}.");
+        }
+
+        private void ProcessMultipleHelperCodePackages(
+                        Uri appName,
+                        string appTypeName,
+                        DeployedServiceReplica deployedReplica,
+                        ref ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> repsOrInstancesInfo,
+                        bool isHostedByFabric)
+        {
+            try
+            {
+                DeployedCodePackageList codepackages = FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(
+                                                        NodeName,
+                                                        appName,
+                                                        deployedReplica.ServiceManifestName,
+                                                        null,
+                                                        ConfigurationSettings.AsyncTimeout,
+                                                        Token).Result;
+
+                ReplicaOrInstanceMonitoringInfo replicaInfo = null;
+
+                // Check for multiple code packages or GuestExecutable service (so, Fabric is host).
+                if (codepackages.Count > 1 || isHostedByFabric)
+                {
+                    foreach (var codepackage in codepackages)
+                    {
+                        // The code package does not belong to a deployed replica, so this is the droid we're looking for (a helper code package or guest executable).
+                        if (codepackage.CodePackageName != deployedReplica.CodePackageName)
+                        {
+                            int procId = (int)codepackage.EntryPoint.ProcessId; // The actual process id of the helper or guest executable binary.
+                            string procName = null;
+
+                            // Process class is a CPU bottleneck on Windows.
+                            if (IsWindows)
+                            {
+                                procName = NativeMethods.GetProcessNameFromId(procId);
+                            }
+                            else // Linux
+                            {
+                                using (var proc = Process.GetProcessById(procId))
+                                {
+                                    try
+                                    {
+                                        procName = proc.ProcessName;
+                                    }
+                                    catch (Exception e) when (e is InvalidOperationException || e is NotSupportedException || e is ArgumentException)
+                                    {
+                                        ObserverLogger.LogInfo($"ProcessMultipleHelperCodePackages::GetProcessById(Linux): Handled Exception: {e.Message}");
+                                    }
+                                }
+                            }
+
+                            // Make sure procName lookup worked and if so that it is still the process we're looking for.
+                            if (string.IsNullOrWhiteSpace(procName) || !EnsureProcess(procName, procId))
+                            {
+                                continue;
+                            }
+
+                            // It doesn't matter that the helper CodePackage or guest executable does not have any replicas (not hosted by Fabric). This basic construct ReplicaOrInstanceMonitoringInfo is used in several places.
+                            // The key information for the helper/guest executable binary case is the ServiceManifestName, the parent's ServiceName/Type, its HostProcessId and its HostProcessName.
+                            // This ensures that support for multiple CodePackages and guest executable services fit naturally into AppObserver's *existing* implementation.
+                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
+                            {
+                                ApplicationName = appName,
+                                ApplicationTypeName = appTypeName,
+                                HostProcessId = procId,
+                                HostProcessName = procName,
+                                ReplicaOrInstanceId = 0,
+                                PartitionId = null,
+                                ReplicaRole = ReplicaRole.None,
+                                ServiceKind = ServiceKind.Invalid,
+                                ServiceName = deployedReplica.ServiceName,
+                                ServiceManifestName = codepackage.ServiceManifestName,
+                                ServiceTypeName = deployedReplica.ServiceTypeName,
+                                ServicePackageActivationId = codepackage.ServicePackageActivationId,
+                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(codepackage.ServicePackageActivationId) ?
+                                                ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
+                                ReplicaStatus = ServiceReplicaStatus.Invalid
+                            };
+
+                            // If Helper binaries launch child processes, AppObserver will monitor them, too.
+                            if (EnableChildProcessMonitoring && procId > 0)
+                            {
+                                // DEBUG - Perf
+                                //var sw = Stopwatch.StartNew();
+                                List<(string ProcName, int Pid)> childPids;
+
+                                if (IsWindows)
+                                {
+                                    childPids = ProcessInfoProvider.Instance.GetChildProcessInfo(procId, Win32HandleToProcessSnapshot);
+                                }
+                                else
+                                {
+                                    childPids = ProcessInfoProvider.Instance.GetChildProcessInfo(procId);
+                                }
+
+                                if (childPids != null && childPids.Count > 0)
+                                {
+                                    replicaInfo.ChildProcesses = childPids;
+                                    ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
+                                }
+                                //sw.Stop();
+                                //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
+                            }
+
+                            // ResourceGovernance/AppTypeVer/ServiceTypeVer.
+                            ProcessServiceConfiguration(appTypeName, codepackage.CodePackageName, ref replicaInfo);
+                        }
+
+                        if (replicaInfo != null && replicaInfo.HostProcessId > 0 && !ReplicaOrInstanceList.Any(r => r.HostProcessId == replicaInfo.HostProcessId))
+                        {
+                            repsOrInstancesInfo.Enqueue(replicaInfo);
+                        }
+                    }
+                }
+            }
+            catch (Exception e) when (e is ArgumentException || e is FabricException || e is TaskCanceledException || e is TimeoutException)
+            {
+                ObserverLogger.LogInfo($"ProcessMultipleHelperCodePackages: Handled Exception: {e.Message}");
+            }
+        }
+
+        private (bool IsRGEnabled, double MemoryLimitMb) TupleGetResourceGovernanceInfo(string appManifestXml, string servicePkgName, string codepackageName)
+        {
+            ObserverLogger.LogInfo("Starting TupleGetResourceGovernanceInfo.");
+
+            if (string.IsNullOrWhiteSpace(appManifestXml))
+            {
+                ObserverLogger.LogInfo($"Invalid value for {nameof(appManifestXml)}: {appManifestXml}. Exiting TupleGetResourceGovernanceInfo.");
+                return (false, 0);
+            }
+
+            if (string.IsNullOrWhiteSpace(servicePkgName))
+            {
+                ObserverLogger.LogInfo($"Invalid value for {nameof(servicePkgName)}: {servicePkgName}. Exiting TupleGetResourceGovernanceInfo.");
+                return (false, 0);
+            }
+
+            if (string.IsNullOrWhiteSpace(codepackageName))
+            {
+                ObserverLogger.LogInfo($"Invalid value for {nameof(codepackageName)}: {codepackageName}. Exiting TupleGetResourceGovernanceInfo.");
+                return (false, 0);
+            }
+
+            // Don't waste cycles with XML parsing if you can easily get a hint first..
+            if (!appManifestXml.Contains($"<{ObserverConstants.RGPolicyNodeName} "))
+            {
+                return (false, 0);
+            }
+
+            // Safe XML pattern - *Do not use LoadXml*.
+            var appManifestXdoc = new XmlDocument { XmlResolver = null };
+
+            using (var sreader = new StringReader(appManifestXml))
+            {
+                using (var xreader = XmlReader.Create(sreader, new XmlReaderSettings { XmlResolver = null }))
+                {
+                    appManifestXdoc?.Load(xreader);
+
+                    ObserverLogger.LogInfo("Completed TupleGetResourceGovernanceInfo.");
+                    return TupleGetResourceGovernanceInfoFromAppManifest(ref appManifestXdoc, servicePkgName, codepackageName);
+                }
+            }
+        }
+
+        private (bool IsRGEnabled, double MemoryLimitMb) TupleGetResourceGovernanceInfoFromAppManifest(ref XmlDocument xDoc, string servicePkgName, string codepackageName)
+        {
+            ObserverLogger.LogInfo("Starting TupleGetResourceGovernanceInfoFromAppManifest.");
+           
+            if (xDoc == null)
+            {
+                ObserverLogger.LogInfo("Completed TupleGetResourceGovernanceInfoFromAppManifest: xDoc == null.");
+                return (false, 0);
+            }
+
+            try
+            {
+                // Find the correct manifest import for specified service package name (servicePkgName arg).
+                // There will generally be multiple RG limits set per application (so, per service settings).
+                var sNode = 
+                    xDoc.DocumentElement?.SelectSingleNode(
+                        $"//*[local-name()='{ObserverConstants.ServiceManifestImport}'][*[local-name()='{ObserverConstants.ServiceManifestRef}' and @*[local-name()='{ObserverConstants.ServiceManifestName}' and . ='{servicePkgName}']]]");
+                
+                if (sNode == null)
+                {
+                    ObserverLogger.LogInfo($"Completing TupleGetResourceGovernanceInfoFromAppManifest: Missing ServiceManifestImport for {servicePkgName}.");
+                    return (false, 0);
+                }
+
+                XmlNodeList childNodes = sNode.ChildNodes;
+
+                foreach (XmlNode node in childNodes)
+                {
+                    if (node.Name != ObserverConstants.PoliciesNodeName)
+                    {
+                        continue;
+                    }
+
+                    foreach (XmlNode polNode in node.ChildNodes)
+                    {
+                        if (polNode.Name != ObserverConstants.RGPolicyNodeName)
+                        {
+                            continue;
+                        }
+
+                        string codePackageRef = polNode.Attributes[ObserverConstants.CodePackageRef]?.Value;
+
+                        if (codePackageRef != codepackageName)
+                        {
+                            continue;
+                        }
+
+                        // Get the rg policy memory attribute. It can only be either "MemoryInMB" or "MemoryInMBLimit"
+                        XmlAttribute memAttr = null;
+
+                        if (polNode.Attributes[ObserverConstants.RGMemoryInMB] != null)
+                        {
+                            memAttr = polNode.Attributes[ObserverConstants.RGMemoryInMB];
+                        }
+                        else if (polNode.Attributes[ObserverConstants.RGMemoryInMBLimit] != null)
+                        {
+                            memAttr = polNode.Attributes[ObserverConstants.RGMemoryInMBLimit];
+                        }
+
+                        // Not the droid we're looking for.
+                        if (memAttr == null || string.IsNullOrWhiteSpace(memAttr.Value))
+                        {
+                            continue;
+                        }
+
+                        // App Parameter support: This means user has specified the absolute memory value in an Application Parameter.
+                        if (memAttr.Value.StartsWith("["))
+                        {
+                            XmlNode parametersNode = xDoc.DocumentElement?.SelectSingleNode($"//*[local-name()='{ObserverConstants.Parameters}']");
+                            XmlNode parameterNode = parametersNode?.SelectSingleNode($"//*[local-name()='{ObserverConstants.Parameter}' and @Name='{memAttr.Value[1..^1]}']");
+                            XmlAttribute attr = parameterNode?.Attributes?[ObserverConstants.DefaultValue];
+                            memAttr.Value = attr.Value;
+                        }
+
+                        ObserverLogger.LogInfo("Completed TupleGetResourceGovernanceInfoFromAppManifest: RG enabled.");
+                        return (true, double.TryParse(memAttr.Value, out double mem) ? mem : 0);
+                    }
+                }
+            }
+            catch (XPathException xe)
+            {
+                ObserverLogger.LogWarning($"Failure in TupleGetResourceGovernanceInfoFromAppManifest: {xe.Message}");
+                return (false, 0);
+            }
+
+            ObserverLogger.LogInfo("Completed TupleGetResourceGovernanceInfoFromAppManifest: RG not configured.");
+            return (false, 0);
         }
 
         private void LogAllAppResourceDataToCsv(string appName)
@@ -2467,90 +3203,152 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            // CPU Time
-            if (AllAppCpuData.ContainsKey(appName))
+            try
             {
-                CsvFileLogger.LogData(
-                    _fileName,
-                    appName,
-                    ErrorWarningProperty.CpuTime,
-                    "Average",
-                    Math.Round(AllAppCpuData.First(x => x.Key == appName).Value.AverageDataValue));
+                // CPU Time
+                if (AllAppCpuData != null && AllAppCpuData.ContainsKey(appName))
+                {
+                    CsvFileLogger.LogData(
+                        _fileName,
+                        appName,
+                        ErrorWarningProperty.CpuTime,
+                        "Average",
+                        Math.Round(AllAppCpuData.First(x => x.Key == appName).Value.AverageDataValue));
 
-                CsvFileLogger.LogData(
-                    _fileName,
-                    appName,
-                    ErrorWarningProperty.CpuTime,
-                    "Peak",
-                    Math.Round(AllAppCpuData.First(x => x.Key == appName).Value.MaxDataValue));
-            }
+                    CsvFileLogger.LogData(
+                        _fileName,
+                        appName,
+                        ErrorWarningProperty.CpuTime,
+                        "Peak",
+                        Math.Round(AllAppCpuData.First(x => x.Key == appName).Value.MaxDataValue));
+                }
 
-            // Memory - MB
-            if (AllAppMemDataMb.ContainsKey(appName))
-            {
-                CsvFileLogger.LogData(
-                    _fileName,
-                    appName,
-                    ErrorWarningProperty.MemoryConsumptionMb,
-                    "Average",
-                    Math.Round(AllAppMemDataMb.First(x => x.Key == appName).Value.AverageDataValue));
+                // Memory - Working set \\
 
-                CsvFileLogger.LogData(
-                    _fileName,
-                    appName,
-                    ErrorWarningProperty.MemoryConsumptionMb,
-                    "Peak",
-                    Math.Round(Convert.ToDouble(AllAppMemDataMb.First(x => x.Key == appName).Value.MaxDataValue)));
-            }
+                if (AllAppMemDataMb != null && AllAppMemDataMb.ContainsKey(appName))
+                {
+                    CsvFileLogger.LogData(
+                        _fileName,
+                        appName,
+                        ErrorWarningProperty.MemoryConsumptionMb,
+                        "Average",
+                        Math.Round(AllAppMemDataMb.First(x => x.Key == appName).Value.AverageDataValue));
 
-            if (AllAppMemDataPercent.ContainsKey(appName))
-            {
-                CsvFileLogger.LogData(
-                   _fileName,
-                   appName,
-                   ErrorWarningProperty.MemoryConsumptionPercentage,
-                   "Average",
-                   Math.Round(AllAppMemDataPercent.First(x => x.Key == appName).Value.AverageDataValue));
+                    CsvFileLogger.LogData(
+                        _fileName,
+                        appName,
+                        ErrorWarningProperty.MemoryConsumptionMb,
+                        "Peak",
+                        Math.Round(Convert.ToDouble(AllAppMemDataMb.First(x => x.Key == appName).Value.MaxDataValue)));
+                }
 
-                CsvFileLogger.LogData(
-                    _fileName,
-                    appName,
-                    ErrorWarningProperty.MemoryConsumptionPercentage,
-                    "Peak",
-                    Math.Round(Convert.ToDouble(AllAppMemDataPercent.FirstOrDefault(x => x.Key == appName).Value.MaxDataValue)));
-            }
+                if (AllAppMemDataPercent != null && AllAppMemDataPercent.ContainsKey(appName))
+                {
+                    CsvFileLogger.LogData(
+                       _fileName,
+                       appName,
+                       ErrorWarningProperty.MemoryConsumptionPercentage,
+                       "Average",
+                       Math.Round(AllAppMemDataPercent.First(x => x.Key == appName).Value.AverageDataValue));
 
-            if (AllAppTotalActivePortsData.ContainsKey(appName))
-            {
-                // Network
-                CsvFileLogger.LogData(
-                    _fileName,
-                    appName,
-                    ErrorWarningProperty.ActiveTcpPorts,
-                    "Total",
-                    Math.Round(Convert.ToDouble(AllAppTotalActivePortsData.First(x => x.Key == appName).Value.MaxDataValue)));
-            }
+                    CsvFileLogger.LogData(
+                        _fileName,
+                        appName,
+                        ErrorWarningProperty.MemoryConsumptionPercentage,
+                        "Peak",
+                        Math.Round(Convert.ToDouble(AllAppMemDataPercent.FirstOrDefault(x => x.Key == appName).Value.MaxDataValue)));
+                }
 
-            if (AllAppEphemeralPortsData.ContainsKey(appName))
-            {
-                // Network
-                CsvFileLogger.LogData(
-                    _fileName,
-                    appName,
-                    ErrorWarningProperty.ActiveEphemeralPorts,
-                    "Total",
-                    Math.Round(Convert.ToDouble(AllAppEphemeralPortsData.First(x => x.Key == appName).Value.MaxDataValue)));
-            }
+                // Memory - Private Bytes \\
 
-            if (AllAppHandlesData.ContainsKey(appName))
-            {
+                if (IsWindows)
+                {
+                    if (AllAppPrivateBytesDataMb != null && AllAppPrivateBytesDataMb.ContainsKey(appName))
+                    {
+                        if (AllAppPrivateBytesDataMb.Any(x => x.Key == appName))
+                        {
+                            CsvFileLogger.LogData(
+                                _fileName,
+                                appName,
+                                ErrorWarningProperty.PrivateBytesMb,
+                                "Average",
+                                Math.Round(AllAppPrivateBytesDataMb.First(x => x.Key == appName).Value.AverageDataValue));
+
+                            CsvFileLogger.LogData(
+                                _fileName,
+                                appName,
+                                ErrorWarningProperty.PrivateBytesMb,
+                                "Peak",
+                                Math.Round(Convert.ToDouble(AllAppPrivateBytesDataMb.First(x => x.Key == appName).Value.MaxDataValue)));
+                        }
+                    }
+
+                    if (AllAppPrivateBytesDataPercent != null && AllAppPrivateBytesDataPercent.ContainsKey(appName))
+                    {
+                        if (AllAppPrivateBytesDataPercent.Any(x => x.Key == appName))
+                        {
+                            CsvFileLogger.LogData(
+                               _fileName,
+                               appName,
+                               ErrorWarningProperty.PrivateBytesPercent,
+                               "Average",
+                               Math.Round(AllAppPrivateBytesDataPercent.First(x => x.Key == appName).Value.AverageDataValue));
+
+                            CsvFileLogger.LogData(
+                                _fileName,
+                                appName,
+                                ErrorWarningProperty.PrivateBytesPercent,
+                                "Peak",
+                                Math.Round(Convert.ToDouble(AllAppPrivateBytesDataPercent.FirstOrDefault(x => x.Key == appName).Value.MaxDataValue)));
+                        }
+                    }
+                }
+
+                // Ports \\
+
+                if (AllAppTotalActivePortsData != null && AllAppTotalActivePortsData.ContainsKey(appName))
+                {
+                    if (AllAppTotalActivePortsData.Any(x => x.Key == appName))
+                    {
+                        CsvFileLogger.LogData(
+                            _fileName,
+                            appName,
+                            ErrorWarningProperty.ActiveTcpPorts,
+                            "Total",
+                            Math.Round(Convert.ToDouble(AllAppTotalActivePortsData.First(x => x.Key == appName).Value.MaxDataValue)));
+                    }
+                }
+
+                if (AllAppEphemeralPortsData != null && AllAppEphemeralPortsData.ContainsKey(appName))
+                {
+                    if (AllAppEphemeralPortsData.Any(x => x.Key == appName))
+                    {
+                        CsvFileLogger.LogData(
+                            _fileName,
+                            appName,
+                            ErrorWarningProperty.ActiveEphemeralPorts,
+                            "Total",
+                            Math.Round(Convert.ToDouble(AllAppEphemeralPortsData.First(x => x.Key == appName).Value.MaxDataValue)));
+                    }
+                }
+
                 // Handles
-                CsvFileLogger.LogData(
-                     _fileName,
-                     appName,
-                     ErrorWarningProperty.AllocatedFileHandles,
-                     "Total",
-                     AllAppHandlesData.First(x => x.Key == appName).Value.MaxDataValue);
+                if (AllAppHandlesData != null && AllAppHandlesData.ContainsKey(appName))
+                {
+                    if (AllAppHandlesData.Any(x => x.Key == appName))
+                    {
+                        CsvFileLogger.LogData(
+                             _fileName,
+                             appName,
+                             ErrorWarningProperty.AllocatedFileHandles,
+                             "Total",
+                             AllAppHandlesData.First(x => x.Key == appName).Value.MaxDataValue);
+                    }
+                }
+            }
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+            {
+                ObserverLogger.LogWarning($"Failure generating CSV data: {e.Message}");
             }
 
             DataTableFileLogger.Flush();
@@ -2622,14 +3420,33 @@ namespace FabricObserver.Observers
                 AllAppThreadsData = null;
             }
 
-            if (AllAppKvsLvidsData != null && AllAppKvsLvidsData.All(frud => !frud.Value.ActiveErrorOrWarning))
-            {
-                AllAppKvsLvidsData?.Clear();
-                AllAppKvsLvidsData = null;
-            }
-
+            // Windows-only cleanup.
             if (IsWindows)
             {
+                if (AllAppKvsLvidsData != null && AllAppKvsLvidsData.All(frud => !frud.Value.ActiveErrorOrWarning))
+                {
+                    AllAppKvsLvidsData?.Clear();
+                    AllAppKvsLvidsData = null;
+                }
+
+                if (AllAppPrivateBytesDataMb != null && AllAppPrivateBytesDataMb.All(frud => !frud.Value.ActiveErrorOrWarning))
+                {
+                    AllAppPrivateBytesDataMb?.Clear();
+                    AllAppPrivateBytesDataMb = null;
+                }
+
+                if (AllAppPrivateBytesDataPercent != null && AllAppPrivateBytesDataPercent.All(frud => !frud.Value.ActiveErrorOrWarning))
+                {
+                    AllAppPrivateBytesDataPercent?.Clear();
+                    AllAppPrivateBytesDataPercent = null;
+                }
+
+                if (AllAppRGMemoryUsagePercent != null && AllAppRGMemoryUsagePercent.All(frud => !frud.Value.ActiveErrorOrWarning))
+                {
+                    AllAppRGMemoryUsagePercent?.Clear();
+                    AllAppRGMemoryUsagePercent = null;
+                }
+
                 _handleToProcSnapshot?.Dispose();
                 GC.KeepAlive(_handleToProcSnapshot);
                 _handleToProcSnapshot = null;

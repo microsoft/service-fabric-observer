@@ -1,0 +1,16 @@
+﻿[
+  {
+    "targetApp": "*",
+    "warningPrivateBytesMb": 1
+  },
+  {
+    "targetApp": "fabric:/Voting",
+    "serviceIncludeList": "VotingData",
+    "dumpProcessOnWarning": true
+  },
+  {
+    "targetApp": "fabric:/Voting",
+    "serviceIncludeList": "VotingWeb",
+    "dumpProcessOnWarning": false
+  }
+]

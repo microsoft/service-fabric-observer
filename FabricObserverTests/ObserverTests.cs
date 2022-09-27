@@ -27,6 +27,8 @@ using System.Xml;
 using FabricObserver.Observers.Utilities.Telemetry;
 using FabricObserver.Utilities.ServiceFabric;
 using Microsoft.Extensions.DependencyInjection;
+using NLog.Targets.Wrappers;
+using System.Collections.Specialized;
 
 /***PLEASE RUN ALL OF THESE TESTS ON YOUR LOCAL DEV MACHINE WITH A RUNNING SF CLUSTER BEFORE SUBMITTING A PULL REQUEST***/
 
@@ -35,9 +37,12 @@ namespace FabricObserverTests
     [TestClass]
     public class ObserverTests
     {
-        // Change these to suit your env.
+        // Change this to suit your test env.
         private const string NodeName = "_Node_0";
+
+        // Change this to suit your test env.
         private const string EtwTestsLogFolder = @"C:\temp\FOTests";
+
         private static readonly Uri TestServiceName = new Uri("fabric:/app/service");
         private static readonly bool IsSFRuntimePresentOnTestMachine = IsLocalSFRuntimePresent();
         private static readonly CancellationToken Token = new CancellationToken();
@@ -175,7 +180,7 @@ namespace FabricObserverTests
             string packagePathZip = Path.Combine(Environment.CurrentDirectory, "HealthMetrics.zip");
             string serviceType1 = "BandActorServiceType";
             string serviceType2 = "DoctorActorServiceType";
-            string packagePath = Path.Combine(Environment.CurrentDirectory, "HealthMetricsApp", "pkg", "Debug");
+            string packagePath = Path.Combine(Environment.CurrentDirectory, "HealthMetricsApp", "HealthMetrics", "pkg", "Debug");
 
             // Unzip the compressed HealthMetrics app package.
             System.IO.Compression.ZipFile.ExtractToDirectory(packagePathZip, "HealthMetricsApp", true);
@@ -187,7 +192,11 @@ namespace FabricObserverTests
             await FabricClient.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
 
             // Create HealthMetrics app instance.
-            ApplicationDescription appDesc = new ApplicationDescription(new Uri(appName), appType, appVersion);
+            /* override app params..
+            NameValueCollection nameValueCollection = new NameValueCollection();
+            nameValueCollection.Add("foo", "bar");
+            */
+            ApplicationDescription appDesc = new ApplicationDescription(new Uri(appName), appType, appVersion/*, nameValueCollection */);
             await FabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
 
             // Create the HealthMetrics service descriptions.
@@ -247,6 +256,50 @@ namespace FabricObserverTests
 
             // Unzip the compressed HealthMetrics app package.
             System.IO.Compression.ZipFile.ExtractToDirectory(packagePathZip, "TestApp42", true);
+
+            // Copy the HealthMetrics app package to a location in the image store.
+            FabricClient.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
+
+            // Provision the HealthMetrics application.          
+            await FabricClient.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
+
+            // Create HealthMetrics app instance.
+            ApplicationDescription appDesc = new ApplicationDescription(new Uri(appName), appType, appVersion);
+            await FabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
+
+            // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
+            // You may need to increase this value depending upon your dev machine? You'll find out..
+            await Task.Delay(TimeSpan.FromSeconds(15));
+        }
+
+        private async Task DeployVotingAppAsync()
+        {
+            string appName = "fabric:/Voting";
+
+            // If fabric:/Voting is already installed, exit.
+            var deployedTestApp =
+                    await FabricClient.QueryManager.GetDeployedApplicationListAsync(
+                            NodeName,
+                            new Uri(appName),
+                            TimeSpan.FromSeconds(30),
+                            Token);
+
+            if (deployedTestApp?.Count > 0)
+            {
+                return;
+            }
+
+            string appType = "VotingType";
+            string appVersion = "1.0.0";
+
+            // Change this to suit your configuration (so, if you are on Windows and you installed SF on a different drive, for example).
+            string imageStoreConnectionString = @"file:C:\SfDevCluster\Data\ImageStoreShare";
+            string packagePathInImageStore = "VotingApp";
+            string packagePathZip = Path.Combine(Environment.CurrentDirectory, "VotingApp.zip");
+            string packagePath = Path.Combine(Environment.CurrentDirectory, "VotingApp");
+
+            // Unzip the compressed HealthMetrics app package.
+            System.IO.Compression.ZipFile.ExtractToDirectory(packagePathZip, "VotingApp", true);
 
             // Copy the HealthMetrics app package to a location in the image store.
             FabricClient.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
@@ -419,7 +472,7 @@ namespace FabricObserverTests
             // Remove any files generated.
             try
             {
-                var outputFolder = Path.Combine(Environment.CurrentDirectory, "fabric_observer_logs");
+                var outputFolder = Path.Combine(Environment.CurrentDirectory, "fabric_logs");
 
                 if (Directory.Exists(outputFolder))
                 {
@@ -474,10 +527,10 @@ namespace FabricObserverTests
                 await fabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
             }
 
+            // TestApp42 \\
+
             if (await EnsureTestServicesExistAsync("fabric:/TestApp42"))
             {
-                // TestApp42 \\
-
                 string appName = "fabric:/TestApp42";
                 string appType = "TestApp42Type";
                 string appVersion = "1.0.0";
@@ -498,6 +551,34 @@ namespace FabricObserverTests
                 // Un-provision the application type.
                 await fabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
             }
+
+            // Voting \\
+
+            if (await EnsureTestServicesExistAsync("fabric:/Voting"))
+            {
+                string appName = "fabric:/Voting";
+                string appType = "VotingType";
+                string appVersion = "1.0.0";
+                string serviceName1 = "fabric:/Voting/VotingData";
+                string serviceName2 = "fabric:/Voting/VotingWeb";
+                string packagePathInImageStore = "VotingApp";
+
+                // Clean up the unzipped directory.
+                fabricClient.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
+
+                // Delete services.
+                var deleteServiceDescription1 = new DeleteServiceDescription(new Uri(serviceName1));
+                var deleteServiceDescription2 = new DeleteServiceDescription(new Uri(serviceName2));
+                await fabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription1);
+                await fabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription2);
+
+                // Delete an application instance from the application type.
+                var deleteApplicationDescription = new DeleteApplicationDescription(new Uri(appName));
+                await fabricClient.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
+
+                // Un-provision the application type.
+                await fabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+            }
         }
 
         private static async Task<bool> EnsureTestServicesExistAsync(string appName)
@@ -505,13 +586,7 @@ namespace FabricObserverTests
             try
             {
                 var services = await FabricClient.QueryManager.GetServiceListAsync(new Uri(appName));
-
-                if (appName == "fabric:/HealthMetrics")
-                {
-                    return services?.Count == 2;
-                }
-
-                return services?.Count == 1;
+                return services?.Count > 0;
             }
             catch (FabricElementNotFoundException)
             {
@@ -532,6 +607,7 @@ namespace FabricObserverTests
 
             DeployHealthMetricsAppAsync().Wait();
             DeployTestApp42Async().Wait();
+            DeployVotingAppAsync().Wait();
         }
 
         [TestMethod]
@@ -992,7 +1068,7 @@ namespace FabricObserverTests
         /* ObserveAsync/ReportAsync */
 
         [TestMethod]
-        public async Task AppObserver_ObserveAsync_Successful_Observer_IsHealthy()
+        public async Task AppObserver_ObserveAsync_Successful_IsHealthy()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1009,7 +1085,8 @@ namespace FabricObserverTests
                 EnableConcurrentMonitoring = true,
                 IsEtwProviderEnabled = true,
                 EnableChildProcessMonitoring = true,
-                MaxChildProcTelemetryDataCount = 25
+                MaxChildProcTelemetryDataCount = 25,
+                MonitorResourceGovernanceLimits = true
             };
 
             await obs.ObserveAsync(Token);
@@ -1025,7 +1102,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task AppObserver_ObserveAsync_Successful_Observer_WarningsGenerated()
+        public async Task AppObserver_ObserveAsync_Successful_WarningsGenerated()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1057,7 +1134,71 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task AppObserver_ObserveAsync_OldConfigStyle_Successful_Observer_WarningsGenerated()
+        public async Task AppObserver_ObserveAsync_PrivateBytes_Successful_WarningsGenerated()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            var startDateTime = DateTime.Now;
+
+            ObserverManager.FabricServiceContext = TestServiceContext;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = true;
+
+            using var obs = new AppObserver(TestServiceContext)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_PrivateBytes_warning.config.json"),
+                IsEtwProviderEnabled = true
+            };
+
+            await obs.ObserveAsync(Token);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected warning conditions.
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+        }
+
+        [TestMethod]
+        public async Task AppObserver_ObserveAsync_Successful_RGLimitWarningGenerated()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+            
+            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
+            {
+                await DeployVotingAppAsync();
+            }
+
+            var startDateTime = DateTime.Now;
+
+            ObserverManager.FabricServiceContext = TestServiceContext;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            using var obs = new AppObserver(TestServiceContext)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_rg_warning.config.json"),
+            };
+
+            await obs.ObserveAsync(Token);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected warning conditions.
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+        }
+
+        [TestMethod]
+        public async Task AppObserver_ObserveAsync_OldConfigStyle_Successful_WarningsGenerated()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1087,7 +1228,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task AppObserver_ObserveAsync_OldConfigStyle_Successful_Observer_NoWarningsGenerated()
+        public async Task AppObserver_ObserveAsync_OldConfigStyle_Successful_NoWarningsGenerated()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1116,8 +1257,97 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.IsUnhealthy);
         }
 
+        #region Dump Tests
+
         [TestMethod]
-        public async Task ContainerObserver_ObserveAsync_Successful_Observer_IsHealthy()
+        public async Task AppObserver_DumpProcessOnWarning_SuccessfulDumpCreation()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
+            {
+                await DeployVotingAppAsync();
+            }
+
+            var startDateTime = DateTime.Now;
+
+            ObserverManager.FabricServiceContext = TestServiceContext;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            using var obs = new AppObserver(TestServiceContext)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_warnings_dmps.config.json"),
+                DumpsPath = Path.Combine(EtwTestsLogFolder, "AppObserver", "MemoryDumps")
+            };
+
+            await obs.ObserveAsync(Token);
+
+            var dmps = Directory.GetFiles(obs.DumpsPath, "*.dmp");
+
+            // VotingData has 3 processes associated with it (1 service pacakge, 2 helper code packages). The config file targets one threshold, so 3 * 1 = 3.
+            Assert.IsTrue(dmps.Length == 3 && dmps.All(d => d.Contains("VotingData") || d.Contains("ConsoleApp6") || d.Contains("ConsoleApp7")));
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no warning conditions.
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            // Clean up.
+            Directory.Delete(obs.DumpsPath, true);
+        }
+
+        [TestMethod]
+        public async Task AppObserver_DumpProcessOnError_SuccessfulDumpCreation()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
+            {
+                await DeployVotingAppAsync();
+            }
+
+            var startDateTime = DateTime.Now;
+
+            ObserverManager.FabricServiceContext = TestServiceContext;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            using var obs = new AppObserver(TestServiceContext)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_errors_dmps.config.json"),
+                DumpsPath = Path.Combine(EtwTestsLogFolder, "AppObserver", "MemoryDumps")
+            };
+
+            await obs.ObserveAsync(Token);
+
+            var dmps = Directory.GetFiles(obs.DumpsPath, "*.dmp");
+
+            // VotingData has 3 processes associated with it (1 service pacakge, 2 helper code packages). The config file targets one threshold, so 3 * 1 = 3.
+            Assert.IsTrue(dmps.Length == 3 && dmps.All(d => d.Contains("VotingData") || d.Contains("ConsoleApp6") || d.Contains("ConsoleApp7")));
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no warning conditions.
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            // Clean up.
+            Directory.Delete(obs.DumpsPath, true);
+        }
+        #endregion
+
+        [TestMethod]
+        public async Task ContainerObserver_ObserveAsync_Successful_IsHealthy()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1146,7 +1376,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task ClusterObserver_ObserveAsync_Successful_Observer_IsHealthy()
+        public async Task ClusterObserver_ObserveAsync_Successful_IsHealthy()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1385,7 +1615,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task OSObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
+        public async Task OSObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1427,7 +1657,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task DiskObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
+        public async Task DiskObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1475,7 +1705,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task DiskObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrors()
+        public async Task DiskObserver_ObserveAsync_Successful_IsHealthy_WarningsOrErrors()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1549,7 +1779,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task NetworkObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
+        public async Task NetworkObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1575,7 +1805,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task NetworkObserver_ObserveAsync_Successful_Observer_WritesLocalFile_ObsWebDeployed()
+        public async Task NetworkObserver_ObserveAsync_Successful_WritesLocalFile_ObsWebDeployed()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1616,7 +1846,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task NodeObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrorsDetected()
+        public async Task NodeObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrorsDetected()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1650,7 +1880,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task NodeObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrorsDetected()
+        public async Task NodeObserver_ObserveAsync_Successful_IsHealthy_WarningsOrErrorsDetected()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1683,7 +1913,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task SFConfigurationObserver_ObserveAsync_Successful_Observer_IsHealthy()
+        public async Task SFConfigurationObserver_ObserveAsync_Successful_IsHealthy()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1725,7 +1955,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors()
+        public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1770,7 +2000,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_MemoryWarningsOrErrorsDetected()
+        public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_MemoryWarningsOrErrorsDetected()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1801,7 +2031,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_ActiveTcpPortsWarningsOrErrorsDetected()
+        public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_ActiveTcpPortsWarningsOrErrorsDetected()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1839,7 +2069,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_EphemeralPortsWarningsOrErrorsDetected()
+        public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_EphemeralPortsWarningsOrErrorsDetected()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -1877,7 +2107,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_HandlesWarningsOrErrorsDetected()
+        public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_HandlesWarningsOrErrorsDetected()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
@@ -2035,7 +2265,7 @@ namespace FabricObserverTests
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
-            await AppObserver_ObserveAsync_Successful_Observer_IsHealthy();
+            await AppObserver_ObserveAsync_Successful_IsHealthy();
 
             List<List<ChildProcessTelemetryData>> childProcessTelemetryData = foEtwListener.foEtwConverter.ChildProcessTelemetry;
             
@@ -2083,14 +2313,11 @@ namespace FabricObserverTests
             if (!await EnsureTestServicesExistAsync("fabric:/TestApp42"))
             {
                 await DeployTestApp42Async();
-
-                // Ensure enough time for child process creation by the test service parent process.
-                await Task.Delay(TimeSpan.FromSeconds(10));
             }
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
-            await AppObserver_ObserveAsync_Successful_Observer_IsHealthy();
+            await AppObserver_ObserveAsync_Successful_IsHealthy();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
             
@@ -2109,27 +2336,20 @@ namespace FabricObserverTests
                 Assert.IsFalse(string.IsNullOrWhiteSpace(t.ProcessName));
                 Assert.IsFalse(string.IsNullOrWhiteSpace(t.ServiceName));
                 Assert.IsFalse(string.IsNullOrWhiteSpace(t.OS));
-                Assert.IsFalse(
-                    string.IsNullOrWhiteSpace(t.PartitionId?.ToString())
-                    && Guid.TryParse(t.PartitionId.ToString(), out Guid guid)
-                    && guid != Guid.Empty);
 
                 Assert.IsFalse(
                     string.IsNullOrWhiteSpace(t.ProcessStartTime)
                     && DateTime.TryParse(t.ProcessStartTime, out DateTime startDate)
                     && startDate > DateTime.MinValue);
 
-                Assert.IsTrue(t.EntityType == EntityType.Service);
-                Assert.IsTrue(t.ServiceKind != System.Fabric.Query.ServiceKind.Invalid);
-                Assert.IsTrue(t.ServicePackageActivationMode == ServicePackageActivationMode.ExclusiveProcess
-                              || t.ServicePackageActivationMode == ServicePackageActivationMode.SharedProcess);
+                Assert.IsTrue(t.EntityType == EntityType.Service || t.EntityType == EntityType.Process);
+                Assert.IsTrue(t.ServicePackageActivationMode == "ExclusiveProcess"
+                              || t.ServicePackageActivationMode == "SharedProcess");
                 Assert.IsTrue(t.HealthState == HealthState.Invalid);
-                Assert.IsTrue(t.ReplicaId > 0);
                 Assert.IsTrue(t.ProcessId > 0);
                 Assert.IsTrue(t.ObserverName == ObserverConstants.AppObserverName);
                 Assert.IsTrue(t.Code == null);
                 Assert.IsTrue(t.Description == null);
-                Assert.IsTrue(t.Property == null);
                 Assert.IsTrue(t.Source == ObserverConstants.AppObserverName);
                 Assert.IsTrue(t.Value >= 0.0);
             }
@@ -2140,17 +2360,14 @@ namespace FabricObserverTests
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
-            if (!await EnsureTestServicesExistAsync("fabric:/TestApp42"))
+            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
             {
-                await DeployTestApp42Async();
-
-                // Ensure enough time for child process creation by the test service parent process.
-                await Task.Delay(TimeSpan.FromSeconds(10));
+                await DeployHealthMetricsAppAsync();
             }
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
-            await AppObserver_ObserveAsync_Successful_Observer_WarningsGenerated();
+            await AppObserver_ObserveAsync_Successful_WarningsGenerated();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
             
@@ -2175,27 +2392,172 @@ namespace FabricObserverTests
                 Assert.IsFalse(string.IsNullOrWhiteSpace(t.ProcessName));
                 Assert.IsFalse(string.IsNullOrWhiteSpace(t.ServiceName));
                 Assert.IsFalse(string.IsNullOrWhiteSpace(t.OS));
-                Assert.IsFalse(
-                    string.IsNullOrWhiteSpace(t.PartitionId?.ToString())
-                    && Guid.TryParse(t.PartitionId.ToString(), out Guid guid)
-                    && guid != Guid.Empty);
 
                 Assert.IsFalse(
                     string.IsNullOrWhiteSpace(t.ProcessStartTime)
                     && DateTime.TryParse(t.ProcessStartTime, out DateTime startDate)
                     && startDate > DateTime.MinValue);
 
-                Assert.IsTrue(t.EntityType == EntityType.Service);
-                Assert.IsTrue(t.ServiceKind != System.Fabric.Query.ServiceKind.Invalid);
-                Assert.IsTrue(t.ServicePackageActivationMode == ServicePackageActivationMode.ExclusiveProcess
-                              || t.ServicePackageActivationMode == ServicePackageActivationMode.SharedProcess);
+                Assert.IsTrue(t.EntityType == EntityType.Service || t.EntityType == EntityType.Process);
+                Assert.IsTrue(t.ServicePackageActivationMode == "ExclusiveProcess"
+                              || t.ServicePackageActivationMode == "SharedProcess");
                 Assert.IsTrue(t.HealthState == HealthState.Warning);
-                Assert.IsTrue(t.ReplicaId > 0);
                 Assert.IsTrue(t.ProcessId > 0);
                 Assert.IsTrue(t.Value > 0.0);
                 Assert.IsTrue(t.ObserverName == ObserverConstants.AppObserverName);
                 Assert.IsTrue(t.Source == $"{t.ObserverName}({t.Code})");
             }
+        }
+
+        // RG
+        [TestMethod]
+        public async Task AppObserver_ETW_EventData_RGEnabled_MemoryInMB_Or_MemoryInMBLimit_ValuesAreNonZero()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
+            {
+                await DeployVotingAppAsync();
+            }
+
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+
+            await AppObserver_ObserveAsync_Successful_IsHealthy();
+
+            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+
+            Assert.IsNotNull(telemData);
+            Assert.IsTrue(telemData.Count > 0);
+
+            telemData = telemData.Where(t => t.ApplicationName == "fabric:/Voting").ToList();
+            Assert.IsTrue(telemData.Any());
+
+            foreach (var t in telemData)
+            {
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ApplicationName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ApplicationType));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeType));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ClusterId));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Metric));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ObserverName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ProcessName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ServiceName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(t.OS));
+                Assert.IsFalse(
+                    string.IsNullOrWhiteSpace(t.ProcessStartTime)
+                    && DateTime.TryParse(t.ProcessStartTime, out DateTime startDate)
+                    && startDate > DateTime.MinValue);
+
+                Assert.IsTrue(t.EntityType == EntityType.Service || t.EntityType == EntityType.Process);
+                Assert.IsTrue(t.ServicePackageActivationMode == "ExclusiveProcess"
+                              || t.ServicePackageActivationMode == "SharedProcess");
+                Assert.IsTrue(t.HealthState == HealthState.Invalid);
+                Assert.IsTrue(t.ProcessId > 0);
+                Assert.IsTrue(t.ObserverName == ObserverConstants.AppObserverName);
+                Assert.IsTrue(t.Code == null);
+                Assert.IsTrue(t.Description == null);
+                Assert.IsTrue(t.Source == ObserverConstants.AppObserverName);
+                
+                // RG
+                if (t.ProcessName == "VotingData" || t.ProcessName == "VotingWeb" || t.ProcessName == "ConsoleApp6" || t.ProcessName == "ConsoleApp7")
+                {
+                    Assert.IsTrue(t.RGEnabled && t.RGMemoryLimitMb > 0);     
+                }
+
+                Assert.IsTrue(t.Value >= 0.0);
+            }
+        }
+
+        // Private Bytes
+        [TestMethod]
+        public async Task AppObserver_ETW_PrivateBytes_Multiple_CodePackages_ValuesAreNonZero_Warnings_MB_Percent()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
+            {
+                await DeployVotingAppAsync();
+            }
+
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+            await AppObserver_ObserveAsync_PrivateBytes_Successful_WarningsGenerated();
+            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+
+            Assert.IsNotNull(telemData);
+            Assert.IsTrue(telemData.Count > 0);
+
+            telemData = telemData.Where(
+                t => t.ApplicationName == "fabric:/Voting" && t.HealthState == HealthState.Warning).ToList();
+
+            // 2 service code packages + 2 helper code packages (VotingData) * 2 metrics = 8 warnings...
+            Assert.IsTrue(telemData.Any() && telemData.Count == 8);
+        }
+
+        // RG - warningRGMemoryLimitPercent
+        [TestMethod]
+        public async Task AppObserver_ETW_RGMemoryLimitPercent_Warning()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
+            {
+                await DeployVotingAppAsync();
+            }
+
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+            await AppObserver_ObserveAsync_Successful_RGLimitWarningGenerated();
+            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+
+            Assert.IsNotNull(telemData);
+            Assert.IsTrue(telemData.Count > 0);
+
+            telemData = telemData.Where(
+                t => t.ApplicationName == "fabric:/Voting" && t.HealthState == HealthState.Warning).ToList();
+
+            // 2 service code packages + 2 helper code packages (VotingData) * 1 metric = 4 warnings...
+            Assert.IsTrue(telemData.All(t => t.Metric == ErrorWarningProperty.RGMemoryUsagePercent) && telemData.Count == 4);
+        }
+
+        [TestMethod]
+        public async Task AppObserver_ETW_PrivateBytes_Warning_ChildProcesses()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            if (!await EnsureTestServicesExistAsync("fabric:/TestApp42"))
+            {
+                await DeployTestApp42Async();
+                await Task.Delay(TimeSpan.FromSeconds(15));
+            }
+
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+            await AppObserver_ObserveAsync_PrivateBytes_Successful_WarningsGenerated();
+            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            List<List<ChildProcessTelemetryData>> childProcessTelemetryData = foEtwListener.foEtwConverter.ChildProcessTelemetry;
+
+            Assert.IsNotNull(telemData);
+            Assert.IsTrue(telemData.Count > 0);
+            Assert.IsNotNull(childProcessTelemetryData);
+            Assert.IsTrue(childProcessTelemetryData.Count > 0);
+
+            // We only care about the launched test app, fabric:/TestApp42, and one metric, Private Bytes (MB).
+            childProcessTelemetryData =
+                childProcessTelemetryData.Where(
+                    c => c.Find(cti => cti.ApplicationName == "fabric:/TestApp42").Metric == ErrorWarningProperty.PrivateBytesMb).ToList();
+            
+            // Ensure parent service is put into warning.
+            telemData = telemData.Where(
+                t => t.ApplicationName == "fabric:/TestApp42" && t.HealthState == HealthState.Warning).ToList();
+
+            // TestApp42 service launches 3 child processes.
+            Assert.IsTrue(childProcessTelemetryData[0][0].ChildProcessInfo.Count == 3);
+
+            // 1 service code package (with 2 children) * 1 metric = 1 warning (parent).
+            Assert.IsTrue(telemData.Count(t => t.ApplicationName == "fabric:/TestApp42" && t.Metric == ErrorWarningProperty.PrivateBytesMb) == 1);
+
+            // All children should definitely have more than 0 bytes committed.
+            Assert.IsTrue(childProcessTelemetryData.All(
+                c => c.TrueForAll(ct => ct.ApplicationName == "fabric:/TestApp42" && ct.Value > 0)));
         }
 
         // DiskObserver: TelemetryData \\
@@ -2207,7 +2569,7 @@ namespace FabricObserverTests
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
-            await DiskObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors();
+            await DiskObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
             
@@ -2240,7 +2602,7 @@ namespace FabricObserverTests
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
-            await DiskObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrors();
+            await DiskObserver_ObserveAsync_Successful_IsHealthy_WarningsOrErrors();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
             
@@ -2279,7 +2641,7 @@ namespace FabricObserverTests
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
-            await FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors();
+            await FabricSystemObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
             
@@ -2308,7 +2670,6 @@ namespace FabricObserverTests
                 Assert.IsTrue(t.ObserverName == ObserverConstants.FabricSystemObserverName);
                 Assert.IsTrue(t.Code == null);
                 Assert.IsTrue(t.Description == null);
-                Assert.IsTrue(t.Property == null);
                 Assert.IsTrue(t.Source == ObserverConstants.FabricSystemObserverName);
                 Assert.IsTrue(t.Value >= 0.0);
             }
@@ -2321,7 +2682,7 @@ namespace FabricObserverTests
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
-            await FabricSystemObserver_ObserveAsync_Successful_Observer_IsHealthy_MemoryWarningsOrErrorsDetected();
+            await FabricSystemObserver_ObserveAsync_Successful_IsHealthy_MemoryWarningsOrErrorsDetected();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
             
@@ -2368,7 +2729,7 @@ namespace FabricObserverTests
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
-            await NodeObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrorsDetected();
+            await NodeObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrorsDetected();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
             
@@ -2402,7 +2763,7 @@ namespace FabricObserverTests
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
-            await NodeObserver_ObserveAsync_Successful_Observer_IsHealthy_WarningsOrErrorsDetected();
+            await NodeObserver_ObserveAsync_Successful_IsHealthy_WarningsOrErrorsDetected();
 
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
             
@@ -2441,9 +2802,7 @@ namespace FabricObserverTests
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
-
-            await OSObserver_ObserveAsync_Successful_Observer_IsHealthy_NoWarningsOrErrors();
-
+            await OSObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors();
             MachineTelemetryData machineTelemetryData = foEtwListener.foEtwConverter.MachineTelemetryData;
             
             Assert.IsNotNull(machineTelemetryData);
@@ -2473,6 +2832,55 @@ namespace FabricObserverTests
             Assert.IsTrue(machineTelemetryData.LogicalProcessorCount > 0);
             Assert.IsTrue(machineTelemetryData.NumberOfRunningProcesses > 0);
             Assert.IsTrue(machineTelemetryData.TotalMemorySizeGB > 0);
+        }
+        #endregion
+
+        #region CodePackage Tests
+
+        // Tests for ensuring ServiceManifests that specify multiple code packages are correctly handled by AppObserver. \\
+
+        [TestMethod]
+        public async Task AppObserver_Detects_Monitors_Multiple_Helper_CodePackages()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
+            {
+                await DeployVotingAppAsync();
+            }
+
+            ObserverManager.FabricServiceContext = TestServiceContext;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            using var obs = new AppObserver(TestServiceContext)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
+                EnableConcurrentMonitoring = true,
+                EnableChildProcessMonitoring = true
+            };
+
+            var startDateTime = DateTime.Now;
+            
+            await obs.InitializeAsync();
+
+            // fabric:/Voting application has 2 default services (that create service types) and 2 extra CodePackages (specified in VotingData manifest)
+            // that contain helper binaries, ConsoleApp6.exe and ConsoleApp7.exe. Therefore, Console6App7 and ConsoleApp7 processes should be added to ReplicaOrInstanceList
+            // and therefore will be treated like any service that AppObserver monitors.
+            Assert.IsTrue(obs.ReplicaOrInstanceList.Any(r => r.HostProcessName == "ConsoleApp6"));
+            Assert.IsTrue(obs.ReplicaOrInstanceList.Any(r => r.HostProcessName == "ConsoleApp7"));
+            
+            await obs.ObserveAsync(Token);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no warning conditions.
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
         }
         #endregion
     }
