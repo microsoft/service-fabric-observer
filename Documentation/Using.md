@@ -148,7 +148,7 @@ So, based on the above configuration, when the number of open file handles held 
 
 **Resource Governance - Memory**  
 
-***Problem:*** I want FabricObserver to warn me when one of my RG-enabled (MemoryInMbLimit) services is approaching the absolute limit (that you specified in Megabytes, as required by SF RG configuration).  
+***Problem:*** I want FabricObserver to warn me when one of my RG-enabled (MemoryInMb or MemoryInMbLimit) services is approaching the absolute limit (that you specified in Megabytes, as required by SF RG configuration).  
 
 ***Solution:*** AppObserver is your friend. 
 
