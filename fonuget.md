@@ -1,4 +1,4 @@
-## FabricObserver 3.2.2.960
+## FabricObserver 3.2.3.960
 ### This version is built for .NET 6 and SF Runtime >= 9.0
 
 [**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer) is a complete implementation of a production-ready, generic resource usage watchdog service written as a stateless, singleton Service Fabric .net 6 application that 

@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -11,6 +12,7 @@ using System.IO;
 using System.Linq;
 using System.Management;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -92,11 +94,11 @@ namespace FabricObserver.Observers.Utilities
                         }
                         catch (ManagementException me)
                         {
-                            Logger.LogInfo($"Handled ManagementException in GetOSInfoAsync retrieval:{Environment.NewLine}{me.Message}");
+                            OSInfoLogger.LogInfo($"Handled ManagementException in GetOSInfoAsync retrieval:{Environment.NewLine}{me.Message}");
                         }
                         catch (Exception e)
                         {
-                            Logger.LogWarning($"Exception in GetOSInfoAsync:{Environment.NewLine}{e.Message}");
+                            OSInfoLogger.LogWarning($"Exception in GetOSInfoAsync:{Environment.NewLine}{e.Message}");
                         }
                         finally
                         {
@@ -143,7 +145,7 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (Win32Exception we)
             {
-                Logger.LogWarning($"TupleGetMemoryInfo: Failure (native) computing memory data:{Environment.NewLine}{we.Message}");
+                OSInfoLogger.LogWarning($"TupleGetMemoryInfo: Failure (native) computing memory data:{Environment.NewLine}{we.Message}");
             }
 
             return (0, 0, 0);
@@ -157,7 +159,7 @@ namespace FabricObserver.Observers.Utilities
                 
                 if (!NativeMethods.GetSytemPerformanceInfo(ref pi))
                 {
-                    Logger.LogWarning($"NativeMethods.GetPerformanceInfo failure: {Marshal.GetLastWin32Error()}");
+                    OSInfoLogger.LogWarning($"NativeMethods.GetPerformanceInfo failure: {Marshal.GetLastWin32Error()}");
                     return (0, 0);
                 }
 
@@ -172,7 +174,7 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (Win32Exception we)
             {
-                Logger.LogWarning($"TupleGetSystemVirtualMemoryInfo: Failure (native) computing memory data:{Environment.NewLine}{we.Message}");
+                OSInfoLogger.LogWarning($"TupleGetSystemVirtualMemoryInfo: Failure (native) computing memory data:{Environment.NewLine}{we.Message}");
             }
 
             return (0, 0);
@@ -246,7 +248,7 @@ namespace FabricObserver.Observers.Utilities
 
                             if (exitStatus != 0)
                             {
-                                Logger.LogWarning(
+                                OSInfoLogger.LogWarning(
                                     "TupleGetDynamicPortRange: netsh failure. " +
                                     $"Unable to determine dynamic port range (will return (-1, -1)):{Environment.NewLine}{error}");
 
@@ -270,7 +272,7 @@ namespace FabricObserver.Observers.Utilities
                                      e is Win32Exception ||
                                      e is SystemException)
                     {
-                        Logger.LogWarning($"Handled Exception in TupleGetDynamicPortRange (will return (-1, -1)):{Environment.NewLine}{e.Message}");
+                        OSInfoLogger.LogWarning($"Handled Exception in TupleGetDynamicPortRange (will return (-1, -1)):{Environment.NewLine}{e.Message}");
                     }
                 }
             }
@@ -288,7 +290,7 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (AggregateException ae)
             {
-                Logger.LogWarning($"Failed all retries (3) for GetActiveEphemeralPortCount (will return -1):{Environment.NewLine}{ae.Flatten().Message}");
+                OSInfoLogger.LogWarning($"Failed all retries (3) for GetActiveEphemeralPortCount (will return -1):{Environment.NewLine}{ae.Flatten().Message}");
                 count = -1;
             }
 
@@ -327,7 +329,7 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (AggregateException ae)
             {
-                Logger.LogWarning($"Failed all retries (3) for GetActivePortCount (will return -1):{Environment.NewLine}{ae.Flatten().Message}");
+                OSInfoLogger.LogWarning($"Failed all retries (3) for GetActivePortCount (will return -1):{Environment.NewLine}{ae.Flatten().Message}");
                 count = -1;
             }
 
@@ -349,8 +351,18 @@ namespace FabricObserver.Observers.Utilities
                 }
 
                 allTcpConnInfo.Clear();
-                allTcpConnInfo.AddRange(NativeMethods.GetAllTcpConnections());
+                allTcpConnInfo.AddRange(NativeMethods.GetAllTCPV4Connections());
                 LastPortCacheUpdate = DateTime.UtcNow;
+
+                // Wait and retry in case of some internal failure (which always includes an empty List of mib info - Win32 exception is logged..).
+                Thread.Sleep(1000);
+
+                // This would only the case if there was some failure. So, try one more time.
+                if (allTcpConnInfo.Count == 0)
+                {
+                    allTcpConnInfo.AddRange(NativeMethods.GetAllTCPV4Connections());
+                    LastPortCacheUpdate = DateTime.UtcNow;
+                }
             }
         }
 

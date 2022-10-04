@@ -3,8 +3,10 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using FabricObserver.Observers.Interfaces;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -13,10 +15,13 @@ using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Description;
 using System.Fabric.Query;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
+using System.Xml.XPath;
 
 namespace FabricObserver.Utilities.ServiceFabric
 {
@@ -378,6 +383,343 @@ namespace FabricObserver.Utilities.ServiceFabric
             }
 
             return pids;
+        }
+
+        public void ProcessServiceConfiguration(string appTypeName, string codepackageName, ref ReplicaOrInstanceMonitoringInfo replicaInfo)
+        {
+            if (string.IsNullOrWhiteSpace(appTypeName))
+            {
+                return;
+            }
+
+            try
+            {
+                string appTypeVersion = null;
+                var appList =
+                    FabricClientSingleton.QueryManager.GetApplicationListAsync(replicaInfo.ApplicationName)?.Result;
+
+                if (appList?.Count > 0)
+                {
+                    try
+                    {
+                        if (appList.Any(app => app.ApplicationTypeName == appTypeName))
+                        {
+                            appTypeVersion = appList.First(app => app.ApplicationTypeName == appTypeName).ApplicationTypeVersion;
+                            replicaInfo.ApplicationTypeVersion = appTypeVersion;
+                        }
+                    }
+                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                    {
+
+                    }
+
+                    // RG - Windows-only. Linux is not supported yet.
+                    if (!string.IsNullOrWhiteSpace(appTypeVersion))
+                    {
+                        if (isWindows)
+                        {
+                            string appManifest = FabricClientSingleton.ApplicationManager.GetApplicationManifestAsync(appTypeName, appTypeVersion)?.Result;
+
+                            if (!string.IsNullOrWhiteSpace(appManifest))
+                            {
+                                (replicaInfo.RGEnabled, replicaInfo.RGMemoryLimitMb) =
+                                    TupleGetResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName);
+                            }
+                        }
+
+                        // ServiceTypeVersion
+                        var serviceList =
+                        FabricClientSingleton.QueryManager.GetServiceListAsync(
+                                replicaInfo.ApplicationName, replicaInfo.ServiceName)?.Result;
+
+                        if (serviceList?.Count > 0)
+                        {
+                            try
+                            {
+                                Uri serviceName = replicaInfo.ServiceName;
+
+                                if (serviceList.Any(s => s.ServiceName == serviceName))
+                                {
+                                    replicaInfo.ServiceTypeVersion = serviceList.First(s => s.ServiceName == serviceName).ServiceManifestVersion;
+                                }
+                            }
+                            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                            {
+
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is TimeoutException || e is XmlException)
+            {
+                // move along
+            }
+        }
+
+        public void ProcessMultipleHelperCodePackages(
+                        Uri appName,
+                        string appTypeName,
+                        DeployedServiceReplica deployedReplica,
+                        ref ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> repsOrInstancesInfo,
+                        bool isHostedByFabric,
+                        bool includeChildProcesses,
+                        NativeMethods.SafeObjectHandle handleToSnapshot = null)
+        {
+            try
+            {
+                DeployedCodePackageList codepackages = FabricClientSingleton.QueryManager.GetDeployedCodePackageListAsync(
+                                                        nodeName,
+                                                        appName,
+                                                        deployedReplica.ServiceManifestName,
+                                                        null).Result;
+
+                ReplicaOrInstanceMonitoringInfo replicaInfo = null;
+
+                // Check for multiple code packages or GuestExecutable service (so, Fabric is host).
+                if (codepackages.Count > 1 || isHostedByFabric)
+                {
+                    foreach (var codepackage in codepackages)
+                    {
+                        // The code package does not belong to a deployed replica, so this is the droid we're looking for (a helper code package or guest executable).
+                        if (codepackage.CodePackageName != deployedReplica.CodePackageName)
+                        {
+                            int procId = (int)codepackage.EntryPoint.ProcessId; // The actual process id of the helper or guest executable binary.
+                            string procName = null;
+
+                            // Process class is a CPU bottleneck on Windows.
+                            if (isWindows)
+                            {
+                                procName = NativeMethods.GetProcessNameFromId(procId);
+                            }
+                            else // Linux
+                            {
+                                using (var proc = Process.GetProcessById(procId))
+                                {
+                                    try
+                                    {
+                                        procName = proc.ProcessName;
+                                    }
+                                    catch (Exception e) when (e is InvalidOperationException || e is NotSupportedException || e is ArgumentException)
+                                    {
+                                        
+                                    }
+                                }
+                            }
+
+                            // Make sure procName lookup worked and if so that it is still the process we're looking for.
+                            if (string.IsNullOrWhiteSpace(procName) || !EnsureProcess(procName, procId))
+                            {
+                                continue;
+                            }
+
+                            // It doesn't matter that the helper CodePackage or guest executable does not have any replicas (not hosted by Fabric). This basic construct ReplicaOrInstanceMonitoringInfo is used in several places.
+                            // The key information for the helper/guest executable binary case is the ServiceManifestName, the parent's ServiceName/Type, its HostProcessId and its HostProcessName.
+                            // This ensures that support for multiple CodePackages and guest executable services fit naturally into AppObserver's *existing* implementation.
+                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
+                            {
+                                ApplicationName = appName,
+                                ApplicationTypeName = appTypeName,
+                                HostProcessId = procId,
+                                HostProcessName = procName,
+                                ReplicaOrInstanceId = 0,
+                                PartitionId = null,
+                                ReplicaRole = ReplicaRole.None,
+                                ServiceKind = ServiceKind.Invalid,
+                                ServiceName = deployedReplica.ServiceName,
+                                ServiceManifestName = codepackage.ServiceManifestName,
+                                ServiceTypeName = deployedReplica.ServiceTypeName,
+                                ServicePackageActivationId = codepackage.ServicePackageActivationId,
+                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(codepackage.ServicePackageActivationId) ?
+                                                ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
+                                ReplicaStatus = ServiceReplicaStatus.Invalid
+                            };
+
+                            // If Helper binaries launch child processes, AppObserver will monitor them, too.
+                            if (includeChildProcesses && procId > 0)
+                            {
+                                // DEBUG - Perf
+                                //var sw = Stopwatch.StartNew();
+                                List<(string ProcName, int Pid)> childPids;
+
+                                if (isWindows)
+                                {
+                                    childPids = ProcessInfoProvider.Instance.GetChildProcessInfo(procId, handleToSnapshot);
+                                }
+                                else
+                                {
+                                    childPids = ProcessInfoProvider.Instance.GetChildProcessInfo(procId);
+                                }
+
+                                if (childPids != null && childPids.Count > 0)
+                                {
+                                    replicaInfo.ChildProcesses = childPids;
+                                }
+                                //sw.Stop();
+                                //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
+                            }
+
+                            // ResourceGovernance/AppTypeVer/ServiceTypeVer.
+                            ProcessServiceConfiguration(appTypeName, codepackage.CodePackageName, ref replicaInfo);
+                        }
+
+                        if (replicaInfo != null && replicaInfo.HostProcessId > 0 && !repsOrInstancesInfo.Any(r => r.HostProcessId == replicaInfo.HostProcessId))
+                        {
+                            repsOrInstancesInfo.Enqueue(replicaInfo);
+                        }
+                    }
+                }
+            }
+            catch (Exception e) when (e is ArgumentException || e is FabricException || e is TaskCanceledException || e is TimeoutException)
+            {
+                
+            }
+        }
+
+        private (bool IsRGEnabled, double MemoryLimitMb) TupleGetResourceGovernanceInfo(string appManifestXml, string servicePkgName, string codepackageName)
+        {
+            if (string.IsNullOrWhiteSpace(appManifestXml))
+            {
+  
+                return (false, 0);
+            }
+
+            if (string.IsNullOrWhiteSpace(servicePkgName))
+            {
+                return (false, 0);
+            }
+
+            if (string.IsNullOrWhiteSpace(codepackageName))
+            {
+                return (false, 0);
+            }
+
+            // Don't waste cycles with XML parsing if you can easily get a hint first..
+            if (!appManifestXml.Contains($"<{ObserverConstants.RGPolicyNodeName} "))
+            {
+                return (false, 0);
+            }
+
+            // Safe XML pattern - *Do not use LoadXml*.
+            var appManifestXdoc = new XmlDocument { XmlResolver = null };
+
+            using (var sreader = new StringReader(appManifestXml))
+            {
+                using (var xreader = XmlReader.Create(sreader, new XmlReaderSettings { XmlResolver = null }))
+                {
+                    appManifestXdoc?.Load(xreader);
+                    return TupleGetResourceGovernanceInfoFromAppManifest(ref appManifestXdoc, servicePkgName, codepackageName);
+                }
+            }
+        }
+
+        private (bool IsRGEnabled, double MemoryLimitMb) TupleGetResourceGovernanceInfoFromAppManifest(ref XmlDocument xDoc, string servicePkgName, string codepackageName)
+        {
+            if (xDoc == null)
+            {
+                return (false, 0);
+            }
+
+            try
+            {
+                // Find the correct manifest import for specified service package name (servicePkgName arg).
+                // There will generally be multiple RG limits set per application (so, per service settings).
+                var sNode =
+                    xDoc.DocumentElement?.SelectSingleNode(
+                        $"//*[local-name()='{ObserverConstants.ServiceManifestImport}'][*[local-name()='{ObserverConstants.ServiceManifestRef}' and @*[local-name()='{ObserverConstants.ServiceManifestName}' and . ='{servicePkgName}']]]");
+
+                if (sNode == null)
+                {
+                    return (false, 0);
+                }
+
+                XmlNodeList childNodes = sNode.ChildNodes;
+
+                foreach (XmlNode node in childNodes)
+                {
+                    if (node.Name != ObserverConstants.PoliciesNodeName)
+                    {
+                        continue;
+                    }
+
+                    foreach (XmlNode polNode in node.ChildNodes)
+                    {
+                        if (polNode.Name != ObserverConstants.RGPolicyNodeName)
+                        {
+                            continue;
+                        }
+
+                        string codePackageRef = polNode.Attributes[ObserverConstants.CodePackageRef]?.Value;
+
+                        if (codePackageRef != codepackageName)
+                        {
+                            continue;
+                        }
+
+                        // Get the rg policy memory attribute. It can only be either "MemoryInMB" or "MemoryInMBLimit"
+                        XmlAttribute memAttr = null;
+
+                        if (polNode.Attributes[ObserverConstants.RGMemoryInMB] != null)
+                        {
+                            memAttr = polNode.Attributes[ObserverConstants.RGMemoryInMB];
+                        }
+                        else if (polNode.Attributes[ObserverConstants.RGMemoryInMBLimit] != null)
+                        {
+                            memAttr = polNode.Attributes[ObserverConstants.RGMemoryInMBLimit];
+                        }
+
+                        // Not the droid we're looking for.
+                        if (memAttr == null || string.IsNullOrWhiteSpace(memAttr.Value))
+                        {
+                            continue;
+                        }
+
+                        // App Parameter support: This means user has specified the absolute memory value in an Application Parameter.
+                        if (memAttr.Value.StartsWith("["))
+                        {
+                            XmlNode parametersNode = xDoc.DocumentElement?.SelectSingleNode($"//*[local-name()='{ObserverConstants.Parameters}']");
+                            XmlNode parameterNode =
+                                parametersNode?.SelectSingleNode($"//*[local-name()='{ObserverConstants.Parameter}' and @Name='{memAttr.Value.Substring(1, memAttr.Value.Length - 1)}']");
+                            XmlAttribute attr = parameterNode?.Attributes?[ObserverConstants.DefaultValue];
+                            memAttr.Value = attr.Value;
+                        }
+
+                        return (true, double.TryParse(memAttr.Value, out double mem) ? mem : 0);
+                    }
+                }
+            }
+            catch (XPathException)
+            {
+                return (false, 0);
+            }
+
+            return (false, 0);
+        }
+
+        private bool EnsureProcess(string procName, int procId)
+        {
+            if (string.IsNullOrWhiteSpace(procName) || procId < 1)
+            {
+                return false;
+            }
+
+            if (!isWindows)
+            {
+                try
+                {
+                    using (Process proc = Process.GetProcessById(procId))
+                    {
+                        return proc.ProcessName == procName;
+                    }
+                }
+                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                {
+                    return false;
+                }
+            }
+
+            // net core's ProcessManager.EnsureState is a CPU bottleneck on Windows.
+            return NativeMethods.GetProcessNameFromId(procId) == procName;
         }
     }
 }

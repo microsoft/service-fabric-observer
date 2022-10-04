@@ -12,7 +12,9 @@ namespace FabricObserver.Observers.Utilities
     public abstract class OSInfoProvider
     {
         private static OSInfoProvider instance;
-        private static readonly object lockObj = new object();
+        private static readonly object _instanceLock = new object();
+        private static readonly object _loggerLock = new object();
+        private static Logger _logger = null;
 
         public static OSInfoProvider Instance
         {
@@ -20,7 +22,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 if (instance == null)
                 {
-                    lock (lockObj)
+                    lock (_instanceLock)
                     {
                         if (instance == null)
                         {
@@ -40,10 +42,24 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        protected Logger Logger
+        protected static Logger OSInfoLogger
         {
-            get;
-        } = new Logger("OSUtilities");
+            get
+            {
+                if (_logger == null)
+                {
+                    lock (_loggerLock)
+                    {
+                        if (_logger == null)
+                        {
+                            _logger = new Logger("OSInfo");
+                        }
+                    }
+                }
+
+                return _logger;
+            }
+        }
 
         /// <summary>
         /// Gets OS physical memory information.
