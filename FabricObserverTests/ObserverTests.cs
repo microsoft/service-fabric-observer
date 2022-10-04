@@ -2230,19 +2230,30 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public void Active_Ports_Machine_Total_Greater_Than_Zero()
+        public void Active_TCP_Ports_Machine_Total_Greater_Than_Zero()
         {
             int ports = OSInfoProvider.Instance.GetActiveTcpPortCount();
 
-            // 0 would mean something failed in the impl or that there are no active TCP connections on the machine (unlikely).
+            // 0 would mean something failed in the impl or that there are no active TCP connections on the machine (highly unlikely).
             Assert.IsTrue(ports > 0);
         }
 
         [TestMethod]
-        public void Active_TCP_Port_Count_Greater_Than_Ephemeral_Port_Count_Machine()
+        public void Active_Ephemeral_Ports_Machine_Total_Greater_Than_Zero()
+        {
+            int ports = OSInfoProvider.Instance.GetActiveEphemeralPortCount();
+
+            // 0 would mean something failed in the impl or that there are no active TCP connections in the dynamic range on the machine (highly unlikely).
+            Assert.IsTrue(ports > 0);
+        }
+
+        [TestMethod]
+        public void Active_TCP_Ports_Machine_Greater_Than_Active_Ephemeral_Ports_Machine()
         {
             int total_tcp_ports = OSInfoProvider.Instance.GetActiveTcpPortCount();
             int ephemeral_tcp_ports = OSInfoProvider.Instance.GetActiveEphemeralPortCount();
+            
+            Assert.IsTrue(total_tcp_ports > 0 && ephemeral_tcp_ports > 0);
             Assert.IsTrue(total_tcp_ports > ephemeral_tcp_ports);
         }
 
