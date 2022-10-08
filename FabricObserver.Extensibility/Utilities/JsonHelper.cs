@@ -42,7 +42,7 @@ namespace FabricObserver.Observers.Utilities
                     MissingMemberHandling = MissingMemberHandling.Ignore
                 };
 
-                return TryDerializeObject<T>(text, out _, jsonSerializerSettings);
+                return TryDeserializeObject<T>(text, out _, jsonSerializerSettings);
             }
             catch (JsonException)
             {
@@ -86,7 +86,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="obj">Json string representing an instance of type T.</param>
         /// <param name="data">out: an instance of type T.</param>
         /// <returns>An instance of the specified type T or null if the string can't be deserialized into the specified type T. Note: Missing members are treated as Error.</returns>
-        public static bool TryDerializeObject<T>(string obj, out T data, JsonSerializerSettings jsonSerializerSettings = null)
+        public static bool TryDeserializeObject<T>(string obj, out T data, JsonSerializerSettings jsonSerializerSettings = null)
         {
             if (string.IsNullOrWhiteSpace(obj))
             {
@@ -98,6 +98,8 @@ namespace FabricObserver.Observers.Utilities
             {
                 if (jsonSerializerSettings == null)
                 {
+                    // Being strict here is the default behavior. This is important because ChildProcessTelemetryData is close enough in structure to TelemetryData
+                    // that without this setting either serialized type would deserialize to TelemetryData successfully, which is not the right behavior.
                     jsonSerializerSettings = new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Error };
                 }
 

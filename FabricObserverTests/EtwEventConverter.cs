@@ -67,21 +67,21 @@ namespace FabricObserverTests
                 string json = eventData.Payload[0].ToString();
 
                 // ChildProcessTelemetryData (only from AppObserver).
-                if (JsonHelper.TryDerializeObject(json, out List<ChildProcessTelemetryData> childProcTelemData))
+                if (JsonHelper.TryDeserializeObject(json, out List<ChildProcessTelemetryData> childProcTelemData))
                 {
                     Logger.LogInfo($"JSON-serialized List<ChildProcessTelemetryData>{Environment.NewLine}{json}");
                     ChildProcessTelemetry ??= new List<List<ChildProcessTelemetryData>>();
                     ChildProcessTelemetry.Add(childProcTelemData);
                 }
                 // TelemetryData (from all observers but OSObserver).
-                else if (JsonHelper.TryDerializeObject(json, out TelemetryData telemetryData))
+                else if (JsonHelper.TryDeserializeObject(json, out TelemetryData telemetryData))
                 {
                     Logger.LogInfo($"JSON-serialized TelemetryData{Environment.NewLine}{json}");
                     TelemetryData ??= new List<TelemetryData>();
                     TelemetryData.Add(telemetryData); 
                 }
                 // MachineTelemetryData (only from OSObserver).
-                else if (JsonHelper.TryDerializeObject(json, out MachineTelemetryData machineTelemetryData))
+                else if (JsonHelper.TryDeserializeObject(json, out MachineTelemetryData machineTelemetryData))
                 {
                     Logger.LogInfo($"JSON-serialized MachineTelemetryData{Environment.NewLine}{json}");
                     MachineTelemetryData = machineTelemetryData;
