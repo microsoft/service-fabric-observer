@@ -4,7 +4,7 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.3</version>
 		<releaseNotes>
-- Bug Fix (OSInfoProvider - Windows).
+- Bug Fix (OSInfoProvider - Windows impl). This version fixes a bug with the Logger implementation in WindowsOSInfoProvider that leads to a NullReferenceException.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
