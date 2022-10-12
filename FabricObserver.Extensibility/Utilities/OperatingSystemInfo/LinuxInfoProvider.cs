@@ -60,7 +60,7 @@ namespace FabricObserver.Observers.Utilities
 
         public override int GetActiveEphemeralPortCount(int processId = -1, string configPath = null)
         {
-            (int lowPort, int highPort) = TupleGetDynamicPortRange();
+            (int lowPort, int highPort, _) = TupleGetDynamicPortRange();
 
             int count = GetPortCount(processId, line =>
             {
@@ -82,8 +82,8 @@ namespace FabricObserver.Observers.Utilities
                 return usedPct;
             }
 
-            (int LowPort, int HighPort) = TupleGetDynamicPortRange();
-            int totalEphemeralPorts = HighPort - LowPort;
+            (_, _, int NumberOfPorts) = TupleGetDynamicPortRange();
+            int totalEphemeralPorts = NumberOfPorts;
 
             if (totalEphemeralPorts > 0)
             {
@@ -93,11 +93,13 @@ namespace FabricObserver.Observers.Utilities
             return usedPct;
         }
 
-        public override (int LowPort, int HighPort) TupleGetDynamicPortRange()
+        public override (int LowPort, int HighPort, int NumberOfPorts) TupleGetDynamicPortRange()
         {
             string text = File.ReadAllText("/proc/sys/net/ipv4/ip_local_port_range");
             int tabIndex = text.IndexOf('\t');
-            return (LowPort: int.Parse(text.Substring(0, tabIndex)), HighPort: int.Parse(text.Substring(tabIndex + 1)));
+            int lowPort = int.Parse(text.Substring(0, tabIndex));
+            int highPort = int.Parse(text.Substring(tabIndex + 1));
+            return (LowPort: lowPort, HighPort: highPort, NumberOfPorts: highPort - lowPort);
         }
 
         public override async Task<OSInfo> GetOSInfoAsync(CancellationToken cancellationToken)

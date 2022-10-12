@@ -422,7 +422,7 @@ namespace FabricObserver.Observers
 
                 // Active, ephemeral ports.
                 int activeEphemeralPorts = OSInfoProvider.Instance.GetActiveEphemeralPortCount();
-                (int lowPortOS, int highPortOS) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
+                (int lowPortOS, int highPortOS, int totalDynamicPortsOS) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
                 string osEphemeralPortRange = string.Empty;
                 string fabricAppPortRange = string.Empty;
                 string clusterManifestXml =
@@ -475,7 +475,7 @@ namespace FabricObserver.Observers
                 if (lowPortOS > -1)
                 {
                     osEphemeralPortRange = $"{lowPortOS} - {highPortOS}";
-                    _ = sb.AppendLine($"EphemeralTcpPortRange: {osEphemeralPortRange} (Active*: {activeEphemeralPorts})");
+                    _ = sb.AppendLine($"EphemeralTcpPortRange: {osEphemeralPortRange} (Total: {totalDynamicPortsOS}, Active*: {activeEphemeralPorts})");
                 }
 
                 if (lowPortApp > -1)
