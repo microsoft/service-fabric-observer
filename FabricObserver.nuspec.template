@@ -4,7 +4,8 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.3.960</version>
 		<releaseNotes>
-- Bug Fix (OSInfoProvider - Windows impl). This version fixes a bug with the Logger implementation in WindowsOSInfoProvider that leads to a NullReferenceException.
+- Updated NodeObserver's Dynamic Port Range ETW impl.
+- Bug fixes.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

@@ -2239,6 +2239,16 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
+        public void Validate_Dynamic_Port_Range_LowPort_HighPort_TotalNumberOfPorts()
+        {
+            var (LowPort, HighPort, NumberOfPorts) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
+            Assert.IsTrue(NumberOfPorts > 0);
+            Assert.IsTrue(LowPort > 0);
+            Assert.IsTrue(HighPort > LowPort);
+            Assert.IsTrue(NumberOfPorts == HighPort - LowPort);
+        }
+
+        [TestMethod]
         public void Active_Ephemeral_Ports_Machine_Total_Greater_Than_Zero()
         {
             int ports = OSInfoProvider.Instance.GetActiveEphemeralPortCount();

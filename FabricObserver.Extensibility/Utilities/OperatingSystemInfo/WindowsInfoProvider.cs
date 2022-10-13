@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -12,7 +11,6 @@ using System.IO;
 using System.Linq;
 using System.Management;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,7 +20,7 @@ namespace FabricObserver.Observers.Utilities
     public class WindowsInfoProvider : OSInfoProvider
     {
         private const string TcpProtocol = "tcp";
-        private (int, int) windowsDynamicPortRange = (-1, -1);
+        private (int LowPort, int HighPort, int NumberOfPorts) windowsDynamicPortRange = (-1, -1, 0);
         private readonly List<NativeMethods.MIB_TCPROW_OWNER_PID> allTcpConnInfo;
         private const int tcpPortOutputMaxCacheTimeSeconds = 15;
         private const int dynamicRangeMaxCacheTimeMinutes = 15;
@@ -180,8 +178,7 @@ namespace FabricObserver.Observers.Utilities
             return (0, 0);
         }
 
-
-        public override (int LowPort, int HighPort) TupleGetDynamicPortRange()
+        public override (int LowPort, int HighPort, int NumberOfPorts) TupleGetDynamicPortRange()
         {
             if (DateTime.UtcNow.Subtract(LastDynamicRangeCacheUpdate) < TimeSpan.FromMinutes(dynamicRangeMaxCacheTimeMinutes))
             {
@@ -228,7 +225,7 @@ namespace FabricObserver.Observers.Utilities
 
                         if (!process.Start())
                         {
-                            return (-1, -1);
+                            return (-1, -1, 0);
                         }
 
                         // Start async reads.
@@ -252,7 +249,7 @@ namespace FabricObserver.Observers.Utilities
                                     "TupleGetDynamicPortRange: netsh failure. " +
                                     $"Unable to determine dynamic port range (will return (-1, -1)):{Environment.NewLine}{error}");
 
-                                return (-1, -1);
+                                return (-1, -1, 0);
                             }
 
                             if (int.TryParse(startPort, out int lowPortRange) && int.TryParse(portCount, out int count))
@@ -260,7 +257,7 @@ namespace FabricObserver.Observers.Utilities
                                 int highPortRange = lowPortRange + count;
                                 LastDynamicRangeCacheUpdate = DateTime.UtcNow;
 
-                                return (lowPortRange, highPortRange);
+                                return (lowPortRange, highPortRange, count);
                             }
                         }
                     }
@@ -277,7 +274,7 @@ namespace FabricObserver.Observers.Utilities
                 }
             }
 
-            return (-1, -1);
+            return (-1, -1, 0);
         }
 
         public override int GetActiveEphemeralPortCount(int processId = -1, string configPath = null)
@@ -308,8 +305,8 @@ namespace FabricObserver.Observers.Utilities
                 return usedPct;
             }
 
-            (int LowPort, int HighPort) = TupleGetDynamicPortRange();
-            int totalEphemeralPorts = HighPort - LowPort;
+            (_, _, int NumberOfPorts) = TupleGetDynamicPortRange();
+            int totalEphemeralPorts = NumberOfPorts;
 
             if (totalEphemeralPorts > 0)
             {
@@ -373,11 +370,11 @@ namespace FabricObserver.Observers.Utilities
             var tempLocalPortData = new List<(int Port, uint Pid)>();
             string findStrProc = string.Empty;
             string error = string.Empty;
-            (int lowPortRange, int highPortRange) = (-1, -1);
+            (int lowPortRange, int highPortRange, int numberOfPorts) = (-1, -1, 0);
 
             if (ephemeral)
             {
-                (lowPortRange, highPortRange) = windowsDynamicPortRange;
+                (lowPortRange, highPortRange, numberOfPorts) = windowsDynamicPortRange;
             }
 
             foreach (var conn in allTcpConnInfo)

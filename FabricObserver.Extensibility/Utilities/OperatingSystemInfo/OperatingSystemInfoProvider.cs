@@ -95,7 +95,7 @@ namespace FabricObserver.Observers.Utilities
         /// 
         /// </summary>
         /// <returns></returns>
-        public abstract (int LowPort, int HighPort) TupleGetDynamicPortRange();
+        public abstract (int LowPort, int HighPort, int NumberOfPorts) TupleGetDynamicPortRange();
 
         /// <summary>
         /// 
