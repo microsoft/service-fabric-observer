@@ -254,7 +254,7 @@ namespace FabricObserver.Observers.Utilities
 
                             if (int.TryParse(startPort, out int lowPortRange) && int.TryParse(portCount, out int count))
                             {
-                                int highPortRange = lowPortRange + count - 1;
+                                int highPortRange = lowPortRange + count;
                                 LastDynamicRangeCacheUpdate = DateTime.UtcNow;
 
                                 return (lowPortRange, highPortRange, count);

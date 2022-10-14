@@ -2239,13 +2239,13 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public void Dynamic_Port_Range_LowPort_HighPort_Equals_TotalNumberOfPorts()
+        public void Validate_Dynamic_Port_Range_LowPort_HighPort_TotalNumberOfPorts()
         {
             var (LowPort, HighPort, NumberOfPorts) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
             Assert.IsTrue(NumberOfPorts > 0);
             Assert.IsTrue(LowPort > 0);
             Assert.IsTrue(HighPort > LowPort);
-            Assert.IsTrue(NumberOfPorts == HighPort - LowPort + 1);
+            Assert.IsTrue(NumberOfPorts == HighPort - LowPort);
         }
 
         [TestMethod]
