@@ -2,14 +2,10 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
 	<metadata minClientVersion="3.3.0">
 		<id>%PACKAGE_ID%</id>
-		<version>3.2.2.831</version>
+		<version>3.2.3.831</version>
 		<releaseNotes>
-- Bug Fix: AppObserver now monitors Guest Executable services.
-- Support for Service Fabric Resource Governance memory limit monitoring (Windows-only).
-- Support for monitoring Private Bytes (Commit/Charge) usage by service processes (Windows-only).
-- Support for monitoring multiple service code packages.
-- Support for dumping service processes in Warning.
-- New unit tests and supporting config/app packages.
+- Updated NodeObserver's Dynamic Port Range ETW impl.
+- Bug fix in OSInfoLogger and new Windows port detection impl. See release notes for Microsoft.ServiceFabricApps.FabricObserver.Extensibility v3.2.3 nupkg for details.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

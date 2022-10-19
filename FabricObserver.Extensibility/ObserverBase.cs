@@ -1050,21 +1050,19 @@ namespace FabricObserver.Observers
                 // Ephemeral port sugar for event description.
                 string dynamicRange = string.Empty;
                 string totalPorts = string.Empty;
-                int Low = 0, High = 0;
+                int Low = 0, High = 0, Total = 0;
 
                 if (data.Property.Contains("Ephemeral"))
                 {
-                    (Low, High) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
+                    (Low, High, Total) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
                     dynamicRange = $" (dynamic range: {Low}-{High})";
 
                     if (data.Property.Contains("Percent"))
                     {
-                        int total = High - Low;
-
-                        if (total > 0)
+                        if (Total > 0)
                         {
-                            int count = (int)(data.AverageDataValue / 100 * total);
-                            totalPorts = $" ({count}/{total})";
+                            int count = (int)(data.AverageDataValue / 100 * Total);
+                            totalPorts = $" ({count}/{Total})";
                         }
                     }
                 }

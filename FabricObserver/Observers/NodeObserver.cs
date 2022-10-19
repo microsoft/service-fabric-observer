@@ -744,27 +744,26 @@ namespace FabricObserver.Observers
                     double usedPct = OSInfoProvider.Instance.GetActiveEphemeralPortCountPercentage();
                     EphemeralPortsDataPercent.AddData(usedPct);
 
-                    /* Raw ETW - Unrelated to Warnings */
-                    if (IsEtwEnabled)
+                /* Raw ETW - Unrelated to Warnings */
+                if (IsEtwEnabled)
+                {
+                    (int LowPort, int HighPort, int NumberOfPorts) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
+
+                    var telemData = new TelemetryData()
                     {
-                        (int LowPort, int HighPort) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
-                        int totalEphemeralPorts = HighPort - LowPort;
+                        ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
+                        EntityType = EntityType.Machine,
+                        Metric = ErrorWarningProperty.TotalEphemeralPorts,
+                        NodeName = NodeName,
+                        NodeType = NodeType,
+                        ObserverName = ObserverName,
+                        Property = $"{LowPort} - {HighPort}",
+                        Source = ObserverName,
+                        Value = NumberOfPorts
+                    };
 
-                        var telemData = new TelemetryData()
-                        {
-                            ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
-                            EntityType = EntityType.Machine,
-                            Metric = ErrorWarningProperty.TotalEphemeralPorts,
-                            NodeName = NodeName,
-                            NodeType = NodeType,
-                            ObserverName = ObserverName,
-                            Property = $"{LowPort} - {HighPort}",
-                            Source = ObserverName,
-                            Value = totalEphemeralPorts
-                        };
-
-                        ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, telemData);
-                    }
+                    ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, telemData);
+                }
                 }
 
                 timer.Start();

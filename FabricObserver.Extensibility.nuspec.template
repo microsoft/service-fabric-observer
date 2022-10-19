@@ -2,12 +2,11 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
 	<metadata minClientVersion="3.3.0">
 		<id>%PACKAGE_ID%</id>
-		<version>3.2.2</version>
+		<version>3.2.3</version>
 		<releaseNotes>
-- Support for Service Fabric Resource Governance memory limit monitoring by AppObserver (Windows-only).
-- Support for monitoring Private Bytes (Commit/Charge) usage by service processes (Windows-only).
-- Support for monitoring multiple service code packages.
-- Support for dumping service processes in Warning.
+- Bug Fix (OSInfoProvider - Windows impl). This version fixes a bug with the Logger implementation in WindowsOSInfoProvider that leads to a NullReferenceException.
+- Updated OSInfoProvider.TupleGetDynamicPortRange impl.
+- Updated Windows TCP port detection impl to account for BOUND state connections (netstat is used to get port data in this release).
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
