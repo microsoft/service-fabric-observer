@@ -6,6 +6,7 @@
 		<releaseNotes>
 - Bug Fix (OSInfoProvider - Windows impl). This version fixes a bug with the Logger implementation in WindowsOSInfoProvider that leads to a NullReferenceException.
 - Updated OSInfoProvider.TupleGetDynamicPortRange impl.
+- Updated Windows TCP port detection impl to account for BOUND state connections (netstat is used to get port data in this release).
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

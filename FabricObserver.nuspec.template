@@ -5,7 +5,7 @@
 		<version>3.2.3.831</version>
 		<releaseNotes>
 - Updated NodeObserver's Dynamic Port Range ETW impl.
-- Bug fixes.
+- Bug fix in OSInfoLogger and new Windows port detection impl. See release notes for Microsoft.ServiceFabricApps.FabricObserver.Extensibility v3.2.3 nupkg for details.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

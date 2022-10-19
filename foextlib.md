@@ -1,4 +1,4 @@
-## FabricObserver Extensibility Library 3.2.2
+## FabricObserver Extensibility Library 3.2.3
 
 This .NET Standard 2.0 library is for building FabricObserver plugins, which are custom observers that extend FabricObserver's capabilities to match your needs. Each plugin is managed like a first class observer.
 
