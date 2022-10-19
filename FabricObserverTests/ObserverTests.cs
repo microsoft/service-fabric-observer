@@ -27,8 +27,6 @@ using System.Xml;
 using FabricObserver.Observers.Utilities.Telemetry;
 using FabricObserver.Utilities.ServiceFabric;
 using Microsoft.Extensions.DependencyInjection;
-using NLog.Targets.Wrappers;
-using System.Collections.Specialized;
 
 /***PLEASE RUN ALL OF THESE TESTS ON YOUR LOCAL DEV MACHINE WITH A RUNNING SF CLUSTER BEFORE SUBMITTING A PULL REQUEST***/
 
