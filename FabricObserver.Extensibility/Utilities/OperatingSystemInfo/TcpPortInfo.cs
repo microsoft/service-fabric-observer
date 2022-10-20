@@ -56,8 +56,9 @@ namespace FabricObserver.Observers.Utilities
         /// Creates a new instance of TcpPortInfo and set properties based on supplied netstat out row string.
         /// </summary>
         /// <param name="netstatOutputLine">A netstat console output row (string).</param>
-        /// <exception cref="ArgumentException">Throws ArgumentException if the supplied string is not a netstat output row.</exception>
-        public TcpPortInfo(string netstatOutputLine)        {
+        /// <exception cref="ArgumentException">Throws ArgumentException if the specified string is not a netstat output row.</exception>
+        public TcpPortInfo(string netstatOutputLine)
+        {
             if (string.IsNullOrWhiteSpace(netstatOutputLine))
             {
                 throw new ArgumentException("netstatOutputLine value must be a valid nestat output row");
