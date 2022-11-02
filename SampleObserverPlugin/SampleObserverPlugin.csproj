@@ -16,7 +16,7 @@
     <ItemGroup>
 	    <!-- Full FabricObserver nupkg (using this enables publishing FO from the plugin project's build output folder).
              You just need to copy the plugin dll and ALL of its dependencies to the output folder's PackageRoot\Data\Plugins folder. Then deploy from there. -->
-	    <!-- <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" Version="3.2.3.960" /> -->
+	    <!-- <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" Version="3.2.4.960" /> -->
 	    <!-- Required if using the full FabricObserver nupkg, which is no longer required as the extensibility library is all you need to build a plugin. -->
 	    <!-- <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="6.0.0" /> -->
 	    <!-- Required if using the full FabricObserver nupkg, which is no longer required as the extensibility library is all you need to build a plugin. -->
@@ -25,7 +25,7 @@
 		<!-- Or, just install Microsoft.ServiceFabricApps.FabricObserver.Extensibility nupkg, which provides all you need to build an FO plugin,
              but no SFPKG folder structure as part of the build output. Just copy your plugin dll and ALL of its unique (so, not already in FO's list of dependencies) 
              dependencies into your FO repo's PackageRoot\Data\Plugins folder. -->
-	    <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" Version="3.2.3" />
+	    <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" Version="3.2.4" />
 	    <PackageReference Include="Polly" Version="7.2.3" />
     </ItemGroup>
 </Project>

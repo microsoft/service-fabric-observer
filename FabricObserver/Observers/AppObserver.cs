@@ -18,7 +18,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
-using System.Xml.XPath;
 using FabricObserver.Interfaces;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
@@ -34,7 +33,6 @@ namespace FabricObserver.Observers
         private const double KvsLvidsWarningPercentage = 75.0;
         private const double MaxRGMemoryInUsePercent = 90.0;
         private const int MaxSameNamedProcesses = 50;
-        private readonly object _lock = new object();
 
         // These are the concurrent data structures that hold all monitoring data for all application service targets for specific metrics.
         // In the case where machine has capable CPU configuration and AppObserverEnableConcurrentMonitoring is enabled, these ConcurrentDictionaries
@@ -59,28 +57,28 @@ namespace FabricObserver.Observers
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppRGMemoryUsagePercent;
 
         // Stores process id (key) / process name pairs for all monitored service processes.
-        private ConcurrentDictionary<int, string> _processInfoDictionary;
+        private ConcurrentDictionary<int, string> processInfoDictionary;
 
         // _userTargetList is the list of ApplicationInfo objects representing app/app types supplied in user configuration (AppObserver.config.json).
         // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
-        private List<ApplicationInfo> _userTargetList;
+        private List<ApplicationInfo> userTargetList;
 
         // _deployedTargetList is the list of ApplicationInfo objects representing currently deployed applications in the user-supplied target list.
         // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
-        private List<ApplicationInfo> _deployedTargetList;
+        private List<ApplicationInfo> deployedTargetList;
 
         // _deployedApps is the List of all apps currently deployed on the local Fabric node.
         // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
-        private List<DeployedApplication> _deployedApps;
+        private List<DeployedApplication> deployedApps;
 
-        private readonly Stopwatch _stopwatch;
+        private readonly Stopwatch stopwatch;
         private readonly object lockObj = new object();
-        private FabricClientUtilities _client;
-        private ParallelOptions _parallelOptions;
-        private string _fileName;
-        private int _appCount;
-        private int _serviceCount;
-        private NativeMethods.SafeObjectHandle _handleToProcSnapshot = null;
+        private FabricClientUtilities fabricClientUtilities;
+        private ParallelOptions parallelOptions;
+        private string fileName;
+        private int appCount;
+        private int serviceCount;
+        private NativeMethods.SafeObjectHandle handleToProcSnapshot = null;
         
         private NativeMethods.SafeObjectHandle Win32HandleToProcessSnapshot
         {
@@ -92,16 +90,16 @@ namespace FabricObserver.Observers
                     return null;
                 }
 
-                if (_handleToProcSnapshot == null)
+                if (handleToProcSnapshot == null)
                 {
                     lock (lockObj)
                     {
-                        if (_handleToProcSnapshot == null)
+                        if (handleToProcSnapshot == null)
                         {
-                            _handleToProcSnapshot = 
+                            handleToProcSnapshot = 
                                 NativeMethods.CreateToolhelp32Snapshot((uint)NativeMethods.CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
                             
-                            if (_handleToProcSnapshot.IsInvalid)
+                            if (handleToProcSnapshot.IsInvalid)
                             {
                                 string message = $"HandleToProcessSnapshot: Failed to get process snapshot with error code {Marshal.GetLastWin32Error()}";
                                 ObserverLogger.LogWarning(message);
@@ -111,7 +109,7 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                return _handleToProcSnapshot;
+                return handleToProcSnapshot;
             }
         }
 
@@ -170,7 +168,7 @@ namespace FabricObserver.Observers
         /// <param name="context">The StatelessServiceContext instance.</param>
         public AppObserver(StatelessServiceContext context) : base(null, context)
         {
-            _stopwatch = new Stopwatch();
+            stopwatch = new Stopwatch();
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -184,7 +182,7 @@ namespace FabricObserver.Observers
             }
 
             Token = token;
-            _stopwatch.Start();
+            stopwatch.Start();
 
             try
             {
@@ -194,8 +192,8 @@ namespace FabricObserver.Observers
                 {
                     ObserverLogger.LogWarning("AppObserver was unable to initialize correctly due to misconfiguration. " +
                                               "Please check your AppObserver configuration settings.");
-                    _stopwatch.Stop();
-                    _stopwatch.Reset();
+                    stopwatch.Stop();
+                    stopwatch.Reset();
                     CleanUp();
                     LastRunDateTime = DateTime.Now;
                     return;
@@ -214,24 +212,24 @@ namespace FabricObserver.Observers
                 await ReportAsync(token);
             }
 
-            _stopwatch.Stop();
-            RunDuration = _stopwatch.Elapsed;
+            stopwatch.Stop();
+            RunDuration = stopwatch.Elapsed;
            
             if (EnableVerboseLogging)
             {
-                ObserverLogger.LogInfo($"Run Duration {(_parallelOptions.MaxDegreeOfParallelism == 1 ? "without" : "with")} " +
-                                       $"Parallel (Processors: {Environment.ProcessorCount} MaxDegreeOfParallelism: {_parallelOptions.MaxDegreeOfParallelism}):{RunDuration}");
+                ObserverLogger.LogInfo($"Run Duration {(parallelOptions.MaxDegreeOfParallelism == 1 ? "without" : "with")} " +
+                                       $"Parallel (Processors: {Environment.ProcessorCount} MaxDegreeOfParallelism: {parallelOptions.MaxDegreeOfParallelism}):{RunDuration}");
             }
 
             CleanUp();
-            _stopwatch.Reset();
+            stopwatch.Reset();
             ObserverLogger.LogInfo($"Completed ObserveAsync.");
             LastRunDateTime = DateTime.Now;
         }
        
         public override Task ReportAsync(CancellationToken token)
         {
-            if (_deployedTargetList.Count == 0)
+            if (deployedTargetList.Count == 0)
             {
                 return Task.CompletedTask;
             }
@@ -243,7 +241,7 @@ namespace FabricObserver.Observers
             TimeSpan TTL = GetHealthReportTimeToLive();
 
             // This will run sequentially (with 1 thread) if the underlying CPU config does not meet the requirements for concurrency (e.g., if logical procs < 4).
-            _ = Parallel.For (0, ReplicaOrInstanceList.Count, _parallelOptions, (i, state) =>
+            _ = Parallel.For (0, ReplicaOrInstanceList.Count, parallelOptions, (i, state) =>
             {
                 if (token.IsCancellationRequested)
                 {
@@ -270,14 +268,14 @@ namespace FabricObserver.Observers
                     childProcessTelemetryDataList = new ConcurrentQueue<ChildProcessTelemetryData>();
                 }
 
-                if (!_deployedTargetList.Any(
+                if (!deployedTargetList.Any(
                          a => (a.TargetApp != null && a.TargetApp == repOrInst.ApplicationName.OriginalString) ||
                               (a.TargetAppType != null && a.TargetAppType == repOrInst.ApplicationTypeName)))
                 {
                     return;
                 }
 
-                app = _deployedTargetList.First(
+                app = deployedTargetList.First(
                         a => (a.TargetApp != null && a.TargetApp == repOrInst.ApplicationName.OriginalString) ||
                                 (a.TargetAppType != null && a.TargetAppType == repOrInst.ApplicationTypeName));
                 
@@ -286,12 +284,12 @@ namespace FabricObserver.Observers
                 if (app?.ServiceIncludeList != null)
                 {
                     // Ensure the service is the one we are looking for.
-                    if (_deployedTargetList.Any(
+                    if (deployedTargetList.Any(
                             a => a.ServiceIncludeList != null &&
                                     a.ServiceIncludeList.Contains(repOrInst.ServiceName.OriginalString.Remove(0, repOrInst.ApplicationName.OriginalString.Length + 1))))
                     {
                         // It could be the case that user config specifies multiple inclusion lists for a single app/type in user configuration. We want the correct service here.
-                        app = _deployedTargetList.First(
+                        app = deployedTargetList.First(
                                 a => a.ServiceIncludeList != null &&
                                 a.ServiceIncludeList.Contains(repOrInst.ServiceName.OriginalString.Remove(0, repOrInst.ApplicationName.OriginalString.Length + 1)));
                     }
@@ -302,12 +300,12 @@ namespace FabricObserver.Observers
                     processId = (int)repOrInst.HostProcessId;
 
                     // Make sure the process id was monitored.
-                    if (!_processInfoDictionary.ContainsKey(processId))
+                    if (!processInfoDictionary.ContainsKey(processId))
                     {
                         return;
                     }
 
-                    processName = _processInfoDictionary[processId];
+                    processName = processInfoDictionary[processId];
 
                     // Make sure the target process still exists, otherwise why report on it (it was ephemeral as far as this run of AO is concerned).
                     if (!EnsureProcess(processName, processId))
@@ -334,9 +332,9 @@ namespace FabricObserver.Observers
                     }
 
                     // This lock is required.
-                    lock (_lock)
+                    lock (lockObj)
                     {
-                        _fileName = $"{processName}{(CsvWriteFormat == CsvFileWriteFormat.MultipleFilesNoArchives ? "_" + DateTime.UtcNow.ToString("o") : string.Empty)}";
+                        fileName = $"{processName}{(CsvWriteFormat == CsvFileWriteFormat.MultipleFilesNoArchives ? "_" + DateTime.UtcNow.ToString("o") : string.Empty)}";
 
                         // BaseLogDataLogFolderPath is set in ObserverBase or a default one is created by CsvFileLogger.
                         // This means a new folder will be added to the base path.
@@ -346,7 +344,7 @@ namespace FabricObserver.Observers
                         }
 
                         // Log pid..
-                        CsvFileLogger.LogData(_fileName, id, "ProcessId", "", processId);
+                        CsvFileLogger.LogData(fileName, id, "ProcessId", "", processId);
 
                         // Log resource usage data to CSV files.
                         LogAllAppResourceDataToCsv(id);
@@ -664,12 +662,12 @@ namespace FabricObserver.Observers
         {
             ObserverLogger.LogInfo($"Initializing AppObserver.");
             ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
-            _userTargetList = new List<ApplicationInfo>();
-            _deployedTargetList = new List<ApplicationInfo>();
+            userTargetList = new List<ApplicationInfo>();
+            deployedTargetList = new List<ApplicationInfo>();
 
             // NodeName is passed here to not break unit tests, which include a mock service fabric context..
-            _client = new FabricClientUtilities(NodeName);
-            _deployedApps = await _client.GetAllDeployedAppsAsync(Token);
+            fabricClientUtilities = new FabricClientUtilities(NodeName);
+            deployedApps = await fabricClientUtilities.GetAllDeployedAppsAsync(Token);
 
             // DEBUG - Perf
             //var stopwatch = Stopwatch.StartNew();
@@ -691,11 +689,11 @@ namespace FabricObserver.Observers
 
             int settingsFail = 0;
 
-            for (int i = 0; i < _userTargetList.Count; i++)
+            for (int i = 0; i < userTargetList.Count; i++)
             {
                 Token.ThrowIfCancellationRequested();
 
-                ApplicationInfo application = _userTargetList[i];
+                ApplicationInfo application = userTargetList[i];
                 Uri appUri = null;
 
                 try
@@ -715,7 +713,7 @@ namespace FabricObserver.Observers
                     settingsFail++;
 
                     // No required settings supplied for deployed application(s).
-                    if (settingsFail == _userTargetList.Count)
+                    if (settingsFail == userTargetList.Count)
                     {
                         string message = "No required settings supplied for deployed applications in AppObserver.config.json. " +
                                          "You must supply either a targetApp or targetAppType setting.";
@@ -770,11 +768,11 @@ namespace FabricObserver.Observers
 
                 if (!string.IsNullOrWhiteSpace(application.TargetAppType))
                 {
-                    await SetDeployedApplicationReplicaOrInstanceListAsync(null, application.TargetAppType);
+                    await SetDeployedReplicaOrInstanceListAsync(null, application.TargetAppType);
                 }
                 else
                 {
-                    await SetDeployedApplicationReplicaOrInstanceListAsync(appUri);
+                    await SetDeployedReplicaOrInstanceListAsync(appUri);
                 }
             }
 
@@ -783,10 +781,10 @@ namespace FabricObserver.Observers
             // internal diagnostic telemetry \\
 
             // Do not emit the same service count data over and over again.
-            if (repCount != _serviceCount)
+            if (repCount != serviceCount)
             {
                 MonitoredServiceProcessCount = repCount;
-                _serviceCount = repCount;
+                serviceCount = repCount;
             }
             else
             {
@@ -794,10 +792,10 @@ namespace FabricObserver.Observers
             }
 
             // Do not emit the same app count data over and over again.
-            if (_deployedTargetList.Count != _appCount)
+            if (deployedTargetList.Count != appCount)
             {
-                MonitoredAppCount = _deployedTargetList.Count;
-                _appCount = _deployedTargetList.Count;
+                MonitoredAppCount = deployedTargetList.Count;
+                appCount = deployedTargetList.Count;
             }
             else
             {
@@ -809,10 +807,10 @@ namespace FabricObserver.Observers
                 return true;
             }
 #if DEBUG
-            for (int i = 0; i < _deployedTargetList.Count; i++)
+            for (int i = 0; i < deployedTargetList.Count; i++)
             {
                 Token.ThrowIfCancellationRequested();
-                ObserverLogger.LogInfo($"AppObserver settings applied to {_deployedTargetList[i].TargetApp}:{Environment.NewLine}{_deployedTargetList[i]}");
+                ObserverLogger.LogInfo($"AppObserver settings applied to {deployedTargetList[i].TargetApp}:{Environment.NewLine}{deployedTargetList[i]}");
             }
 #endif
             for (int i = 0; i < repCount; ++i)
@@ -831,25 +829,25 @@ namespace FabricObserver.Observers
 
         private async Task ProcessGlobalThresholdSettingsAsync()
         {
-            if (_userTargetList == null || _userTargetList.Count == 0)
+            if (userTargetList == null || userTargetList.Count == 0)
             {
                 return;
             }
 
-            if (!_userTargetList.Any(app => app.TargetApp?.ToLower() == "all" || app.TargetApp == "*"))
+            if (!userTargetList.Any(app => app.TargetApp?.ToLower() == "all" || app.TargetApp == "*"))
             {
                 return;
             }
 
             ObserverLogger.LogInfo($"Started processing of global (*/all) settings from appObserver.config.json.");
 
-            ApplicationInfo application = _userTargetList.First(app => app.TargetApp?.ToLower() == "all" || app.TargetApp == "*");
+            ApplicationInfo application = userTargetList.First(app => app.TargetApp?.ToLower() == "all" || app.TargetApp == "*");
 
-            for (int i = 0; i < _deployedApps.Count; i++)
+            for (int i = 0; i < deployedApps.Count; i++)
             {
                 Token.ThrowIfCancellationRequested();
 
-                var app = _deployedApps[i];
+                var app = deployedApps[i];
 
                 // Make sure deployed app is not a containerized app.
                 var codepackages = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
@@ -904,9 +902,9 @@ namespace FabricObserver.Observers
                 // Note that if you supply a conflicting setting (where you specify a threshold for a specific app target config item and also in a global config item), then the target-specific setting will be used.
                 // E.g., if you supply a memoryWarningLimitMb threshold for an app named fabric:/MyApp and also supply a memoryWarningLimitMb threshold for all apps ("targetApp" : "All"),
                 // then the threshold specified for fabric:/MyApp will remain in place for that app target. So, target specificity overrides any global setting.
-                if (_userTargetList.Any(a => a.TargetApp == app.ApplicationName.OriginalString || a.TargetAppType == app.ApplicationTypeName))
+                if (userTargetList.Any(a => a.TargetApp == app.ApplicationName.OriginalString || a.TargetAppType == app.ApplicationTypeName))
                 {
-                    var existingAppConfig = _userTargetList.FindAll(a => a.TargetApp == app.ApplicationName.OriginalString || a.TargetAppType == app.ApplicationTypeName);
+                    var existingAppConfig = userTargetList.FindAll(a => a.TargetApp == app.ApplicationName.OriginalString || a.TargetAppType == app.ApplicationTypeName);
 
                     if (existingAppConfig == null || existingAppConfig.Count == 0)
                     {
@@ -1002,21 +1000,21 @@ namespace FabricObserver.Observers
                         WarningRGMemoryLimitPercent = application.WarningRGMemoryLimitPercent
                     };
 
-                    _userTargetList.Add(appConfig);
+                    userTargetList.Add(appConfig);
                 }
             }
 
             // Remove the All/* config item.
-             _ = _userTargetList.Remove(application);
+             _ = userTargetList.Remove(application);
             ObserverLogger.LogInfo($"Completed processing of global (*/all) settings from appObserver.config.json.");
         }
 
         private void FilterTargetAppFormat()
         {
             ObserverLogger.LogInfo($"Evaluating targetApp format. Will attempt to correct malformed values, if any.");
-            for (int i = 0; i < _userTargetList.Count; i++)
+            for (int i = 0; i < userTargetList.Count; i++)
             {
-                var target = _userTargetList[i];
+                var target = userTargetList[i];
 
                 // We are only filtering/fixing targetApp string format.
                 if (string.IsNullOrWhiteSpace(target.TargetApp))
@@ -1050,7 +1048,7 @@ namespace FabricObserver.Observers
 
                     if (!Uri.IsWellFormedUriString(target.TargetApp, UriKind.RelativeOrAbsolute))
                     {
-                        _userTargetList.RemoveAt(i);
+                        userTargetList.RemoveAt(i);
 
                         string msg = $"FilterTargetAppFormat: Unsupported TargetApp value: {target.TargetApp}. " +
                                      "Value must be a valid Uri string of format \"fabric:/MyApp\" OR just \"MyApp\". Ignoring targetApp.";
@@ -1208,10 +1206,10 @@ namespace FabricObserver.Observers
 
             await using Stream stream = new FileStream(JsonConfigPath, FileMode.Open, FileAccess.Read, FileShare.Read);
             var appInfo = JsonHelper.ReadFromJsonStream<ApplicationInfo[]>(stream);
-            _userTargetList.AddRange(appInfo);
+            userTargetList.AddRange(appInfo);
 
             // Does the configuration have any objects (targets) defined?
-            if (_userTargetList.Count == 0)
+            if (userTargetList.Count == 0)
             {
                 string message = $"Please add targets to AppObserver's JSON configuration file and redeploy FabricObserver if you want AppObserver to monitor service processes.";
 
@@ -1377,7 +1375,7 @@ namespace FabricObserver.Observers
             }
 
             ObserverLogger.LogInfo($"ParallelOps");
-            _parallelOptions = new ParallelOptions
+            parallelOptions = new ParallelOptions
             {
                 MaxDegreeOfParallelism = maxDegreeOfParallelism,
                 CancellationToken = Token,
@@ -1621,7 +1619,7 @@ namespace FabricObserver.Observers
                                         break;
                                 }
 
-                                lock (_lock)
+                                lock (lockObj)
                                 {
                                     if (dump)
                                     {
@@ -1731,12 +1729,12 @@ namespace FabricObserver.Observers
                 }
             }
 
-            _processInfoDictionary ??= new ConcurrentDictionary<int, string>();
+            processInfoDictionary ??= new ConcurrentDictionary<int, string>();
 
             // DEBUG - Perf
             //var threadData = new ConcurrentQueue<int>();
 
-            ParallelLoopResult result = Parallel.For (0, ReplicaOrInstanceList.Count, _parallelOptions, (i, state) =>
+            ParallelLoopResult result = Parallel.For (0, ReplicaOrInstanceList.Count, parallelOptions, (i, state) =>
             {
                 if (token.IsCancellationRequested)
                 {
@@ -1759,7 +1757,7 @@ namespace FabricObserver.Observers
                 bool checkHandles = false;
                 bool checkThreads = false;
                 bool checkLvids = false;
-                var application = _deployedTargetList?.First(
+                var application = deployedTargetList?.First(
                                     app => app?.TargetApp?.ToLower() == repOrInst.ApplicationName?.OriginalString.ToLower() ||
                                     !string.IsNullOrWhiteSpace(app?.TargetAppType) &&
                                     app.TargetAppType?.ToLower() == repOrInst.ApplicationTypeName?.ToLower());
@@ -1909,7 +1907,7 @@ namespace FabricObserver.Observers
                             state.Stop();
                         }
 
-                        _ = _processInfoDictionary.TryAdd(proc.Key, proc.Value);
+                        _ = processInfoDictionary.TryAdd(proc.Key, proc.Value);
                     }
 
                     string appNameOrType = GetAppNameOrType(repOrInst);
@@ -1980,7 +1978,7 @@ namespace FabricObserver.Observers
                     }
 
                     // Memory - RG monitoring. Windows-only for now.
-                    if (MonitorResourceGovernanceLimits && repOrInst.RGEnabled && repOrInst.RGMemoryLimitMb > 0)
+                    if (MonitorResourceGovernanceLimits && repOrInst.RGMemoryEnabled && repOrInst.RGAppliedMemoryLimitMb > 0)
                     {
                         _ = AllAppRGMemoryUsagePercent.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.RGMemoryUsagePercent, id, 1, false, EnableConcurrentMonitoring));
                     }
@@ -2134,7 +2132,7 @@ namespace FabricObserver.Observers
                         double rgMemoryPercentThreshold,
                         CancellationToken token)
         {
-            _ = Parallel.For (0, processDictionary.Count, _parallelOptions, (i, state) =>
+            _ = Parallel.For (0, processDictionary.Count, parallelOptions, (i, state) =>
             {
                 if (token.IsCancellationRequested)
                 {
@@ -2353,22 +2351,22 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                // RG Memory (Percent) Monitoring - Windows-only.
-                if (MonitorResourceGovernanceLimits && rgMemoryPercentThreshold > 0)
+                // RG Memory (Percent) Monitoring - Windows-only (MonitorResourceGovernanceLimits will always be false for Linux for the time being).
+                if (MonitorResourceGovernanceLimits && repOrInst.RGMemoryEnabled && rgMemoryPercentThreshold > 0)
                 {
                     float memPb = ProcessInfoProvider.Instance.GetProcessPrivateBytesMb(procId);
 
                     if (procId == parentPid)
                     {
-                        if (repOrInst.RGMemoryLimitMb > 0)
+                        if (repOrInst.RGAppliedMemoryLimitMb > 0)
                         {
-                            double pct = ((double)memPb / repOrInst.RGMemoryLimitMb) * 100;
+                            double pct = ((double)memPb / repOrInst.RGAppliedMemoryLimitMb) * 100;
                             AllAppRGMemoryUsagePercent[id].AddData(pct);
                         }
                     }
                     else
                     {
-                        if (repOrInst.RGMemoryLimitMb > 0)
+                        if (repOrInst.RGAppliedMemoryLimitMb > 0)
                         {
                             _ = AllAppRGMemoryUsagePercent.TryAdd(
                                     $"{id}:{procName}{procId}",
@@ -2379,7 +2377,7 @@ namespace FabricObserver.Observers
                                             UseCircularBuffer,
                                             EnableConcurrentMonitoring));
 
-                            double pct = ((double)memPb / repOrInst.RGMemoryLimitMb) * 100;
+                            double pct = ((double)memPb / repOrInst.RGAppliedMemoryLimitMb) * 100;
                             AllAppRGMemoryUsagePercent[$"{id}:{procName}{procId}"].AddData(pct);
                         }
                     }
@@ -2535,10 +2533,10 @@ namespace FabricObserver.Observers
             });
         }
 
-        private async Task SetDeployedApplicationReplicaOrInstanceListAsync(Uri applicationNameFilter = null, string applicationType = null)
+        private async Task SetDeployedReplicaOrInstanceListAsync(Uri applicationNameFilter = null, string applicationType = null)
         {
             ObserverLogger.LogInfo("Starting SetDeployedApplicationReplicaOrInstanceListAsync.");
-            List<DeployedApplication> deployedApps = _deployedApps;
+            List<DeployedApplication> depApps = null;
 
             // DEBUG - Perf
             //var stopwatch = Stopwatch.StartNew();
@@ -2546,11 +2544,15 @@ namespace FabricObserver.Observers
             {
                 if (applicationNameFilter != null)
                 {
-                    deployedApps = deployedApps.FindAll(a => a.ApplicationName.Equals(applicationNameFilter));
+                    depApps = deployedApps.FindAll(a => a.ApplicationName.Equals(applicationNameFilter));
                 }
                 else if (!string.IsNullOrWhiteSpace(applicationType))
                 {
-                    deployedApps = deployedApps.FindAll(a => a.ApplicationTypeName == applicationType);
+                    depApps = deployedApps.FindAll(a => a.ApplicationTypeName == applicationType);
+                }
+                else
+                {
+                    depApps = deployedApps;
                 }
             }
             catch (ArgumentException ae)
@@ -2559,9 +2561,9 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            foreach (var userTarget in _userTargetList)
+            foreach (var userTarget in userTargetList)
             {
-                for (int i = 0; i < deployedApps.Count; i++)
+                for (int i = 0; i < depApps.Count; i++)
                 {
                     Token.ThrowIfCancellationRequested();
 
@@ -2572,12 +2574,12 @@ namespace FabricObserver.Observers
                         // TargetAppType supplied in user config, so set TargetApp on deployedApp instance by searching for it in the currently deployed application list.
                         if (userTarget.TargetAppType != null)
                         {
-                            if (deployedApps[i].ApplicationTypeName != userTarget.TargetAppType)
+                            if (depApps[i].ApplicationTypeName != userTarget.TargetAppType)
                             {
                                 continue;
                             }
 
-                            userTarget.TargetApp = deployedApps[i].ApplicationName.OriginalString;
+                            userTarget.TargetApp = depApps[i].ApplicationName.OriginalString;
                         }
 
                         if (userTarget.TargetApp == null)
@@ -2585,7 +2587,7 @@ namespace FabricObserver.Observers
                             continue;
                         }
 
-                        if (deployedApps[i].ApplicationName.OriginalString != userTarget.TargetApp)
+                        if (depApps[i].ApplicationName.OriginalString != userTarget.TargetApp)
                         {
                             continue;
                         }
@@ -2605,7 +2607,7 @@ namespace FabricObserver.Observers
                             filterType = ServiceFilterType.Include;
                         }
 
-                        List<ReplicaOrInstanceMonitoringInfo> replicasOrInstances = await GetDeployedPrimaryReplicaAsync(
+                        List<ReplicaOrInstanceMonitoringInfo> replicasOrInstances = await GetDeployedReplicasAsync(
                                                                                             new Uri(userTarget.TargetApp),
                                                                                             filteredServiceList,
                                                                                             filterType,
@@ -2615,12 +2617,12 @@ namespace FabricObserver.Observers
                         {
                             ReplicaOrInstanceList.AddRange(replicasOrInstances);
 
-                            var targets = _userTargetList.Where(x => x.TargetApp != null && x.TargetApp == userTarget.TargetApp
+                            var targets = userTargetList.Where(x => x.TargetApp != null && x.TargetApp == userTarget.TargetApp
                                                                   || x.TargetAppType != null && x.TargetAppType == userTarget.TargetAppType);
 
-                            if (userTarget.TargetApp != null && !_deployedTargetList.Any(r => r.TargetApp == userTarget.TargetApp))
+                            if (userTarget.TargetApp != null && !deployedTargetList.Any(r => r.TargetApp == userTarget.TargetApp))
                             {
-                                _deployedTargetList.AddRange(targets);
+                                deployedTargetList.AddRange(targets);
                             }
 
                             replicasOrInstances.Clear();
@@ -2631,19 +2633,19 @@ namespace FabricObserver.Observers
                     catch (Exception e) when (e is ArgumentException || e is FabricException || e is Win32Exception)
                     {
                         ObserverLogger.LogWarning(
-                            $"SetDeployedApplicationReplicaOrInstanceListAsync: Unable to process replica information for {userTarget}{Environment.NewLine}{e}");
+                            $"SetDeployedReplicaOrInstanceListAsync: Unable to process replica information for {userTarget}{Environment.NewLine}{e}");
                     }
                 }
             }
 
-            deployedApps.Clear();
-            deployedApps = null;
+            depApps?.Clear();
+            depApps = null;
             ObserverLogger.LogInfo("Completed SetDeployedApplicationReplicaOrInstanceListAsync.");
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"SetDeployedApplicationReplicaOrInstanceListAsync for {applicationNameFilter?.OriginalString} run duration: {stopwatch.Elapsed}");
         }
 
-        private async Task<List<ReplicaOrInstanceMonitoringInfo>> GetDeployedPrimaryReplicaAsync(
+        private async Task<List<ReplicaOrInstanceMonitoringInfo>> GetDeployedReplicasAsync(
                                                                      Uri appName,
                                                                      string[] serviceFilterList = null,
                                                                      ServiceFilterType filterType = ServiceFilterType.None,
@@ -2664,9 +2666,9 @@ namespace FabricObserver.Observers
             {
                 try
                 {
-                    if (_deployedApps.Any(app => app.ApplicationName == appName))
+                    if (deployedApps.Any(app => app.ApplicationName == appName))
                     {
-                        appType = _deployedApps.First(app => app.ApplicationName == appName).ApplicationTypeName;
+                        appType = deployedApps.First(app => app.ApplicationName == appName).ApplicationTypeName;
                     }
                 }
                 catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
@@ -2700,7 +2702,7 @@ namespace FabricObserver.Observers
             ObserverLogger.LogInfo("Starting SetInstanceOrReplicaMonitoringList.");
             // DEBUG - Perf
             //var stopwatch = Stopwatch.StartNew();
-            _ = Parallel.For (0, deployedReplicaList.Count, _parallelOptions, (i, state) =>
+            _ = Parallel.For (0, deployedReplicaList.Count, parallelOptions, (i, state) =>
             {
                 Token.ThrowIfCancellationRequested();
 
@@ -2905,10 +2907,10 @@ namespace FabricObserver.Observers
                             string appManifest = FabricClientInstance.ApplicationManager.GetApplicationManifestAsync(
                                                     appTypeName, appTypeVersion, ConfigurationSettings.AsyncTimeout, Token)?.Result;
 
-                            if (!string.IsNullOrWhiteSpace(appManifest))
+                            if (!string.IsNullOrWhiteSpace(appManifest) && appManifest.Contains($"<{ObserverConstants.RGPolicyNodeName} "))
                             {
-                                (replicaInfo.RGEnabled, replicaInfo.RGMemoryLimitMb) =
-                                    TupleGetResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName);
+                                (replicaInfo.RGMemoryEnabled, replicaInfo.RGAppliedMemoryLimitMb) =
+                                    fabricClientUtilities.TupleGetMemoryResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName); 
                             }
                         }
 
@@ -3064,138 +3066,6 @@ namespace FabricObserver.Observers
             }
         }
 
-        private (bool IsRGEnabled, double MemoryLimitMb) TupleGetResourceGovernanceInfo(string appManifestXml, string servicePkgName, string codepackageName)
-        {
-            ObserverLogger.LogInfo("Starting TupleGetResourceGovernanceInfo.");
-
-            if (string.IsNullOrWhiteSpace(appManifestXml))
-            {
-                ObserverLogger.LogInfo($"Invalid value for {nameof(appManifestXml)}: {appManifestXml}. Exiting TupleGetResourceGovernanceInfo.");
-                return (false, 0);
-            }
-
-            if (string.IsNullOrWhiteSpace(servicePkgName))
-            {
-                ObserverLogger.LogInfo($"Invalid value for {nameof(servicePkgName)}: {servicePkgName}. Exiting TupleGetResourceGovernanceInfo.");
-                return (false, 0);
-            }
-
-            if (string.IsNullOrWhiteSpace(codepackageName))
-            {
-                ObserverLogger.LogInfo($"Invalid value for {nameof(codepackageName)}: {codepackageName}. Exiting TupleGetResourceGovernanceInfo.");
-                return (false, 0);
-            }
-
-            // Don't waste cycles with XML parsing if you can easily get a hint first..
-            if (!appManifestXml.Contains($"<{ObserverConstants.RGPolicyNodeName} "))
-            {
-                return (false, 0);
-            }
-
-            // Safe XML pattern - *Do not use LoadXml*.
-            var appManifestXdoc = new XmlDocument { XmlResolver = null };
-
-            using (var sreader = new StringReader(appManifestXml))
-            {
-                using (var xreader = XmlReader.Create(sreader, new XmlReaderSettings { XmlResolver = null }))
-                {
-                    appManifestXdoc?.Load(xreader);
-
-                    ObserverLogger.LogInfo("Completed TupleGetResourceGovernanceInfo.");
-                    return TupleGetResourceGovernanceInfoFromAppManifest(ref appManifestXdoc, servicePkgName, codepackageName);
-                }
-            }
-        }
-
-        private (bool IsRGEnabled, double MemoryLimitMb) TupleGetResourceGovernanceInfoFromAppManifest(ref XmlDocument xDoc, string servicePkgName, string codepackageName)
-        {
-            ObserverLogger.LogInfo("Starting TupleGetResourceGovernanceInfoFromAppManifest.");
-           
-            if (xDoc == null)
-            {
-                ObserverLogger.LogInfo("Completed TupleGetResourceGovernanceInfoFromAppManifest: xDoc == null.");
-                return (false, 0);
-            }
-
-            try
-            {
-                // Find the correct manifest import for specified service package name (servicePkgName arg).
-                // There will generally be multiple RG limits set per application (so, per service settings).
-                var sNode = 
-                    xDoc.DocumentElement?.SelectSingleNode(
-                        $"//*[local-name()='{ObserverConstants.ServiceManifestImport}'][*[local-name()='{ObserverConstants.ServiceManifestRef}' and @*[local-name()='{ObserverConstants.ServiceManifestName}' and . ='{servicePkgName}']]]");
-                
-                if (sNode == null)
-                {
-                    ObserverLogger.LogInfo($"Completing TupleGetResourceGovernanceInfoFromAppManifest: Missing ServiceManifestImport for {servicePkgName}.");
-                    return (false, 0);
-                }
-
-                XmlNodeList childNodes = sNode.ChildNodes;
-
-                foreach (XmlNode node in childNodes)
-                {
-                    if (node.Name != ObserverConstants.PoliciesNodeName)
-                    {
-                        continue;
-                    }
-
-                    foreach (XmlNode polNode in node.ChildNodes)
-                    {
-                        if (polNode.Name != ObserverConstants.RGPolicyNodeName)
-                        {
-                            continue;
-                        }
-
-                        string codePackageRef = polNode.Attributes[ObserverConstants.CodePackageRef]?.Value;
-
-                        if (codePackageRef != codepackageName)
-                        {
-                            continue;
-                        }
-
-                        // Get the rg policy memory attribute. It can only be either "MemoryInMB" or "MemoryInMBLimit"
-                        XmlAttribute memAttr = null;
-
-                        if (polNode.Attributes[ObserverConstants.RGMemoryInMB] != null)
-                        {
-                            memAttr = polNode.Attributes[ObserverConstants.RGMemoryInMB];
-                        }
-                        else if (polNode.Attributes[ObserverConstants.RGMemoryInMBLimit] != null)
-                        {
-                            memAttr = polNode.Attributes[ObserverConstants.RGMemoryInMBLimit];
-                        }
-
-                        // Not the droid we're looking for.
-                        if (memAttr == null || string.IsNullOrWhiteSpace(memAttr.Value))
-                        {
-                            continue;
-                        }
-
-                        // App Parameter support: This means user has specified the absolute memory value in an Application Parameter.
-                        if (memAttr.Value.StartsWith("["))
-                        {
-                            XmlNode parametersNode = xDoc.DocumentElement?.SelectSingleNode($"//*[local-name()='{ObserverConstants.Parameters}']");
-                            XmlNode parameterNode = parametersNode?.SelectSingleNode($"//*[local-name()='{ObserverConstants.Parameter}' and @Name='{memAttr.Value[1..^1]}']");
-                            XmlAttribute attr = parameterNode?.Attributes?[ObserverConstants.DefaultValue];
-                            memAttr.Value = attr.Value;
-                        }
-
-                        ObserverLogger.LogInfo("Completed TupleGetResourceGovernanceInfoFromAppManifest: RG enabled.");
-                        return (true, double.TryParse(memAttr.Value, out double mem) ? mem : 0);
-                    }
-                }
-            }
-            catch (XPathException xe)
-            {
-                ObserverLogger.LogWarning($"Failure in TupleGetResourceGovernanceInfoFromAppManifest: {xe.Message}");
-                return (false, 0);
-            }
-
-            ObserverLogger.LogInfo("Completed TupleGetResourceGovernanceInfoFromAppManifest: RG not configured.");
-            return (false, 0);
-        }
-
         private void LogAllAppResourceDataToCsv(string appName)
         {
             if (!EnableCsvLogging)
@@ -3209,14 +3079,14 @@ namespace FabricObserver.Observers
                 if (AllAppCpuData != null && AllAppCpuData.ContainsKey(appName))
                 {
                     CsvFileLogger.LogData(
-                        _fileName,
+                        fileName,
                         appName,
                         ErrorWarningProperty.CpuTime,
                         "Average",
                         Math.Round(AllAppCpuData.First(x => x.Key == appName).Value.AverageDataValue));
 
                     CsvFileLogger.LogData(
-                        _fileName,
+                        fileName,
                         appName,
                         ErrorWarningProperty.CpuTime,
                         "Peak",
@@ -3228,14 +3098,14 @@ namespace FabricObserver.Observers
                 if (AllAppMemDataMb != null && AllAppMemDataMb.ContainsKey(appName))
                 {
                     CsvFileLogger.LogData(
-                        _fileName,
+                        fileName,
                         appName,
                         ErrorWarningProperty.MemoryConsumptionMb,
                         "Average",
                         Math.Round(AllAppMemDataMb.First(x => x.Key == appName).Value.AverageDataValue));
 
                     CsvFileLogger.LogData(
-                        _fileName,
+                        fileName,
                         appName,
                         ErrorWarningProperty.MemoryConsumptionMb,
                         "Peak",
@@ -3245,14 +3115,14 @@ namespace FabricObserver.Observers
                 if (AllAppMemDataPercent != null && AllAppMemDataPercent.ContainsKey(appName))
                 {
                     CsvFileLogger.LogData(
-                       _fileName,
+                       fileName,
                        appName,
                        ErrorWarningProperty.MemoryConsumptionPercentage,
                        "Average",
                        Math.Round(AllAppMemDataPercent.First(x => x.Key == appName).Value.AverageDataValue));
 
                     CsvFileLogger.LogData(
-                        _fileName,
+                        fileName,
                         appName,
                         ErrorWarningProperty.MemoryConsumptionPercentage,
                         "Peak",
@@ -3268,14 +3138,14 @@ namespace FabricObserver.Observers
                         if (AllAppPrivateBytesDataMb.Any(x => x.Key == appName))
                         {
                             CsvFileLogger.LogData(
-                                _fileName,
+                                fileName,
                                 appName,
                                 ErrorWarningProperty.PrivateBytesMb,
                                 "Average",
                                 Math.Round(AllAppPrivateBytesDataMb.First(x => x.Key == appName).Value.AverageDataValue));
 
                             CsvFileLogger.LogData(
-                                _fileName,
+                                fileName,
                                 appName,
                                 ErrorWarningProperty.PrivateBytesMb,
                                 "Peak",
@@ -3288,14 +3158,14 @@ namespace FabricObserver.Observers
                         if (AllAppPrivateBytesDataPercent.Any(x => x.Key == appName))
                         {
                             CsvFileLogger.LogData(
-                               _fileName,
+                               fileName,
                                appName,
                                ErrorWarningProperty.PrivateBytesPercent,
                                "Average",
                                Math.Round(AllAppPrivateBytesDataPercent.First(x => x.Key == appName).Value.AverageDataValue));
 
                             CsvFileLogger.LogData(
-                                _fileName,
+                                fileName,
                                 appName,
                                 ErrorWarningProperty.PrivateBytesPercent,
                                 "Peak",
@@ -3311,7 +3181,7 @@ namespace FabricObserver.Observers
                     if (AllAppTotalActivePortsData.Any(x => x.Key == appName))
                     {
                         CsvFileLogger.LogData(
-                            _fileName,
+                            fileName,
                             appName,
                             ErrorWarningProperty.ActiveTcpPorts,
                             "Total",
@@ -3324,7 +3194,7 @@ namespace FabricObserver.Observers
                     if (AllAppEphemeralPortsData.Any(x => x.Key == appName))
                     {
                         CsvFileLogger.LogData(
-                            _fileName,
+                            fileName,
                             appName,
                             ErrorWarningProperty.ActiveEphemeralPorts,
                             "Total",
@@ -3338,7 +3208,7 @@ namespace FabricObserver.Observers
                     if (AllAppHandlesData.Any(x => x.Key == appName))
                     {
                         CsvFileLogger.LogData(
-                             _fileName,
+                             fileName,
                              appName,
                              ErrorWarningProperty.AllocatedFileHandles,
                              "Total",
@@ -3357,20 +3227,20 @@ namespace FabricObserver.Observers
         private void CleanUp()
         {
             ObserverLogger.LogInfo("Starting CleanUp...");
-            _deployedTargetList?.Clear();
-            _deployedTargetList = null;
+            deployedTargetList?.Clear();
+            deployedTargetList = null;
 
-            _userTargetList?.Clear();
-            _userTargetList = null;
+            userTargetList?.Clear();
+            userTargetList = null;
 
             ReplicaOrInstanceList?.Clear();
             ReplicaOrInstanceList = null;
 
-            _processInfoDictionary?.Clear();
-            _processInfoDictionary = null;
+            processInfoDictionary?.Clear();
+            processInfoDictionary = null;
 
-            _deployedApps?.Clear();
-            _deployedApps = null;
+            deployedApps?.Clear();
+            deployedApps = null;
 
             if (AllAppCpuData != null && AllAppCpuData.All(frud => !frud.Value.ActiveErrorOrWarning))
             {
@@ -3447,9 +3317,9 @@ namespace FabricObserver.Observers
                     AllAppRGMemoryUsagePercent = null;
                 }
 
-                _handleToProcSnapshot?.Dispose();
-                GC.KeepAlive(_handleToProcSnapshot);
-                _handleToProcSnapshot = null;
+                handleToProcSnapshot?.Dispose();
+                GC.KeepAlive(handleToProcSnapshot);
+                handleToProcSnapshot = null;
             }
             ObserverLogger.LogInfo("Completed CleanUp...");
         }
