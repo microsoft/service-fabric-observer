@@ -1161,6 +1161,8 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.IsUnhealthy);
         }
 
+        // RG \\
+
         [TestMethod]
         public async Task AppObserver_ObserveAsync_Successful_RGLimitWarningGenerated()
         {
@@ -1191,6 +1193,52 @@ namespace FabricObserverTests
 
             // observer detected warning conditions.
             Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+        }
+
+        [TestMethod]
+        public async Task AppObserver_ObserveAsync_Successful_RGLimit_Validate_Multiple_Memory_Specification()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
+            {
+                await DeployVotingAppAsync();
+                await Task.Delay(TimeSpan.FromSeconds(10));
+            }
+
+            var startDateTime = DateTime.Now;
+
+            ObserverManager.FabricServiceContext = TestServiceContext;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            using var obs = new AppObserver(TestServiceContext)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1)
+            };
+
+            await obs.ObserveAsync(Token);
+
+            Assert.IsTrue(obs.MonitorResourceGovernanceLimits == true);
+
+            var clientUtilities = new FabricClientUtilities(NodeName);
+            string appManifest =
+                await FabricClient.ApplicationManager.GetApplicationManifestAsync(
+                        "VotingType", "1.0.0",
+                        TimeSpan.FromSeconds(60),
+                        Token);
+
+            // VotingWeb has both MemoryInMB and MemoryInMBLimit specified in a code package rg policy node. Ensure that only the value
+            // of MemoryInMBLimit is used (this is known to be 2048, whereas MemoryInMB is known to be 1024, per the application's App manifest).
+            var (RGEnabled, RGMemoryLimit) = clientUtilities.TupleGetMemoryResourceGovernanceInfo(appManifest, "VotingWebPkg", "Code");
+            Assert.IsTrue(RGEnabled);
+            Assert.IsTrue(RGMemoryLimit == 2048);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
