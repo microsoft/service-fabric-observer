@@ -892,8 +892,8 @@ namespace FabricObserver.Observers
                     Property = id,
                     ReplicaId = replicaOrInstance != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
                     ReplicaRole = replicaOrInstance?.ReplicaRole.ToString(),
-                    RGEnabled = replicaOrInstance != null && replicaOrInstance.RGEnabled,
-                    RGMemoryLimitMb = replicaOrInstance != null ? replicaOrInstance.RGMemoryLimitMb : 0,
+                    RGMemoryEnabled = replicaOrInstance != null && replicaOrInstance.RGMemoryEnabled,
+                    RGAppliedMemoryLimitMb = replicaOrInstance != null ? replicaOrInstance.RGAppliedMemoryLimitMb : 0,
                     ServiceKind = replicaOrInstance?.ServiceKind.ToString(),
                     ServiceName = serviceName?.OriginalString ?? null,
                     ServiceTypeName = serviceTypeName,
@@ -1210,7 +1210,7 @@ namespace FabricObserver.Observers
 
                 if (replicaOrInstance != null && data.Property == ErrorWarningProperty.RGMemoryUsagePercent)
                 {
-                    rgInfo = $" of {replicaOrInstance.RGMemoryLimitMb}MB";
+                    rgInfo = $" of {replicaOrInstance.RGAppliedMemoryLimitMb}MB";
                 }
 
                 string metric = data.Property;

@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
 	<metadata minClientVersion="3.3.0">
 		<id>%PACKAGE_ID%</id>
-		<version>3.2.3.831</version>
+		<version>3.2.4.831</version>
 		<releaseNotes>
 - Updated NodeObserver's Dynamic Port Range ETW impl.
 - Bug fix in OSInfoLogger and new Windows port detection impl. See release notes for Microsoft.ServiceFabricApps.FabricObserver.Extensibility v3.2.3 nupkg for details.

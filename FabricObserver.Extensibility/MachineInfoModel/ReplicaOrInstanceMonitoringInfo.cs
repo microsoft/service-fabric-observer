@@ -106,12 +106,19 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
-        public bool RGEnabled
+        public bool RGMemoryEnabled
         {
             get; set;
         }
 
-        public double RGMemoryLimitMb
+        /* TODO..
+        public bool RGCpuEnabled
+        {
+            get; set;
+        }
+        */
+
+        public double RGAppliedMemoryLimitMb
         {
             get; set;
         }

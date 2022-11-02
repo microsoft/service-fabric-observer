@@ -1169,6 +1169,7 @@ namespace FabricObserverTests
             if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
             {
                 await DeployVotingAppAsync();
+                await Task.Delay(TimeSpan.FromSeconds(10));
             }
 
             var startDateTime = DateTime.Now;
@@ -1265,6 +1266,7 @@ namespace FabricObserverTests
             if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
             {
                 await DeployVotingAppAsync();
+                await Task.Delay(TimeSpan.FromSeconds(10));
             }
 
             var startDateTime = DateTime.Now;
@@ -1308,6 +1310,7 @@ namespace FabricObserverTests
             if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
             {
                 await DeployVotingAppAsync();
+                await Task.Delay(TimeSpan.FromSeconds(10));
             }
 
             var startDateTime = DateTime.Now;
@@ -2332,6 +2335,7 @@ namespace FabricObserverTests
             if (!await EnsureTestServicesExistAsync("fabric:/TestApp42"))
             {
                 await DeployTestApp42Async();
+                await Task.Delay(TimeSpan.FromSeconds(10));
             }
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
@@ -2382,6 +2386,7 @@ namespace FabricObserverTests
             if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
             {
                 await DeployHealthMetricsAppAsync();
+                await Task.Delay(TimeSpan.FromSeconds(10));
             }
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
@@ -2437,6 +2442,7 @@ namespace FabricObserverTests
             if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
             {
                 await DeployVotingAppAsync();
+                await Task.Delay(TimeSpan.FromSeconds(10));
             }
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
@@ -2481,7 +2487,7 @@ namespace FabricObserverTests
                 // RG
                 if (t.ProcessName == "VotingData" || t.ProcessName == "VotingWeb" || t.ProcessName == "ConsoleApp6" || t.ProcessName == "ConsoleApp7")
                 {
-                    Assert.IsTrue(t.RGEnabled && t.RGMemoryLimitMb > 0);     
+                    Assert.IsTrue(t.RGMemoryEnabled && t.RGAppliedMemoryLimitMb > 0);     
                 }
 
                 Assert.IsTrue(t.Value >= 0.0);
@@ -2497,6 +2503,7 @@ namespace FabricObserverTests
             if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
             {
                 await DeployVotingAppAsync();
+                await Task.Delay(TimeSpan.FromSeconds(10));
             }
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
@@ -2513,31 +2520,7 @@ namespace FabricObserverTests
             Assert.IsTrue(telemData.Any() && telemData.Count == 8);
         }
 
-        // RG - warningRGMemoryLimitPercent
-        [TestMethod]
-        public async Task AppObserver_ETW_RGMemoryLimitPercent_Warning()
-        {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
-            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
-            {
-                await DeployVotingAppAsync();
-            }
-
-            using var foEtwListener = new FabricObserverEtwListener(_logger);
-            await AppObserver_ObserveAsync_Successful_RGLimitWarningGenerated();
-            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
-
-            Assert.IsNotNull(telemData);
-            Assert.IsTrue(telemData.Count > 0);
-
-            telemData = telemData.Where(
-                t => t.ApplicationName == "fabric:/Voting" && t.HealthState == HealthState.Warning).ToList();
-
-            // 2 service code packages + 2 helper code packages (VotingData) * 1 metric = 4 warnings...
-            Assert.IsTrue(telemData.All(t => t.Metric == ErrorWarningProperty.RGMemoryUsagePercent) && telemData.Count == 4);
-        }
-
+        // Private Bytes
         [TestMethod]
         public async Task AppObserver_ETW_PrivateBytes_Warning_ChildProcesses()
         {
@@ -2546,7 +2529,7 @@ namespace FabricObserverTests
             if (!await EnsureTestServicesExistAsync("fabric:/TestApp42"))
             {
                 await DeployTestApp42Async();
-                await Task.Delay(TimeSpan.FromSeconds(15));
+                await Task.Delay(TimeSpan.FromSeconds(10));
             }
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
@@ -2577,6 +2560,32 @@ namespace FabricObserverTests
             // All children should definitely have more than 0 bytes committed.
             Assert.IsTrue(childProcessTelemetryData.All(
                 c => c.TrueForAll(ct => ct.ApplicationName == "fabric:/TestApp42" && ct.Value > 0)));
+        }
+
+        // RG - warningRGMemoryLimitPercent
+        [TestMethod]
+        public async Task AppObserver_ETW_RGMemoryLimitPercent_Warning()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
+            {
+                await DeployVotingAppAsync();
+                await Task.Delay(TimeSpan.FromSeconds(10));
+            }
+
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+            await AppObserver_ObserveAsync_Successful_RGLimitWarningGenerated();
+            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+
+            Assert.IsNotNull(telemData);
+            Assert.IsTrue(telemData.Count > 0);
+
+            telemData = telemData.Where(
+                t => t.ApplicationName == "fabric:/Voting" && t.HealthState == HealthState.Warning).ToList();
+
+            // 2 service code packages + 2 helper code packages (VotingData) * 1 metric = 4 warnings...
+            Assert.IsTrue(telemData.All(t => t.Metric == ErrorWarningProperty.RGMemoryUsagePercent) && telemData.Count == 4);
         }
 
         // DiskObserver: TelemetryData \\
@@ -2866,6 +2875,7 @@ namespace FabricObserverTests
             if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
             {
                 await DeployVotingAppAsync();
+                await Task.Delay(TimeSpan.FromSeconds(10));
             }
 
             ObserverManager.FabricServiceContext = TestServiceContext;

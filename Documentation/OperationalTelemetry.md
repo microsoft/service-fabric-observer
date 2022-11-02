@@ -44,7 +44,7 @@ Here is a full example of exactly what is sent in one of these telemetry events,
     "ClusterId": "00000000-1111-1111-0000-00f00d000d",
     "ClusterType": "SFRP",
     "NodeNameHash": "3e83569d4c6aad78083cd081215dafc81e5218556b6a46cb8dd2b183ed0095ad",
-    "FOVersion": "3.2.3.831",
+    "FOVersion": "3.2.4.831",
     "HasPlugins": "False",
     "ParallelCapable": "True",
     "SFRuntimeVersion":"8.2.1363.9590"
