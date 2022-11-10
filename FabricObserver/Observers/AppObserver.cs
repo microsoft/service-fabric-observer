@@ -1,4 +1,4 @@
-// ------------------------------------------------------------
+﻿// ------------------------------------------------------------
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
@@ -1367,7 +1367,7 @@ namespace FabricObserver.Observers
                 // If user configures MaxConcurrentTasks setting, then use that value instead.
                 if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasksParameter), out int maxTasks))
                 {
-                    if (maxTasks > 0)
+                    if (maxTasks == -1 || maxTasks > 0)
                     {
                         maxDegreeOfParallelism = maxTasks;
                     }
