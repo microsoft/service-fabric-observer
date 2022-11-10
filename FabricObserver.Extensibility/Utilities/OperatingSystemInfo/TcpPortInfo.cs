@@ -47,7 +47,7 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Owning process id.
         /// </summary>
-        public int ProcessId
+        public int OwningProcessId
         {
             get; private set;
         }
@@ -87,7 +87,7 @@ namespace FabricObserver.Observers.Utilities
             LocalPort = localPort;
             ForeignAddress = stats[2];
             State = stats[3];
-            ProcessId = pid;
+            OwningProcessId = pid;
         }
     }
 }
