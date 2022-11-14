@@ -50,7 +50,9 @@
 | FO045 | Percentage of active Ephemeral TCP ports in use is at or exceeding configured ***Warning*** threshold for an app service process. | 
 | FO046 | Percentage of active Ephemeral TCP ports in use is at or exceeding configured ***Error*** threshold for a machine. | 
 | FO047 | Percentage of active Ephemeral TCP ports in use is at or exceeding configured ***Warning*** threshold for a machine. | 
-| FO048 | Private Bytes usage (Commit) is at or exceeding configured ***Error*** threshold for an app service process. | 
-| FO049 | Private Bytes usage (Commit) is at or exceeding configured ***Warning*** threshold for an app service process. | 
-| FO050 | At or exceeding default (90%) or configured percentage of Resource Governance limit 'MemoryInMBLimit' for a service code package. | 
+| FO048 | Private Bytes usage (Commit) MB is at or exceeding configured ***Error*** threshold for an app service process. | 
+| FO049 | Private Bytes usage (Commit) MB is at or exceeding configured ***Warning*** threshold for an app service process. |
+| FO050 | Private Bytes usage (Commit) Percentage is at or exceeding configured ***Error*** threshold for an app service process. | 
+| FO051 | Private Bytes usage (Commit) Percentage is at or exceeding configured ***Warning*** threshold for an app service process. |  
+| FO052 | At or exceeding **configured percentage** of Memory Resource Governance limit for a service code package. | 
 
