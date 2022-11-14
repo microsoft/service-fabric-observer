@@ -26,7 +26,7 @@ namespace FabricObserver.Observers.Utilities
         private const int dynamicRangeMaxCacheTimeMinutes = 15;
         private readonly bool useNetstat = true;
 
-        // Win32 Impl (iphlpapi.dll pInvoke call, fills this cache).
+        // Win32 Impl (iphlpapi.dll pInvoke call, fills this cache. *Does not include BOUND state records*).
         private readonly List<(ushort LocalPort, uint OwningProcessId, MIB_TCP_STATE State)> win32TcpConnInfo = null;
 
         // Netstat Impl (launches console, calls netstat -qno -p tcp, parses output, fills this cache).
@@ -136,12 +136,14 @@ namespace FabricObserver.Observers.Utilities
         // Not implemented. No Windows support.
         public override int GetMaximumConfiguredFileHandlesCount()
         {
+            OSInfoLogger.LogWarning("Called GetMaximumConfiguredFileHandlesCount on Windows. This is unsupported. Returning -1.");
             return -1;
         }
 
         // Not implemented. No Windows support.
         public override int GetTotalAllocatedFileHandlesCount()
         {
+            OSInfoLogger.LogWarning("Called GetTotalAllocatedFileHandlesCount on Windows. This is unsupported. Returning -1.");
             return -1;
         }
 
