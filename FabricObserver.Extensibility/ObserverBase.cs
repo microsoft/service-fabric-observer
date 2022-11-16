@@ -1504,16 +1504,16 @@ namespace FabricObserver.Observers
 
                 case TelemetryProviderType.AzureApplicationInsights:
                         
-                    string aiKey = GetSettingParameterValue(
-                        ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.AiKey);
+                    string aiConnString = GetSettingParameterValue(
+                        ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.AppInsightsConnectionString);
 
-                    if (string.IsNullOrWhiteSpace(aiKey))
+                    if (string.IsNullOrWhiteSpace(aiConnString))
                     {
                         IsTelemetryProviderEnabled = false;
                         return;
                     }
 
-                    TelemetryClient = new AppInsightsTelemetry(aiKey);
+                    TelemetryClient = new AppInsightsTelemetry(aiConnString);
                     break;
 
                 default:
