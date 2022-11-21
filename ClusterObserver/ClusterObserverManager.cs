@@ -288,7 +288,7 @@ namespace ClusterObserver
                 {
                     try
                     {
-                        using var telemetryEvents = new TelemetryEvents(FabricServiceContext);
+                        using var telemetryEvents = new TelemetryEvents(nodeName);
                         ClusterObserverOperationalEventData coData = GetClusterObserverInternalTelemetryData();
 
                         if (coData != null)
@@ -363,7 +363,7 @@ namespace ClusterObserver
                 {
                     try
                     {
-                        using var telemetryEvents = new TelemetryEvents(FabricServiceContext);
+                        using var telemetryEvents = new TelemetryEvents(nodeName);
 
                         var data = new CriticalErrorEventData
                         {
