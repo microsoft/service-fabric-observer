@@ -7,8 +7,8 @@
 		<TargetFramework>netcoreapp3.1</TargetFramework>
 		<Copyright>Copyright © 2022</Copyright>
 		<Product>ClusterObserver</Product>
-		<Version>2.2.0.831</Version>
-		<FileVersion>2.2.0.831</FileVersion>
+		<Version>2.2.1.831</Version>
+		<FileVersion>2.2.1.831</FileVersion>
 		<!-- ***NOTE***: If deploying to SF cluster directly from Visual Studio, you must use single target RID:
          For Windows, use win-x64. For Linux, use linux-x64.
     <RuntimeIdentifier>win-x64</RuntimeIdentifier> -->

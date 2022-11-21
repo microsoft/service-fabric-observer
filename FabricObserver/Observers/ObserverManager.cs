@@ -227,7 +227,7 @@ namespace FabricObserver.Observers
                     {
                         try
                         {
-                            using var telemetryEvents = new TelemetryEvents(FabricServiceContext);
+                            using var telemetryEvents = new TelemetryEvents(nodeName);
                             var foData = GetFabricObserverInternalTelemetryData();
 
                             if (foData != null)
@@ -327,7 +327,7 @@ namespace FabricObserver.Observers
                 {
                     try
                     {
-                        using var telemetryEvents = new TelemetryEvents(FabricServiceContext);
+                        using var telemetryEvents = new TelemetryEvents(nodeName);
                         var data = new CriticalErrorEventData
                         {
                             Source = ObserverConstants.ObserverManagerName,
