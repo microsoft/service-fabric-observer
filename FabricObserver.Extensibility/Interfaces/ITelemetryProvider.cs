@@ -18,6 +18,14 @@ namespace FabricObserver.Observers.Interfaces
     public interface ITelemetryProvider
     {
         /// <summary>
+        /// Gets or sets the telemetry API key.
+        /// </summary>
+        string Key
+        {
+            get; set;
+        }
+
+        /// <summary>
         /// Calls telemetry provider to track the availability.
         /// </summary>
         /// <param name="serviceUri">Service name.</param>

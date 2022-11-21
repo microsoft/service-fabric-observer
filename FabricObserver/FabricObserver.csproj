@@ -8,7 +8,7 @@
 	<Nullable>disable</Nullable>
 	<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
 	<ServerGarbageCollection>False</ServerGarbageCollection>
-	<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
+	<RuntimeIdentifiers>win7-x64;linux-x64</RuntimeIdentifiers>
 	<TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
     <Copyright>Copyright © 2022</Copyright>
     <Product>FabricObserver</Product>
@@ -25,9 +25,22 @@
     <None Remove="ApplicationInsights.config" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.14.1" />
-    <PackageReference Include="Octokit" Version="4.0.1" />
-    <PackageReference Include="System.Diagnostics.EventLog" Version="7.0.0" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.13.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="6.0.0" />
+    <PackageReference Include="Microsoft.ServiceFabric.Services" Version="6.0.1017" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="Octokit" Version="1.0.0" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="6.0.0" />
+    <PackageReference Include="System.Diagnostics.EventLog" Version="6.0.0" />
+    <PackageReference Include="System.IO" Version="4.3.0" />
+    <PackageReference Include="System.Management" Version="6.0.0" />
+    <PackageReference Include="System.Numerics.Vectors" Version="4.5.0" />
+    <PackageReference Include="System.Runtime" Version="4.3.1" />
+    <PackageReference Include="System.Security.Cryptography.Algorithms" Version="4.3.1" />
+    <PackageReference Include="System.Security.Cryptography.Encoding" Version="4.3.0" />
+    <PackageReference Include="System.Security.Cryptography.Primitives" Version="4.3.0" />
+    <PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
     <PackageReference Include="McMaster.NETCore.Plugins" Version="1.4.0" />
     <Reference Include="..\Interop\Interop.WUApiLib.dll" />
   </ItemGroup>
@@ -73,7 +86,4 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="del $(TargetDir)\System.Drawing.*" />
-  </Target>
 </Project>

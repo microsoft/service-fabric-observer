@@ -35,13 +35,6 @@ try
     Remove-Item bin\release\FabricObserver\win-x64\framework-dependent\FabricObserverType\FabricObserverPkg\ServiceManifest_linux.xml -Force -Confirm:$False
     Remove-Item bin\release\FabricObserver\linux-x64\self-contained\FabricObserverType\FabricObserverPkg\ServiceManifest_linux.xml -Force -Confirm:$False
     Remove-Item bin\release\FabricObserver\win-x64\self-contained\FabricObserverType\FabricObserverPkg\ServiceManifest_linux.xml -Force -Confirm:$False
-
-    #Get rid of System.Drawing dlls from the Code package folderr
-    # Get rid of ServiceManifest_linux.xml from build output.
-    Remove-Item bin\release\FabricObserver\linux-x64\framework-dependent\FabricObserverType\FabricObserverPkg\Code\System.Drawing.* -Force -Confirm:$False
-    Remove-Item bin\release\FabricObserver\win-x64\framework-dependent\FabricObserverType\FabricObserverPkg\Code\System.Drawing.* -Force -Confirm:$False
-    Remove-Item bin\release\FabricObserver\linux-x64\self-contained\FabricObserverType\FabricObserverPkg\Code\System.Drawing.* -Force -Confirm:$False
-    Remove-Item bin\release\FabricObserver\win-x64\self-contained\FabricObserverType\FabricObserverPkg\Code\System.Drawing.* -Force -Confirm:$False
 }
 finally 
 {

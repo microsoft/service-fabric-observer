@@ -161,7 +161,6 @@ namespace FabricObserver.Observers.Utilities
 
         // Telemetry Settings Parameters.
         public const string AiKey = "AppInsightsInstrumentationKey";
-        public const string AppInsightsConnectionString = "AppInsightsConnectionString";
         public const string TelemetryEnabled = "EnableTelemetryProvider";
         public const string TelemetryProviderType = "TelemetryProvider";
         public const string LogAnalyticsLogTypeParameter = "LogAnalyticsLogType";

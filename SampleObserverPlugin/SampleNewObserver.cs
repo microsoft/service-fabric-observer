@@ -258,7 +258,7 @@ namespace FabricObserver.Observers
                 NodeName = NodeName,
                 Observer = ObserverName,
                 Property = "SomeUniquePropertyForMyHealthEvent",
-                ReportType = HealthReportType.Node,
+                EntityType = EntityType.Node,
                 State = HealthState.Ok
             };
 
