@@ -217,8 +217,8 @@ namespace FabricObserver.Observers
            
             if (EnableVerboseLogging)
             {
-                ObserverLogger.LogInfo($"Run Duration {(parallelOptions.MaxDegreeOfParallelism == 1 ? "without" : "with")} " +
-                                       $"Parallel (Processors: {Environment.ProcessorCount} MaxDegreeOfParallelism: {parallelOptions.MaxDegreeOfParallelism}):{RunDuration}");
+                ObserverLogger.LogInfo($"Run Duration ({ReplicaOrInstanceList?.Count} service processes observed) {(parallelOptions.MaxDegreeOfParallelism == 1 ? "without" : "with")} " +
+                                       $"Parallel Processing (Processors: {Environment.ProcessorCount} MaxDegreeOfParallelism: {parallelOptions.MaxDegreeOfParallelism}): {RunDuration}.");
             }
 
             CleanUp();
