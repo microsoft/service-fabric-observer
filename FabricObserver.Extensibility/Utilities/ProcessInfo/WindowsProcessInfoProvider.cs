@@ -270,12 +270,12 @@ namespace FabricObserver.Observers.Utilities
 
             catch (Exception e) when (e is Win32Exception) // e.g., process is no longer running.
             {
-                Logger.LogWarning($"Handled Exception in TupleGetChildProcesses:{Environment.NewLine}{e.Message}");
+                Logger.LogWarning($"Handled Exception in TupleGetChildProcessesWin32:{Environment.NewLine}{e.Message}");
             }
             catch (Exception e)
             {
                 // Log the full error(including stack trace) for debugging purposes.
-                Logger.LogError($"Unhandled Exception in TupleGetChildProcesses:{Environment.NewLine}{e}");
+                Logger.LogError($"Unhandled Exception in TupleGetChildProcessesWin32:{Environment.NewLine}{e}");
                 throw;
             }
 
@@ -296,7 +296,7 @@ namespace FabricObserver.Observers.Utilities
                     // The related Observer will have logged any privilege related failure.
                     if (Marshal.GetLastWin32Error() != 5)
                     {
-                        Logger.LogWarning($"GetProcessHandleCount for process id {processId}: Failed with Win32 error code {Marshal.GetLastWin32Error()}.");
+                        Logger.LogWarning($"GetProcessHandleCountWin32 for process id {processId}: Failed with Win32 error code {Marshal.GetLastWin32Error()}.");
                     }
                 }
 
@@ -307,7 +307,7 @@ namespace FabricObserver.Observers.Utilities
                 // Access denied (FO is running as a less privileged user than the target process).
                 if (e is Win32Exception && (e as Win32Exception).NativeErrorCode != 5)
                 {
-                    Logger.LogWarning($"NativeGetProcessHandleCount: Exception getting working set for process {processId}:{Environment.NewLine}{e.Message}");
+                    Logger.LogWarning($"GetProcessHandleCountWin32: Exception getting working set for process {processId}:{Environment.NewLine}{e.Message}");
                 }
 
                 return -1;
@@ -330,7 +330,7 @@ namespace FabricObserver.Observers.Utilities
         {
             if (processId < 1)
             {
-                Logger.LogWarning($"NativeGetProcessFullWorkingSetMb: Process ID is an unsupported value ({processId}). Returning 0F.");
+                Logger.LogWarning($"GetProcessMemoryMbWin32: Process ID is an unsupported value ({processId}). Returning 0F.");
                 return 0F;
             }
 
@@ -356,7 +356,7 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
             {
-                Logger.LogWarning($"GetProcessWorkingSetWin32: Exception getting working set for process {processId}: {e.Message}");
+                Logger.LogWarning($"GetProcessMemoryMbWin32: Exception getting working set for process {processId}: {e.Message}");
                 return 0F;
             }
             finally
