@@ -22,6 +22,11 @@
     <Platforms>x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="Connected Services\**" />
+    <EmbeddedResource Remove="Connected Services\**" />
+    <None Remove="Connected Services\**" />
+  </ItemGroup>
+  <ItemGroup>
     <None Remove="ApplicationInsights.config" />
   </ItemGroup>
   <ItemGroup>
