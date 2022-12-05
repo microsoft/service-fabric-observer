@@ -217,8 +217,8 @@ namespace FabricObserver.Observers
            
             if (EnableVerboseLogging)
             {
-                ObserverLogger.LogInfo($"Run Duration {(parallelOptions.MaxDegreeOfParallelism == 1 ? "without" : "with")} " +
-                                       $"Parallel (Processors: {Environment.ProcessorCount} MaxDegreeOfParallelism: {parallelOptions.MaxDegreeOfParallelism}):{RunDuration}");
+                ObserverLogger.LogInfo($"Run Duration ({ReplicaOrInstanceList?.Count} service processes observed) {(parallelOptions.MaxDegreeOfParallelism == 1 ? "without" : "with")} " +
+                                       $"Parallel Processing (Processors: {Environment.ProcessorCount} MaxDegreeOfParallelism: {parallelOptions.MaxDegreeOfParallelism}): {RunDuration}.");
             }
 
             CleanUp();
@@ -2535,7 +2535,7 @@ namespace FabricObserver.Observers
 
         private async Task SetDeployedReplicaOrInstanceListAsync(Uri applicationNameFilter = null, string applicationType = null)
         {
-            ObserverLogger.LogInfo("Starting SetDeployedApplicationReplicaOrInstanceListAsync.");
+            ObserverLogger.LogInfo("Starting SetDeployedReplicaOrInstanceListAsync.");
             List<DeployedApplication> depApps = null;
 
             // DEBUG - Perf
@@ -2557,7 +2557,7 @@ namespace FabricObserver.Observers
             }
             catch (ArgumentException ae)
             {
-                ObserverLogger.LogWarning($"SetDeployedApplicationReplicaOrInstanceListAsync: Unable to process replica information:{Environment.NewLine}{ae}");
+                ObserverLogger.LogWarning($"SetDeployedReplicaOrInstanceListAsync: Unable to process replica information:{Environment.NewLine}{ae}");
                 return;
             }
 
@@ -2615,10 +2615,21 @@ namespace FabricObserver.Observers
 
                         if (replicasOrInstances?.Count > 0)
                         {
+                            /* TOTHINK: Filter out SharedProcess replicas to only include a single element in the ReplicaOrInstanceList list;
+                            // so, only one SharedHost activated service entry with the same host process id should be added to the global replica list,
+                            // which is used in multiple code paths by AppObserver.
+                            foreach (var rep in replicasOrInstances)
+                            {
+                                if (!ReplicaOrInstanceList.Any(r => r.HostProcessId == rep.HostProcessId))
+                                {
+                                    ReplicaOrInstanceList.Add(rep);
+                                }
+                            }*/
+
                             ReplicaOrInstanceList.AddRange(replicasOrInstances);
 
                             var targets = userTargetList.Where(x => x.TargetApp != null && x.TargetApp == userTarget.TargetApp
-                                                                  || x.TargetAppType != null && x.TargetAppType == userTarget.TargetAppType);
+                                                                 || x.TargetAppType != null && x.TargetAppType == userTarget.TargetAppType);
 
                             if (userTarget.TargetApp != null && !deployedTargetList.Any(r => r.TargetApp == userTarget.TargetApp))
                             {
@@ -2640,9 +2651,9 @@ namespace FabricObserver.Observers
 
             depApps?.Clear();
             depApps = null;
-            ObserverLogger.LogInfo("Completed SetDeployedApplicationReplicaOrInstanceListAsync.");
+            ObserverLogger.LogInfo("Completed SetDeployedReplicaOrInstanceListAsync.");
             //stopwatch.Stop();
-            //ObserverLogger.LogInfo($"SetDeployedApplicationReplicaOrInstanceListAsync for {applicationNameFilter?.OriginalString} run duration: {stopwatch.Elapsed}");
+            //ObserverLogger.LogInfo($"SetDeployedReplicaOrInstanceListAsync for {applicationNameFilter?.OriginalString} run duration: {stopwatch.Elapsed}");
         }
 
         private async Task<List<ReplicaOrInstanceMonitoringInfo>> GetDeployedReplicasAsync(
@@ -2651,11 +2662,12 @@ namespace FabricObserver.Observers
                                                                      ServiceFilterType filterType = ServiceFilterType.None,
                                                                      string appTypeName = null)
         {
-            ObserverLogger.LogInfo("Starting GetDeployedPrimaryReplicaAsync.");
+            ObserverLogger.LogInfo("Starting GetDeployedReplicasAsync.");
             // DEBUG - Perf
             //var stopwatch = Stopwatch.StartNew();
             var deployedReplicaList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                () => FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, appName, null, null, ConfigurationSettings.AsyncTimeout, Token),
+                                                () => FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(
+                                                        NodeName, appName, null, null, ConfigurationSettings.AsyncTimeout, Token),
                                                 Token);
 
             //ObserverLogger.LogInfo($"QueryManager.GetDeployedReplicaListAsync for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
@@ -2685,9 +2697,10 @@ namespace FabricObserver.Observers
                 deployedReplicaList,
                 replicaMonitoringList);
 
-            ObserverLogger.LogInfo("Completed GetDeployedPrimaryReplicaAsync.");
+            ObserverLogger.LogInfo("Completed GetDeployedReplicasAsync.");
             //stopwatch.Stop();
-            //ObserverLogger.LogInfo($"GetDeployedPrimaryReplicaAsync for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
+            //ObserverLogger.LogInfo($"GetDeployedReplicasAsync for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
+
             return replicaMonitoringList.ToList();
         }
 
@@ -2702,6 +2715,7 @@ namespace FabricObserver.Observers
             ObserverLogger.LogInfo("Starting SetInstanceOrReplicaMonitoringList.");
             // DEBUG - Perf
             //var stopwatch = Stopwatch.StartNew();
+            
             _ = Parallel.For (0, deployedReplicaList.Count, parallelOptions, (i, state) =>
             {
                 Token.ThrowIfCancellationRequested();
@@ -2830,9 +2844,19 @@ namespace FabricObserver.Observers
                     }
                 }
 
+                // TOTHINK: Filter out SharedProcess replicas if one is already present in the list ssince they are all hosted in the same process,
+                // and FO can only operate at the process level for resource monitoring.
+                /*if (replicaMonitoringList.Any(
+                        r => r.ServicePackageActivationMode == ServicePackageActivationMode.SharedProcess
+                          && r.HostProcessId == replicaInfo.HostProcessId))
+                {
+                    // return in a parallel loop is equivalent to continue in a sequential loop.
+                    return;
+                }*/
+
                 ProcessServiceConfiguration(appTypeName, deployedReplica.CodePackageName, ref replicaInfo);
 
-                if (replicaInfo?.HostProcessId > 0 && !ReplicaOrInstanceList.Any(r => r.ServiceName == replicaInfo.ServiceName))
+                if (replicaInfo?.HostProcessId > 0 && !ReplicaOrInstanceList.Any(r => r.ServiceName.Equals(replicaInfo.ServiceName)))
                 {
                     if (IsWindows)
                     {
@@ -2852,14 +2876,14 @@ namespace FabricObserver.Observers
 
                         }
                     }
-
+                    
+                    // If Fabric is the hosting process, then this is a Guest Executable or helper code package.
                     if (replicaInfo.HostProcessName != "Fabric")
                     {
                         replicaMonitoringList.Enqueue(replicaInfo);
                     }
                 }
 
-                // Multiple code packages (initial impl: supports only helper code packages, the canonical case).
                 ProcessMultipleHelperCodePackages(appName, appTypeName, deployedReplica, ref replicaMonitoringList, replicaInfo.HostProcessName == "Fabric");
             });
             ObserverLogger.LogInfo("Completed SetInstanceOrReplicaMonitoringList.");
@@ -2899,9 +2923,9 @@ namespace FabricObserver.Observers
                         
                     }
 
-                    // RG - Windows-only. Linux is not supported yet.
                     if (!string.IsNullOrWhiteSpace(appTypeVersion))
                     {
+                        // RG - Windows-only. Linux is not supported yet.
                         if (IsWindows)
                         {
                             string appManifest = FabricClientInstance.ApplicationManager.GetApplicationManifestAsync(
@@ -2953,6 +2977,7 @@ namespace FabricObserver.Observers
                         ref ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> repsOrInstancesInfo,
                         bool isHostedByFabric)
         {
+            ObserverLogger.LogInfo($"Starting ProcessMultipleHelperCodePackages for {deployedReplica.ServiceName} (isHostedByFabric = {isHostedByFabric})");
             try
             {
                 DeployedCodePackageList codepackages = FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(
@@ -2965,98 +2990,104 @@ namespace FabricObserver.Observers
 
                 ReplicaOrInstanceMonitoringInfo replicaInfo = null;
 
-                // Check for multiple code packages or GuestExecutable service (so, Fabric is host).
-                if (codepackages.Count > 1 || isHostedByFabric)
+                // Check for multiple code packages or GuestExecutable service (Fabric is the host).
+                if (codepackages.Count < 2 && !isHostedByFabric)
                 {
-                    foreach (var codepackage in codepackages)
+                    ObserverLogger.LogInfo($"Completed ProcessMultipleHelperCodePackages.");
+                    return;
+                }
+
+                foreach (var codepackage in codepackages)
+                {
+                    // If the code package does not belong to a deployed replica, then this is the droid we're looking for (a helper code package or guest executable).
+                    if (codepackage.CodePackageName == deployedReplica.CodePackageName)
                     {
-                        // The code package does not belong to a deployed replica, so this is the droid we're looking for (a helper code package or guest executable).
-                        if (codepackage.CodePackageName != deployedReplica.CodePackageName)
+                        continue;
+                    }
+
+                    int procId = (int)codepackage.EntryPoint.ProcessId; // The actual process id of the helper or guest executable binary.
+                    string procName = null;
+
+                    // Process class is a CPU bottleneck on Windows.
+                    if (IsWindows)
+                    {
+                        procName = NativeMethods.GetProcessNameFromId(procId);
+                    }
+                    else // Linux
+                    {
+                        using (var proc = Process.GetProcessById(procId))
                         {
-                            int procId = (int)codepackage.EntryPoint.ProcessId; // The actual process id of the helper or guest executable binary.
-                            string procName = null;
-
-                            // Process class is a CPU bottleneck on Windows.
-                            if (IsWindows)
+                            try
                             {
-                                procName = NativeMethods.GetProcessNameFromId(procId);
+                                procName = proc.ProcessName;
                             }
-                            else // Linux
+                            catch (Exception e) when (e is InvalidOperationException || e is NotSupportedException || e is ArgumentException)
                             {
-                                using (var proc = Process.GetProcessById(procId))
-                                {
-                                    try
-                                    {
-                                        procName = proc.ProcessName;
-                                    }
-                                    catch (Exception e) when (e is InvalidOperationException || e is NotSupportedException || e is ArgumentException)
-                                    {
-                                        ObserverLogger.LogInfo($"ProcessMultipleHelperCodePackages::GetProcessById(Linux): Handled Exception: {e.Message}");
-                                    }
-                                }
+                                ObserverLogger.LogInfo($"ProcessMultipleHelperCodePackages::GetProcessById(Linux): Handled Exception: {e.Message}");
                             }
+                        }
+                    }
 
-                            // Make sure procName lookup worked and if so that it is still the process we're looking for.
-                            if (string.IsNullOrWhiteSpace(procName) || !EnsureProcess(procName, procId))
-                            {
-                                continue;
-                            }
+                    // Make sure procName lookup worked and if so that it is still the process we're looking for.
+                    if (string.IsNullOrWhiteSpace(procName) || !EnsureProcess(procName, procId))
+                    {
+                        continue;
+                    }
 
-                            // It doesn't matter that the helper CodePackage or guest executable does not have any replicas (not hosted by Fabric). This basic construct ReplicaOrInstanceMonitoringInfo is used in several places.
-                            // The key information for the helper/guest executable binary case is the ServiceManifestName, the parent's ServiceName/Type, its HostProcessId and its HostProcessName.
-                            // This ensures that support for multiple CodePackages and guest executable services fit naturally into AppObserver's *existing* implementation.
-                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
-                            {
-                                ApplicationName = appName,
-                                ApplicationTypeName = appTypeName,
-                                HostProcessId = procId,
-                                HostProcessName = procName,
-                                ReplicaOrInstanceId = 0,
-                                PartitionId = null,
-                                ReplicaRole = ReplicaRole.None,
-                                ServiceKind = ServiceKind.Invalid,
-                                ServiceName = deployedReplica.ServiceName,
-                                ServiceManifestName = codepackage.ServiceManifestName,
-                                ServiceTypeName = deployedReplica.ServiceTypeName,
-                                ServicePackageActivationId = codepackage.ServicePackageActivationId,
-                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(codepackage.ServicePackageActivationId) ?
-                                                ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
-                                ReplicaStatus = ServiceReplicaStatus.Invalid
-                            };
+                    // This ensures that support for multiple CodePackages and GuestExecutable services fit naturally into AppObserver's *existing* implementation.
+                    replicaInfo = new ReplicaOrInstanceMonitoringInfo
+                    {
+                        ApplicationName = appName,
+                        ApplicationTypeName = appTypeName,
+                        HostProcessId = procId,
+                        HostProcessName = procName,
+                        ReplicaOrInstanceId = deployedReplica is DeployedStatefulServiceReplica replica ?
+                                                replica.ReplicaId : ((DeployedStatelessServiceInstance)deployedReplica).InstanceId,
+                        PartitionId = deployedReplica.Partitionid,
+                        ReplicaRole = deployedReplica is DeployedStatefulServiceReplica rep ? rep.ReplicaRole : ReplicaRole.None,
+                        ServiceKind = deployedReplica.ServiceKind,
+                        ServiceName = deployedReplica.ServiceName,
+                        ServiceManifestName = codepackage.ServiceManifestName,
+                        ServiceTypeName = deployedReplica.ServiceTypeName,
+                        ServicePackageActivationId = string.IsNullOrWhiteSpace(codepackage.ServicePackageActivationId) ?
+                                                        deployedReplica.ServicePackageActivationId : codepackage.ServicePackageActivationId,
+                        ServicePackageActivationMode = string.IsNullOrWhiteSpace(codepackage.ServicePackageActivationId) ?
+                                                        ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
+                        ReplicaStatus = deployedReplica is DeployedStatefulServiceReplica r ?
+                                            r.ReplicaStatus : ((DeployedStatelessServiceInstance)deployedReplica).ReplicaStatus,
+                    };
 
-                            // If Helper binaries launch child processes, AppObserver will monitor them, too.
-                            if (EnableChildProcessMonitoring && procId > 0)
-                            {
-                                // DEBUG - Perf
-                                //var sw = Stopwatch.StartNew();
-                                List<(string ProcName, int Pid)> childPids;
+                    // If Helper binaries launch child processes, AppObserver will monitor them, too.
+                    if (EnableChildProcessMonitoring && procId > 0)
+                    {
+                        // DEBUG - Perf
+                        //var sw = Stopwatch.StartNew();
+                        List<(string ProcName, int Pid)> childPids;
 
-                                if (IsWindows)
-                                {
-                                    childPids = ProcessInfoProvider.Instance.GetChildProcessInfo(procId, Win32HandleToProcessSnapshot);
-                                }
-                                else
-                                {
-                                    childPids = ProcessInfoProvider.Instance.GetChildProcessInfo(procId);
-                                }
-
-                                if (childPids != null && childPids.Count > 0)
-                                {
-                                    replicaInfo.ChildProcesses = childPids;
-                                    ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
-                                }
-                                //sw.Stop();
-                                //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
-                            }
-
-                            // ResourceGovernance/AppTypeVer/ServiceTypeVer.
-                            ProcessServiceConfiguration(appTypeName, codepackage.CodePackageName, ref replicaInfo);
+                        if (IsWindows)
+                        {
+                            childPids = ProcessInfoProvider.Instance.GetChildProcessInfo(procId, Win32HandleToProcessSnapshot);
+                        }
+                        else
+                        {
+                            childPids = ProcessInfoProvider.Instance.GetChildProcessInfo(procId);
                         }
 
-                        if (replicaInfo != null && replicaInfo.HostProcessId > 0 && !ReplicaOrInstanceList.Any(r => r.HostProcessId == replicaInfo.HostProcessId))
+                        if (childPids != null && childPids.Count > 0)
                         {
-                            repsOrInstancesInfo.Enqueue(replicaInfo);
+                            replicaInfo.ChildProcesses = childPids;
+                            ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
                         }
+                        //sw.Stop();
+                        //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
+                    }
+
+                    // ResourceGovernance/AppTypeVer/ServiceTypeVer.
+                    ProcessServiceConfiguration(appTypeName, codepackage.CodePackageName, ref replicaInfo);
+                        
+                    if (replicaInfo != null && replicaInfo.HostProcessId > 0 && !repsOrInstancesInfo.Any(r => r.HostProcessId == replicaInfo.HostProcessId))
+                    {
+                        repsOrInstancesInfo.Enqueue(replicaInfo);
                     }
                 }
             }
@@ -3064,6 +3095,7 @@ namespace FabricObserver.Observers
             {
                 ObserverLogger.LogInfo($"ProcessMultipleHelperCodePackages: Handled Exception: {e.Message}");
             }
+            ObserverLogger.LogInfo($"Completed ProcessMultipleHelperCodePackages.");
         }
 
         private void LogAllAppResourceDataToCsv(string appName)

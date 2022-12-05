@@ -1348,6 +1348,8 @@ namespace FabricObserverTests
 
             // Clean up.
             Directory.Delete(obs.DumpsPath, true);
+
+            await CleanupTestHealthReportsAsync();
         }
 
         [TestMethod]
@@ -1392,6 +1394,8 @@ namespace FabricObserverTests
 
             // Clean up.
             Directory.Delete(obs.DumpsPath, true);
+
+            await CleanupTestHealthReportsAsync();
         }
         #endregion
 
