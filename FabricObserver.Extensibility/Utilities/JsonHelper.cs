@@ -3,25 +3,14 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using System.Collections.Generic;
 using System.IO;
-using System.Net.Http.Formatting;
 using System.Text;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Serialization;
 
 namespace FabricObserver.Observers.Utilities
 {
     public static class JsonHelper
     {
-        public static MediaTypeFormatter JsonMediaTypeFormatter =>
-            new JsonMediaTypeFormatter
-            {
-                SerializerSettings = MediaTypeFormatterSettings,
-                UseDataContractJsonSerializer = false
-            };
-
         /// <summary>
         /// Determines if the supplied string is a serialized instance of the specified type T.
         /// </summary>
@@ -115,26 +104,20 @@ namespace FabricObserver.Observers.Utilities
             return false;
         }
 
-        private static readonly JsonSerializerSettings MediaTypeFormatterSettings = new JsonSerializerSettings
-        {
-            NullValueHandling = NullValueHandling.Ignore,
-            ContractResolver = new CamelCasePropertyNamesContractResolver(),
-            Converters = new List<JsonConverter>
-            {
-                new StringEnumConverter { NamingStrategy = new CamelCaseNamingStrategy() }
-            },
-            TypeNameHandling = TypeNameHandling.Auto
-        };
-
         public static T ReadFromJsonStream<T>(Stream stream)
         {
-            var data = (T)JsonMediaTypeFormatter.ReadFromStreamAsync(
-                            typeof(T),
-                            stream,
-                            null,
-                            null).Result;
+            using (StreamReader r = new StreamReader(stream))
+            {
+                string json = r.ReadToEnd();
+                var jsonSerializerSettings = new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Ignore };
+                
+                if (TryDeserializeObject(json, out T data, jsonSerializerSettings))
+                {
+                    return data;
+                }
 
-            return data;
+                return default;
+            }
         }
 
         public static T ConvertFromString<T>(string jsonInput)
@@ -142,26 +125,6 @@ namespace FabricObserver.Observers.Utilities
             using (var stream = CreateStreamFromString(jsonInput))
             {
                 return ReadFromJsonStream<T>(stream);
-            }
-        }
-
-        public static void WriteToStream<T>(T data, Stream stream)
-        {
-            JsonMediaTypeFormatter.WriteToStreamAsync(
-                typeof(T),
-                data,
-                stream,
-                null,
-                null).Wait();
-        }
-
-        public static string ConvertToString<T>(T data)
-        {
-            using (var stream = new MemoryStream())
-            {
-                WriteToStream(data, stream);
-                stream.Position = 0;
-                return Encoding.UTF8.GetString(stream.GetBuffer());
             }
         }
 

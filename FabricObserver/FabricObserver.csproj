@@ -31,10 +31,10 @@
 		<None Remove="ApplicationInsights.config" />
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="Azure.Storage.Blobs" Version="12.13.0" />
+		<PackageReference Include="Azure.Storage.Blobs" Version="12.14.1" />
 		<PackageReference Include="Microsoft.ServiceFabric.Services" Version="5.0.516" />
-		<PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
-		<PackageReference Include="Octokit" Version="1.0.0" />
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+		<PackageReference Include="Octokit" Version="4.0.3" />
 		<PackageReference Include="System.Diagnostics.DiagnosticSource" Version="6.0.0" />
 		<PackageReference Include="System.Diagnostics.EventLog" Version="6.0.0" />
 		<PackageReference Include="System.IO" Version="4.3.0" />
