@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using Microsoft.Win32.SafeHandles;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -60,7 +59,7 @@ namespace FabricObserver.Observers.Utilities
                 return 0F;
             }
 
-            return GetProcessMemoryMbWin32(processId, getPrivateBytes:true);
+            return GetProcessMemoryMbWin32(processId, getPrivateBytes: true);
         }
 
         public override float GetProcessAllocatedHandles(int processId, string configPath = null)
@@ -192,23 +191,6 @@ namespace FabricObserver.Observers.Utilities
                             }
                         }
                     }
-
-                    try
-                    {
-                        internalProcName = GetInternalProcessName(procName, procId, token);
-
-                        if (internalProcName == null)
-                        {
-                            return -1;
-                        }
-                    }
-                    catch (InvalidOperationException e)
-                    {
-                        Logger.LogWarning($"GetProcessKvsLvidsUsagePercentage (Returning -1): Handled Exception from GetInternalProcessName.{Environment.NewLine}" +
-                                          $"The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for: {e.Message}");
-                        return -1;
-                    }
-                }
 
                     try
                     {
@@ -471,8 +453,8 @@ namespace FabricObserver.Observers.Utilities
                 throw;
             }
 
-                    return null;
-                }
+            return 0F;
+        }
 
         private string GetInternalProcessName(string procName, int pid, CancellationToken token)
         {

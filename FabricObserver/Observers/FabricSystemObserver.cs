@@ -157,19 +157,19 @@ namespace FabricObserver.Observers
             get; set;
         } = false;
 
-        public int ThreadCountError 
-        { 
-            get; set; 
+        public int ThreadCountError
+        {
+            get; set;
         }
 
-        public int ThreadCountWarning 
-        { 
-            get; set; 
+        public int ThreadCountWarning
+        {
+            get; set;
         }
 
-        public int TotalThreadsAllSystemServices 
-        { 
-            get; set; 
+        public int TotalThreadsAllSystemServices
+        {
+            get; set;
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -193,7 +193,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
-                ObserverLogger.LogError( $"Unhandled exception in ObserveAsync:{Environment.NewLine}{e}");
+                ObserverLogger.LogError($"Unhandled exception in ObserveAsync:{Environment.NewLine}{e}");
 
                 // Fix the bug..
                 throw;
@@ -309,7 +309,7 @@ namespace FabricObserver.Observers
                 {
                     ProcessResourceDataList(allCpuData, CpuErrorUsageThresholdPct, CpuWarnUsageThresholdPct);
                 }
-  
+
                 // Memory
                 if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
                 {
@@ -572,7 +572,7 @@ namespace FabricObserver.Observers
         private void Initialize()
         {
             Token.ThrowIfCancellationRequested();
-            
+
             // fabric:/System
             MonitoredAppCount = 1;
             MonitoredServiceProcessCount = processWatchList.Length;
@@ -683,7 +683,7 @@ namespace FabricObserver.Observers
         private void SetThresholdSFromConfiguration()
         {
             /* Error thresholds */
-            
+
             Token.ThrowIfCancellationRequested();
 
             // CPU Time
@@ -703,11 +703,11 @@ namespace FabricObserver.Observers
 
             /* Memory - Private or Full Working Set */
             var privateWS = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MonitorPrivateWorkingSetParameter);
-            
+
             if (!string.IsNullOrWhiteSpace(privateWS))
             {
                 _ = bool.TryParse(privateWS, out bool privWs);
-               checkPrivateWorkingSet = privWs;
+                checkPrivateWorkingSet = privWs;
             }
 
             // Memory - Working Set MB
@@ -794,7 +794,7 @@ namespace FabricObserver.Observers
             }
 
             // Ports
-            var activeTcpPortsWarning = GetSettingParameterValue( ConfigurationSectionName, ObserverConstants.FabricSystemObserverNetworkWarningActivePorts);
+            var activeTcpPortsWarning = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverNetworkWarningActivePorts);
 
             if (!string.IsNullOrWhiteSpace(activeTcpPortsWarning))
             {
@@ -821,7 +821,7 @@ namespace FabricObserver.Observers
 
             // Threads
             var threadCountWarning = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverWarningThreadCount);
-            
+
             if (!string.IsNullOrWhiteSpace(threadCountWarning))
             {
                 _ = int.TryParse(threadCountWarning, out int threshold);
@@ -898,7 +898,7 @@ namespace FabricObserver.Observers
             Stopwatch timer = new Stopwatch();
 
             try
-            {   
+            {
                 if (IsWindows && procId < 1)
                 {
                     // This will be a Win32Exception or InvalidOperationException if FabricObserver.exe is not running as Admin or LocalSystem on Windows.
@@ -914,7 +914,7 @@ namespace FabricObserver.Observers
                 // Ports - Active TCP All
                 int activePortCount = OSInfoProvider.Instance.GetActiveTcpPortCount(procId, CodePackage?.Path);
                 TotalActivePortCountAllSystemServices += activePortCount;
-                    
+
                 if (ActiveTcpPortCountError > 0 || ActiveTcpPortCountWarning > 0)
                 {
                     if (allActiveTcpPortData.ContainsKey(dotnetArg))
@@ -926,7 +926,7 @@ namespace FabricObserver.Observers
                 // Ports - Active TCP Ephemeral
                 int activeEphemeralPortCount = OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, CodePackage?.Path);
                 TotalActiveEphemeralPortCountAllSystemServices += activeEphemeralPortCount;
-                    
+
                 if (ActiveEphemeralPortCountError > 0 || ActiveEphemeralPortCountWarning > 0)
                 {
                     if (allEphemeralTcpPortData.ContainsKey(dotnetArg))
@@ -962,7 +962,7 @@ namespace FabricObserver.Observers
                 }
 
                 TotalThreadsAllSystemServices += threads;
-                    
+
                 // No need to proceed further if there are no configuration settings for CPU, Memory, Handles thresholds.
                 // Returning here is correct as supplied thresholds apply to all system services.
                 if (CpuErrorUsageThresholdPct <= 0 && CpuWarnUsageThresholdPct <= 0 && MemErrorUsageThresholdMb <= 0 && MemWarnUsageThresholdMb <= 0
@@ -1067,7 +1067,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
             {
-               
+
             }
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
@@ -1124,57 +1124,6 @@ namespace FabricObserver.Observers
 
                 // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
                 if (EnableKvsLvidMonitoring && allAppKvsLvidsData != null)
-                {
-                    _ = allAppKvsLvidsData.Remove(dotnetArg);
-                }
-            }
-            catch (Exception e) when (e is ArgumentException || e is KeyNotFoundException)
-            {
-
-            }
-        }
-
-        private void TryRemoveTargetFromFruds(string dotnetArg)
-        {
-            try
-            {
-                // CPU data
-                if (allCpuData != null)
-                {
-                    _ = allCpuData.Remove(dotnetArg);
-                }
-
-                // Memory data
-                if (allMemData != null)
-                {
-                    _ = allMemData.Remove(dotnetArg);
-                }
-
-                // Ports
-                if (allActiveTcpPortData != null)
-                {
-                    _ = allActiveTcpPortData.Remove(dotnetArg);
-                }
-
-                if (allEphemeralTcpPortData != null)
-                {
-                    _ = allEphemeralTcpPortData.Remove(dotnetArg);
-                }
-
-                // Handles
-                if (allHandlesData != null)
-                {
-                    _ = allHandlesData.Remove(dotnetArg);
-                }
-
-                // Threads
-                if (allThreadsData != null)
-                {
-                    _ = allThreadsData.Remove(dotnetArg);
-                }
-
-                // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
-                if (allAppKvsLvidsData != null)
                 {
                     _ = allAppKvsLvidsData.Remove(dotnetArg);
                 }
