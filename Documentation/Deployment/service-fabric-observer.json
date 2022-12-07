@@ -11,7 +11,7 @@
     },
     "applicationTypeVersionFabricObserver": {
       "type": "string",
-      "defaultValue": "3.2.4.831",
+      "defaultValue": "3.2.4.860",
       "metadata": {
         "description": "Provide the app version number of FabricObserver. This must be identical to the version, 3.2.4.831, in the referenced sfpkg specified in packageUrlFabricObserver."
       }

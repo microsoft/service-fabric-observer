@@ -26,7 +26,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Documentation\ETW.md = Documentation\ETW.md
 		FabricObserver.Extensibility.nuspec.template = FabricObserver.Extensibility.nuspec.template
 		FabricObserver.nuspec.template = FabricObserver.nuspec.template
-		FabricObserverWebApi.nuspec.template = FabricObserverWebApi.nuspec.template
 		FOAzurePipeline.yaml = FOAzurePipeline.yaml
 		foextlib.md = foextlib.md
 		fonuget.md = fonuget.md
@@ -40,7 +39,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Documentation\Deployment\service-fabric-cluster-observer.v2.2.1.831.parameters.json = Documentation\Deployment\service-fabric-cluster-observer.v2.2.1.831.parameters.json
 		Documentation\Deployment\service-fabric-observer.json = Documentation\Deployment\service-fabric-observer.json
 		Documentation\Using.md = Documentation\Using.md
-		Documentation\Deployment\service-fabric-observer.vv3.2.4.831.parameters.json = Documentation\Deployment\service-fabric-observer.vv3.2.4.831.parameters.json
+		Documentation\Deployment\service-fabric-observer.vv3.2.4.860.parameters.json = Documentation\Deployment\service-fabric-observer.vv3.2.4.860.parameters.json
 	EndProjectSection
 EndProject
 Project("{A07B5EB6-E848-4116-A8D0-A826331D98C6}") = "ClusterObserverApp", "ClusterObserverApp\ClusterObserverApp.sfproj", "{BD5D216F-5F89-4CC4-92FD-D6FDEC5A19AD}"
