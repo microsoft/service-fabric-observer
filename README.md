@@ -1,5 +1,6 @@
 ## FabricObserver 3.2.4.831
 #### NOTE: This version targets .NET Core 3.1 and requires SF Runtime >= 8.0 
+**This is the last version that will support .NET Core 3.1**
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-observer%2Fmain%2FDocumentation%2FDeployment%2Fservice-fabric-observer.json)
 
