@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <!-- You can use the XML diff/merge tool XmlDiffPatchSF (located in this repo) to make upgrading your base configurations to the latest version much easier. -->
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.4.960" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.5" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <Parameter Name="FabricObserver_InstanceCount" DefaultValue="-1" />
     <!-- ObserverManager Configuration -->
@@ -215,7 +215,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.2.4.960" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.2.5" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
