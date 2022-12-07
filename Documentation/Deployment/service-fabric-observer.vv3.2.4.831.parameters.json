@@ -6,7 +6,7 @@
             "value": "<YOUR-CLUSTER-RESOURCE-NAME>"
         },
         "applicationTypeVersionFabricObserver": {
-            "value": "3.2.4.860"
+            "value": "3.2.4.831"
         },
         "packageUrlFabricObserver": {
             "value": "<PUBLIC-ACCESSIBLE-URL-FOR-FABRICOBSERVER-SFPKG>"
