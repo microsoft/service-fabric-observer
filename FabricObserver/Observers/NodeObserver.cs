@@ -6,11 +6,11 @@
 using System;
 using System.Diagnostics;
 using System.Fabric;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
+using FabricObserver.TelemetryLib;
 
 namespace FabricObserver.Observers
 {
@@ -20,7 +20,6 @@ namespace FabricObserver.Observers
     public sealed class NodeObserver : ObserverBase
     {
         private readonly Stopwatch stopwatch;
-        private readonly bool isWindows;
 
         // These are public properties because they are used in unit tests.
         public FabricResourceUsageData<float> MemDataInUse;
@@ -136,7 +135,6 @@ namespace FabricObserver.Observers
         public NodeObserver(StatelessServiceContext context) : base(null, context)
         {
             stopwatch = new Stopwatch();
-            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows); 
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -151,8 +149,8 @@ namespace FabricObserver.Observers
             stopwatch.Start();
 
             Initialize();
-            await GetSystemCpuMemoryValuesAsync(token).ConfigureAwait(false);
-            await ReportAsync(token).ConfigureAwait(false);
+            await GetSystemCpuMemoryValuesAsync(token);
+            await ReportAsync(token);
 
             // The time it took to run this observer.
             stopwatch.Stop();
@@ -251,7 +249,7 @@ namespace FabricObserver.Observers
                             Math.Round(EphemeralPortsDataRaw.AverageDataValue));
                     }
 
-                    if (FirewallData != null && isWindows && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
+                    if (FirewallData != null && IsWindows && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
                     {
                         CsvFileLogger.LogData(
                             fileName,
@@ -263,7 +261,7 @@ namespace FabricObserver.Observers
 
                     // Windows does not have a corresponding FD/FH limit which can be set by a user, nor does Windows have a reliable way of determining the total number of open handles in the system.
                     // As such, it does not make sense to monitor system-wide, percent usage of ALL available file handles on Windows. This feature of NodeObserver is therefore Linux-only.
-                    if (!isWindows)
+                    if (!IsWindows)
                     {
                         if (LinuxFileHandlesDataPercentAllocated != null && (LinuxFileHandlesErrorPercent > 0 || LinuxFileHandlesWarningPercent > 0))
                         {
@@ -327,7 +325,7 @@ namespace FabricObserver.Observers
                 }
 
                 // Windows Firewall Rules - Total number of rules in use.
-                if (FirewallData != null && isWindows && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
+                if (FirewallData != null && IsWindows && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
                 {
                     ProcessResourceDataReportHealth(
                             FirewallData,
@@ -373,7 +371,7 @@ namespace FabricObserver.Observers
                 }
 
                 // Total Open File Handles % (Linux-only) - Total Percentage Allocated (in use) of the configured Maximum number of File Handles the linux kernel will allocate.
-                if (!isWindows)
+                if (!IsWindows)
                 {
                     if (LinuxFileHandlesDataPercentAllocated != null && (LinuxFileHandlesErrorPercent > 0 || LinuxFileHandlesWarningPercent > 0))
                     {
@@ -428,50 +426,59 @@ namespace FabricObserver.Observers
 
             if (CpuTimeData == null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
             {
-                CpuTimeData = new FabricResourceUsageData<float>(ErrorWarningProperty.CpuTime, "TotalCpuTime", frudCapacity, UseCircularBuffer);
+                CpuTimeData = new FabricResourceUsageData<float>(
+                    ErrorWarningProperty.CpuTime, ErrorWarningProperty.CpuTime.Replace(" ", string.Empty), frudCapacity, UseCircularBuffer);
             }
 
             if (MemDataInUse == null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
             {
-                MemDataInUse = new FabricResourceUsageData<float>(ErrorWarningProperty.MemoryConsumptionMb, "MemoryConsumedMb", frudCapacity, UseCircularBuffer);
+                MemDataInUse = new FabricResourceUsageData<float>(
+                    ErrorWarningProperty.MemoryConsumptionMb, ErrorWarningProperty.MemoryConsumptionMb.Replace(" ", string.Empty), frudCapacity, UseCircularBuffer);
             }
 
             if (MemDataPercent == null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
             {
-                MemDataPercent = new FabricResourceUsageData<double>(ErrorWarningProperty.MemoryConsumptionPercentage, "MemoryConsumedPercentage", frudCapacity, UseCircularBuffer);
+                MemDataPercent = new FabricResourceUsageData<double>(
+                    ErrorWarningProperty.MemoryConsumptionPercentage, ErrorWarningProperty.MemoryConsumptionPercentage.Replace(" ", string.Empty), frudCapacity, UseCircularBuffer);
             }
 
             if (FirewallData == null && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
             {
-                FirewallData = new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveFirewallRules, "ActiveFirewallRules", 1);
+                FirewallData = new FabricResourceUsageData<int>(
+                    ErrorWarningProperty.ActiveFirewallRules, ErrorWarningProperty.ActiveFirewallRules.Replace(" ", string.Empty), 1);
             }
 
             if (ActivePortsData == null && (ActivePortsErrorThreshold > 0 || ActivePortsWarningThreshold > 0))
             {
-                ActivePortsData = new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveTcpPorts, "AllPortsInUse", 1);
+                ActivePortsData = new FabricResourceUsageData<int>(
+                    ErrorWarningProperty.ActiveTcpPorts, ErrorWarningProperty.ActiveTcpPorts.Replace(" ", string.Empty), 1);
             }
 
             if (EphemeralPortsDataRaw == null && (EphemeralPortsRawErrorThreshold > 0 || EphemeralPortsRawWarningThreshold > 0))
             {
-                EphemeralPortsDataRaw = new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveEphemeralPorts, "EphemeralPortsInUseTotal", 1);
+                EphemeralPortsDataRaw = new FabricResourceUsageData<int>(
+                    ErrorWarningProperty.ActiveEphemeralPorts, ErrorWarningProperty.ActiveEphemeralPorts.Replace(" ", string.Empty), 1);
             }
 
             if (EphemeralPortsDataPercent == null && (EphemeralPortsPercentErrorThreshold > 0 || EphemeralPortsPercentWarningThreshold > 0))
             {
-                EphemeralPortsDataPercent = new FabricResourceUsageData<double>(ErrorWarningProperty.ActiveEphemeralPortsPercentage, "EphemeralPortsInUsePercentage", 1);
+                EphemeralPortsDataPercent = new FabricResourceUsageData<double>(
+                    ErrorWarningProperty.ActiveEphemeralPortsPercentage, ErrorWarningProperty.ActiveEphemeralPortsPercentage.Replace(" ", string.Empty), 1);
             }
 
             // This only makes sense for Linux.
-            if (!isWindows)
+            if (!IsWindows)
             {
                 if (LinuxFileHandlesDataPercentAllocated == null && (LinuxFileHandlesErrorPercent > 0 || LinuxFileHandlesWarningPercent > 0))
                 {
-                    LinuxFileHandlesDataPercentAllocated = new FabricResourceUsageData<double>(ErrorWarningProperty.AllocatedFileHandlesPct, "TotalFileHandlesPercentage", 1);
+                    LinuxFileHandlesDataPercentAllocated = new FabricResourceUsageData<double>(
+                        ErrorWarningProperty.AllocatedFileHandlesPct, ErrorWarningProperty.AllocatedFileHandlesPct.Replace(" ", string.Empty), 1);
                 }
 
                 if (LinuxFileHandlesDataTotalAllocated == null && (LinuxFileHandlesErrorTotalAllocated > 0 || LinuxFileHandlesWarningTotalAllocated > 0))
                 {
-                    LinuxFileHandlesDataTotalAllocated = new FabricResourceUsageData<int>(ErrorWarningProperty.AllocatedFileHandles, "TotalFileHandlesCount", 1);
+                    LinuxFileHandlesDataTotalAllocated = new FabricResourceUsageData<int>(
+                        ErrorWarningProperty.AllocatedFileHandles, ErrorWarningProperty.AllocatedFileHandles.Replace(" ", string.Empty), 1);
                 }
             }
         }
@@ -538,7 +545,7 @@ namespace FabricObserver.Observers
             }
 
             // Linux FDs.
-            if (!isWindows)
+            if (!IsWindows)
             {
                 var errFileHandlesPercentUsed = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverLinuxFileHandlesErrorLimitPct);
 
@@ -622,7 +629,7 @@ namespace FabricObserver.Observers
 
             /* Linux FDs */
 
-            if (isWindows)
+            if (IsWindows)
             {
                 return;
             }
@@ -659,13 +666,13 @@ namespace FabricObserver.Observers
             try
             {
                 // Firewall rules.
-                if (isWindows && FirewallData != null)
+                if (IsWindows && FirewallData != null)
                 {
                     int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
                     FirewallData.AddData(firewalls);
                 }
 
-                TimeSpan duration = TimeSpan.FromSeconds(5);
+                TimeSpan duration = TimeSpan.FromSeconds(10);
 
                 if (MonitorDuration > TimeSpan.MinValue)
                 {
@@ -690,7 +697,7 @@ namespace FabricObserver.Observers
                 // OS-level file handle monitoring only makes sense for Linux, where the Maximum system-wide number of handles the kernel will allocate is a user-configurable setting.
                 // Windows does not have a configurable setting for Max Handles as the number of handles available to the system is dynamic (even if the max per process is not). 
                 // As such, for Windows, GetMaximumConfiguredFileHandlesCount always return -1, by design. Also, GetTotalAllocatedFileHandlesCount is not implemented for Windows (just returns -1).
-                if (!isWindows)
+                if (!IsWindows)
                 {
                     if (LinuxFileHandlesDataPercentAllocated != null && (LinuxFileHandlesErrorPercent > 0 || LinuxFileHandlesWarningPercent > 0))
                     {
@@ -737,23 +744,26 @@ namespace FabricObserver.Observers
                     double usedPct = OSInfoProvider.Instance.GetActiveEphemeralPortCountPercentage();
                     EphemeralPortsDataPercent.AddData(usedPct);
 
-                    /* Raw ETW - Unrelated to Warnings */
-                    if (IsEtwEnabled)
-                    {
-                        (int LowPort, int HighPort) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
-                        int totalEphemeralPorts = HighPort - LowPort;
+                /* Raw ETW - Unrelated to Warnings */
+                if (IsEtwEnabled)
+                {
+                    (int LowPort, int HighPort, int NumberOfPorts) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
 
-                        ObserverLogger.LogEtw(
-                            ObserverConstants.FabricObserverETWEventName,
-                            new
-                            {
-                                NodeName,
-                                ObserverName,
-                                Metric = ErrorWarningProperty.TotalEphemeralPorts,
-                                Source = ObserverConstants.FabricObserverName,
-                                Value = totalEphemeralPorts
-                            });
-                    }
+                    var telemData = new TelemetryData()
+                    {
+                        ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
+                        EntityType = EntityType.Machine,
+                        Metric = ErrorWarningProperty.TotalEphemeralPorts,
+                        NodeName = NodeName,
+                        NodeType = NodeType,
+                        ObserverName = ObserverName,
+                        Property = $"{LowPort} - {HighPort}",
+                        Source = ObserverName,
+                        Value = NumberOfPorts
+                    };
+
+                    ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, telemData);
+                }
                 }
 
                 timer.Start();
@@ -765,13 +775,13 @@ namespace FabricObserver.Observers
                     // CPU
                     if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
                     {
-                        CpuTimeData.AddData(CpuUtilizationProvider.Instance.GetProcessorTimePercentage());
+                         CpuTimeData.AddData(CpuUtilizationProvider.Instance.GetProcessorTimePercentage());
                     }
 
                     // Memory
                     if (MemDataInUse != null || MemDataPercent != null)
                     {
-                        var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetSystemMemoryInfo();
+                        var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetSystemPhysicalMemoryInfo();
 
                         if (MemDataInUse != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
                         {
@@ -784,7 +794,7 @@ namespace FabricObserver.Observers
                         }
                     }
 
-                    await Task.Delay(250, Token).ConfigureAwait(false);
+                    await Task.Delay(1000, Token);
                 }
 
                 timer.Stop();
@@ -797,14 +807,17 @@ namespace FabricObserver.Observers
                 // Fix the bug..
                 throw;
             }
-            finally
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (IsWindows)
             {
-                if (isWindows)
-                {
-                    CpuUtilizationProvider.Instance?.Dispose();
-                    CpuUtilizationProvider.Instance = null;
-                }
+                CpuUtilizationProvider.Instance?.Dispose();
+                CpuUtilizationProvider.Instance = null;
             }
+
+            base.Dispose(disposing);
         }
     }
 }

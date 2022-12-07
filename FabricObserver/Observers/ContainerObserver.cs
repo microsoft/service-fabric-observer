@@ -12,7 +12,6 @@ using System.Linq;
 using System.IO;
 using System.Fabric.Query;
 using System.Fabric;
-using System.Runtime.InteropServices;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.MachineInfoModel;
 using System.Fabric.Description;
@@ -26,7 +25,6 @@ namespace FabricObserver.Observers
     public sealed class ContainerObserver : ObserverBase
     {
         private const int MaxProcessExitWaitTimeMS = 60000;
-        private readonly bool isWindows;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> allCpuDataPercentage;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> allMemDataMB;
 
@@ -56,7 +54,7 @@ namespace FabricObserver.Observers
         /// <param name="context">The StatelessServiceContext instance.</param>
         public ContainerObserver(StatelessServiceContext context) : base(null, context)
         {
-            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            
         }
 
         // OsbserverManager passes in a special token to ObserveAsync and ReportAsync that enables it to stop this observer outside of
@@ -71,7 +69,7 @@ namespace FabricObserver.Observers
 
             runDurationTimer = Stopwatch.StartNew();
 
-            if (!await InitializeAsync(token).ConfigureAwait(false))
+            if (!await InitializeAsync(token))
             {
                 return;
             }
@@ -196,7 +194,7 @@ namespace FabricObserver.Observers
             // FabricObserver has on the resources it monitors and alerts on...
             // Concurrency/Parallelism support. The minimum requirement is 4 logical processors, regardless of user setting.
             if (Environment.ProcessorCount >= 4 && bool.TryParse(
-                    GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoring), out bool enableConcurrency))
+                    GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoringParameter), out bool enableConcurrency))
             {
                 EnableConcurrentMonitoring = enableConcurrency;
             }
@@ -212,7 +210,7 @@ namespace FabricObserver.Observers
                 maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
 
                 // If user configures MaxConcurrentTasks setting, then use that value instead.
-                if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasks), out int maxTasks))
+                if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasksParameter), out int maxTasks))
                 {
                     maxDegreeOfParallelism = maxTasks;
                 }
@@ -445,7 +443,7 @@ namespace FabricObserver.Observers
                 string filename = $"{Environment.GetFolderPath(Environment.SpecialFolder.System)}\\cmd.exe";
                 string error = string.Empty;
 
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                if (!IsWindows)
                 {
                     args = string.Empty;
 
@@ -505,7 +503,7 @@ namespace FabricObserver.Observers
                 {
                     string msg = $"docker stats exited with {exitStatus} on node {NodeName}: {error}{Environment.NewLine}";
 
-                    if (isWindows)
+                    if (IsWindows)
                     {
                         msg += "NOTE: docker must be running and you must run FabricObserver as System user or Admin user on Windows " +
                                "in order for ContainerObserver to function correctly on Windows.";
@@ -566,7 +564,7 @@ namespace FabricObserver.Observers
                     }
 
                     // Linux: Try and work around the unsetting of caps issues when SF runs a cluster upgrade.
-                    if (!isWindows && error.ToLower().Contains("permission denied"))
+                    if (!IsWindows && error.ToLower().Contains("permission denied"))
                     {
                         // Throwing LinuxPermissionException here will eventually take down FO (by design). The failure will be logged and telemetry will be emitted, then
                         // the exception will be re-thrown by ObserverManager and the FO process will fail fast exit. Then, SF will create a new instance of FO on the offending node which
@@ -681,7 +679,7 @@ namespace FabricObserver.Observers
                 return true;
             }
 
-            string configFilename = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileName);
+            string configFilename = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileNameParameter);
 
             if (string.IsNullOrWhiteSpace(configFilename))
             {

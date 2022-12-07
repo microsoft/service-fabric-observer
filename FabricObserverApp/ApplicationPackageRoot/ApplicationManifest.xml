@@ -1,18 +1,24 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <!-- You can try the XML diff/merge tool XmlDiffPatchSF (located in this repo) to make upgrading your base configurations to the latest version much easier. -->
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.0.831" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.4.960" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- ObserverManager Configuration -->
     <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
     <Parameter Name="ObserverManagerObserverExecutionTimeoutSeconds" DefaultValue="3600" />
     <Parameter Name="ObserverManagerEnableVerboseLogging" DefaultValue="false" />
+    <!-- If you want to transmit ETW events to Kusto, for example, then enable this setting. Otherwise, set this to false. Please see ETW.md for related documentation. -->
     <Parameter Name="ObserverManagerEnableETWProvider" DefaultValue="true" />
     <!-- You only need to set this if you want to use a different EventSource provider name than the default, FabricObserverETWProvider.
          This is primarily useful for scenarios where you have multiple instances of FO running on a node and you want to ensure that each instance writes 
          ETW event data to different named sinks. This is more of an advanced scenario. In general, just leave this blank. -->
     <Parameter Name="ObserverManagerETWProviderName" DefaultValue="" />
+    <!-- If you want to transmit telemetry events to ApplicationInsights or LogAnalytics, for example, then enable this setting. Otherwise, set this to false. -->
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
+    <!-- We would really appreciate it if you kept this set to true. The information we collect contains no PII and helps us understand how FO is doing in the wild. -->
     <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="true" />
+    <!-- If an observer run fails due to timeout (ObserverExecutionTimeout is exceeded) or AppObserver can't monitor a service that runs at higher privilege, 
+         for example, then this setting will put FO into Warning or Error state or just create a an Ok (info) health message.
+         Supported values are Error, Warning, Ok or None (which means don't put FO into Warning or Error state or create an Ok health event (info)). -->
     <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
     <Parameter Name="ObserverLogPath" DefaultValue="fabric_observer_logs" />
     <!-- Observer Configuration Settings.
@@ -41,7 +47,8 @@
     <Parameter Name="NodeObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
-    <!-- ETW - Custom EventSource Tracing -->
+    <!-- ETW - Custom EventSource Tracing. Each observer can emit ETW. You can decide which ones. 
+         Make sure to enable ObserverManagerEnableETWProvider above if you plan on enabling ETW for some observer below. -->
     <Parameter Name="AppObserverEnableEtw" DefaultValue="true" />
     <Parameter Name="AzureStorageUploadObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableEtw" DefaultValue="false" />
@@ -100,9 +107,9 @@
     <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="false" />
     <!-- The maximum number of child process data items to include in a sorted list of top n consumers for some metric, where n is the value of this setting. -->
     <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
-    <!-- Service process dumps (dumpProcessOnError setting).
-         You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError to true in AppObserver.config.json
-         if you want AppObserver to dump service processes when an Error threshold has been breached for some observed metric (e.g., memoryErrorLimitPercent). -->
+    <!-- Service process dumps (dumpProcessOnError/dumpProcessOnWarning setting).
+         You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError or dumpProcessOnWarning to true in AppObserver.config.json
+         if you want AppObserver to dump service processes when an Error or Warning threshold has been breached for some observed metric (e.g., memoryErrorLimitPercent/memoryWarningLimitPercent). -->
     <Parameter Name="AppObserverEnableProcessDumps" DefaultValue="false" />
     <!-- Supported values are: Mini, MiniPlus, Full. -->
     <Parameter Name="AppObserverProcessDumpType" DefaultValue="MiniPlus" />
@@ -111,9 +118,9 @@
     <!-- Time window in which max dumps per process, per observed metric can occur. See AppObserverMaxProcessDumps. -->
     <Parameter Name="AppObserverMaxDumpsTimeWindow" DefaultValue="04:00:00" />
     <!-- Concurrency/Parallelism Support.
-         Note: If you do not monitor 50, 100, or even 1000 or more services, then enabling this is not super useful. This will only add any value (substantial) on machines with capable hardware (>= 8 logical processors).
-         If you do run on capable hardware and want AppObserver to complete a run faster than at sequential speed, then enable this. You can control the level of concurrency by setting the AppObserverMaxConcurrentTasks
-         setting. -->
+         Note: This will only add real value (substantial) on machines with capable hardware (>= 8 logical processors). FO will not attempt to do anything concurrently if
+         the number of logical processors is less than 4, even if this is set to true. If you do run on capable hardware and want AppObserver to complete a run much faster than at sequential speed, then keep this enabled.
+         You can control the level of concurrency by setting the AppObserverMaxConcurrentTasks setting. -->
     <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
     <!-- The default value is 1/4 of detected logical processors (LPs). This would mean given 20 LPs, the number of threads that will be created will be at least 5 (and seldom more than that), if possible.
          You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
@@ -124,12 +131,14 @@
          NOTE: If you monitor stateful Actor services, then you should set this to true.
          This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
     <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
-    <!-- Process Working set type for AppObserver to monitor. 
+    <!-- Process Working Set type for AppObserver to monitor. 
          Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). 
-         NOTE: If you have *several* service processes of the **same name**, this feature will add *significant* time-to-completion and increased CPU usage to AppObserver. 
-         In the case where you are monitoring 100s of same-named service processes, you should set this to false and monitor Full Working set (Private + Shared), 
-         which will be computed using NativeMethods.GetProcessMemoryInfo function (very fast). -->
+         NOTE: If you have *several* service processes of the **same name**, setting this to true will add *significant* time-to-completion and increased CPU usage (small, but more than necessary) to AppObserver. 
+         FO will automatically compute Shared + Private memory usage if it detects 50 or more same-named service processes, regardless of this setting.-->
     <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
+    <!-- Windows-only. AppObserver can monitor services with resource governance limits set and put related services into Warning if they reach 90% of the specified limit (only Memory limit is supported in this release). 
+         If you set RG Memory limits for your service code packages, then you should consider enabling this feature. Else, don't. -->
+    <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="false" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
@@ -146,9 +155,9 @@
     <Parameter Name="DiskObserverDiskSpacePercentUsageWarningThreshold" DefaultValue="90" />
     <Parameter Name="DiskObserverDiskSpacePercentUsageErrorThreshold" DefaultValue="" />
     <Parameter Name="DiskObserverAverageQueueLengthErrorThreshold" DefaultValue="" />
-    <Parameter Name="DiskObserverAverageQueueLengthWarningThreshold" DefaultValue="15" />
+    <Parameter Name="DiskObserverAverageQueueLengthWarningThreshold" DefaultValue="" />
     <!-- Folder size monitoring. If you want to monitor folder sizes, then enable this feature and provide full paths (and/or path env vars) as shown below. -->
-    <Parameter Name="DiskObserverEnableFolderSizeMonitoring" DefaultValue="true" />
+    <Parameter Name="DiskObserverEnableFolderSizeMonitoring" DefaultValue="false" />
     <!-- Supply full path/threshold(in MB) pairs for Warning/Error level monitoring here. Format is "fullpath0, size0 | fullpath1, size1 | fullpath2, size2 ..." -->
     <Parameter Name="DiskObserverFolderPathsErrorThresholdsMb" DefaultValue="" />
     <Parameter Name="DiskObserverFolderPathsWarningThresholdsMb" DefaultValue="C:\fabric_observer_logs, 250 | D:\SomeFolder, 1024 | %SOMEFULLPATH%, 4096 | %SOMEPATH%\SubFolder, 1024" />
@@ -158,8 +167,8 @@
     <Parameter Name="FabricSystemObserverResourceUsageDataCapacity" DefaultValue="" />
     <!-- KVS LVID Usage Monitoring - Windows-only.
          This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
-    <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverMonitorPrivateWorkingSet" DefaultValue="true" />
+    <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="false" />
+    <Parameter Name="FabricSystemObserverMonitorPrivateWorkingSet" DefaultValue="false" />
     <!-- FabricSystemObserver Warning/Error Thresholds -->
     <Parameter Name="FabricSystemObserverCpuErrorLimitPercent" DefaultValue="" />
     <Parameter Name="FabricSystemObserverCpuWarningLimitPercent" DefaultValue="" />
@@ -221,7 +230,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.2.0.831" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.2.4.960" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -238,6 +247,7 @@
             <Parameter Name="RunInterval" Value="[AppObserverRunInterval]" />
             <Parameter Name="ConfigurationFileName" Value="[AppObserverConfigurationFile]" />
             <Parameter Name="MonitorPrivateWorkingSet" Value="[AppObserverMonitorPrivateWorkingSet]" />
+            <Parameter Name="MonitorResourceGovernanceLimits" Value="[AppObserverMonitorResourceGovernanceLimits]" />
             <Parameter Name="ClusterOperationTimeoutSeconds" Value="[AppObserverClusterOperationTimeoutSeconds]" />
             <Parameter Name="UseCircularBuffer" Value="[AppObserverUseCircularBuffer]" />
             <!-- Required-If UseCircularBuffer = True -->

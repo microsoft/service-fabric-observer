@@ -1,6 +1,6 @@
 ## How to implement an observer plugin using FO's extensibility model
 
-#### Note that starting in version 2.2.0.831, ClusterObserver supports the FO plugin model. So, you can build cluster-level monitoring plugins should you so desire.
+#### Note that starting in version 2.2.8.31, ClusterObserver supports the FO plugin model. So, you can build cluster-level monitoring plugins should you so desire.
 
 1. Create a new .NET Standard (2.0) library project.
 

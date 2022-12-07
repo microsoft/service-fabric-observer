@@ -10,7 +10,6 @@ using System.Fabric;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -32,7 +31,6 @@ namespace FabricObserver.Observers
         private List<FabricResourceUsageData<double>> DiskSpaceTotalMbData;
         private List<FabricResourceUsageData<double>> FolderSizeDataMb;
         private readonly Stopwatch stopWatch;
-        private readonly bool isWindows;
         private StringBuilder diskInfo = new StringBuilder();
 
         public int DiskSpacePercentErrorThreshold
@@ -78,7 +76,6 @@ namespace FabricObserver.Observers
         /// <param name="context">The StatelessServiceContext instance.</param>
         public DiskObserver(StatelessServiceContext context) : base(null, context)
         {
-            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
             stopWatch = new Stopwatch();
         }
 
@@ -107,7 +104,7 @@ namespace FabricObserver.Observers
             DiskSpaceTotalMbData ??= new List<FabricResourceUsageData<double>>(driveCount);
             FolderSizeDataMb ??= new List<FabricResourceUsageData<double>>();
 
-            if (isWindows)
+            if (IsWindows)
             {
                 DiskAverageQueueLengthData ??= new List<FabricResourceUsageData<float>>(driveCount);
             }
@@ -141,7 +138,7 @@ namespace FabricObserver.Observers
 
                     string id = d.Name;
 
-                    if (isWindows)
+                    if (IsWindows)
                     {
                         try
                         {
@@ -161,7 +158,7 @@ namespace FabricObserver.Observers
                     }
 
                     // Current disk queue length. Windows only.
-                    if (isWindows && DiskAverageQueueLengthData.All(data => data.Id != id) && (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0))
+                    if (IsWindows && DiskAverageQueueLengthData.All(data => data.Id != id) && (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0))
                     {
                         DiskAverageQueueLengthData.Add(new FabricResourceUsageData<float>(ErrorWarningProperty.DiskAverageQueueLength, id, 1));
                     }
@@ -180,7 +177,7 @@ namespace FabricObserver.Observers
 
                     // It is important to check if code is running on Windows, since d.Name.Substring(0, 2) will fail on Linux for / (root) mount point.
                     // Also, this feature is not supported for Linux yet.
-                    if (isWindows && (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0))
+                    if (IsWindows && (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0))
                     {
                         DiskAverageQueueLengthData.Find(x => x.Id == id)?.AddData(DiskUsage.GetAverageDiskQueueLength(d.Name[..2]));
                     }
@@ -194,7 +191,7 @@ namespace FabricObserver.Observers
                     DiskSpaceTotalMbData.Find(x => x.Id == id)?.AddData(DiskUsage.GetTotalDiskSpace(id, SizeUnit.Megabytes));
 
                     // This section only needs to run if you have the FabricObserverWebApi app installed.
-                    if (!IsObserverWebApiAppDeployed || !isWindows)
+                    if (!IsObserverWebApiAppDeployed || !IsWindows)
                     {
                         continue;
                     }
@@ -231,7 +228,7 @@ namespace FabricObserver.Observers
                 throw;
             }
 
-            await ReportAsync(token).ConfigureAwait(false);
+            await ReportAsync(token);
 
             // The time it took to run this observer.
             stopWatch.Stop();
@@ -394,7 +391,7 @@ namespace FabricObserver.Observers
                 if (IsTelemetryEnabled)
                 {
                     _ = TelemetryClient?.ReportHealthAsync(
-                            $"InvalidConfigFormat",
+                            "InvalidConfigFormat",
                             ObserverManager.ObserverFailureHealthStateLevel,
                             message,
                             ObserverName,
@@ -408,9 +405,10 @@ namespace FabricObserver.Observers
                         ObserverConstants.FabricObserverETWEventName,
                         new
                         {
-                            Property = $"InvalidConfigFormat",
+                            Property = "InvalidConfigFormat",
                             Level = ObserverManager.ObserverFailureHealthStateLevel,
                             Message = message,
+                            NodeName,
                             ObserverName
                         });
                 }
@@ -551,7 +549,7 @@ namespace FabricObserver.Observers
                 }
 
                 // User-supplied Average disk queue length thresholds from ApplicationManifest.xml. Windows only.
-                if (isWindows)
+                if (IsWindows)
                 {
                     for (int i = 0; i <  DiskAverageQueueLengthData.Count; ++i)
                     {

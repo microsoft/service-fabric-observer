@@ -120,7 +120,7 @@ namespace FabricObserver.Observers
                 apps.AddRange(appList.ToList());
 
                 // Wait a second before grabbing the next batch of apps..
-                await Task.Delay(TimeSpan.FromSeconds(1), Token).ConfigureAwait(false);
+                await Task.Delay(TimeSpan.FromSeconds(1), Token);
             }
 
             var totalNumberOfDeployedSFApps = apps.Count;
@@ -132,7 +132,7 @@ namespace FabricObserver.Observers
                                         app.ApplicationName,
                                         null,
                                         AsyncClusterOperationTimeoutSeconds,
-                                        token).ConfigureAwait(false);
+                                        token);
 
                 totalNumberOfDeployedServices += services.Count;
                 servicesInWarningError += services.Count(s => s.HealthState == HealthState.Warning || s.HealthState == HealthState.Error);
@@ -143,7 +143,7 @@ namespace FabricObserver.Observers
                                             service.ServiceName,
                                             null,
                                             AsyncClusterOperationTimeoutSeconds,
-                                            token).ConfigureAwait(false);
+                                            token);
 
                     totalNumberOfPartitions += partitions.Count;
                     partitionsInWarningError += partitions.Count(p => p.HealthState == HealthState.Warning || p.HealthState == HealthState.Error);
@@ -154,7 +154,7 @@ namespace FabricObserver.Observers
                                                 partition.PartitionInformation.Id,
                                                 null,
                                                 AsyncClusterOperationTimeoutSeconds,
-                                                token).ConfigureAwait(false);
+                                                token);
 
                         totalNumberOfReplicas += replicas.Count;
                         replicasInWarningError += replicas.Count(r => r.HealthState == HealthState.Warning || r.HealthState == HealthState.Error);
@@ -181,11 +181,11 @@ namespace FabricObserver.Observers
         }
 
         /// <summary>
-        /// Emit an ETW event containing Node data.
+        /// Emits an ETW event containing Fabric node data.
         /// </summary>
-        /// <param name="nodeName">Name of the target node.</param>
+        /// <param name="nodeName">Name of the target node. If absent (or null), then the local Fabric node.</param>
         /// <returns>Task</returns>
-        private async Task EmitNodeSnapshotEtwAsync(string nodeName)
+        private async Task EmitNodeSnapshotEtwAsync(string nodeName = null)
         {
             // This function isn't useful if you don't enable ETW for the plugin.
             if (!IsEtwEnabled)
@@ -193,22 +193,9 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            // Make sure to set the plugin's ClusterOperationTimeoutSeconds setting in FO's Settings.xml. That maps to ConfigurationSettings.AsyncTimeout:
-            // Set the RunInterval for you plugins to mirror the errata scripts. TimeSpan format: x.xx:xx:xx (days.hours:minutes:seconds).
-            /*  <Section Name="SampleNewObserverConfiguration">
-                    <Parameter Name="Enabled" Value="true" />
-                    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
-                    <Parameter Name="EnableCSVDataLogging" Value="false" />
-                    <Parameter Name="EnableEtw" Value="true" />
-                    <Parameter Name="EnableTelemetry" Value="false" />
-                    <Parameter Name="EnableVerboseLogging" Value="false" />
-                    <Parameter Name="RunInterval" Value="00:05:00"  />
-                  </Section> -->
-            */
-
             try
             {
-                var nodes = await FabricClientInstance.QueryManager.GetNodeListAsync(nodeName, ConfigurationSettings.AsyncTimeout, Token);
+                var nodes = await FabricClientInstance.QueryManager.GetNodeListAsync(nodeName ?? this.NodeName, ConfigurationSettings.AsyncTimeout, Token);
 
                 if (nodes?.Count == 0)
                 {
@@ -271,8 +258,7 @@ namespace FabricObserver.Observers
                 NodeName = NodeName,
                 Observer = ObserverName,
                 Property = "SomeUniquePropertyForMyHealthEvent",
-                EntityType = EntityType.Node, // this is an FO 3.2.0.831 required change.
-                //ReportType = HealthReportType.Node, // this is gone in FO 3.2.x.
+                EntityType = EntityType.Node,
                 State = HealthState.Ok
             };
 

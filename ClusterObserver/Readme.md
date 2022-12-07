@@ -1,9 +1,9 @@
-## ClusterObserver 2.2.0.831
-#### This version requires SF Runtime >= 8.0 and targets .NET Core 3.1
+### ClusterObserver 2.2.0.960
+#### This version requires SF Runtime >= 9.0 and targets .NET 6
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-observer%2Fmain%2FDocumentation%2FDeployment%2Fservice-fabric-cluster-observer.json)
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-observer%2Fnet6%2FDocumentation%2FDeployment%2Fservice-fabric-cluster-observer.json)
 
-ClusterObserver (CO) is a stateless singleton Service Fabric .NET Core 3.1 application that runs on one node in a cluster. CO observes cluster health (aggregated) 
+ClusterObserver (CO) is a stateless singleton Service Fabric .NET 6 service that runs on one node in a cluster. CO observes cluster health (aggregated) 
 and sends telemetry when a cluster is in Error or Warning. CO shares a very small subset of FabricObserver's (FO) code. It is designed to be completely independent from FO sources, 
 but lives in this repo (and SLN) because it is very useful to have both services deployed, especially for those who want cluster-level health observation and reporting in addition to 
 the node-level user-defined resource monitoring, health event creation, and health reporting done by FO. FabricObserver is designed to generate Service Fabric health events based on user-defined resource usage Warning and Error thresholds which ClusterObserver sends to your log analytics and alerting service.
@@ -36,7 +36,7 @@ $appParams = @{ "RunInterval" = "00:10:00"; "MaxTimeNodeStatusNotOk" = "04:00:00
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -ApplicationTypeVersion 2.2.0.831 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -ApplicationTypeVersion 2.2.0.960 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```
 
 ### ClusterObserver Configuration 
@@ -136,7 +136,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -
 
 ``` XML
 <?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.2.0.831" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.2.0.960" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- ClusterObserverManager settings. -->
     <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
@@ -164,7 +164,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.2.0.831" />
+    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.2.0.960" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -235,7 +235,7 @@ Here is a full example of exactly what is sent in one of these telemetry events,
     "TaskName": "ClusterObserver",
     "ClusterId": "00000000-1111-1111-0000-00f00d000d",
     "ClusterType": "SFRP",
-    "COVersion": "2.2.0.831",
+    "COVersion": "2.2.0.960",
     "Timestamp": "2022-07-12T19:02:04.4287671Z",
     "OS": "Windows"
 }

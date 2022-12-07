@@ -14,7 +14,7 @@ namespace FabricObserver.Observers.Utilities
 {
     public class LinuxInfoProvider : OSInfoProvider
     {
-        public override (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetSystemMemoryInfo()
+        public override (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetSystemPhysicalMemoryInfo()
         {
             Dictionary<string, ulong> memInfo = LinuxProcFS.ReadMemInfo();
 
@@ -23,11 +23,33 @@ namespace FabricObserver.Observers.Utilities
             long availableMem = (long)memInfo[MemInfoConstants.MemAvailable];
 
             // Divide by 1048576 to convert total memory from KB to GB.
+            long totalMemGb = totalMemory / 1048576;
+            double pctUsed = ((double)(totalMemory - availableMem - freeMem)) / totalMemory * 100;
+            long memUsed = (totalMemory - availableMem - freeMem) / 1024;
+
+            return (totalMemGb, memUsed, Math.Round(pctUsed, 2));
+        }
+
+        // TODO...
+        public override (long TotalCommitGb, long CommittedInUseMb) TupleGetSystemCommittedMemoryInfo()
+        {
+            var (TotalMemoryGb, MemoryInUseMb, _) = TupleGetSystemPhysicalMemoryInfo();
+            return (TotalMemoryGb, MemoryInUseMb);
+
+            /*
+            Dictionary<string, ulong> memInfo = LinuxProcFS.ReadMemInfo();
+
+            long totalMemory = (long)memInfo[MemInfoConstants.VmallocTotal];
+            long freeMem = totalMemory - (long)memInfo[MemInfoConstants.VmallocUsed];
+            long availableMem = freeMem + (long)memInfo[MemInfoConstants.SwapFree];
+
+            // Divide by 1048576 to convert total memory from KB to GB.
             long totalMem = totalMemory / 1048576;
             double pctUsed = ((double)(totalMemory - availableMem - freeMem)) / totalMemory * 100;
             long memUsed = (totalMemory - availableMem - freeMem) / 1024;
 
             return (totalMem, memUsed, Math.Round(pctUsed, 2));
+            */
         }
 
         public override int GetActiveTcpPortCount(int processId = -1, string configPath = null)
@@ -38,7 +60,7 @@ namespace FabricObserver.Observers.Utilities
 
         public override int GetActiveEphemeralPortCount(int processId = -1, string configPath = null)
         {
-            (int lowPort, int highPort) = TupleGetDynamicPortRange();
+            (int lowPort, int highPort, _) = TupleGetDynamicPortRange();
 
             int count = GetPortCount(processId, line =>
             {
@@ -60,8 +82,8 @@ namespace FabricObserver.Observers.Utilities
                 return usedPct;
             }
 
-            (int LowPort, int HighPort) = TupleGetDynamicPortRange();
-            int totalEphemeralPorts = HighPort - LowPort;
+            (_, _, int NumberOfPorts) = TupleGetDynamicPortRange();
+            int totalEphemeralPorts = NumberOfPorts;
 
             if (totalEphemeralPorts > 0)
             {
@@ -71,11 +93,13 @@ namespace FabricObserver.Observers.Utilities
             return usedPct;
         }
 
-        public override (int LowPort, int HighPort) TupleGetDynamicPortRange()
+        public override (int LowPort, int HighPort, int NumberOfPorts) TupleGetDynamicPortRange()
         {
             string text = File.ReadAllText("/proc/sys/net/ipv4/ip_local_port_range");
             int tabIndex = text.IndexOf('\t');
-            return (LowPort: int.Parse(text.Substring(0, tabIndex)), HighPort: int.Parse(text.Substring(tabIndex + 1)));
+            int lowPort = int.Parse(text.Substring(0, tabIndex));
+            int highPort = int.Parse(text.Substring(tabIndex + 1));
+            return (LowPort: lowPort, HighPort: highPort, NumberOfPorts: highPort - lowPort);
         }
 
         public override async Task<OSInfo> GetOSInfoAsync(CancellationToken cancellationToken)

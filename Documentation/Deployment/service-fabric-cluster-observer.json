@@ -11,16 +11,16 @@
     },
     "applicationTypeVersionClusterObserver": {
       "type": "string",
-      "defaultValue": "2.2.0.831",
+      "defaultValue": "2.2.1.960",
       "metadata": {
-        "description": "Provide the app version number of ClusterObserver. This must be identical to the version speficied in the related sfpkg."
+        "description": "Provide the app version number of ClusterObserver. This must be identical to the version specified in the corresponding sfpkg."
       }
     },
     "packageUrlClusterObserver": {
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "This has to be a public accessible URL for the sfpkg file which contains the ClusterObserver app package. Example: https://github.com/microsoft/service-fabric-observer/releases/download/57635490/Microsoft.ServiceFabricApps.ClusterObserver.Windows.SelfContained.2.2.0.831.sfpkg"
+        "description": "This has to be a public accessible URL for the sfpkg file which contains the ClusterObserver app package. Example: https://github.com/microsoft/service-fabric-observer/releases/download/57648098/Microsoft.ServiceFabricApps.ClusterObserver.Windows.SelfContained.2.2.0.960.sfpkg"
       }
     }
   },

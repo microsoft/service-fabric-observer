@@ -1,0 +1,8 @@
+﻿[
+  {
+    "targetApp": "*",
+    "appIncludeList": "Voting, TestApp42",
+    "warningPrivateBytesMb": 1,
+    "warningPrivateBytesPercent": 0.00005
+  }
+]

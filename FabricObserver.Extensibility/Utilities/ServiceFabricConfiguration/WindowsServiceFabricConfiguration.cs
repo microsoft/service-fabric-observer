@@ -27,7 +27,6 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (Exception e) when (e is ArgumentException || e is IOException || e is SecurityException)
             {
-                _logger.LogWarning($"GetString: {e.Message}");
                 return "Unknown";
             }
         }
@@ -40,7 +39,6 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (Exception e) when (e is ArgumentException || e is IOException || e is SecurityException)
             {
-                _logger.LogWarning($"GetInt32: {e.Message}");
                 return 0;
             }
         }

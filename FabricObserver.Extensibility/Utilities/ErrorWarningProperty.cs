@@ -14,10 +14,12 @@ namespace FabricObserver.Observers.Utilities
         /// CPU Time (Percent)
         /// </summary>
         public const string CpuTime = "CPU Time (Percent)";
+        
         /// <summary>
         /// Memory Usage (MB)
         /// </summary>
         public const string MemoryConsumptionMb = "Memory Usage (MB)";
+        
         /// <summary>
         /// Memory Usage (Percent)
         /// </summary>
@@ -101,5 +103,20 @@ namespace FabricObserver.Observers.Utilities
         /// LVID Usage (Percent)
         /// </summary>
         public const string KvsLvidsPercent = "LVID Usage (Percent)";
+
+        /// <summary>
+        /// Process Private Bytes (MB)
+        /// </summary>
+        public const string PrivateBytesMb = "Private Bytes (MB)";
+
+        /// <summary>
+        /// Process Private Bytes (MB)
+        /// </summary>
+        public const string PrivateBytesPercent = "Private Bytes (Percent)";
+
+        /// <summary>
+        /// Process RG Memory (Percent)
+        /// </summary>
+        public const string RGMemoryUsagePercent = "RG Memory Usage (Percent)";
     }
 }

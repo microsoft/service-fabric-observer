@@ -101,14 +101,14 @@ namespace ClusterObserver
                 return;
             }
 
-            await ReportAsync(token).ConfigureAwait(false);
+            await ReportAsync(token);
 
             LastRunDateTime = DateTime.Now;
         }
 
         public override async Task ReportAsync(CancellationToken token)
         {
-            await ReportClusterHealthAsync(token).ConfigureAwait(false);
+            await ReportClusterHealthAsync(token);
         }
 
         /// <summary>
@@ -146,12 +146,12 @@ namespace ClusterObserver
             try
             {
                 // Monitor node status.
-                await MonitorNodeStatusAsync(token, ignoreDefaultQueryTimeout).ConfigureAwait(false);
+                await MonitorNodeStatusAsync(token, ignoreDefaultQueryTimeout);
 
                 // Check for active repairs in the cluster.
                 if (MonitorRepairJobStatus)
                 {
-                    var repairsInProgress = await GetRepairTasksCurrentlyProcessingAsync(token).ConfigureAwait(false);
+                    var repairsInProgress = await GetRepairTasksCurrentlyProcessingAsync(token);
                     string repairState = string.Empty;
 
                     if (repairsInProgress?.Count > 0)
@@ -177,7 +177,10 @@ namespace ClusterObserver
                         // Telemetry.
                         if (TelemetryEnabled)
                         {
-                            await TelemetryClient?.ReportHealthAsync(telemetry, token);
+                            if (TelemetryClient != null)
+                            {
+                                await TelemetryClient.ReportHealthAsync(telemetry, token);
+                            }
                         }
 
                         // ETW.
@@ -220,7 +223,10 @@ namespace ClusterObserver
                     // Telemetry.
                     if (TelemetryEnabled)
                     {
-                        await TelemetryClient?.ReportHealthAsync(telemetry, token);
+                        if (TelemetryClient != null)
+                        {
+                            await TelemetryClient.ReportHealthAsync(telemetry, token);
+                        }
                     }
 
                     // ETW.
@@ -262,7 +268,7 @@ namespace ClusterObserver
                         case HealthEvaluationKind.Nodes:
                             try
                             {
-                                await ProcessNodeHealthAsync(clusterHealth.NodeHealthStates, token).ConfigureAwait(false);
+                                await ProcessNodeHealthAsync(clusterHealth.NodeHealthStates, token);
                             }
                             catch (Exception e) when (e is FabricException || e is TimeoutException)
                             {
@@ -320,7 +326,7 @@ namespace ClusterObserver
 
                             try
                             {
-                                await ProcessGenericEntityHealthAsync(evaluation, token).ConfigureAwait(false);
+                                await ProcessGenericEntityHealthAsync(evaluation, token);
                             }
                             catch (Exception e) when (e is FabricException || e is TimeoutException)
                             {
@@ -356,7 +362,10 @@ namespace ClusterObserver
                 // Send Telemetry.
                 if (TelemetryEnabled)
                 {
-                    await TelemetryClient?.ReportHealthAsync(telemetryData, token);
+                    if (TelemetryClient != null)
+                    {
+                        await TelemetryClient.ReportHealthAsync(telemetryData, token);
+                    }
                 }
 
                 // Emit ETW.
@@ -522,7 +531,10 @@ namespace ClusterObserver
                     // Telemetry.
                     if (TelemetryEnabled)
                     {
-                        await TelemetryClient?.ReportHealthAsync(foTelemetryData, token);
+                        if (TelemetryClient != null)
+                        {
+                            await TelemetryClient.ReportHealthAsync(foTelemetryData, token);
+                        }
                     }
 
                     // ETW.
@@ -557,7 +569,10 @@ namespace ClusterObserver
                     // Telemetry.
                     if (TelemetryEnabled)
                     {
-                        await TelemetryClient?.ReportHealthAsync(telemetryData, token);
+                        if (TelemetryClient != null)
+                        {
+                            await TelemetryClient.ReportHealthAsync(telemetryData, token);
+                        }
                     }
 
                     // ETW.
@@ -624,7 +639,10 @@ namespace ClusterObserver
                     // Telemetry.
                     if (TelemetryEnabled)
                     {
-                        await TelemetryClient?.ReportHealthAsync(foTelemetryData, token);
+                        if (TelemetryClient != null)
+                        {
+                            await TelemetryClient.ReportHealthAsync(foTelemetryData, token);
+                        }
                     }
 
                     // ETW.
@@ -661,7 +679,10 @@ namespace ClusterObserver
                     // Telemetry.
                     if (TelemetryEnabled)
                     {
-                        await TelemetryClient?.ReportHealthAsync(telemetryData, token);
+                        if (TelemetryClient != null)
+                        {
+                            await TelemetryClient.ReportHealthAsync(telemetryData, token);
+                        }
                     }
 
                     // ETW.
@@ -791,7 +812,10 @@ namespace ClusterObserver
             // Telemetry.
             if (TelemetryEnabled)
             {
-                await TelemetryClient?.ReportHealthAsync(telemetryData, token);
+                if (TelemetryClient != null)
+                {
+                    await TelemetryClient.ReportHealthAsync(telemetryData, token);
+                }
             }
 
             // ETW.
@@ -804,7 +828,7 @@ namespace ClusterObserver
         private async Task MonitorNodeStatusAsync(CancellationToken token, bool isTest = false)
         {
             // If a node's NodeStatus is Disabling, Disabled, or Down 
-            // for at or above the specified maximum time (in Settings.xml),
+            // for at or above the specified maximum time (in ApplicationManifest.xml, see MaxTimeNodeStatusNotOk),
             // then CO will emit a Warning signal.
             var nodeList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                     () =>
@@ -812,7 +836,7 @@ namespace ClusterObserver
                                                 null,
                                                 isTest ? TimeSpan.FromSeconds(1) : ConfigurationSettings.AsyncTimeout,
                                                 token),
-                                     token).ConfigureAwait(false);
+                                     token);
 
             // Are any of the nodes that were previously in non-Up status, now Up?
             if (NodeStatusDictionary.Count > 0)
@@ -838,7 +862,10 @@ namespace ClusterObserver
                     // Telemetry.
                     if (TelemetryEnabled)
                     {
-                        await TelemetryClient?.ReportHealthAsync(telemetry, token);
+                        if (TelemetryClient != null)
+                        {
+                            await TelemetryClient.ReportHealthAsync(telemetry, token);
+                        }
                     }
 
                     // ETW.
@@ -902,7 +929,10 @@ namespace ClusterObserver
                         // Telemetry.
                         if (TelemetryEnabled)
                         {
-                            await TelemetryClient?.ReportHealthAsync(telemetry, token);
+                            if (TelemetryClient != null)
+                            {
+                                await TelemetryClient.ReportHealthAsync(telemetry, token);
+                            }
                         }
 
                         // ETW.
@@ -949,7 +979,7 @@ namespace ClusterObserver
                                                     repairManagerServiceUri,
                                                     ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigurationSettings.AsyncTimeout,
                                                     cancellationToken),
-                                            cancellationToken).ConfigureAwait(false);  
+                                            cancellationToken);  
 
                 return serviceList?.Count > 0;
             }
@@ -986,7 +1016,7 @@ namespace ClusterObserver
                                                         null,
                                                         ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigurationSettings.AsyncTimeout,
                                                         cancellationToken),
-                                               cancellationToken).ConfigureAwait(false);  
+                                               cancellationToken);  
 
                 return repairTasks;
             }

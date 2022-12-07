@@ -40,6 +40,10 @@ namespace FabricObserver.Observers.Utilities
 
                 return instance;
             }
+            set
+            {
+                instance = value;
+            }
         }
 
         protected Logger Logger 
@@ -48,6 +52,8 @@ namespace FabricObserver.Observers.Utilities
         } = new Logger("Utilities");
 
         public abstract float GetProcessWorkingSetMb(int processId, string procName, CancellationToken token, bool getPrivateWorkingSet = false);
+
+        public abstract float GetProcessPrivateBytesMb(int processId);
 
         public abstract List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot = null);
 

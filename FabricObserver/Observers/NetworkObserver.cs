@@ -85,7 +85,7 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            if (!await InitializeAsync().ConfigureAwait(false) || token.IsCancellationRequested)
+            if (!await InitializeAsync() || token.IsCancellationRequested)
             {
                 stopwatch.Stop();
                 stopwatch.Reset();
@@ -103,7 +103,7 @@ namespace FabricObserver.Observers
 
             // Run conn tests.
             Retry.Do(InternetConnectionStateIsConnected, TimeSpan.FromSeconds(10), token);
-            await ReportAsync(token).ConfigureAwait(false);
+            await ReportAsync(token);
 
             // The time it took to run this observer.
             stopwatch.Stop();
@@ -322,7 +322,7 @@ namespace FabricObserver.Observers
             }
 
             var networkObserverConfigFileName =
-                Path.Combine(ConfigPackage.Path, GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileName));
+                Path.Combine(ConfigPackage.Path, GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileNameParameter));
 
             if (string.IsNullOrWhiteSpace(networkObserverConfigFileName))
             {

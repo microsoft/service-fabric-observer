@@ -44,9 +44,15 @@
 | FO039 | Number of threads at or exceeding configured ***Error*** threshold for an app service process. | 
 | FO040 | Number of threads at or exceeding configured ***Warning*** threshold for an app service process. |  
 | FO041 | Percentage of Maximum number of KVS LVIDs in use is at or exceeding internal ***Warning*** threshold (75%) for an app service process. This is non-configurable and Windows-only. | 
-| FO042 | Folder size (MB) has exceeded configured ***Error*** threshold |  
-| FO043 | Folder size (MB) has exceeded configured ***Warning*** threshold | 
+| FO042 | Folder size (MB) has exceeded configured ***Error*** threshold. |  
+| FO043 | Folder size (MB) has exceeded configured ***Warning*** threshold. | 
 | FO044 | Percentage of active Ephemeral TCP ports in use is at or exceeding configured ***Error*** threshold for an app service process. | 
-| FO045 | Percentage of active Ephemeral TCP ports in use is at or exceeding configured ***Error*** threshold for an app service process. | 
+| FO045 | Percentage of active Ephemeral TCP ports in use is at or exceeding configured ***Warning*** threshold for an app service process. | 
 | FO046 | Percentage of active Ephemeral TCP ports in use is at or exceeding configured ***Error*** threshold for a machine. | 
-| FO047 | Percentage of active Ephemeral TCP ports in use is at or exceeding configured ***Error*** threshold for a machine. | 
+| FO047 | Percentage of active Ephemeral TCP ports in use is at or exceeding configured ***Warning*** threshold for a machine. | 
+| FO048 | Private Bytes usage (Commit) MB is at or exceeding configured ***Error*** threshold for an app service process. | 
+| FO049 | Private Bytes usage (Commit) MB is at or exceeding configured ***Warning*** threshold for an app service process. |
+| FO050 | Private Bytes usage (Commit) Percentage is at or exceeding configured ***Error*** threshold for an app service process. | 
+| FO051 | Private Bytes usage (Commit) Percentage is at or exceeding configured ***Warning*** threshold for an app service process. |  
+| FO052 | At or exceeding **configured percentage** of Memory Resource Governance limit for a service code package. | 
+

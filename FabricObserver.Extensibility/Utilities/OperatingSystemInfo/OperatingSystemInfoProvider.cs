@@ -12,7 +12,9 @@ namespace FabricObserver.Observers.Utilities
     public abstract class OSInfoProvider
     {
         private static OSInfoProvider instance;
-        private static readonly object lockObj = new object();
+        private static readonly object _instanceLock = new object();
+        private static readonly object _loggerLock = new object();
+        private static Logger _logger = null;
 
         public static OSInfoProvider Instance
         {
@@ -20,7 +22,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 if (instance == null)
                 {
-                    lock (lockObj)
+                    lock (_instanceLock)
                     {
                         if (instance == null)
                         {
@@ -40,16 +42,36 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        protected Logger Logger
+        protected static Logger OSInfoLogger
         {
-            get;
-        } = new Logger("OSUtilities");
+            get
+            {
+                if (_logger == null)
+                {
+                    lock (_loggerLock)
+                    {
+                        if (_logger == null)
+                        {
+                            _logger = new Logger("OSInfo");
+                        }
+                    }
+                }
+
+                return _logger;
+            }
+        }
 
         /// <summary>
-        /// 
+        /// Gets OS physical memory information.
         /// </summary>
         /// <returns></returns>
-        public abstract (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetSystemMemoryInfo();
+        public abstract (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetSystemPhysicalMemoryInfo();
+
+        /// <summary>
+        /// Gets OS virtual memory information. Note, this is not yet implemented for Linux. Linux calls will just get TupleGetSystemPhysicalMemoryInfo() result for now.
+        /// </summary>
+        /// <returns>Tuple of total available to commit in gigabytes and currenty committed in megabytes.</returns>
+        public abstract (long TotalCommitGb, long CommittedInUseMb) TupleGetSystemCommittedMemoryInfo();
 
         /// <summary>
         /// Compute count of active TCP ports.
@@ -73,7 +95,7 @@ namespace FabricObserver.Observers.Utilities
         /// 
         /// </summary>
         /// <returns></returns>
-        public abstract (int LowPort, int HighPort) TupleGetDynamicPortRange();
+        public abstract (int LowPort, int HighPort, int NumberOfPorts) TupleGetDynamicPortRange();
 
         /// <summary>
         /// 

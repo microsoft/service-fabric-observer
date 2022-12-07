@@ -2,9 +2,8 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
 	<metadata minClientVersion="3.3.0">
 		<id>%PACKAGE_ID%</id>
-		<version>3.2.0</version>
+		<version>3.2.4</version>
 		<releaseNotes>
-
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
@@ -21,17 +20,17 @@
 			<group targetFramework="netstandard2.0">
 				<dependency id="Microsoft.Win32.Registry" version="5.0.0" />
 				<dependency id="Microsoft.ServiceFabric.Services" version="5.0.516" />
-				<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="5.0.0" />
-				<dependency id="Microsoft.ApplicationInsights" version="2.20.0" />
-				<dependency id="Microsoft.ApplicationInsights.DependencyCollector" version="2.20.0" />
-				<dependency id="Microsoft.ApplicationInsights.NLogTarget" version="2.20.0" />
-				<dependency id="Microsoft.ApplicationInsights.PerfCounterCollector" version="2.20.0" />
-				<dependency id="Microsoft.ApplicationInsights.WindowsServer" version="2.20.0" />
-				<dependency id="Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel" version="2.20.0" />
-				<dependency id="Microsoft.AspNet.WebApi.Client" version="5.2.9" />
-				<dependency id="Microsoft.Extensions.DependencyInjection" version="5.0.2" />
-				<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="5.0.0" />
-				<dependency id="NLog" version="5.0.0" />
+				<dependency id="Microsoft.ApplicationInsights" version="2.21.0" />
+				<dependency id="Microsoft.ApplicationInsights.DependencyCollector" version="2.21.0" />
+				<dependency id="Microsoft.ApplicationInsights.NLogTarget" version="2.21.0" />
+				<dependency id="Microsoft.ApplicationInsights.PerfCounterCollector" version="2.21.0" />
+				<dependency id="Microsoft.ApplicationInsights.WindowsServer" version="2.21.0" />
+				<dependency id="Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel" version="2.21.0" />
+				<dependency id="Microsoft.Extensions.DependencyInjection" version="7.0.0" />
+				<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="7.0.0" />
+				<dependency id="Newtonsoft.Json" version="13.0.2" />
+				<dependency id="NLog" version="5.1.0" />
+				<dependency id="System.Management" version="7.0.0" />
 			</group>
 		</dependencies>
 		<projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>

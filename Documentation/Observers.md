@@ -2,9 +2,10 @@
 
 Observers are low-impact, long-lived objects that perform specialied monitoring and reporting activities. Observers monitor and report, but they aren't designed to take action. Observers generally monitor appliations through their side effects on the node, like resource usage, but do not actually communicate with the applications. Observers report to SF Event Store (viewable through SFX) in warning and error states, and can use built-in AppInsights support to report there as well.  
 
-### Note: All of the observers that collect resource usage data can also emit telemetry: EventSource ETW and either LogAnalytics or ApplicationInsights diagnostic service calls. 
+### Note: All of the observers that collect resource usage data can also emit telemetry: [EventSource ETW](ETW.md) and either LogAnalytics or ApplicationInsights diagnostic service calls. 
 
-> AppInsights or LogAnalytics telemetry can be enabled in `Settings.xml` by providing your related authorization/identity information (keys).
+> AppInsights or LogAnalytics telemetry can be configured in `Settings.xml` by providing your related authorization/identity information (keys). You must enable ObserverManagerEnableTelemetryProvider app parameter in AppplicationManifest.xml, which you can also enable/disable with versionless
+> parameter-only application upgrades.
 
 ### Logging
 
@@ -168,128 +169,87 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 
 | Setting | Description |
 | :--- | :--- |
-| **targetApp** | App URI string to observe. Optional (Required if targetType not specified). | 
-| **targetAppType** | ApplicationType name (this is not a Uri format). FO will observe **all** app services belonging to it. Optional (Required if target not specified). | 
-| **appExcludeList** | This setting is only useful when targetApp is set to "*" or "All". A comma-separated list of app names (***URI format***) to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense) | 
-| **appIncludeList** | This setting is only useful when targetApp is set to "*" or "All". A comma-separated list of app names (***URI format***) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***.  | 
+| **targetApp** | App name to observe (either SF URI format or just the name. E.g., fabric:/FooApp or FooApp). Optional (Required if targetType not specified). | 
+| **targetAppType** | ApplicationType name. FO will observe **all** app services belonging to it. Optional (Required if target not specified). | 
+| **appExcludeList** | This setting is only useful when targetApp is set to "*" or "All". A comma-separated list of app names to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense) | 
+| **appIncludeList** | This setting is only useful when targetApp is set to "*" or "All". A comma-separated list of app names to ***include in observation***. Just omit the object or set value to "" to mean ***include all***.  | 
 | **serviceExcludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***exclude from observation***. Just omit the object or set value to "" to mean ***include all***. (excluding all does not make sense) |
 | **serviceIncludeList** | A comma-separated list of service names (***not URI format***, just the service name as we already know the app name URI) to ***include in observation***. Just omit the object or set value to "" to mean ***include all***. |  
-| **memoryErrorLimitMb** | Maximum service process total working set in Megabytes that should generate an Error |  
-| **memoryWarningLimitMb**| Minimum service process total working set in Megabytes that should generate a Warning | 
-| **memoryErrorLimitPercent** | Maximum percentage of memory used by an App's service process (integer) that should generate an Error |  
-| **memoryWarningLimitPercent** | Minimum percentage of memory used by an App's service process (integer) that should generate a Warning | 
-| **cpuErrorLimitPercent** | Maximum CPU percentage that should generate an Error |
-| **cpuWarningLimitPercent** | Minimum CPU percentage that should generate a Warning |
-| **dumpProcessOnError** | Instructs whether or not FabricObserver should dump your service process when service health is detected to be in an  Error (critical) state. |  
-| **networkErrorActivePorts** | Maximum number of established TCP ports in use by app process that will generate an Error. |
-| **networkWarningActivePorts** | Minimum number of established TCP ports in use by app process that will generate a Warning. |
-| **networkErrorEphemeralPorts** | Maximum number of ephemeral TCP ports (within a dynamic port range) in use by app process that will generate an Error. |
-| **networkWarningEphemeralPorts** | Minimum number of established TCP ports (within a dynamic port range) in use by app process that will generate a Warning. | 
-| **networkErrorEphemeralPortsPercent** | Maximum percentage of ephemeral TCP ports (within a dynamic port range) in use by app process that will generate an Error. |
-| **networkWarningEphemeralPortsPercent** | Minimum percentage of established TCP ports (within a dynamic port range) in use by app process that will generate a Warning. |   
-| **errorOpenFileHandles** | Maximum number of open file handles in use by an app process that will generate an Error. |  
-| **warningOpenFileHandles** | Minimum number of open file handles in use by app process that will generate a Warning. |  
-| **errorThreadCount** | Maximum number of threads in use by an app process that will generate an Error. |  
-| **warningThreadCount** | Minimum number of threads in use by app process that will generate a Warning.|  
+| **memoryErrorLimitMb** | Maximum service process Working Set (RAM, physical memory) in Megabytes that should generate an Error. Default type is Private Working Set. You can change this in ApplicationManifest.xml if you want full Working Set (private + shared physical memory). |  
+| **memoryWarningLimitMb**| Minimum service process Working Set (RAM, physical memory) in Megabytes that should generate a Warning. Default type is Private Working Set. You can change this in ApplicationManifest.xml if you want full Working Set (private + shared physical memory). | 
+| **memoryErrorLimitPercent** | Maximum percentage of total physical memory (RAM) used by a service process that should generate an Error. |  
+| **memoryWarningLimitPercent** | Minimum percentage of total physical memory (RAM) used by a service process that should generate a Warning. | 
+| **cpuErrorLimitPercent** | Maximum CPU usage by a service process as a percentage of total CPU that should generate an Error. |
+| **cpuWarningLimitPercent** | Minimum CPU usage by a service process as a percentage of total CPU that should generate a Warning. |
+| **dumpProcessOnError** | Instructs FabricObserver to dump a user service process when any related ***Error*** threshold has been reached. This is only supported on Windows today. |  
+| **dumpProcessOnWarning** | Instructs FabricObserver to dump a user service process when any related ***Warning*** threshold has been reached. This is only supported on Windows today. |  
+| **networkErrorActivePorts** | Maximum number of established TCP ports in use by service process that will generate an Error. |
+| **networkWarningActivePorts** | Minimum number of established TCP ports in use by service process that will generate a Warning. |
+| **networkErrorEphemeralPorts** | Maximum number of ephemeral TCP ports (within a dynamic port range) in use by service process that will generate an Error. |
+| **networkWarningEphemeralPorts** | Minimum number of established TCP ports (within a dynamic port range) in use by service process that will generate a Warning. | 
+| **networkErrorEphemeralPortsPercent** | Maximum percentage of ephemeral TCP ports (within a dynamic port range) in use by service process that will generate an Error. |
+| **networkWarningEphemeralPortsPercent** | Minimum percentage of established TCP ports (within a dynamic port range) in use by service process that will generate a Warning. |   
+| **errorOpenFileHandles** | Maximum number of open file handles in use by an service process that will generate an Error. |  
+| **warningOpenFileHandles** | Minimum number of open file handles in use by service process that will generate a Warning. |  
+| **errorThreadCount** | Maximum number of threads in use by an service process that will generate an Error. |  
+| **warningThreadCount** | Minimum number of threads in use by service process that will generate a Warning. |  
+| **errorPrivateBytesMb** | Windows-only. Maximum amount of Private Bytes (or Commit Charge) for a service process in megabytes that will generate an Error. Think of this as the total amount of private memory that the memory manager has committed for your service. |  
+| **warningPrivateBytesMb** | Windows-only. Minimum amount of Private Bytes (or Commit Charge) for a service process in megabytes that will generate a Warning. Think of this as the total amount of private memory that the memory manager has committed for your service. | 
+| **errorPrivateBytesPercent** | Windows-only. Maximum percentage of Private Bytes (or Commit Charge) for a service process that will generate an Error. Think of this as the total amount of private memory that the memory manager has committed for your service as a percentage of available commit. |  
+| **warningPrivateBytesPercent** | Windows-only. Minimum percentage of Private Bytes (or Commit Charge) for a service process that will generate a Warning. Think of this as the total amount of private memory that the memory manager has committed for your service as a percentage of available commit. | 
+| **warningRGMemoryLimitPercent** | Windows-only. Percentage of Resource Governance 'MemoryInMBLimit' value currently in use that will trigger a Warning for a service code package. This is how you override the default 90% threshold that AppObserver uses. You can override this value for specific or all services like any other AppObserver threshold. |  
 
-**Output** Log text(Error/Warning), Application Level Service Fabric Health Report (Error/Warning/Ok), ETW (EventSource), Telemetry (AppInsights/LogAnalytics)
+**Output** Local log text(Error/Warning/Info), Service entity Health Reports (Error/Warning/Ok), ETW (EventSource), Telemetry (AppInsights/LogAnalytics).
 
 AppObserver also supports non-JSON parameters for configuration unrelated to thresholds. Like all observers these settings are located in ApplicationManifest.xml to support versionless configuration updates via application upgrade. 
 
 #### Non-json settings set in ApplicationManifest.xml  
 
-**Version 3.1.18 introduced support for concurrent service process monitoring and reporting by AppObserver**. You can enable/disable this feature by setting the boolean value for AppObserverEnableConcurrentMonitoring. Note that this is disabled by default.
-If your compute configuration includes multiple CPUs (logical processors >= 4) and you monitor several services, then you should consider enabling this capability as it will significantly decrease the time it takes AppObserver to complete monitoring/reporting.
-If you do not have a capable CPU configuration, then enabling concurrent monitoring will not do anything.
-
 ```XML
-<Section Name="AppObserverConfiguration">
-    <!-- Required Parameter for all Observers: To enable or not enable, that is the question. -->
-    <Parameter Name="Enabled" Value="" MustOverride="true" />
-
-    <!-- Optional: Whether or not AppObserver should try to monitor service processes concurrently.
-         This can significantly decrease the amount of time it takes AppObserver to monitor and report on several application services. 
-         Note that this feature is only useful on capable CPU configurations (>= 4 logical processors). -->
-    <Parameter Name="EnableConcurrentMonitoring" Value="" MustOverride="true" />
-	
-    <!-- Optional: The maximum number of concurrent tasks to use when monitoring service processes in parallel. By default, AppObserver will set this to be the number of logical processors
-         present in the underlying (virtual) machine. Experiment with various values (including -1 which means unlimited) before you ship into production. 
-         This is especially important if you monitor lots of services (>= 100) and enable concurrent monitoring - 
-         and have capable hardware: >= 4 logical processors (none of this matters if this is not true.) -->
-    <Parameter Name="MaxConcurrentTasks" Value="" MustOverride="true" />
-	  
-    <!-- Required: Whether the Observer should send all of its monitoring data and Warnings/Errors to configured Telemetry service. -->
-    <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
-    
-    <!-- Required: Whether the Observer should write EventSource traces containing all of its monitoring data and Warnings/Errors to configured. -->
-    <Parameter Name="EnableEtw" Value="" MustOverride="true" />
-    
-    <!-- Optional: Enabling this will generate CSV files that contain resource metric data across runs. 
-         These files will be written to the DataLogPath supplied in ObserverManagerConfiguration section above. -->
-    <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
-	  
-    <!-- Optional: Whether or not AppObserver should monitor the percentage of maximum LVIDs in use by a stateful service that employs KVS (like SF Actor services). 
-         Enabling this will put the containing Application into Warning when a related service has consumed 75% of the Maximum number of LVIDs (which is int.MaxValue per process). -->
-    <Parameter Name="EnableKvsLvidMonitoring" Value="" MustOverride="true" />
-	  
-    <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
-         will be locally logged. This is the recommended setting. Note that file logging is generally
-         only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
-    <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
-    
-    <!-- Optional: The amount of time this observer conducts resource usage probing. 
-         Each observer has a default value set, but you should override by setting this
-         parameter to what makes sense for your service(s). Note that this value represents
-         the time spent monitoring for each service you specify in configuration. -->
-    <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
-
-    <!-- Optional: How often does the observer run? For example, CertificateObserver's RunInterval is set to 1 day 
-         in ApplicationManifest.xml, which means it won't run more than once a day (where day = 24 hours.). All observers support a RunInterval parameter. -->
-    <Parameter Name="RunInterval" Value="" MustOverride="true" />
-    
-    <!-- Required: The thresholds are held in a json file. Note that these thresholds apply to any service that is part 
-         of the Target Application, which is the logical container for service processes in Service Fabric parlance.-->
-    <Parameter Name="AppObserverDataFileName" Value="" MustOverride="true" />
-    
-    <!-- Optional: Some observers make async SF Api calls that are cluster-wide operations and can take time in large deployments. -->
-    <Parameter Name="ClusterOperationTimeoutSeconds" Value="" MustOverride="true" />
-    
-    <!-- Optional: You can choose between of List<T> or a CircularBufferCollection<T> for observer data storage.
-         It just depends upon how much data you are collecting per observer run and if you only care about
-         the most recent data (where number of most recent items in collection 
-         type equals the ResourceUsageDataCapacity you specify). -->
-    <Parameter Name="UseCircularBuffer" Value="" MustOverride="true" />
-    
-    <!-- Required-If UseCircularBuffer = True: This represents the number of items to hold in the data collection instance for
-         the observer. The default value for capacity is 30 if you omit the ResourceUsageDataCapacity parameter or use an invalid value
-         like 0 or a negative number (or omit the parameter altogether). -->
-    <Parameter Name="ResourceUsageDataCapacity" Value="" MustOverride="true" />
-    
-    <!-- AppObserver will automatically monitor a service process's descendants (max depth = 5, max procs = 50). You should only disable this if you know the services 
-         that you want AppObserver to monitor do not launch child processes. -->
-    <Parameter Name="EnableChildProcessMonitoring" Value="" MustOverride="true" />
-    
-    <!-- Max number of a service process's spawned (child) processes to report via telemetry (ordered by descending value - so, top n consumers).
-         The recommended value range for this setting is 5 to 10. See Observers.md for more details on AppObserver's child process monitoring. -->
-    <Parameter Name="MaxChildProcTelemetryDataCount" Value="" MustOverride="true" />
-    
-    <!-- dumpProcessOnError related configuration. -->
-    <!-- This setting will override dumpProcessOnError in AppObserver.config.json. This is a big red button to disable/enable the feature 
-         without having to deploy a new json config file for AppObserver as part of a configuration update or App redeployment. This feature will only work
-         if you have "dumpProcessOnError"=true setting for your app target(s) in AppObserver.config.json. 
-         AppObserver's dumpProcessOnError feature is currently only supported for Windows. -->
-    <Parameter Name="EnableProcessDumps" Value="" MustOverride="true" />
-    
-    <!-- Supported values are: Mini, MiniPlus, Full. Default is MiniPlus. Full can create giant files - be careful there.. -->
-    <Parameter Name="DumpType" Value="" MustOverride="true" />
-    
-    <!-- The maximum number of dumps per day per service process per metric. Default is 3. -->
-    <Parameter Name="MaxDumps" Value="" MustOverride="true" />
-    <Parameter Name="MaxDumpsTimeWindow" Value="" MustOverride="true" />
-	
-    <!-- Optional: monitor private working set only for target service processes (versus full working set, which is private + shared). The default setting in ApplicationManifest.xml is true. -->
-    <Parameter Name="MonitorPrivateWorkingSet" Value="" MustOverride="true" />
-  </Section>   
+<!-- AppObserver -->
+    <Parameter Name="AppObserverClusterOperationTimeoutSeconds" DefaultValue="120" />
+    <!-- Note: CircularBufferCollection is not thread safe for writes. If you enable this AND enable concurrent monitoring, a ConcurrentQueue will be used. -->
+    <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
+    <!-- Optional-If UseCircularBuffer = true -->
+    <Parameter Name="AppObserverResourceUsageDataCapacity" DefaultValue="" />
+    <!-- Configuration file name. -->
+    <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
+    <!-- Process family tree monitoring: AppObserver monitors the resource usage by child processes of target services.
+         NOTE: If you already know that your target services do *not* spawn child processes, then you should not enable this feature. -->
+    <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="false" />
+    <!-- The maximum number of child process data items to include in a sorted list of top n consumers for some metric, where n is the value of this setting. -->
+    <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
+    <!-- Service process dumps (dumpProcessOnError setting).
+         You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError to true in AppObserver.config.json
+         if you want AppObserver to dump service processes when an Error threshold has been breached for some observed metric (e.g., memoryErrorLimitPercent). -->
+    <Parameter Name="AppObserverEnableProcessDumps" DefaultValue="false" />
+    <!-- Supported values are: Mini, MiniPlus, Full. -->
+    <Parameter Name="AppObserverProcessDumpType" DefaultValue="MiniPlus" />
+    <!-- Max number of dumps to generate per service, per observed metric, within a supplied TimeSpan window. See AppObserverMaxDumpsTimeWindow. -->
+    <Parameter Name="AppObserverMaxProcessDumps" DefaultValue="3" />
+    <!-- Time window in which max dumps per process, per observed metric can occur. See AppObserverMaxProcessDumps. -->
+    <Parameter Name="AppObserverMaxDumpsTimeWindow" DefaultValue="04:00:00" />
+    <!-- Concurrency/Parallelism Support.
+         Note: This will only add real value (substantial) on machines with capable hardware (>= 8 logical processors). FO will not attempt to do anything concurrently if
+         the number of logical processors is less than 4, even if this is set to true. If you do run on capable hardware and want AppObserver to complete a run much faster than at sequential speed, then keep this enabled.
+         You can control the level of concurrency by setting the AppObserverMaxConcurrentTasks setting. -->
+    <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
+    <!-- The default value is 1/4 of detected logical processors (LPs). This would mean given 20 LPs, the number of threads that will be created will be at least 5 (and seldom more than that), if possible.
+         You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
+         eating some additional CPU and Memory to complete the parallelized monitoring on a node with lots of services (>= 100). The impact of parallelization on nodes with less than 100 services is minimal.
+         Please test and choose a value that suits your needs or simply leave this unset and go with the default. Please see Observers.md for more information. -->
+    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
+    <!-- KVS LVID Usage Monitoring - Windows-only.
+         NOTE: If you monitor stateful Actor services, then you should set this to true.
+         This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
+    <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
+    <!-- Process Working Set type for AppObserver to monitor. 
+         Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). 
+         NOTE: If you have *several* service processes of the **same name**, setting this to true will add *significant* time-to-completion and increased CPU usage (small, but more than necessary) to AppObserver. 
+         FO will automatically compute Shared + Private memory usage if it detects 50 or more same-named service processes, regardless of this setting.-->
+    <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
+    <!-- AppObserver can monitor services with resource governance limits set and put related services into Warning if they reach 90% of the specified limit (only Memory limit is supported in this release). -->
+    <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="true" />
 ```
 
 Example AppObserver Output (Warning - Ephemeral Ports Usage):  
@@ -546,9 +506,6 @@ This is very important because there is no "one threshold fits all" across warni
 By default, FabricObserver runs as NetworkUser on Windows and sfappsuser on Linux. These are non-privileged accounts and therefore for any service
 running as System or root, default FabricObserver can't monitor process behavior (this is always true on Windows). That said, there are only a few system
 services you would care about: Fabric.exe and FabricGateway.exe. Fabric.exe is generally the system service that your code can directly impact with respect to machine resource usage.
-
-**NOTE: Version 3.2.1 removes support for concurrent service process monitoring and reporting by FabricSystemObserver**. This feature is not worth the resource overhead given the limited number of processes FSO monitors.
-
 
 **Input - Settings.xml**: Only ClusterOperationTimeoutSeconds is set in Settings.xml.
 

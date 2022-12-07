@@ -32,16 +32,16 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         private readonly TelemetryClient telemetryClient;
         private readonly Logger logger;
 
-        public AppInsightsTelemetry(string key)
+        public AppInsightsTelemetry(string connString)
         {
-            if (string.IsNullOrWhiteSpace(key))
+            if (string.IsNullOrWhiteSpace(connString))
             {
-                throw new ArgumentException("Argument is empty", nameof(key));
+                throw new ArgumentException("Argument is empty", nameof(connString));
             }
 
             logger = new Logger("TelemetryLog");
             TelemetryConfiguration configuration = TelemetryConfiguration.CreateDefault();
-            configuration.InstrumentationKey = key; 
+            configuration.ConnectionString = connString;
             telemetryClient = new TelemetryClient(configuration);
 #if DEBUG
             // Expedites the flow of data through the pipeline.
@@ -53,15 +53,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// Gets a value indicating whether telemetry is enabled or not.
         /// </summary>
         private bool IsEnabled => telemetryClient.IsEnabled();
-
-        /// <summary>
-        /// Gets or sets the key.
-        /// </summary>
-        public string Key
-        {
-            get => telemetryClient?.InstrumentationKey;
-            set => telemetryClient.InstrumentationKey = value;
-        }
 
         /// <summary>
         /// Calls AI to track the availability.
@@ -183,9 +174,9 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
                     { "ApplicationTypeName", telemetryData.ApplicationType ?? string.Empty },
                     { "ServiceName", telemetryData.ServiceName ?? string.Empty },
-                    { "ReplicaRole", telemetryData.ReplicaRole.ToString() },
-                    { "ServiceKind", telemetryData.ServiceKind.ToString() },
-                    { "ServicePackageActivationMode", telemetryData.ServicePackageActivationMode?.ToString() ?? string.Empty },
+                    { "ReplicaRole", telemetryData.ReplicaRole ?? string.Empty },
+                    { "ServiceKind", telemetryData.ServiceKind ?? string.Empty },
+                    { "ServicePackageActivationMode", telemetryData.ServicePackageActivationMode ?? string.Empty },
                     { "ProcessId", telemetryData.ProcessId == 0 ? string.Empty : telemetryData.ProcessId.ToString() },
                     { "ProcessName", telemetryData.ProcessName },
                     { "ProcessStartTime", telemetryData.ProcessStartTime },
@@ -195,6 +186,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "Value", telemetryData.Value.ToString() },
                     { "PartitionId", telemetryData.PartitionId != null ? telemetryData.PartitionId.ToString() : string.Empty },
                     { "ReplicaId", telemetryData.ReplicaId.ToString() },
+                    { "RGEnabled", telemetryData.RGMemoryEnabled.ToString() },
+                    { "RGMemoryLimitMb", telemetryData.RGAppliedMemoryLimitMb.ToString() },
                     { "ObserverName", telemetryData.ObserverName },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
                     { "OS", telemetryData.OS ?? string.Empty }
@@ -258,8 +251,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
                     { "ApplicationTypeName", telemetryData.ApplicationType ?? string.Empty },
                     { "ServiceName", telemetryData.ServiceName ?? string.Empty },
-                    { "ReplicaRole", telemetryData.ReplicaRole.ToString() },
-                    { "ServiceKind", telemetryData.ServiceKind.ToString() },
+                    { "ReplicaRole", telemetryData.ReplicaRole ?? string.Empty },
+                    { "ServiceKind", telemetryData.ServiceKind ?? string.Empty },
                     { "ServicePackageActivationMode", telemetryData.ServicePackageActivationMode?.ToString() ?? string.Empty },
                     { "ProcessId", telemetryData.ProcessId == 0 ? string.Empty : telemetryData.ProcessId.ToString() },
                     { "ProcessName", telemetryData.ProcessName },
@@ -270,6 +263,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "Value", telemetryData.Value.ToString() },
                     { "PartitionId", telemetryData.PartitionId != null ? telemetryData.PartitionId.ToString() : string.Empty },
                     { "ReplicaId", telemetryData.ReplicaId.ToString() },
+                    { "RGEnabled", telemetryData.RGMemoryEnabled.ToString() },
+                    { "RGMemoryLimitMb", telemetryData.RGAppliedMemoryLimitMb.ToString() },
                     { "ObserverName", telemetryData.ObserverName },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
                     { "OS", telemetryData.OS ?? string.Empty },
@@ -318,7 +313,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                         { "ProcessName", telemData.ProcessName },
                         { "ChildProcessInfo", JsonConvert.SerializeObject(telemData.ChildProcessInfo) },
                         { "PartitionId", telemData.PartitionId },
-                        { "ReplicaId", telemData.ReplicaId },
+                        { "ReplicaId", telemData.ReplicaId.ToString() },
                         { "Source", ObserverConstants.AppObserverName },
                         { "NodeName", telemData.NodeName },
                         { "OS", OS }
@@ -553,7 +548,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                             long value,
                             CancellationToken cancellationToken)
         {
-            await ReportMetricAsync(role, id.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken).ConfigureAwait(false);
+            await ReportMetricAsync(role, id.ToString(), name, value, 1, value, value, value, 0.0, null, cancellationToken);
         }
 
         /// <summary>

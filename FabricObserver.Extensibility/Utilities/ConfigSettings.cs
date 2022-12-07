@@ -13,8 +13,6 @@ namespace FabricObserver.Observers.Utilities
 {
     public class ConfigSettings
     {
-        private readonly ConfigurationSection _section;
-
         public TimeSpan RunInterval
         {
             get; set;
@@ -69,6 +67,11 @@ namespace FabricObserver.Observers.Utilities
             private set;
         }
 
+        public ConfigurationSection ConfigSection
+        {
+            get; set;
+        }
+
         public ConfigSettings(ConfigurationSettings settings, string observerConfiguration)
         {
             if (settings == null || string.IsNullOrWhiteSpace(observerConfiguration) || !settings.Sections.Contains(observerConfiguration))
@@ -76,11 +79,11 @@ namespace FabricObserver.Observers.Utilities
                 return;
             }
 
-            _section = settings.Sections[observerConfiguration];
-            UpdateConfigSettings();
+            ConfigSection = settings.Sections[observerConfiguration];
+            SetConfigSettings();
         }
 
-        private void UpdateConfigSettings()
+        private void SetConfigSettings()
         {
             // Observer enabled?
             if (bool.TryParse(
@@ -165,11 +168,89 @@ namespace FabricObserver.Observers.Utilities
 
             // Resource usage data collection type.
             if (bool.TryParse(
-                     GetConfigSettingValue(
-                     ObserverConstants.UseCircularBufferParameter),
-                     out bool useCircularBuffer))
+                    GetConfigSettingValue(
+                    ObserverConstants.UseCircularBufferParameter),
+                    out bool useCircularBuffer))
             {
                 UseCircularBuffer = useCircularBuffer;
+            }
+        }
+
+        public void UpdateConfigSettings(IEnumerable<ConfigurationProperty> props)
+        {
+            foreach (var prop in props)
+            {
+                // Observer enabled?
+                if (prop.Name == ObserverConstants.ObserverEnabledParameter)    
+                {
+                    IsEnabled = bool.TryParse(prop.Value, out bool enabled) && enabled;
+                }
+
+                // TelemetryEnabled?
+                else if (prop.Name == ObserverConstants.ObserverTelemetryEnabledParameter)
+                {
+                    IsObserverTelemetryEnabled = bool.TryParse(prop.Value, out bool telemEnabled) && telemEnabled;
+                }
+
+                // Observer etw enabled?
+                else if (prop.Name == ObserverConstants.ObserverEtwEnabledParameter)
+                {
+                    IsObserverEtwEnabled = bool.TryParse(prop.Value, out bool etwEnabled) && etwEnabled;
+                }
+
+                // Verbose logging?
+                else if (prop.Name == ObserverConstants.EnableVerboseLoggingParameter)
+                {
+                    EnableVerboseLogging = bool.TryParse(prop.Value, out bool enableVerboseLogging) && enableVerboseLogging;
+                }
+
+                // CSV Logging?
+                else if (prop.Name == ObserverConstants.EnableCSVDataLogging)
+                {
+                    EnableCsvLogging = bool.TryParse(prop.Value, out bool enableCsvLogging) && enableCsvLogging;
+                }
+
+                // RunInterval?
+                else if (prop.Name == ObserverConstants.ObserverRunIntervalParameter)
+                {
+                    if (TimeSpan.TryParse(prop.Value, out TimeSpan runInterval))
+                    {
+                        RunInterval = runInterval;
+                    }
+                }
+
+                // Monitor duration.
+                else if (prop.Name == ObserverConstants.MonitorDurationParameter)
+                {
+                    if (TimeSpan.TryParse(prop.Value, out TimeSpan monitorDuration))
+                    {
+                        MonitorDuration = monitorDuration;
+                    }
+                }
+
+                // Async cluster operation timeout setting..
+                else if (prop.Name == ObserverConstants.AsyncClusterOperationTimeoutSeconds)
+                {
+                    if (int.TryParse(prop.Value, out int asyncOpTimeoutSeconds))
+                    {
+                        AsyncTimeout = TimeSpan.FromSeconds(asyncOpTimeoutSeconds);
+                    }
+                }
+
+                // Resource usage data collection item capacity.
+                else if (prop.Name == ObserverConstants.DataCapacityParameter)
+                {
+                    if (int.TryParse(prop.Value, out int dataCapacity))
+                    {
+                        DataCapacity = dataCapacity;
+                    }
+                }
+
+                // Resource usage data collection type.
+                if (prop.Name == ObserverConstants.UseCircularBufferParameter)
+                {
+                    UseCircularBuffer = bool.TryParse(prop.Value, out bool useCircularBuffer) && useCircularBuffer;
+                }
             }
         }
 
@@ -177,9 +258,9 @@ namespace FabricObserver.Observers.Utilities
         {
             try
             {
-                if (_section.Parameters.Any(p => p.Name == parameterName))
+                if (ConfigSection.Parameters.Any(p => p.Name == parameterName))
                 {
-                    return _section.Parameters[parameterName]?.Value;
+                    return ConfigSection.Parameters[parameterName]?.Value;
                 }
             }
             catch (Exception e) when (e is KeyNotFoundException || e is FabricElementNotFoundException)
