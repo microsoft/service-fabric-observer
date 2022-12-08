@@ -2,9 +2,7 @@
 
 #### Note that starting in version 2.2.0.831, ClusterObserver supports the FO plugin model. So, you can build cluster-level monitoring plugins should you so desire.
 
-1. Create a new .NET core library project. Your plugin csproj file should specify the same .net target version (netcoreapp3.1 or net6.0) as FabricObserver or as netstandard2.0. In general, it 
-is best that you target the same .net version as FabricObserver, as a simple rule. This is due to known issues using netstandard2.0 with the plugin loader library that FabricObserver employs.
-Note that these issues are rare, but can cause you problems in more complex build systems and plugin implementations.
+1. Create a new .net core library project. You can target netstandard2.0 or net6.0, depending upon what version of FO you are using. If you are deploying FO *.960 (built for .NET 6), then you can target net6.0. Else, target netstandard2.0.
 
 2. Install the latest Microsoft.ServiceFabricApps.FabricObserver.Extensibility nupkg from https://www.nuget.org/profiles/ServiceFabricApps into your plugin project.
 

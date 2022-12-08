@@ -1,7 +1,6 @@
 ﻿Your Observer plugins must live in this folder. 
 
-You must build your plugin as a .NET Standard 2.0 library.
-
+You can target netstandard2.0 or net6.0, depending upon what version of FO you are using. If you are deploying FO *.960 (built for .NET 6), then you can target net6.0. Else, target netstandard2.0.
 
 -- How to implement an observer plugin with our extensibility model --
 
