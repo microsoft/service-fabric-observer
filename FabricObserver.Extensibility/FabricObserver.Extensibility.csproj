@@ -5,8 +5,8 @@
 		<RootNamespace>FabricObserver</RootNamespace>
 		<Copyright>Copyright © 2022</Copyright>
 		<Product>FabricObserver</Product>
-		<Version>3.2.4</Version>
-		<FileVersion>3.2.4</FileVersion>
+		<Version>3.2.5</Version>
+		<FileVersion>3.2.5</FileVersion>
 	</PropertyGroup>
 	<ItemGroup>
 		<Compile Remove="Utilities\MemoryUsage\**" />
@@ -25,11 +25,12 @@
 		<PackageReference Include="Microsoft.ApplicationInsights" Version="2.21.0" />
 		<PackageReference Include="Microsoft.ApplicationInsights.NLogTarget" Version="2.21.0" />
 		<PackageReference Include="Microsoft.ServiceFabric.Services" Version="5.0.516" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="6.0.0" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="6.0.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
+		<PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
 		<PackageReference Include="NLog" Version="5.1.0" />
-		<PackageReference Include="System.Management" Version="6.0.0" />
+		<PackageReference Include="System.Management" Version="7.0.0" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />

@@ -148,7 +148,7 @@ So, based on the above configuration, when the number of open file handles held 
 
 **Resource Governance - Memory**  
 
-***Problem:*** I want FabricObserver to warn me when one of my RG-enabled (MemoryInMb or MemoryInMbLimit) services is approaching the absolute limit (that you specified in Megabytes, as required by SF RG configuration).  
+***Problem:*** I want FabricObserver to warn me when one of my RG-enabled (MemoryInMbLimit) services is approaching the absolute limit (that you specified in Megabytes, as required by SF RG configuration).  
 
 ***Solution:*** AppObserver is your friend. 
 
@@ -710,7 +710,7 @@ $appParams = @{ "FabricSystemObserverEnabled" = "true"; "FabricSystemObserverMem
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.2.2.960 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.2.5 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```  
 
 **Important**: This action will overwrite previous changes that were made this way. If you want to preserve any earlier changes, then you will need to

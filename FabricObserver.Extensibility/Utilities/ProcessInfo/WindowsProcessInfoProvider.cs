@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using Microsoft.Win32.SafeHandles;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -60,7 +59,7 @@ namespace FabricObserver.Observers.Utilities
                 return 0F;
             }
 
-            return GetProcessMemoryMbWin32(processId, getPrivateBytes:true);
+            return GetProcessMemoryMbWin32(processId, getPrivateBytes: true);
         }
 
         public override float GetProcessAllocatedHandles(int processId, string configPath = null)

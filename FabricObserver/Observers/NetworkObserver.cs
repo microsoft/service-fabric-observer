@@ -11,10 +11,9 @@ using System.Fabric.Health;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Net.NetworkInformation;
-using System.Net.Security;
 using System.Net.Sockets;
-using System.Security.Principal;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -415,53 +414,30 @@ namespace FabricObserver.Observers
                                 prefix = string.Empty;
                             }
 
-                            var request = (HttpWebRequest)WebRequest.Create(new Uri($"{prefix}{endpoint.HostName}:{endpoint.Port}"));
-                            request.AuthenticationLevel = AuthenticationLevel.MutualAuthRequired;
-                            request.ImpersonationLevel = TokenImpersonationLevel.Impersonation;
-                            request.Timeout = 60000;
-                            request.Method = "GET";
+                            var httpClient = new HttpClient();
+                            HttpResponseMessage response =
+                                httpClient.Send(
+                                    new HttpRequestMessage(
+                                    HttpMethod.Get, new Uri($"{prefix}{endpoint.HostName}:{endpoint.Port}")),
+                                    HttpCompletionOption.ResponseHeadersRead, Token);
 
-                            using var response = (HttpWebResponse)request.GetResponse();
-                            var status = response.StatusCode;
+                            HttpStatusCode status = response.StatusCode;
 
-                            // The target server responded with something.
-                            // It doesn't really matter what it "said".
-                            if (status == HttpStatusCode.OK || response.Headers?.Count > 0)
+                            // The target server responded with something. It doesn't really matter what it "said".
+                            if (status == HttpStatusCode.OK || response.Headers.Any())
                             {
                                 passed = true;
                             }
                         }
-                        catch (IOException ie)
+                        catch (Exception e) when (e is HttpRequestException || e is InvalidOperationException)
                         {
-                            if (ie.InnerException is ProtocolViolationException)
-                            {
-                                passed = true;
-                            }
+
                         }
-                        catch (WebException we)
+                        catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
                         {
-                            if (we.Status == WebExceptionStatus.ProtocolError
-                                || we.Status == WebExceptionStatus.TrustFailure
-                                || we.Status == WebExceptionStatus.SecureChannelFailure
-                                || we.Response?.Headers?.Count > 0)
-                            {
-                                // Could not establish trust or server doesn't want to hear from you, or...
-                                // Either way, the Server *responded*. It's reachable.
-                                // You could always add code to grab your app or cluster certs from local store
-                                // and apply it to the request. See CertificateObserver for how to get
-                                // both your App cert(s) and Cluster cert. The goal of NetworkObserver is
-                                // to test availability. Nothing more.
-                                passed = true;
-                            }
-                            else if (we.Status == WebExceptionStatus.SendFailure
-                                        && we.InnerException != null
-                                        && (we.InnerException.Message.ToLower().Contains("authentication")
-                                        || we.InnerException.HResult == -2146232800))
-                            {
-                                passed = true;
-                            }
+                            return;
                         }
-                        catch (Exception e) when (!(e is OperationCanceledException))
+                        catch (Exception e)
                         {
                             ObserverLogger.LogWarning(e.ToString());
 

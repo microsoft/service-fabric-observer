@@ -33,6 +33,7 @@ namespace FabricObserver.Observers
         private bool disposed;
         private ConcurrentDictionary<string, (int DumpCount, DateTime LastDumpDate)> ServiceDumpCountDictionary;
         private readonly object lockObj = new object();
+        private bool _isWindows;
 
         public static StatelessServiceContext FabricServiceContext
         {
@@ -419,6 +420,8 @@ namespace FabricObserver.Observers
                     GetSettingParameterValue(
                         ObserverConstants.ObserverManagerConfigurationSectionName,
                         ObserverConstants.ObserverWebApiEnabled), out bool obsWeb) && obsWeb && IsObserverWebApiAppInstalled();
+
+            _isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
 
         private void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
@@ -662,16 +665,16 @@ namespace FabricObserver.Observers
 
                     dumpFileName += $"_{DateTime.Now:ddMMyyyyHHmmssFFF}.dmp";
 
-                    // Check disk space availability before writing dump file.
-                    string driveName = DumpsPath.Substring(0, 2);
+                        // Check disk space availability before writing dump file.
+                        string driveName = DumpsPath.Substring(0, 2);
 
-                    if (DiskUsage.GetCurrentDiskSpaceUsedPercent(driveName) > 90)
-                    {
-                        ObserverLogger.LogWarning("Not enough disk space available for dump file creation.");
-                        return false;
-                    }
+                        if (DiskUsage.GetCurrentDiskSpaceUsedPercent(driveName) > 90)
+                        {
+                            ObserverLogger.LogWarning("Not enough disk space available for dump file creation.");
+                            return false;
+                        }
 
-                    dumpFilePath = Path.Combine(DumpsPath, dumpFileName);
+                        dumpFilePath = Path.Combine(DumpsPath, dumpFileName);
 
                     lock (lockObj)
                     {
@@ -1348,6 +1351,56 @@ namespace FabricObserver.Observers
             }
 
             data.ClearData();
+        }
+
+        private (string AppType, string AppTypeVersion) TupleGetApplicationTypeInfo(Uri appName)
+        {
+            try
+            {
+                var appList = FabricClientInstance.QueryManager.GetApplicationListAsync(appName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
+
+                if (appList?.Count > 0)
+                {
+                    string appType = appList[0].ApplicationTypeName;
+                    string appTypeVersion = appList[0].ApplicationTypeVersion;
+                    return (appType, appTypeVersion);
+                }
+            }
+            catch (AggregateException)
+            {
+
+            }
+            catch (FabricException)
+            {
+
+            }
+
+            return (null, null);
+        }
+
+        private (string ServiceType, string ServiceManifestVersion) TupleGetServiceTypeInfo(Uri appName, Uri serviceName)
+        {
+            try
+            {
+                var serviceList = FabricClientInstance.QueryManager.GetServiceListAsync(appName, serviceName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
+
+                if (serviceList?.Count > 0)
+                {
+                    string serviceType = serviceList[0].ServiceTypeName;
+                    string serviceManifestVersion = serviceList[0].ServiceManifestVersion;
+                    return (serviceType, serviceManifestVersion);
+                }
+            }
+            catch (AggregateException)
+            {
+
+            }
+            catch (FabricException)
+            {
+
+            }
+
+            return (null, null);
         }
 
         /// <summary>

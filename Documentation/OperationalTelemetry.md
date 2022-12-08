@@ -18,7 +18,7 @@ As with most of FabricObserver's application settings, you can also do this with
 Connect-ServiceFabricCluster ...
 
 $appParams = @{ "ObserverManagerEnableOperationalFOTelemetry" = "false"; }
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationParameter $appParams -ApplicationTypeVersion 3.2.1 -UnMonitoredAuto
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationParameter $appParams -ApplicationTypeVersion 3.2.5 -UnMonitoredAuto
  
 ```
 
@@ -44,12 +44,12 @@ Here is a full example of exactly what is sent in one of these telemetry events,
     "ClusterId": "00000000-1111-1111-0000-00f00d000d",
     "ClusterType": "SFRP",
     "NodeNameHash": "3e83569d4c6aad78083cd081215dafc81e5218556b6a46cb8dd2b183ed0095ad",
-    "FOVersion": "3.2.4.831",
+    "FOVersion": "3.2.5",
     "HasPlugins": "False",
     "ParallelCapable": "True",
-    "SFRuntimeVersion":"8.2.1363.9590"
+    "SFRuntimeVersion":"9.0.1028.9590"
     "UpTime": "1.00:30:18.8058379",
-    "Timestamp": "2022-07-14T02:45:28.9827940Z",
+    "Timestamp": "2022-07-08T02:45:28.9827940Z",
     "OS": "Windows",
     "EnabledObserverCount": 5,
     "AppObserverTotalMonitoredApps": 5,

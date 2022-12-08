@@ -2345,8 +2345,8 @@ namespace FabricObserverTests
                 await Task.Delay(TimeSpan.FromSeconds(10));
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(10));
             using var foEtwListener = new FabricObserverEtwListener(_logger);
+
             await AppObserver_ObserveAsync_Successful_IsHealthy();
 
             List<List<ChildProcessTelemetryData>> childProcessTelemetryData = foEtwListener.foEtwConverter.ChildProcessTelemetry;
@@ -2592,7 +2592,6 @@ namespace FabricObserverTests
                 await Task.Delay(TimeSpan.FromSeconds(10));
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(10));
             using var foEtwListener = new FabricObserverEtwListener(_logger);
             await AppObserver_ObserveAsync_PrivateBytes_Successful_WarningsGenerated();
             List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;

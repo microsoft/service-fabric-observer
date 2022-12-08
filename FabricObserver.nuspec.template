@@ -2,16 +2,9 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
 	<metadata minClientVersion="3.3.0">
 		<id>%PACKAGE_ID%</id>
-		<version>3.2.4.831</version>
+		<version>3.2.5</version>
 		<releaseNotes>
-**Note: this is the last version of FabricObserver that will support .NET Core 3.1 and Service Fabric runtime 8.x. Going forward, there will only be one release and it will target .NET 6 and Service Fabric runtime versions 9 and higher.**
-
-- Modifications to how AppObserver detects and monitors Guest Executable services and service helper code packages.
-- Bug fix: Guest Executable service data contains the usual information - partition id, replica id, etc.
-- Bug fix: Service helper code package data contains related information about the primary service to which it belongs - partition id, replica id, Service Name, etc.
-- Removed support for ApplicationInsights InstrumentationKey usage. Instead, you must use the full Connection String. This is because ApplicationInsights has deprecated support for supplying only an InstrumentatioKey for authentication/identification to its service. You will see this change reflected in FO's Settings.xml.
-- Performance improvements.
-- Updated nuget package dependencies to latest versions, where possible.
+- Updated RG Memory impl.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
@@ -20,14 +13,26 @@
 		<icon>icon.png</icon>
 		<readme>fonuget.md</readme>
 		<language>en-US</language>
-		<description>This package contains the FabricObserver Application (built for .NET Core 3.1, SF Runtime 8.0 and above), a highly configurable and extensible resource usage watchdog service that is designed to be run in Azure Service Fabric Windows and Linux clusters. This package contains the entire application and can be used to build .NET Standard 2.0 observer plugins.</description>
+		<description>This package contains the FabricObserver Application (built for .NET 6.0, SF Runtime 9.0 and above), a highly configurable and extensible resource usage watchdog service that is designed to be run in Azure Service Fabric Windows and Linux clusters. This package contains the entire application and can be used to build .NET Standard 2.0 observer plugins.</description>
 		<contentFiles>
 			<files include="**" buildAction="None" copyToOutput="true" />
 		</contentFiles>
 		<dependencies>
 			<group targetFramework="netstandard2.0"></group>
 			<group targetFramework="netcoreapp3.1">
+				<dependency id="Microsoft.Win32.Registry" version="5.0.0" />
 				<dependency id="Microsoft.ServiceFabric.Services" version="5.0.516" />
+				<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="5.0.0" />
+				<dependency id="Microsoft.ApplicationInsights" version="2.20.0" />
+				<dependency id="Microsoft.ApplicationInsights.DependencyCollector" version="2.20.0" />
+				<dependency id="Microsoft.ApplicationInsights.NLogTarget" version="2.20.0" />
+				<dependency id="Microsoft.ApplicationInsights.PerfCounterCollector" version="2.20.0" />
+				<dependency id="Microsoft.ApplicationInsights.WindowsServer" version="2.20.0" />
+				<dependency id="Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel" version="2.20.0" />
+				<dependency id="Microsoft.AspNet.WebApi.Client" version="5.2.9" />
+				<dependency id="Microsoft.Extensions.DependencyInjection" version="5.0.2" />
+				<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="5.0.0" />
+				<dependency id="NLog" version="5.0.0" />
 			</group>
 		</dependencies>
 		<projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>

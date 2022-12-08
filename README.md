@@ -1,12 +1,9 @@
-## FabricObserver [3.2.4.831](https://github.com/microsoft/service-fabric-observer/releases/tag/65632410)
-#### NOTE: This version targets .NET Core 3.1 and requires SF Runtime >= 8.0 
+## FabricObserver 3.2.5
 
-**This is the last version of FabricObserver that will target .NET Core 3.1. If you are running Service Fabric version 9 or higher, then you should use FabricObserver [version 3.2.4.960](https://github.com/microsoft/service-fabric-observer/releases/tag/65633122).**
+[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-observer%2Fnet6%2FDocumentation%2FDeployment%2Fservice-fabric-observer.json)
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-observer%2Fmain%2FDocumentation%2FDeployment%2Fservice-fabric-observer.json)
-
-[**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a complete implementation of a production-ready, generic resource usage watchdog service written as a stateless, singleton Service Fabric .NET Core 3.1 application that 
-1. Monitors a broad range of machine resources that tend to be very important to all Service Fabric applications, like disk space consumption, CPU use, memory use (working set, private bytes), ephemeral TCP port use, threads, handles, and app/cluster certificate health out-of-the-box.
+[**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a complete implementation of a production-ready, generic resource usage watchdog service written as a stateless, singleton Service Fabric .NET 6 application that 
+1. Monitors a broad range of machine resources that tend to be very important to all Service Fabric applications, like disk space consumption, CPU use, memory use, endpoint availability, ephemeral TCP port use, and app/cluster certificate health out-of-the-box.
 2. Runs on multiple versions of Windows Server and Ubuntu 16.04 and 18.04
 3. Provides [an easy-to-use extensibility model](/Documentation/Plugins.md) for creating [custom Observers](/SampleObserverPlugin) out of band (so, you don't need to clone the repo to build an Observer). See [ContainerObserver](https://github.com/GitTorre/ContainerObserver) for a complete plugin impl that extends FO with SF container app resource monitoring and alerting (note that this observer is built into FO as of version 3.1.17).
 4. Supports [Configuration Setting Application Updates](/Documentation/Using.md#parameterUpdates) for any observer for any supported setting. 
@@ -14,12 +11,7 @@
 
 FO is a Stateless Service Fabric Application composed of a single service that runs on every node in your cluster, so it can be deployed and run alongside your applications without any changes to them. Each FO service instance knows nothing about other FO instances in the cluster, by design. 
 
-Note that in version 3.1.18 and higher, AppObserver and ContainerObserver can run their monitoring loops in parallel on capable hardware (logical CPU processors >= 4).
-This feature is enabled by default. You can disable/enable with parameter-only, versionless application upgrades with the related settings found in ApplicationManifest.xml under the AppObserver, ContainerObserver and FabricSystemObserver settings sections.
-Enabling this feature greatly decreases the time it takes for an observer running on capable hardware to complete monitoring. This is especially important if you monitor a large number of services.
-
-
-> Running side-by-side with existing monitoring services, FO provides useful and timely health information for the nodes (VMs), apps, and services that make up your Service Fabric deployment. 
+> Running side-by-side with existing monitoring services, FabricObserver provides useful and timely health information for the nodes (VMs), apps, and services that make up your Service Fabric deployment. 
 
 
 [Read more about Service Fabric health monitoring](https://docs.microsoft.com/azure/service-fabric/service-fabric-health-introduction) 
@@ -90,7 +82,7 @@ see [FOAzurePipeline.yaml](/FOAzurePipeline.yaml) for msazure devops build tasks
 .net6 installed (if you deploy VM images from Azure gallery, then they will not have .net6 installed), then you must deploy the SelfContained package.</strong>
 
 ### Deploy FabricObserver
-**Note: You must deploy this version (3.2.4.831) to clusters that are running SF 8.0 and above. This version also requires .NET Core 3.1.**
+**Note: You must deploy this version (3.2.5) to clusters that are running SF 9.0 and above. This version also requires .NET 6.**
 You can deploy FabricObserver (and ClusterObserver) using Visual Studio (if you build the sources yourself), PowerShell or ARM. Please note that this version of FabricObserver no longer supports the DefaultServices node in ApplicationManifest.xml.
 This means that should you deploy using PowerShell, you must create an instance of the service as the last command in your script. This was done to support ARM deployment, specifically.
 The StartupServices.xml file you see in the FabricHealerApp project now contains the service information once held in ApplicationManifest's DefaultServices node. Note that this information is primarily useful for deploying from Visual Studio.
@@ -101,7 +93,7 @@ Your ARM template or PowerShell script will contain all the information necessar
 
 #### Deploy FabricObserver using Client (PowerShell)  
 
-After you adjust configuration settings to meet to your needs (this means changing settings in Settings.xml for ObserverManager (ObserverManagerConfiguration section) and in ApplicationManifest.xml for observers). 
+After you adjust configuration settings to meet to your needs (this means changing settings in Settings.xml for ObserverManager (ObserverManagerConfiguration section) and in ApplicationManifest.xml for observers).
 
 **NOTE: In version 3.2.0 and higher and you must create a service instance after you create the application.**
 
@@ -130,15 +122,15 @@ Connect-ServiceFabricCluster -ConnectionEndpoint @('sf-win-cluster.westus2.cloud
 
 #Copy $path contents (FO app package) to server:
 
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FO321831 -TimeoutSec 1800
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FO32960 -TimeoutSec 1800
 
 #Register FO ApplicationType:
 
-Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO321831
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO32960
 
 #Create FO application (if not already deployed at lesser version):
 
-New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.2.4.831   
+New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.2.5   
 
 #Create the Service instances (-1 means all nodes, which is what is required for FO):  
 
@@ -146,7 +138,7 @@ New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName f
 
 #OR if updating existing version:  
 
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.2.4.831 -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.2.5 -Monitored -FailureAction rollback
 ```  
 
 ## Configuration Change Support

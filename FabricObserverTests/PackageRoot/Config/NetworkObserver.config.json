@@ -10,7 +10,17 @@
     ]
   },
   {
-    "targetApp": "fabric:/FabricObserver",
+    "targetApp": "fabric:/TestApp42",
+    "endpoints": [
+      {
+        "hostname": "bing.com",
+        "port": 443,
+        "protocol": "http"
+      }
+    ]
+  },
+  {
+    "targetApp": "fabric:/HealthMetrics",
     "endpoints": [
       {
         "hostname": "yahoo.com",

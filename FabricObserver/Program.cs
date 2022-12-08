@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Diagnostics;
 using System.Threading;
 using Microsoft.ServiceFabric.Services.Runtime;
 using FabricObserver.Observers.Utilities.Telemetry;
@@ -21,7 +20,7 @@ namespace FabricObserver
             try
             {
                 ServiceRuntime.RegisterServiceAsync("FabricObserverType", context => new FabricObserverService(context)).GetAwaiter().GetResult();
-                ServiceEventSource.Current?.ServiceTypeRegistered(Process.GetCurrentProcess().Id, nameof(FabricObserver));
+                ServiceEventSource.Current?.ServiceTypeRegistered(Environment.ProcessId, nameof(FabricObserver));
 
                 // Prevents this host process from terminating so services keep running.
                 Thread.Sleep(Timeout.Infinite);
