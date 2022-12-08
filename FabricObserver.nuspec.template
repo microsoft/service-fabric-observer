@@ -4,8 +4,14 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.4.831</version>
 		<releaseNotes>
-- Updated RG Memory impl.
-- Bug fixes.
+**Note: this is the last version of FabricObserver that will support .NET Core 3.1 and Service Fabric runtime 8.x. Going forward, there will only be one release and it will target .NET 6 and Service Fabric runtime versions 9 and higher.**
+
+- Modifications to how AppObserver detects and monitors Guest Executable services and service helper code packages.
+- Bug fix: Guest Executable service data contains the usual information - partition id, replica id, etc.
+- Bug fix: Service helper code package data contains related information about the primary service to which it belongs - partition id, replica id, Service Name, etc.
+- Removed support for ApplicationInsights InstrumentationKey usage. Instead, you must use the full Connection String. This is because ApplicationInsights has deprecated support for supplying only an InstrumentatioKey for authentication/identification to its service. You will see this change reflected in FO's Settings.xml.
+- Performance improvements.
+- Updated nuget package dependencies to latest versions, where possible.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
