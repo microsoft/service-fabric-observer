@@ -11,20 +11,26 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Management;
-using System.Net;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using static FabricObserver.Observers.Utilities.NativeMethods;
 
 namespace FabricObserver.Observers.Utilities
 {
     public class WindowsInfoProvider : OSInfoProvider
     {
         private const string TcpProtocol = "tcp";
-        private const int netstatOutputMaxCacheTimeSeconds = 15;
+        private const int portDataMaxCacheTimeSeconds = 45;
         private const int dynamicRangeMaxCacheTimeMinutes = 15;
-        private readonly ConcurrentDictionary<int, string> netstatOutput;
+        private readonly bool useNetstat = true;
+
+        // Win32 Impl (iphlpapi.dll pInvoke call, fills this cache. *Does not include BOUND state records*).
+        private readonly List<(ushort LocalPort, uint OwningProcessId, MIB_TCP_STATE State)> win32TcpConnInfo = null;
+
+        // Netstat Impl (launches console, calls netstat -qno -p tcp, parses output, fills this cache).
+        private readonly ConcurrentDictionary<int, string> netstatOutput = null;
         private readonly object _lock = new object();
         private (int LowPort, int HighPort, int NumberOfPorts) windowsDynamicPortRange = (-1, -1, 0);
         private DateTime LastDynamicRangeCacheUpdate = DateTime.MinValue;
@@ -33,7 +39,15 @@ namespace FabricObserver.Observers.Utilities
         public WindowsInfoProvider()
         {
             windowsDynamicPortRange = TupleGetDynamicPortRange();
-            netstatOutput = new ConcurrentDictionary<int, string>();
+
+            if (useNetstat)
+            {
+                netstatOutput = new ConcurrentDictionary<int, string>();
+            }
+            else
+            {
+                win32TcpConnInfo = new List<(ushort LocalPort, uint OwningProcessId, MIB_TCP_STATE State)>();
+            }
         }
 
         public override Task<OSInfo> GetOSInfoAsync(CancellationToken cancellationToken)
@@ -122,12 +136,14 @@ namespace FabricObserver.Observers.Utilities
         // Not implemented. No Windows support.
         public override int GetMaximumConfiguredFileHandlesCount()
         {
+            OSInfoLogger.LogWarning("Called GetMaximumConfiguredFileHandlesCount on Windows. This is unsupported. Returning -1.");
             return -1;
         }
 
         // Not implemented. No Windows support.
         public override int GetTotalAllocatedFileHandlesCount()
         {
+            OSInfoLogger.LogWarning("Called GetTotalAllocatedFileHandlesCount on Windows. This is unsupported. Returning -1.");
             return -1;
         }
 
@@ -256,6 +272,11 @@ namespace FabricObserver.Observers.Utilities
                                         return (lowPortRange, highPortRange, count);
                                     }
                                 }
+                                else
+                                {
+                                    OSInfoLogger.LogWarning("netsh call did not complete in time (60s). Killing process. Unable to determine dynamic range.");
+                                    process.Kill();
+                                }
                             }
                             catch (Exception e) when (
                                              e is ArgumentException ||
@@ -265,7 +286,7 @@ namespace FabricObserver.Observers.Utilities
                                              e is Win32Exception ||
                                              e is SystemException)
                             {
-                                OSInfoLogger.LogWarning($"Handled Exception in TupleGetDynamicPortRange (will return (-1, -1)):{Environment.NewLine}{e.Message}");
+                                OSInfoLogger.LogWarning($"Handled Exception in TupleGetDynamicPortRange (will return (-1, -1, 0)): {e.Message}");
                             }
                         }
                     }
@@ -277,15 +298,57 @@ namespace FabricObserver.Observers.Utilities
 
         public override int GetActiveEphemeralPortCount(int processId = -1, string configPath = null)
         {
+            int count = 0;
+
+            try
+            {
+                if (useNetstat)
+                {
+                    // This involves creating a process, so apply retries.
+                    count = Retry.Do(() => GetTcpPortCountNetstat(processId, ephemeral: true), TimeSpan.FromSeconds(3), CancellationToken.None);
+                }
+                else
+                {
+                    count = GetTcpPortCountWin32(processId, ephemeral: true);
+                }
+            }
+            catch (AggregateException ae)
+            {
+                OSInfoLogger.LogWarning($"Failed all retries (3) for GetActiveEphemeralPortCount (will return -1): {ae.Flatten().Message}");
+                count = -1;
+            }
+            catch (Win32Exception we)
+            {
+                OSInfoLogger.LogWarning($"Failed GetActiveEphemeralPortCount with Win32 error (will return -1):{Environment.NewLine}{we}");
+                count = -1;
+            }
+
+            return count;
+        }
+
+        public override int GetActiveTcpPortCount(int processId = -1, string configPath = null)
+        {
             int count;
 
             try
             {
-                count = Retry.Do(() => GetTcpPortCountNetstat(processId, ephemeral: true), TimeSpan.FromSeconds(3), CancellationToken.None);
+                if (useNetstat)
+                {
+                    count = Retry.Do(() => GetTcpPortCountNetstat(processId, ephemeral: false), TimeSpan.FromSeconds(3), CancellationToken.None);
+                }
+                else
+                {
+                    count = GetTcpPortCountWin32(processId, ephemeral: false);
+                }
             }
             catch (AggregateException ae)
             {
-                OSInfoLogger.LogWarning($"Failed all retries (3) for GetActiveEphemeralPortCount (will return -1):{Environment.NewLine}{ae.Flatten().Message}");
+                OSInfoLogger.LogWarning($"Failed all retries (3) for GetActivePortCount (will return -1):{Environment.NewLine}{ae.Flatten().Message}");
+                count = -1;
+            }
+            catch (Win32Exception we)
+            {
+                OSInfoLogger.LogWarning($"GetActiveTcpPortCount failed with Win32 error (will return -1):{Environment.NewLine}{we}");
                 count = -1;
             }
 
@@ -308,36 +371,19 @@ namespace FabricObserver.Observers.Utilities
 
             if (totalEphemeralPorts > 0)
             {
-                usedPct = (double) (count* 100) / totalEphemeralPorts;
+                usedPct = (double)(count * 100) / totalEphemeralPorts;
             }
 
             return usedPct;
         }
 
-        public override int GetActiveTcpPortCount(int processId = -1, string configPath = null)
-        {
-            int count;
-
-            try
-            {
-                count = Retry.Do(() => GetTcpPortCountNetstat(processId, ephemeral: false), TimeSpan.FromSeconds(3), CancellationToken.None);
-            }
-            catch (AggregateException ae)
-            {
-                OSInfoLogger.LogWarning($"Failed all retries (3) for GetActivePortCount (will return -1):{Environment.NewLine}{ae.Flatten().Message}");
-                count = -1;
-            }
-
-            return count;
-        }
-
         private int GetTcpPortCountNetstat(int processId = -1, bool ephemeral = false)
         {
-            if (DateTime.UtcNow.Subtract(LastCacheUpdate) > TimeSpan.FromSeconds(netstatOutputMaxCacheTimeSeconds))
+            if (DateTime.UtcNow.Subtract(LastCacheUpdate) > TimeSpan.FromSeconds(portDataMaxCacheTimeSeconds))
             {
                 lock (_lock)
                 {
-                    if (DateTime.UtcNow.Subtract(LastCacheUpdate) > TimeSpan.FromSeconds(netstatOutputMaxCacheTimeSeconds))
+                    if (DateTime.UtcNow.Subtract(LastCacheUpdate) > TimeSpan.FromSeconds(portDataMaxCacheTimeSeconds))
                     {
                         RefreshNetstatData();
                         windowsDynamicPortRange = TupleGetDynamicPortRange();
@@ -362,41 +408,107 @@ namespace FabricObserver.Observers.Utilities
                     continue;
                 }
 
-                var portInfo = TupleGetLocalPortPidPairFromNetStatString(portRow);
+                var (LocalPort, OwningProcessId) = TupleGetLocalPortPidPairFromNetStatString(portRow);
 
-                if (portInfo.LocalPort == -1 || portInfo.OwningProcessId == -1)
+                if (LocalPort == -1 || OwningProcessId == -1)
                 {
                     continue;
                 }
 
                 if (processId > 0)
                 {
-                    if (processId != portInfo.OwningProcessId)
+                    if (processId != OwningProcessId)
                     {
                         continue;
                     }
 
                     // Only add unique pid (if supplied in call) and local port data to list.
-                    if (tempLocalPortData.Any(t => t.Pid == portInfo.OwningProcessId && t.Port == portInfo.LocalPort))
+                    if (tempLocalPortData.Any(t => t.Pid == OwningProcessId && t.Port == LocalPort))
                     {
                         continue;
                     }
                 }
                 else
                 {
-                    if (tempLocalPortData.Any(t => t.Port == portInfo.LocalPort))
+                    if (tempLocalPortData.Any(t => t.Port == LocalPort))
                     {
                         continue;
                     }
                 }
 
                 // Ephemeral ports query?
-                if (ephemeral && (portInfo.LocalPort < lowPortRange || portInfo.LocalPort > highPortRange))
+                if (ephemeral && (LocalPort < lowPortRange || LocalPort > highPortRange))
                 {
                     continue;
                 }
 
-                tempLocalPortData.Add((portInfo.OwningProcessId, portInfo.LocalPort));
+                tempLocalPortData.Add((OwningProcessId, LocalPort));
+            }
+
+            int count = tempLocalPortData.Count;
+            tempLocalPortData.Clear();
+            tempLocalPortData = null;
+
+            return count;
+        }
+
+        private int GetTcpPortCountWin32(int processId = -1, bool ephemeral = false)
+        {
+            if (DateTime.UtcNow.Subtract(LastCacheUpdate) > TimeSpan.FromSeconds(portDataMaxCacheTimeSeconds))
+            {
+                lock (_lock)
+                {
+                    if (DateTime.UtcNow.Subtract(LastCacheUpdate) > TimeSpan.FromSeconds(portDataMaxCacheTimeSeconds))
+                    {
+                        UpdateWin32TcpConnectionCache();
+                        windowsDynamicPortRange = TupleGetDynamicPortRange();
+                    }
+                }
+            }
+
+            var tempLocalPortData = new List<(int Port, uint Pid)>();
+            string findStrProc = string.Empty;
+            string error = string.Empty;
+            (int lowPortRange, int highPortRange) = (-1, -1);
+
+            if (ephemeral)
+            {
+                (lowPortRange, highPortRange, _) = windowsDynamicPortRange;
+            }
+
+            foreach (var (LocalPort, OwningProcessId, State) in win32TcpConnInfo)
+            {
+                int localPort = LocalPort;
+                uint pid = OwningProcessId;
+
+                if (processId > 0)
+                {
+                    if (processId != pid)
+                    {
+                        continue;
+                    }
+
+                    // Only add unique pid (if supplied in call) and local port data to list.
+                    if (tempLocalPortData.Any(t => t.Port == localPort && t.Pid == pid))
+                    {
+                        continue;
+                    }
+                }
+                else
+                {
+                    if (tempLocalPortData.Any(t => t.Port == localPort))
+                    {
+                        continue;
+                    }
+                }
+
+                // Ephemeral ports query?
+                if (ephemeral && (localPort < lowPortRange || localPort > highPortRange))
+                {
+                    continue;
+                }
+
+                tempLocalPortData.Add((localPort, pid));
             }
 
             int count = tempLocalPortData.Count;
@@ -457,31 +569,45 @@ namespace FabricObserver.Observers.Utilities
                 process.BeginErrorReadLine();
                 process.BeginOutputReadLine();
 
-                process.WaitForExit();
-                int exitStatus = process.ExitCode;
-
-                if (exitStatus == 0)
+                if (process.WaitForExit(120000))
                 {
-                    LastCacheUpdate = DateTime.UtcNow;
-                    return;
+                    int exitStatus = process.ExitCode;
+
+                    if (exitStatus == 0)
+                    {
+                        LastCacheUpdate = DateTime.UtcNow;
+                        return;
+                    }
+
+                    // There was an error associated with the non-zero exit code.
+                    string msg = $"RefreshNetstatData: netstat -qno -p {TcpProtocol} exited with {exitStatus}: {error}";
+                    OSInfoLogger.LogWarning(msg);
+
+                    // Handled by Retry.Do.
+                    throw new RetryableException(msg);
                 }
-
-                // There was an error associated with the non-zero exit code.
-                string msg = $"RefreshNetstatData: netstat -qno -p {TcpProtocol} exited with {exitStatus}: {error}";
-                OSInfoLogger.LogWarning(msg);
-
-                // Handled by Retry.Do.
-                throw new RetryableException(msg);
+                else
+                {
+                    OSInfoLogger.LogWarning("netstat call did not complete in time (120s). Killing process. Unable to complete connection data cache refresh.");
+                    process.Kill();
+                }
             }
             catch (Exception ex) when (ex is Win32Exception || ex is InvalidOperationException || ex is NotSupportedException || ex is SystemException)
             {
-                OSInfoLogger.LogWarning($"Unable to get netstat information:{Environment.NewLine}{ex}");
+                OSInfoLogger.LogWarning($"Unable to get netstat information: {ex.Message}");
             }
             finally
             {
                 process?.Dispose();
                 process = null;
             }
+        }
+
+        private void UpdateWin32TcpConnectionCache()
+        {
+            win32TcpConnInfo.Clear();
+            win32TcpConnInfo.AddRange(GetAllTcpConnections());
+            LastCacheUpdate = DateTime.UtcNow;
         }
 
         /// <summary>
@@ -498,8 +624,8 @@ namespace FabricObserver.Observers.Utilities
                     return (-1, -1);
                 }
 
-                TcpPortInfo tcpPortInfo = new TcpPortInfo(netstatOutputLine);
-                return (tcpPortInfo.LocalPort, tcpPortInfo.ProcessId);
+                var tcpPortInfo = new TcpPortInfo(netstatOutputLine);
+                return (tcpPortInfo.LocalPort, tcpPortInfo.OwningProcessId);
             }
             catch (Exception e) when (e is ArgumentException || e is FormatException)
             {

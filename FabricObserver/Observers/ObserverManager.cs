@@ -49,7 +49,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.2.3.831";
+        private const string InternalVersionNumber = "3.2.4.831";
 
         private bool RuntimeTokenCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;
@@ -227,7 +227,7 @@ namespace FabricObserver.Observers
                     {
                         try
                         {
-                            using var telemetryEvents = new TelemetryEvents(FabricServiceContext);
+                            using var telemetryEvents = new TelemetryEvents(nodeName);
                             var foData = GetFabricObserverInternalTelemetryData();
 
                             if (foData != null)
@@ -327,7 +327,7 @@ namespace FabricObserver.Observers
                 {
                     try
                     {
-                        using var telemetryEvents = new TelemetryEvents(FabricServiceContext);
+                        using var telemetryEvents = new TelemetryEvents(nodeName);
                         var data = new CriticalErrorEventData
                         {
                             Source = ObserverConstants.ObserverManagerName,

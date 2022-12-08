@@ -32,16 +32,16 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         private readonly TelemetryClient telemetryClient;
         private readonly Logger logger;
 
-        public AppInsightsTelemetry(string key)
+        public AppInsightsTelemetry(string connString)
         {
-            if (string.IsNullOrWhiteSpace(key))
+            if (string.IsNullOrWhiteSpace(connString))
             {
-                throw new ArgumentException("Argument is empty", nameof(key));
+                throw new ArgumentException("Argument is empty", nameof(connString));
             }
 
             logger = new Logger("TelemetryLog");
             TelemetryConfiguration configuration = TelemetryConfiguration.CreateDefault();
-            configuration.InstrumentationKey = key; 
+            configuration.ConnectionString = connString;
             telemetryClient = new TelemetryClient(configuration);
 #if DEBUG
             // Expedites the flow of data through the pipeline.
@@ -53,15 +53,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// Gets a value indicating whether telemetry is enabled or not.
         /// </summary>
         private bool IsEnabled => telemetryClient.IsEnabled();
-
-        /// <summary>
-        /// Gets or sets the key.
-        /// </summary>
-        public string Key
-        {
-            get => telemetryClient?.InstrumentationKey;
-            set => telemetryClient.InstrumentationKey = value;
-        }
 
         /// <summary>
         /// Calls AI to track the availability.
@@ -195,8 +186,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "Value", telemetryData.Value.ToString() },
                     { "PartitionId", telemetryData.PartitionId != null ? telemetryData.PartitionId.ToString() : string.Empty },
                     { "ReplicaId", telemetryData.ReplicaId.ToString() },
-                    { "RGEnabled", telemetryData.RGEnabled.ToString() },
-                    { "RGMemoryLimitMb", telemetryData.RGMemoryLimitMb.ToString() },
+                    { "RGEnabled", telemetryData.RGMemoryEnabled.ToString() },
+                    { "RGMemoryLimitMb", telemetryData.RGAppliedMemoryLimitMb.ToString() },
                     { "ObserverName", telemetryData.ObserverName },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
                     { "OS", telemetryData.OS ?? string.Empty }
@@ -272,8 +263,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "Value", telemetryData.Value.ToString() },
                     { "PartitionId", telemetryData.PartitionId != null ? telemetryData.PartitionId.ToString() : string.Empty },
                     { "ReplicaId", telemetryData.ReplicaId.ToString() },
-                    { "RGEnabled", telemetryData.RGEnabled.ToString() },
-                    { "RGMemoryLimitMb", telemetryData.RGMemoryLimitMb.ToString() },
+                    { "RGEnabled", telemetryData.RGMemoryEnabled.ToString() },
+                    { "RGMemoryLimitMb", telemetryData.RGAppliedMemoryLimitMb.ToString() },
                     { "ObserverName", telemetryData.ObserverName },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
                     { "OS", telemetryData.OS ?? string.Empty },

@@ -1,10 +1,10 @@
-## FabricObserver Extensibility Library 3.2.3
+## FabricObserver Extensibility Library 3.2.4
 
 This .NET Standard 2.0 library is for building FabricObserver plugins, which are custom observers that extend FabricObserver's capabilities to match your needs. Each plugin is managed like a first class observer.
 
 ### How to implement an observer plugin using FO's extensibility model
 
-1. Create a new .NET Standard (2.0) library project.
+1. Create a new core library project. If you are building a plugin for FabricObserver version 3.2.4.960, then you should target net6.0 in your plugin's project file (csproj), else target netstandard2.0.
 
 2. Install the latest Microsoft.ServiceFabricApps.FabricObserver.Extensibility nupkg from https://www.nuget.org/profiles/ServiceFabricApps into your plugin project.
 

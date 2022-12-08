@@ -2,11 +2,9 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
 	<metadata minClientVersion="3.3.0">
 		<id>%PACKAGE_ID%</id>
-		<version>3.2.3</version>
+		<version>3.2.4</version>
 		<releaseNotes>
-- Bug Fix (OSInfoProvider - Windows impl). This version fixes a bug with the Logger implementation in WindowsOSInfoProvider that leads to a NullReferenceException.
-- Updated OSInfoProvider.TupleGetDynamicPortRange impl.
-- Updated Windows TCP port detection impl to account for BOUND state connections (netstat is used to get port data in this release).
+
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
@@ -23,13 +21,12 @@
 			<group targetFramework="netstandard2.0">
 				<dependency id="Microsoft.Win32.Registry" version="5.0.0" />
 				<dependency id="Microsoft.ServiceFabric.Services" version="5.0.516" />
-				<dependency id="Microsoft.ApplicationInsights" version="2.20.0" />
-				<dependency id="Microsoft.ApplicationInsights.DependencyCollector" version="2.20.0" />
-				<dependency id="Microsoft.ApplicationInsights.NLogTarget" version="2.20.0" />
-				<dependency id="Microsoft.ApplicationInsights.PerfCounterCollector" version="2.20.0" />
-				<dependency id="Microsoft.ApplicationInsights.WindowsServer" version="2.20.0" />
-				<dependency id="Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel" version="2.20.0" />
-				<dependency id="Microsoft.AspNet.WebApi.Client" version="5.2.9" />
+				<dependency id="Microsoft.ApplicationInsights" version="2.21.0" />
+				<dependency id="Microsoft.ApplicationInsights.DependencyCollector" version="2.21.0" />
+				<dependency id="Microsoft.ApplicationInsights.NLogTarget" version="2.21.0" />
+				<dependency id="Microsoft.ApplicationInsights.PerfCounterCollector" version="2.21.0" />
+				<dependency id="Microsoft.ApplicationInsights.WindowsServer" version="2.21.0" />
+				<dependency id="Microsoft.ApplicationInsights.WindowsServer.TelemetryChannel" version="2.21.0" />
 				<dependency id="Microsoft.Extensions.DependencyInjection" version="6.0.0" />
 				<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="6.0.0" />
 				<dependency id="NLog" version="5.0.1" />

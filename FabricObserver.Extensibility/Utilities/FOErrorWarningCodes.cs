@@ -208,23 +208,23 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public const string NodeWarningActiveEphemeralPortsPercent = "FO047";
         /// <summary>
-        /// FO048  Private Bytes usage (Commit) is at or exceeding Error threshold for an app service process.
+        /// FO048  Private Bytes usage (Commit) MB is at or exceeding Error threshold for an app service process.
         /// </summary>
         public const string AppErrorPrivateBytesMb = "FO048";
         /// <summary>
-        /// FO049  Private Bytes usage (Commit) is at or exceeding Warning threshold for an app service process.
+        /// FO049  Private Bytes usage (Commit) MB is at or exceeding Warning threshold for an app service process.
         /// </summary>
         public const string AppWarningPrivateBytesMb = "FO049";
         /// <summary>
-        /// FO049  Private Bytes usage (Commit) is at or exceeding Error threshold for an app service process.
+        /// FO050  Private Bytes usage (Commit) Percentage is at or exceeding Error threshold for an app service process.
         /// </summary>
         public const string AppErrorPrivateBytesPercent = "FO050";
         /// <summary>
-        /// FO051  Private Bytes usage (Commit) is at or exceeding Warning threshold for an app service process.
+        /// FO051  Private Bytes usage (Commit) Percentage is at or exceeding Warning threshold for an app service process.
         /// </summary>
         public const string AppWarningPrivateBytesPercent = "FO051";
         /// <summary>
-        /// FO052  At or exceeding default (90%) or configured percentage of Resource Governance limit 'MemoryInMBLimit' for a service code package.
+        /// FO052  At or exceeding configured percentage of Memory Resource Governance limit for a service code package.
         /// </summary>
         public const string AppWarningRGMemoryLimitPercent = "FO052";
 

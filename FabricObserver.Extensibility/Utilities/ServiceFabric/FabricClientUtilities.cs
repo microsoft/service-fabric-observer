@@ -3,10 +3,8 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using FabricObserver.Observers.Interfaces;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -37,6 +35,7 @@ namespace FabricObserver.Utilities.ServiceFabric
         private static FabricClient fabricClient = null;
         private static readonly object lockObj = new object();
         private readonly bool isWindows;
+        private readonly Logger logger;
 
         /// <summary>
         /// The singleton FabricClient instance that is used throughout FabricObserver.
@@ -92,6 +91,7 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// <param name="NodeName">Name of the Fabric node FabricObserver instance is running on.</param>
         public FabricClientUtilities(string nodeName = null)
         {
+            logger = new Logger("FabClientUtil");
             int maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
             parallelOptions = new ParallelOptions
             {
@@ -385,212 +385,38 @@ namespace FabricObserver.Utilities.ServiceFabric
             return pids;
         }
 
-        public void ProcessServiceConfiguration(string appTypeName, string codepackageName, ref ReplicaOrInstanceMonitoringInfo replicaInfo)
+        /// <summary>
+        /// Windows-only. Gets RG Memory limit information for a code package.
+        /// </summary>
+        /// <param name="appManifestXml">Application Manifest</param>
+        /// <param name="servicePkgName">Service Package name</param>
+        /// <param name="codepackageName">Code Package name</param>
+        /// <returns>A Tuple containing a boolean value (whether or not RG is enabled) and a double value (the absolute limit in megabytes)</returns>
+        public (bool IsMemoryRGEnabled, double MemoryLimitMb) TupleGetMemoryResourceGovernanceInfo(string appManifestXml, string servicePkgName, string codepackageName)
         {
-            if (string.IsNullOrWhiteSpace(appTypeName))
+            logger.LogInfo("Starting TupleGetResourceGovernanceInfo.");
+
+            if (!isWindows)
             {
-                return;
+                logger.LogInfo("Completing TupleGetResourceGovernanceInfo: OS not yet supported.");
+                return (false, 0);
             }
 
-            try
-            {
-                string appTypeVersion = null;
-                var appList =
-                    FabricClientSingleton.QueryManager.GetApplicationListAsync(replicaInfo.ApplicationName)?.Result;
-
-                if (appList?.Count > 0)
-                {
-                    try
-                    {
-                        if (appList.Any(app => app.ApplicationTypeName == appTypeName))
-                        {
-                            appTypeVersion = appList.First(app => app.ApplicationTypeName == appTypeName).ApplicationTypeVersion;
-                            replicaInfo.ApplicationTypeVersion = appTypeVersion;
-                        }
-                    }
-                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
-                    {
-
-                    }
-
-                    // RG - Windows-only. Linux is not supported yet.
-                    if (!string.IsNullOrWhiteSpace(appTypeVersion))
-                    {
-                        if (isWindows)
-                        {
-                            string appManifest = FabricClientSingleton.ApplicationManager.GetApplicationManifestAsync(appTypeName, appTypeVersion)?.Result;
-
-                            if (!string.IsNullOrWhiteSpace(appManifest))
-                            {
-                                (replicaInfo.RGEnabled, replicaInfo.RGMemoryLimitMb) =
-                                    TupleGetResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName);
-                            }
-                        }
-
-                        // ServiceTypeVersion
-                        var serviceList =
-                        FabricClientSingleton.QueryManager.GetServiceListAsync(
-                                replicaInfo.ApplicationName, replicaInfo.ServiceName)?.Result;
-
-                        if (serviceList?.Count > 0)
-                        {
-                            try
-                            {
-                                Uri serviceName = replicaInfo.ServiceName;
-
-                                if (serviceList.Any(s => s.ServiceName == serviceName))
-                                {
-                                    replicaInfo.ServiceTypeVersion = serviceList.First(s => s.ServiceName == serviceName).ServiceManifestVersion;
-                                }
-                            }
-                            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
-                            {
-
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is TimeoutException || e is XmlException)
-            {
-                // move along
-            }
-        }
-
-        public void ProcessMultipleHelperCodePackages(
-                        Uri appName,
-                        string appTypeName,
-                        DeployedServiceReplica deployedReplica,
-                        ref ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> repsOrInstancesInfo,
-                        bool isHostedByFabric,
-                        bool includeChildProcesses,
-                        NativeMethods.SafeObjectHandle handleToSnapshot = null)
-        {
-            try
-            {
-                DeployedCodePackageList codepackages = FabricClientSingleton.QueryManager.GetDeployedCodePackageListAsync(
-                                                        nodeName,
-                                                        appName,
-                                                        deployedReplica.ServiceManifestName,
-                                                        null).Result;
-
-                ReplicaOrInstanceMonitoringInfo replicaInfo = null;
-
-                // Check for multiple code packages or GuestExecutable service (so, Fabric is host).
-                if (codepackages.Count > 1 || isHostedByFabric)
-                {
-                    foreach (var codepackage in codepackages)
-                    {
-                        // The code package does not belong to a deployed replica, so this is the droid we're looking for (a helper code package or guest executable).
-                        if (codepackage.CodePackageName != deployedReplica.CodePackageName)
-                        {
-                            int procId = (int)codepackage.EntryPoint.ProcessId; // The actual process id of the helper or guest executable binary.
-                            string procName = null;
-
-                            // Process class is a CPU bottleneck on Windows.
-                            if (isWindows)
-                            {
-                                procName = NativeMethods.GetProcessNameFromId(procId);
-                            }
-                            else // Linux
-                            {
-                                using (var proc = Process.GetProcessById(procId))
-                                {
-                                    try
-                                    {
-                                        procName = proc.ProcessName;
-                                    }
-                                    catch (Exception e) when (e is InvalidOperationException || e is NotSupportedException || e is ArgumentException)
-                                    {
-                                        
-                                    }
-                                }
-                            }
-
-                            // Make sure procName lookup worked and if so that it is still the process we're looking for.
-                            if (string.IsNullOrWhiteSpace(procName) || !EnsureProcess(procName, procId))
-                            {
-                                continue;
-                            }
-
-                            // It doesn't matter that the helper CodePackage or guest executable does not have any replicas (not hosted by Fabric). This basic construct ReplicaOrInstanceMonitoringInfo is used in several places.
-                            // The key information for the helper/guest executable binary case is the ServiceManifestName, the parent's ServiceName/Type, its HostProcessId and its HostProcessName.
-                            // This ensures that support for multiple CodePackages and guest executable services fit naturally into AppObserver's *existing* implementation.
-                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
-                            {
-                                ApplicationName = appName,
-                                ApplicationTypeName = appTypeName,
-                                HostProcessId = procId,
-                                HostProcessName = procName,
-                                ReplicaOrInstanceId = 0,
-                                PartitionId = null,
-                                ReplicaRole = ReplicaRole.None,
-                                ServiceKind = ServiceKind.Invalid,
-                                ServiceName = deployedReplica.ServiceName,
-                                ServiceManifestName = codepackage.ServiceManifestName,
-                                ServiceTypeName = deployedReplica.ServiceTypeName,
-                                ServicePackageActivationId = codepackage.ServicePackageActivationId,
-                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(codepackage.ServicePackageActivationId) ?
-                                                ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
-                                ReplicaStatus = ServiceReplicaStatus.Invalid
-                            };
-
-                            // If Helper binaries launch child processes, AppObserver will monitor them, too.
-                            if (includeChildProcesses && procId > 0)
-                            {
-                                // DEBUG - Perf
-                                //var sw = Stopwatch.StartNew();
-                                List<(string ProcName, int Pid)> childPids;
-
-                                if (isWindows)
-                                {
-                                    childPids = ProcessInfoProvider.Instance.GetChildProcessInfo(procId, handleToSnapshot);
-                                }
-                                else
-                                {
-                                    childPids = ProcessInfoProvider.Instance.GetChildProcessInfo(procId);
-                                }
-
-                                if (childPids != null && childPids.Count > 0)
-                                {
-                                    replicaInfo.ChildProcesses = childPids;
-                                }
-                                //sw.Stop();
-                                //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
-                            }
-
-                            // ResourceGovernance/AppTypeVer/ServiceTypeVer.
-                            ProcessServiceConfiguration(appTypeName, codepackage.CodePackageName, ref replicaInfo);
-                        }
-
-                        if (replicaInfo != null && replicaInfo.HostProcessId > 0 && !repsOrInstancesInfo.Any(r => r.HostProcessId == replicaInfo.HostProcessId))
-                        {
-                            repsOrInstancesInfo.Enqueue(replicaInfo);
-                        }
-                    }
-                }
-            }
-            catch (Exception e) when (e is ArgumentException || e is FabricException || e is TaskCanceledException || e is TimeoutException)
-            {
-                
-            }
-        }
-
-        private (bool IsRGEnabled, double MemoryLimitMb) TupleGetResourceGovernanceInfo(string appManifestXml, string servicePkgName, string codepackageName)
-        {
             if (string.IsNullOrWhiteSpace(appManifestXml))
             {
-  
+                logger.LogInfo($"Invalid value for {nameof(appManifestXml)}: {appManifestXml}. Exiting TupleGetResourceGovernanceInfo.");
                 return (false, 0);
             }
 
             if (string.IsNullOrWhiteSpace(servicePkgName))
             {
+                logger.LogInfo($"Invalid value for {nameof(servicePkgName)}: {servicePkgName}. Exiting TupleGetResourceGovernanceInfo.");
                 return (false, 0);
             }
 
             if (string.IsNullOrWhiteSpace(codepackageName))
             {
+                logger.LogInfo($"Invalid value for {nameof(codepackageName)}: {codepackageName}. Exiting TupleGetResourceGovernanceInfo.");
                 return (false, 0);
             }
 
@@ -603,20 +429,47 @@ namespace FabricObserver.Utilities.ServiceFabric
             // Safe XML pattern - *Do not use LoadXml*.
             var appManifestXdoc = new XmlDocument { XmlResolver = null };
 
-            using (var sreader = new StringReader(appManifestXml))
+            try
             {
-                using (var xreader = XmlReader.Create(sreader, new XmlReaderSettings { XmlResolver = null }))
+                using (var sreader = new StringReader(appManifestXml))
                 {
-                    appManifestXdoc?.Load(xreader);
-                    return TupleGetResourceGovernanceInfoFromAppManifest(ref appManifestXdoc, servicePkgName, codepackageName);
+                    using (var xreader = XmlReader.Create(sreader, new XmlReaderSettings { XmlResolver = null }))
+                    {
+                        appManifestXdoc?.Load(xreader);
+
+                        logger.LogInfo("Completed TupleGetResourceGovernanceInfo.");
+                        return TupleGetRGPolicyInfoFromAppManifest(ref appManifestXdoc, servicePkgName, codepackageName);
+                    }
                 }
             }
+            catch (Exception e) when (e is ArgumentException || e is XmlException)
+            {
+                logger.LogWarning($"Failure in TupleGetResourceGovernanceInfo: {e.Message}");
+            }
+
+            return (false, 0);
         }
 
-        private (bool IsRGEnabled, double MemoryLimitMb) TupleGetResourceGovernanceInfoFromAppManifest(ref XmlDocument xDoc, string servicePkgName, string codepackageName)
+        /// <summary>
+        /// TODO. Do not call. Gets CPU RG info.
+        /// </summary>
+        /// <param name="appManifestXml"></param>
+        /// <param name="servicePkgName"></param>
+        /// <param name="codepackageName"></param>
+        /// <returns>Calling this throws NotImplementedException.</returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public (bool IsMemoryRGEnabled, double MemoryLimitMb) TupleGetCpuResourceGovernanceInfo(string appManifestXml, string servicePkgName, string codepackageName)
         {
+            throw new NotImplementedException();
+        }
+
+        private (bool IsRGMemoryEnabled, double MemoryLimitMb) TupleGetRGPolicyInfoFromAppManifest(ref XmlDocument xDoc, string servicePkgName, string codepackageName)
+        {
+            logger.LogInfo("Starting TupleGetResourceGovernanceInfoFromAppManifest.");
+
             if (xDoc == null)
             {
+                logger.LogInfo("Completed TupleGetResourceGovernanceInfoFromAppManifest: xDoc == null.");
                 return (false, 0);
             }
 
@@ -630,6 +483,7 @@ namespace FabricObserver.Utilities.ServiceFabric
 
                 if (sNode == null)
                 {
+                    logger.LogInfo($"Completing TupleGetResourceGovernanceInfoFromAppManifest: Missing ServiceManifestImport for {servicePkgName}.");
                     return (false, 0);
                 }
 
@@ -642,84 +496,71 @@ namespace FabricObserver.Utilities.ServiceFabric
                         continue;
                     }
 
-                    foreach (XmlNode polNode in node.ChildNodes)
+                    foreach (XmlNode rgPolicyNode in node.ChildNodes)
                     {
-                        if (polNode.Name != ObserverConstants.RGPolicyNodeName)
+                        try
                         {
-                            continue;
+                            if (rgPolicyNode.Name != ObserverConstants.RGPolicyNodeName)
+                            {
+                                continue;
+                            }
+
+                            string codePackageRef = rgPolicyNode.Attributes[ObserverConstants.CodePackageRef]?.Value;
+
+                            if (codePackageRef != codepackageName)
+                            {
+                                continue;
+                            }
+
+                            // Memory Limit (Note: CPU support is TODO) \\
+
+                            // Get the rg policy Memory attribute. If user specifies both MemoryInMB and MemoryInMBLimit, prefer MemoryInMBLimit, just like SF RG will.
+                            // FO only cares about the specified memory limit for a code package, not the memory request (unless *only* MemoryInMB is specified).
+                            XmlAttribute memAttr = null;
+
+                            if (rgPolicyNode.Attributes[ObserverConstants.RGMemoryInMBLimit] != null)
+                            {
+                                memAttr = rgPolicyNode.Attributes[ObserverConstants.RGMemoryInMBLimit];
+                            }
+                            else if (rgPolicyNode.Attributes[ObserverConstants.RGMemoryInMB] != null)
+                            {
+                                memAttr = rgPolicyNode.Attributes[ObserverConstants.RGMemoryInMB];
+                            }
+
+                            // Not the droid we're looking for.
+                            if (memAttr == null || string.IsNullOrWhiteSpace(memAttr.Value))
+                            {
+                                continue;
+                            }
+
+                            // App Parameter support: This means user has specified the absolute memory value in an Application Parameter.
+                            if (memAttr.Value.StartsWith("["))
+                            {
+                                XmlNode parametersNode = xDoc.DocumentElement?.SelectSingleNode($"//*[local-name()='{ObserverConstants.Parameters}']");
+                                XmlNode parameterNode = parametersNode?.SelectSingleNode($"//*[local-name()='{ObserverConstants.Parameter}' and @Name='{memAttr.Value.Substring(1, memAttr.Value.Length - 2)}']");
+                                XmlAttribute attr = parameterNode?.Attributes?[ObserverConstants.DefaultValue];
+                                memAttr.Value = attr.Value;
+                            }
+
+                            logger.LogInfo("Completed TupleGetResourceGovernanceInfoFromAppManifest: Memory RG enabled.");
+                            return (true, double.TryParse(memAttr.Value, out double mem) ? mem : 0);
                         }
-
-                        string codePackageRef = polNode.Attributes[ObserverConstants.CodePackageRef]?.Value;
-
-                        if (codePackageRef != codepackageName)
+                        catch (Exception e) when (e is ArgumentException || e is XPathException)
                         {
-                            continue;
+                            logger.LogWarning($"Failure getting RG memory limit value for code package '{codepackageName}': {e.Message}");
+                            return (false, 0);
                         }
-
-                        // Get the rg policy memory attribute. It can only be either "MemoryInMB" or "MemoryInMBLimit"
-                        XmlAttribute memAttr = null;
-
-                        if (polNode.Attributes[ObserverConstants.RGMemoryInMB] != null)
-                        {
-                            memAttr = polNode.Attributes[ObserverConstants.RGMemoryInMB];
-                        }
-                        else if (polNode.Attributes[ObserverConstants.RGMemoryInMBLimit] != null)
-                        {
-                            memAttr = polNode.Attributes[ObserverConstants.RGMemoryInMBLimit];
-                        }
-
-                        // Not the droid we're looking for.
-                        if (memAttr == null || string.IsNullOrWhiteSpace(memAttr.Value))
-                        {
-                            continue;
-                        }
-
-                        // App Parameter support: This means user has specified the absolute memory value in an Application Parameter.
-                        if (memAttr.Value.StartsWith("["))
-                        {
-                            XmlNode parametersNode = xDoc.DocumentElement?.SelectSingleNode($"//*[local-name()='{ObserverConstants.Parameters}']");
-                            XmlNode parameterNode =
-                                parametersNode?.SelectSingleNode($"//*[local-name()='{ObserverConstants.Parameter}' and @Name='{memAttr.Value.Substring(1, memAttr.Value.Length - 1)}']");
-                            XmlAttribute attr = parameterNode?.Attributes?[ObserverConstants.DefaultValue];
-                            memAttr.Value = attr.Value;
-                        }
-
-                        return (true, double.TryParse(memAttr.Value, out double mem) ? mem : 0);
                     }
                 }
             }
-            catch (XPathException)
+            catch (XPathException xe)
             {
+                logger.LogWarning($"XPath processing failure - {servicePkgName}/{codepackageName}: {xe.Message}");
                 return (false, 0);
             }
 
+            logger.LogInfo("Completed TupleGetResourceGovernanceInfoFromAppManifest: Memory RG not configured.");
             return (false, 0);
-        }
-
-        private bool EnsureProcess(string procName, int procId)
-        {
-            if (string.IsNullOrWhiteSpace(procName) || procId < 1)
-            {
-                return false;
-            }
-
-            if (!isWindows)
-            {
-                try
-                {
-                    using (Process proc = Process.GetProcessById(procId))
-                    {
-                        return proc.ProcessName == procName;
-                    }
-                }
-                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
-                {
-                    return false;
-                }
-            }
-
-            // net core's ProcessManager.EnsureState is a CPU bottleneck on Windows.
-            return NativeMethods.GetProcessNameFromId(procId) == procName;
         }
     }
 }

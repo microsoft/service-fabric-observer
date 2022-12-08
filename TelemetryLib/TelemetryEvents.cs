@@ -27,13 +27,17 @@ namespace FabricObserver.TelemetryLib
         private const string COTaskName = "ClusterObserver";
         private const string FOTaskName = "FabricObserver";
         private readonly TelemetryClient telemetryClient;
-        private readonly ServiceContext serviceContext;
         private readonly string clusterId, tenantId, clusterType;
         private readonly TelemetryConfiguration appInsightsTelemetryConf;
+        private readonly string nodeName;
 
-        public TelemetryEvents(ServiceContext context)
+        /// <summary>
+        /// Creates an instance of the TelemetryEvents class which is used to emit AppInsights telemetry events from a source Fabric node.
+        /// </summary>
+        /// <param name="sourceNodeName">The name of the node that is the origin of the telemetry.</param>
+        public TelemetryEvents(string sourceNodeName)
         {
-            serviceContext = context;
+            nodeName= sourceNodeName;
             appInsightsTelemetryConf = TelemetryConfiguration.CreateDefault();
             appInsightsTelemetryConf.ConnectionString = TelemetryConstants.ConnectionString;
             telemetryClient = new TelemetryClient(appInsightsTelemetryConf);
@@ -53,7 +57,7 @@ namespace FabricObserver.TelemetryLib
 
             try
             {
-                _ = TryGetHashStringSha256(serviceContext?.NodeContext.NodeName, out string nodeHashString);
+                _ = TryGetHashStringSha256(nodeName, out string nodeHashString);
 
                 IDictionary<string, string> eventProperties = new Dictionary<string, string>
                 {
@@ -257,7 +261,7 @@ namespace FabricObserver.TelemetryLib
 
                 if (source == FOTaskName)
                 {
-                    _ = TryGetHashStringSha256(serviceContext.NodeContext.NodeName, out nodeHashString);
+                    _ = TryGetHashStringSha256(nodeName, out nodeHashString);
                     eventProperties.Add("NodeNameHash", nodeHashString);
                 }
 
