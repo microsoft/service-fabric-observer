@@ -1819,9 +1819,15 @@ namespace FabricObserver.Observers
                         {
                             if (exception.NativeErrorCode == 5 || exception.NativeErrorCode == 6)
                             {
-                                string serviceName = repOrInst?.ServiceName?.OriginalString;
+                                string serviceName = repOrInst.ServiceName.OriginalString;
                                 string message = $"{serviceName} is running as Admin or System user on Windows and can't be monitored by FabricObserver, which is running as Network Service. " +
-                                                 $"Please configure FabricObserver to run as Admin or System user on Windows to solve this problem and/or determine if {serviceName} really needs to run as Admin or System user on Windows.";
+                                                 $"You can configure FabricObserver to run as Admin or System user on Windows to solve this problem. It is best that you first determine if {serviceName} really needs to run as Admin or System user on Windows. " +
+                                                 $"In the meantime, you can easily configure AppObserver to ignore this particular service by adding a config object to AppObserver.config.json:{Environment.NewLine}" +
+                                                 "E.g.," + Environment.NewLine +
+                                                 $"{{" + Environment.NewLine +
+                                                 $"      \"targetApp\": \"{repOrInst.ApplicationName.OriginalString.Remove(0, "fabric:/".Length)}\"," + Environment.NewLine +
+                                                 $"      \"serviceExcludeList\": \"{serviceName.Remove(0, repOrInst.ApplicationName.OriginalString.Length + 1)}\"" + Environment.NewLine +
+                                                 $"}}";
 
                                 string property = $"RestrictedAccess({serviceName})";
                                 var healthReport = new Utilities.HealthReport
