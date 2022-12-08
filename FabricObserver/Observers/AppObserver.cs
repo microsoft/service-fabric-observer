@@ -2844,8 +2844,9 @@ namespace FabricObserver.Observers
                         }
                 }
 
-                // TOTHINK: Filter out SharedProcess replicas if one is already present in the list ssince they are all hosted in the same process,
-                // and FO can only operate at the process level for resource monitoring.
+                // TOTHINK: Filter out SharedProcess replicas if one is already present in the list since they are all hosted in the same process,
+                // and FO can only operate at the process level for resource monitoring. So, if you have 100 replicas in a shared host process, FO would monitor the same process
+                // 100 times, which is *extremely* redundant and inefficient.
                 /*if (replicaMonitoringList.Any(
                         r => r.ServicePackageActivationMode == ServicePackageActivationMode.SharedProcess
                           && r.HostProcessId == replicaInfo.HostProcessId))
