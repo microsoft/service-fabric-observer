@@ -81,38 +81,3 @@ steps:
     publishRunAttachments: false
     rerunFailedTests: true
   enabled: false
-
-- task: PowerShell@2
-  displayName: 'Build FabricObserverWebApi'
-  inputs:
-    targetType: filePath
-    filePath: './Build-FabricObserverWebApi.ps1'
-  enabled: false
-
-- task: PowerShell@2
-  displayName: 'Build Nuget Packages - FOW'
-  inputs:
-    targetType: filePath
-    filePath: './Build-FOWNugetPackages.ps1'
-  enabled: false
-
-- task: PublishBuildArtifacts@1
-  displayName: 'Publish Nuget Packages - FOW'
-  inputs:
-    PathtoPublish: '$(Build.SourcesDirectory)/bin/Release/FabricObserverWeb/Nugets'
-    ArtifactName: FabricObserverNugets
-  enabled: false
-
-- task: PowerShell@2
-  displayName: 'Build Service Fabric Packages - FOW'
-  inputs:
-    targetType: filePath
-    filePath: './Build-FOWSFPkgs.ps1'
-  enabled: false
-
-- task: PublishBuildArtifacts@1
-  displayName: 'Publish Service Fabric Packages - FOW'
-  inputs:
-    PathtoPublish: '$(Build.SourcesDirectory)/bin/Release/FabricObserverWeb/SFPkgs'
-    ArtifactName: FabricObserverSFPackage
-  enabled: false
