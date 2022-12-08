@@ -8,6 +8,8 @@
 4. Supports [Configuration Setting Application Updates](/Documentation/Using.md#parameterUpdates) for any observer for any supported setting. 
 5. Is actively developed completely in the open. The latest code (generally in flight and not meant for production) lives in the develop branch. It is highly recommended that you only deploy code built from the main branch into your production clusters.
 
+> FabricObserver targets SF runtime versions 9 and higher. 
+
 FO is a Stateless Service Fabric Application composed of a single service that runs on every node in your cluster, so it can be deployed and run alongside your applications without any changes to them. Each FO service instance knows nothing about other FO instances in the cluster, by design. 
 
 ```If you run your apps on Service Fabric, then you should definitely consider deploying FabricObserver to all of your clusters (Test, Staging, Production).```
