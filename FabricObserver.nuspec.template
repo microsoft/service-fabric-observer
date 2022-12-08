@@ -5,6 +5,7 @@
 		<version>3.2.4.960</version>
 		<releaseNotes>
 - Updated RG Memory impl.
+- Bug fixes.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

@@ -1,5 +1,6 @@
 ## FabricObserver 3.2.4.960
 ### This version is built for .NET 6 and SF Runtime >= 9.0
+**After this release, there will only be .NET 6 (and higher) supported versions of FabricObserver. Version naming will change to x.x.x format and there will only be 1 released version per cycle.** 
 
 [**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer) is a complete implementation of a production-ready, generic resource usage watchdog service written as a stateless, singleton Service Fabric .net 6 application that 
 1. Monitors a broad range of machine resources that tend to be very important to all Service Fabric applications, like disk space consumption, CPU use, memory use, endpoint availability, ephemeral TCP port use, and app/cluster certificate health out-of-the-box.
