@@ -9,7 +9,7 @@
 - Bug fix: Service helper code package data contains related information about the primary service to which it belongs - partition id, replica id, Service Name, etc.
 - Removed support for ApplicationInsights InstrumentationKey usage. Instead, you must use the full Connection String. This is because ApplicationInsights has deprecated support for supplying only an InstrumentatioKey for authentication/identification to its service. You will see this change reflected in FO's Settings.xml.
 - Performance improvements.
-- Updated nuget package dependencies to latest versions, where possible.
+- Updated nuget package dependencies to latest versions, where possible. Note: If you build plugins and do *not* use the FO Extensibility nuget package, you must update your Microsoft.Extensions.DependencyInjection.Abstractions reference to version 7.0.0.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
