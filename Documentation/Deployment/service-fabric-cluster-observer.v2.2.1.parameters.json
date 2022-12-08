@@ -6,7 +6,7 @@
             "value": "<ClusterResourceName>"
         },
         "applicationTypeVersionClusterObserver": {
-            "value": "2.2.0.960"
+            "value": "2.2.1"
         },
         "packageUrlClusterObserver": {
             "value": "<PUBLIC-ACCESSIBLE-URL-FOR-CLUSTEROBSERVER-SFPKG>"

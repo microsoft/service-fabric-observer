@@ -6,8 +6,10 @@ You can target netstandard2.0 or net6.0, depending upon what version of FO you a
 
 Note that the observer API surface lives in its own library (.NET Standard 2.0), FabricObserver.Extensibility.dll. FO and CO also use this library for their internal observer impls.
 
-1. Create a new .NET Standard (2.0) library project.
+1. Create a new .NET core library project. You should target net6.0 in your csproj because that is the target net SDK version that FabricObserver is built for.
+
 2. Install the latest Microsoft.ServiceFabricApps.FabricObserver.Extensibility nupkg from https://www.nuget.org/profiles/ServiceFabricApps into your plugin project.
+
 3. Write an observer plugin!
 
     E.g., create a new class file, MyObserver.cs.
@@ -51,9 +53,11 @@ Note that the observer API surface lives in its own library (.NET Standard 2.0),
 5. Build your observer project, drop the output dll and *ALL* of its dependencies, both managed and native (this is *very* important), into the Config/Data/Plugins folder in FabricObserver/PackageRoot. 
    You can place your plugin dll and all of its dependencies in its own (*same*) folder under the Plugins directory (useful if you have multiple plugins). 
    Again, ALL plugin dll dependencies (and their dependencies, if any) need to live in the *same* folder as the plugin dll.
+
 6. Add a new config section for your observer in FabricObserver/PackageRoot/Config/Settings.xml (see example at bottom of that file)
    Update ApplicationManifest.xml with Parameters if you want to support Versionless Application Parameter-only Upgrades for your plugin.
    (Look at both FabricObserver/PackageRoot/Config/Settings.xml and FabricObserverApp/ApplicationPackageRoot/ApplicationManifest.xml for several examples of how to do this.)
+
 7. Ship it! (Well, test it first =)
 
 If you want to build your own nupkg from FO source, then:

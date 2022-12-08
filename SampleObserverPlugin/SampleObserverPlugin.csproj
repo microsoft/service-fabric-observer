@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>netstandard2.0</TargetFramework>
+		<TargetFramework>net6.0</TargetFramework>
 		<RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
 		<RootNamespace>FabricObserver.Observers</RootNamespace>
 		<AssemblyName>SampleNewObserver</AssemblyName>
@@ -14,18 +14,10 @@
 		<Exec Command="copy &quot;$(SolutionDir)packages\polly\7.2.3\lib\netstandard2.0\Polly.dll&quot; &quot;$(OutDir)&quot;" />
 	</Target>
     <ItemGroup>
-	    <!-- Full FabricObserver nupkg (using this enables publishing FO from the plugin project's build output folder).
-             You just need to copy the plugin dll and ALL of its dependencies to the output folder's PackageRoot\Data\Plugins folder. Then deploy from there. -->
-	    <!-- <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" Version="3.2.5" /> -->
-	    <!-- Required if using the full FabricObserver nupkg, which is no longer required as the extensibility library is all you need to build a plugin. -->
-	    <!-- <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" /> -->
-	    <!-- Required if using the full FabricObserver nupkg, which is no longer required as the extensibility library is all you need to build a plugin. -->
-	    <!-- <PackageReference Include="Microsoft.ServiceFabric" Version="9.0.1017" /> -->
-
-		<!-- Or, just install Microsoft.ServiceFabricApps.FabricObserver.Extensibility nupkg, which provides all you need to build an FO plugin,
-             but no SFPKG folder structure as part of the build output. Just copy your plugin dll and ALL of its unique (so, not already in FO's list of dependencies) 
-             dependencies into your FO repo's PackageRoot\Data\Plugins folder. -->
-	    <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" Version="3.2.4" />
+	    <!--<PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" Version="3.2.5" />-->
 	    <PackageReference Include="Polly" Version="7.2.3" />
+    </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\FabricObserver.Extensibility\FabricObserver.Extensibility.csproj" />
     </ItemGroup>
 </Project>
