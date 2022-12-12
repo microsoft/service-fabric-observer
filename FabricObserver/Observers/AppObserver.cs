@@ -201,8 +201,13 @@ namespace FabricObserver.Observers
             }
             catch (Exception e)
             {
+#if DEBUG
                 ObserverLogger.LogWarning($"DEBUG: InitializeAsync failure:{Environment.NewLine}{e}");
                 throw;
+#else
+                ObserverLogger.LogWarning($"InitializeAsync failure:{Environment.NewLine}{e.Message}");
+                return;
+#endif
             }
 
             ParallelLoopResult result = await MonitorDeployedAppsAsync(token);

@@ -85,23 +85,24 @@
     
     <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
     <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
-    
-    <!-- [OBSOLETE. DO NOT USE. Use AppInsightsConnectionString instead] Required-If TelemetryProvider is AzureApplicationInsights.
-    <Parameter Name="AppInsightsInstrumentationKey" Value="" /> -->
 
-	<!-- [Use this for AppInsights telemetry] Required-If TelemetryProvider is AzureApplicationInsights. Your AppInsights Connection String. -->
+	<!-- Application Insights -->
+	<!-- Required-If TelemetryProvider is AzureApplicationInsights. Your AppInsights Connection String. -->
 	<Parameter Name="AppInsightsConnectionString" Value="" />
+	<!-- OBSOLETE. DO NOT USE. Use AppInsightsConnectionString instead. InstrumentationKey is no longer recommended for ApplicationInsights ingestion.
+	     NOTE: Specifying this has no effect as FabricObserver requires a ConnectionString for ApplicationInsights. -->
+	<Parameter Name="AppInsightsInstrumentationKey" Value="" />
     
+	<!-- LogAnalytics -->
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Workspace Id. -->
     <Parameter Name="LogAnalyticsWorkspaceId" Value="" />
-    
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Shared Key. -->
     <Parameter Name="LogAnalyticsSharedKey" Value="" />
-    
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
     <Parameter Name="LogAnalyticsLogType" Value="FabricObserver" />
-
-    <!-- Optional: If you deploy the FabricObserverWebApi app, set this to true.-->
+	  
+    <!-- OBSOLETE: FabricObserverWebApi is no longer supported or maintained. This setting is here for legacy purposes only. 
+	     If you deploy the FabricObserverWebApi app, set this to true. -->
     <Parameter Name="ObserverWebApiEnabled" Value="false" />
   </Section>
   

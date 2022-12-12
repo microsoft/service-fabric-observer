@@ -26,7 +26,7 @@ namespace FabricObserver.Observers.Utilities
         private const int AF_INET = 2;
         private const int AF_INET6 = 23;
         private const int ERROR_SUCCESS = 0;
-        private const int THREAD_STILL_ACTIVE = 259;
+        private const int STILL_ACTIVE = 259;
         private const int ERROR_NO_MORE_ITEMS = 259;
         private const int ERROR_INSUFFICIENT_BUFFER_SIZE = 122;
         private static readonly Logger logger = new Logger("NativeMethods");
@@ -928,13 +928,17 @@ namespace FabricObserver.Observers.Utilities
                 {
                     foreach (var entry in PssWalkSnapshot<PSS_THREAD_ENTRY>(snap, PSS_WALK_INFORMATION_CLASS.PSS_WALK_THREADS))
                     {
-                        if (entry.ExitStatus != THREAD_STILL_ACTIVE)
+                        if (entry.ExitStatus != STILL_ACTIVE || entry.Flags.HasFlag(PSS_THREAD_FLAGS.PSS_THREAD_FLAGS_TERMINATED))
                         {
                             continue;
                         }
                         activeThreads++;
                     }
                 }
+            }
+            catch (ArgumentException)
+            {
+
             }
             catch (SEHException seh)
             {

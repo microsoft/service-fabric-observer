@@ -32,6 +32,21 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         private readonly TelemetryClient telemetryClient;
         private readonly Logger logger;
 
+        /// <summary>
+        /// OBSOLETE: DO NOT USE. Application Insights InstrumentationKey is deprecated. Pass a full ConnectionString to AppInsightsTelemetry constructor instead.
+        /// Setting or getting this property will throw a NotSupportedException.
+        /// </summary>
+        public string Key
+        {
+            get => throw new NotSupportedException("Key unsupported for ApplicationInsights (InstrumentationKey is deprecated). Use ConnectionString instead.");
+            set => throw new NotSupportedException("Key unsupported for ApplicationInsights (InstrumentationKey is deprecated). Use ConnectionString instead.");
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="connString">Required: ApplicationInsights connection string.</param>
+        /// <exception cref="ArgumentException">null of whitespace value will throw ArgumentException.</exception>
         public AppInsightsTelemetry(string connString)
         {
             if (string.IsNullOrWhiteSpace(connString))
