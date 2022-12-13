@@ -196,7 +196,7 @@ namespace FabricObserver.Observers.Utilities
 
             int count = 0;
             string error = string.Empty;
-            using (Process process = new Process())
+            using (Process process = new())
             {
                 process.ErrorDataReceived += (sender, e) => { error += e.Data; };
                 process.StartInfo = startInfo;
@@ -336,7 +336,7 @@ namespace FabricObserver.Observers.Utilities
                 RedirectStandardError = false
             };
 
-            List<string> output = new List<string>();
+            List<string> output = new();
 
             using (Process process = Process.Start(startInfo))
             {

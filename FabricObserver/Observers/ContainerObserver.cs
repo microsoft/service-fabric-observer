@@ -34,7 +34,7 @@ namespace FabricObserver.Observers
         // deployedTargetList is the list of ApplicationInfo objects representing currently deployed applications in the user-supplied list.
         private ConcurrentQueue<ApplicationInfo> deployedTargetList;
         private ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> ReplicaOrInstanceList;
-        private readonly object lockObj = new object();
+        private readonly object lockObj = new();
         private Stopwatch runDurationTimer;
         public string ConfigurationFilePath = string.Empty;
 
@@ -465,7 +465,7 @@ namespace FabricObserver.Observers
                 };
 
                 var output = new List<string>();
-                using Process process = new Process();
+                using Process process = new();
                 process.ErrorDataReceived += (sender, e) => { error += e.Data; };
                 process.OutputDataReceived += (sender, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) { output.Add(e.Data); } };
                 process.StartInfo = ps;
@@ -542,25 +542,25 @@ namespace FabricObserver.Observers
                     if (IsTelemetryEnabled)
                     {
                         _ = TelemetryClient?.ReportHealthAsync(
-                                                    "docker_stats_failure",
-                                                    HealthState.Warning,
-                                                    msg,
-                                                    ObserverName,
-                                                    Token);
+                                "docker_stats_failure",
+                                HealthState.Warning,
+                                msg,
+                                ObserverName,
+                                Token);
                     }
 
                     // ETW.
                     if (IsEtwEnabled)
                     {
                         ObserverLogger.LogEtw(
-                                        ObserverConstants.FabricObserverETWEventName,
-                                        new
-                                        {
-                                            Property = "docker_stats_failure",
-                                            Level = "Warning",
-                                            Message = msg,
-                                            ObserverName
-                                        });
+                            ObserverConstants.FabricObserverETWEventName,
+                            new
+                            {
+                                Property = "docker_stats_failure",
+                                Level = "Warning",
+                                Message = msg,
+                                ObserverName
+                            });
                     }
 
                     // Linux: Try and work around the unsetting of caps issues when SF runs a cluster upgrade.

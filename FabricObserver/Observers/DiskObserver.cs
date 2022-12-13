@@ -31,7 +31,7 @@ namespace FabricObserver.Observers
         private List<FabricResourceUsageData<double>> DiskSpaceTotalMbData;
         private List<FabricResourceUsageData<double>> FolderSizeDataMb;
         private readonly Stopwatch stopWatch;
-        private StringBuilder diskInfo = new StringBuilder();
+        private StringBuilder diskInfo = new();
 
         public int DiskSpacePercentErrorThreshold
         {
@@ -673,7 +673,7 @@ namespace FabricObserver.Observers
 
         private string GetWindowsPerfCounterDetailsText(IEnumerable<float> data, string counter)
         {
-            if (data == null || data.Count() == 0)
+            if (data == null || !data.Any())
             {
                 return null;
             }

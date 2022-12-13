@@ -18,7 +18,7 @@ namespace FabricObserver.Observers.Utilities
     public static class FabricClientRetryHelper
     {
         private static readonly TimeSpan DefaultOperationTimeout = TimeSpan.FromMinutes(2);
-        private static readonly Logger Logger = new Logger("FabricClientRetryHelper");
+        private static readonly Logger Logger = new("FabricClientRetryHelper");
 
         /// <summary>
         /// Helper method to execute given function with defaultFabricClientRetryErrors and default Operation Timeout.
@@ -43,7 +43,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="operationTimeout">Timeout for the operation.</param>
         /// <param name="cancellationToken">Cancellation token for Async operation.</param>
         /// <returns>Task object.</returns>
-        public static async Task<T> ExecuteFabricActionWithRetryAsync<T>(
+        private static async Task<T> ExecuteFabricActionWithRetryAsync<T>(
                                         Func<Task<T>> function,
                                         FabricClientRetryErrors errors,
                                         TimeSpan operationTimeout,

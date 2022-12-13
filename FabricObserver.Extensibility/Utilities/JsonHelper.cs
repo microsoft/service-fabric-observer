@@ -26,7 +26,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                JsonSerializerSettings jsonSerializerSettings = new JsonSerializerSettings 
+                JsonSerializerSettings jsonSerializerSettings = new()
                 { 
                     MissingMemberHandling = MissingMemberHandling.Ignore
                 };
@@ -106,7 +106,7 @@ namespace FabricObserver.Observers.Utilities
 
         public static T ReadFromJsonStream<T>(Stream stream)
         {
-            using (StreamReader r = new StreamReader(stream))
+            using (StreamReader r = new(stream))
             {
                 string json = r.ReadToEnd();
                 var jsonSerializerSettings = new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Ignore };

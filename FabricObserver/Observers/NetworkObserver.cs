@@ -33,7 +33,7 @@ namespace FabricObserver.Observers
     public class NetworkObserver : ObserverBase
     {
         private const int MaxTcpConnTestRetries = 5;
-        private readonly List<NetworkObserverConfig> defaultConfig = new List<NetworkObserverConfig>
+        private readonly List<NetworkObserverConfig> defaultConfig = new()
         {
             new NetworkObserverConfig
             {
@@ -59,9 +59,9 @@ namespace FabricObserver.Observers
             }
         };
 
-        private readonly List<NetworkObserverConfig> userConfig = new List<NetworkObserverConfig>();
-        private readonly List<ConnectionState> connectionStatus = new List<ConnectionState>();
-        private readonly Dictionary<string, bool> connEndpointTestResults = new Dictionary<string, bool>();
+        private readonly List<NetworkObserverConfig> userConfig = new();
+        private readonly List<ConnectionState> connectionStatus = new();
+        private readonly Dictionary<string, bool> connEndpointTestResults = new();
         private readonly Stopwatch stopwatch;
         private HealthState healthState = HealthState.Ok;
         private bool hasRun;

@@ -200,13 +200,13 @@ namespace FabricObserver.Observers
             try
             {
                 zipPath = file.Replace(".dmp", ".zip");
-                using FileStream fs = new FileStream(zipPath, FileMode.Create);
-                using ZipArchive zip = new ZipArchive(fs, ZipArchiveMode.Create);
+                using FileStream fs = new(zipPath, FileMode.Create);
+                using ZipArchive zip = new(fs, ZipArchiveMode.Create);
                 zip.CreateEntryFromFile(file, Path.GetFileName(file), ZipCompressionLevel);
             }
             catch (Exception e) when (e is ArgumentException || e is IOException || e is NotSupportedException || e is UnauthorizedAccessException)
             {
-                ObserverLogger.LogWarning($"Unable to compress file for uploading:{Environment.NewLine}{e}");
+                ObserverLogger.LogWarning($"Unable to compress file for uploading:{Environment.NewLine}{e.Message}");
                 return false;
             }
 
@@ -219,7 +219,7 @@ namespace FabricObserver.Observers
                 }
                 catch (AggregateException ae)
                 {
-                    ObserverLogger.LogWarning($"Unable to delete original file after successful compression to zip file:{Environment.NewLine}{ae}");
+                    ObserverLogger.LogWarning($"Unable to delete original file after successful compression to zip file:{Environment.NewLine}{ae.Message}");
                 }
             }
 
@@ -393,7 +393,7 @@ namespace FabricObserver.Observers
                     return false;
                 }
 
-                string s = new string(arr);
+                string s = new(arr);
 
                 // Create a client that can authenticate with a connection string.
                 container = new BlobContainerClient(s, BlobContainerName);
@@ -409,17 +409,17 @@ namespace FabricObserver.Observers
                     return false;
                 }
 
-                string accountKey = new string(arr);
-                Uri serviceUri = new Uri($"https://{accountName}.blob.core.windows.net/{BlobContainerName}");
+                string accountKey = new(arr);
+                Uri serviceUri = new($"https://{accountName}.blob.core.windows.net/{BlobContainerName}");
 
                 // Create a SharedKeyCredential that we can use to authenticate.
-                StorageSharedKeyCredential credential = new StorageSharedKeyCredential(accountName, accountKey);
+                StorageSharedKeyCredential credential = new(accountName, accountKey);
 
                 // Create a client that can authenticate with a shared key credential.
                 container = new BlobContainerClient(serviceUri, credential);
             }
 
-            _ = container.CreateIfNotExists();
+            _ = container.CreateIfNotExists(cancellationToken: token);
             token.ThrowIfCancellationRequested();
             BlobClient blob = container.GetBlobClient(blobName);
 
@@ -468,7 +468,7 @@ namespace FabricObserver.Observers
 
         private SecureString SecureStringFromCharArray(char[] charArray, int start, int end)
         {
-            SecureString secureString = new SecureString();
+            SecureString secureString = new();
 
             try
             {
@@ -479,7 +479,7 @@ namespace FabricObserver.Observers
                     secureString.AppendChar(charArray[i]);
                 }
             }
-            catch (Exception e) when (!(e is OperationCanceledException))
+            catch (Exception e) when (e is not OperationCanceledException)
             {
                 ObserverLogger.LogWarning($"Unable to create SecureString from supplied char array:{Environment.NewLine}{e}");
                 return null;

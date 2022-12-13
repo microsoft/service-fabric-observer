@@ -21,13 +21,13 @@ namespace FabricObserver.Observers.Utilities
         private const int MaxDescendants = 50;
         private const int MaxSameNamedProcesses = 50;
         private const int MaxInstanceNameLengthTruncated = 64;
-        private static readonly object _lock = new object();
-        private readonly object _lockUpdate = new object();
+        private static readonly object _lock = new();
+        private readonly object _lockUpdate = new();
         private volatile bool hasWarnedProcessNameLength = false;
         private DateTime sameNamedProcCacheLastUpdated = DateTime.MinValue;
         private TimeSpan maxLifetimeForProcCache = TimeSpan.FromMinutes(3);
         private readonly ConcurrentDictionary<string, List<(string InternalName, int Pid)>> _procCache =
-            new ConcurrentDictionary<string, List<(string InternalName, int Pid)>>();
+            new();
 
         public override float GetProcessWorkingSetMb(int processId, string procName, CancellationToken token, bool getPrivateWorkingSet = false)
         {
@@ -437,7 +437,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                using (PerformanceCounter perfCounter = new PerformanceCounter("Process", perfCounterName, internalProcName, true))
+                using (PerformanceCounter perfCounter = new("Process", perfCounterName, internalProcName, true))
                 {
                     return perfCounter.NextValue() / 1024 / 1024;
                 }
@@ -517,7 +517,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                PerformanceCounterCategory cat = new PerformanceCounterCategory("Process");
+                PerformanceCounterCategory cat = new("Process");
                 var instances = cat.GetInstanceNames().Where(inst => inst == procName || inst.StartsWith($"{procName}#"));
                 cnt = new PerformanceCounter("Process", "ID Process", true);
 
@@ -565,7 +565,7 @@ namespace FabricObserver.Observers.Utilities
             try
             {
                 _procCache.Clear();
-                PerformanceCounterCategory cat = new PerformanceCounterCategory("Process");
+                PerformanceCounterCategory cat = new("Process");
                 var instances = cat.GetInstanceNames().Where(inst => inst == procName || inst.StartsWith($"{procName}#"));
                 cnt = new PerformanceCounter("Process", "ID Process", true);
 

@@ -38,10 +38,10 @@ namespace FabricObserver.Observers.Utilities
         public static Dictionary<string, ulong> ReadMemInfo()
         {
             // Currently /proc/meminfo contains 51 rows on Ubuntu 18.
-            Dictionary<string, ulong> result = new Dictionary<string, ulong>(capacity: 64);
+            Dictionary<string, ulong> result = new(capacity: 64);
 
             // Source code: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/fs/proc/meminfo.c
-            using (StreamReader sr = new StreamReader("/proc/meminfo", encoding: Encoding.UTF8))
+            using (StreamReader sr = new("/proc/meminfo", encoding: Encoding.UTF8))
             {
                 string line;
                 while ((line = sr.ReadLine()) != null)

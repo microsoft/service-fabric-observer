@@ -29,7 +29,7 @@ namespace FabricObserver.Observers.Utilities
         private const int STILL_ACTIVE = 259;
         private const int ERROR_NO_MORE_ITEMS = 259;
         private const int ERROR_INSUFFICIENT_BUFFER_SIZE = 122;
-        private static readonly Logger logger = new Logger("NativeMethods");
+        private static readonly Logger logger = new("NativeMethods");
         private static readonly string[] ignoreProcessList = new string[]
         {
             "AggregatorHost.exe", "backgroundTaskHost.exe", "CcmExec.exe", "com.docker.service",
@@ -841,7 +841,6 @@ namespace FabricObserver.Observers.Utilities
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
-        [ReliabilityContract(Consistency.WillNotCorruptState, Cer.Success)]
         private static extern bool CloseHandle(IntPtr hObject);
 
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
@@ -1159,7 +1158,7 @@ namespace FabricObserver.Observers.Utilities
 
         internal static MEMORYSTATUSEX GetSystemMemoryInfo()
         {
-            MEMORYSTATUSEX memory = new MEMORYSTATUSEX();
+            MEMORYSTATUSEX memory = new();
 
             if (!GlobalMemoryStatusEx(memory))
             {
@@ -1213,7 +1212,7 @@ namespace FabricObserver.Observers.Utilities
                     }
                 }
 
-                PROCESSENTRY32 procEntry = new PROCESSENTRY32
+                PROCESSENTRY32 procEntry = new()
                 {
                     dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32))
                 };
@@ -1224,7 +1223,7 @@ namespace FabricObserver.Observers.Utilities
                     return null;
                 }
 
-                List<(string procName, int procId)> childProcs = new List<(string procName, int procId)>();
+                List<(string procName, int procId)> childProcs = new();
 
                 do
                 {
@@ -1426,7 +1425,7 @@ namespace FabricObserver.Observers.Utilities
         private static string GetProcessNameFromId(uint pid)
         {
             SafeProcessHandle hProc = null;
-            StringBuilder sbProcName = new StringBuilder(1024);
+            StringBuilder sbProcName = new(1024);
 
             try
             {

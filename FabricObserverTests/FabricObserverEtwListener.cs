@@ -14,7 +14,7 @@ namespace FabricObserverTests
     /// </summary>
     internal class FabricObserverEtwListener : EventListener
     {
-        private readonly object lockObj = new object();
+        private readonly object lockObj = new();
         private readonly Logger logger;
         internal readonly EtwEventConverter foEtwConverter;
 

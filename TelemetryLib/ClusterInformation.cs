@@ -25,8 +25,8 @@ namespace FabricObserver.TelemetryLib
         private static string paasClusterId;
         private static string diagnosticsClusterId;
         private static XmlDocument clusterManifestXdoc;
-        private static readonly object _lock = new object();
-        private static readonly object _lock2 = new object();
+        private static readonly object _lock = new();
+        private static readonly object _lock2 = new();
         private static (string ClusterId, string ClusterType, string TenantId) _clusterInfoTuple;
 
         public static (string ClusterId, string ClusterType, string TenantId) ClusterInfoTuple
@@ -189,8 +189,12 @@ namespace FabricObserver.TelemetryLib
 
             try
             {
+#pragma warning disable CA1416 // Validate platform compatibility
                 string tenantIdKeyName = string.Format(CultureInfo.InvariantCulture, "{0}\\{1}", Registry.LocalMachine.Name, FabricRegistryKeyPath);
+#pragma warning restore CA1416 // Validate platform compatibility
+#pragma warning disable CA1416 // Validate platform compatibility
                 return (string)Registry.GetValue(tenantIdKeyName, TenantIdValueName, null);
+#pragma warning restore CA1416 // Validate platform compatibility
             }
             catch (Exception e) when (e is ArgumentException || e is FormatException || e is IOException || e is System.Security.SecurityException)
             {

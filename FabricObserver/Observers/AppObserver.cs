@@ -72,7 +72,7 @@ namespace FabricObserver.Observers
         private List<DeployedApplication> deployedApps;
 
         private readonly Stopwatch stopwatch;
-        private readonly object lockObj = new object();
+        private readonly object lockObj = new();
         private FabricClientUtilities fabricClientUtilities;
         private ParallelOptions parallelOptions;
         private string fileName;
@@ -496,8 +496,8 @@ namespace FabricObserver.Observers
                         EntityType.Service,
                         processName,
                         repOrInst,
-                        false, // Not supported
-                        false, // Not supported
+                        dumpOnError: false, // Not supported
+                        dumpOnWarning: false, // Not supported
                         processId);
                 }
 
@@ -877,12 +877,13 @@ namespace FabricObserver.Observers
                     continue;
                 }
 
+                // AppObserver does not monitor SF system services.
                 if (app.ApplicationName.OriginalString == "fabric:/System")
                 {
                     continue;
                 }
 
-                // Multiple code packages
+                // Multiple code packages?
                 if (codepackages.Count > 1)
                 {
                     foreach (var codepackage in codepackages)
@@ -2866,7 +2867,7 @@ namespace FabricObserver.Observers
                     return;
                 }*/
 
-                ProcessServiceConfiguration(appTypeName, deployedReplica.CodePackageName, ref replicaInfo);
+                ProcessServiceConfiguration(appTypeName, deployedReplica.CodePackageName, replicaInfo);
 
                 if (replicaInfo?.HostProcessId > 0 && !ReplicaOrInstanceList.Any(r => r.ServiceName.Equals(replicaInfo.ServiceName)))
                 {
@@ -2903,7 +2904,7 @@ namespace FabricObserver.Observers
             //ObserverLogger.LogInfo($"SetInstanceOrReplicaMonitoringList for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
         }
 
-        private void ProcessServiceConfiguration(string appTypeName, string codepackageName, ref ReplicaOrInstanceMonitoringInfo replicaInfo)
+        private void ProcessServiceConfiguration(string appTypeName, string codepackageName, ReplicaOrInstanceMonitoringInfo replicaInfo)
         {
             // ResourceGovernance/AppTypeVer/ServiceTypeVer.
             ObserverLogger.LogInfo($"Starting ProcessServiceConfiguration check for {replicaInfo.ServiceName.OriginalString}.");
@@ -2917,8 +2918,13 @@ namespace FabricObserver.Observers
             {
                 string appTypeVersion = null;
 
-                var appList =
-                    FabricClientInstance.QueryManager.GetApplicationListAsync(replicaInfo.ApplicationName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
+                ApplicationList appList =
+                    FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                        async () => 
+                                await FabricClientInstance.QueryManager.GetApplicationListAsync(
+                                        replicaInfo.ApplicationName,
+                                        ConfigurationSettings.AsyncTimeout,
+                                        Token), Token).Result;
 
                 if (appList?.Count > 0)
                 {
@@ -2940,8 +2946,14 @@ namespace FabricObserver.Observers
                         // RG - Windows-only. Linux is not supported yet.
                         if (IsWindows)
                         {
-                            string appManifest = FabricClientInstance.ApplicationManager.GetApplicationManifestAsync(
-                                                    appTypeName, appTypeVersion, ConfigurationSettings.AsyncTimeout, Token)?.Result;
+                            string appManifest =
+                                 FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                    async () =>
+                                            await FabricClientInstance.ApplicationManager.GetApplicationManifestAsync(
+                                                    appTypeName,
+                                                    appTypeVersion,
+                                                    ConfigurationSettings.AsyncTimeout,
+                                                    Token), Token).Result;
 
                             if (!string.IsNullOrWhiteSpace(appManifest) && appManifest.Contains($"<{ObserverConstants.RGPolicyNodeName} "))
                             {
@@ -2952,8 +2964,13 @@ namespace FabricObserver.Observers
 
                         // ServiceTypeVersion
                         var serviceList =
-                            FabricClientInstance.QueryManager.GetServiceListAsync(
-                                replicaInfo.ApplicationName, replicaInfo.ServiceName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
+                            FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                async () => 
+                                        await FabricClientInstance.QueryManager.GetServiceListAsync(
+                                            replicaInfo.ApplicationName,
+                                            replicaInfo.ServiceName,
+                                            ConfigurationSettings.AsyncTimeout,
+                                            Token), Token).Result;
 
                         if (serviceList?.Count > 0)
                         {
@@ -2992,13 +3009,16 @@ namespace FabricObserver.Observers
             ObserverLogger.LogInfo($"Starting ProcessMultipleHelperCodePackages for {deployedReplica.ServiceName} (isHostedByFabric = {isHostedByFabric})");
             try
             {
-                DeployedCodePackageList codepackages = FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(
-                                                        NodeName,
-                                                        appName,
-                                                        deployedReplica.ServiceManifestName,
-                                                        null,
-                                                        ConfigurationSettings.AsyncTimeout,
-                                                        Token).Result;
+                DeployedCodePackageList codepackages =
+                    FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                        async () =>
+                                await FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(
+                                        NodeName,
+                                        appName,
+                                        deployedReplica.ServiceManifestName,
+                                        null,
+                                        ConfigurationSettings.AsyncTimeout,
+                                        Token), Token).Result;
 
                 ReplicaOrInstanceMonitoringInfo replicaInfo = null;
 
@@ -3095,7 +3115,7 @@ namespace FabricObserver.Observers
                     }
 
                     // ResourceGovernance/AppTypeVer/ServiceTypeVer.
-                    ProcessServiceConfiguration(appTypeName, codepackage.CodePackageName, ref replicaInfo);
+                    ProcessServiceConfiguration(appTypeName, codepackage.CodePackageName, replicaInfo);
 
                     if (replicaInfo != null && replicaInfo.HostProcessId > 0 &&
                         !repsOrInstancesInfo.Any(r => r.HostProcessId == replicaInfo.HostProcessId && r.HostProcessName == replicaInfo.HostProcessName))

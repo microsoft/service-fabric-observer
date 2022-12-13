@@ -398,7 +398,7 @@ namespace FabricObserver.Observers
                             // App Health reports. NetworkObserver only generates App health reports and stores app name in ServiceNames field (TODO: Change that).
                             if (obs.ObserverName == ObserverConstants.NetworkObserverName)
                             {
-                                Uri appName = new Uri(service);
+                                Uri appName = new(service);
                                 var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(appName);
                                 var fabricObserverAppHealthEvents = appHealth?.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
@@ -427,7 +427,7 @@ namespace FabricObserver.Observers
                             }
                             else // Service Health reports.
                             {
-                                Uri serviceName = new Uri(service);
+                                Uri serviceName = new(service);
                                 ServiceHealth serviceHealth = await FabricClientInstance.HealthManager.GetServiceHealthAsync(serviceName);
                                 IEnumerable<HealthEvent> fabricObserverServiceHealthEvents =
                                     serviceHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
@@ -1296,8 +1296,8 @@ namespace FabricObserver.Observers
 
                 string releaseAssetName = releases[0].Name;
                 string latestVersion = releaseAssetName.Split(" ")[1];
-                Version latestGitHubVersion = new Version(latestVersion);
-                Version localVersion = new Version(InternalVersionNumber);
+                Version latestGitHubVersion = new(latestVersion);
+                Version localVersion = new(InternalVersionNumber);
                 int versionComparison = localVersion.CompareTo(latestGitHubVersion);
 
                 if (versionComparison < 0)

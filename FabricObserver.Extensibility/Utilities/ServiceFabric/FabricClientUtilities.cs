@@ -33,7 +33,7 @@ namespace FabricObserver.Utilities.ServiceFabric
 
         // This is the FC singleton that will be used for the lifetime of this FO instance.
         private static FabricClient fabricClient = null;
-        private static readonly object lockObj = new object();
+        private static readonly object lockObj = new();
         private readonly bool isWindows;
         private readonly Logger logger;
 
@@ -170,7 +170,7 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// <returns>A List of ReplicaOrInstanceMonitoringInfo objects representing all replicas in any status (consumer should filter Status per need) on the local (or specified) node.</returns>
         public async Task<List<ReplicaOrInstanceMonitoringInfo>> GetAllDeployedReplicasOrInstances(bool includeChildProcesses, CancellationToken token, string nodeName = null)
         {
-            List<ReplicaOrInstanceMonitoringInfo> repList = new List<ReplicaOrInstanceMonitoringInfo>();
+            List<ReplicaOrInstanceMonitoringInfo> repList = new();
             List<DeployedApplication> appList = await GetAllDeployedAppsAsync(token);
             NativeMethods.SafeObjectHandle handleToSnapshot = null;
 
@@ -236,7 +236,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                                                         NativeMethods.SafeObjectHandle handleToSnapshot,
                                                         CancellationToken token)
         {
-            ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList = new ConcurrentQueue<ReplicaOrInstanceMonitoringInfo>();
+            ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList = new();
             parallelOptions.CancellationToken = token;
 
             _ = Parallel.For(0, deployedReplicaList.Count, parallelOptions, (i, state) =>
@@ -347,7 +347,7 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// <returns>A List of tuple (string ServiceName, string ProcName, int Pid) representing all services supplied in the ReplicaOrInstanceMonitoringInfo instance, including child processes of each service, if any.</returns>
         public List<(string ServiceName, string ProcName, int Pid)> GetServiceProcessInfo(List<ReplicaOrInstanceMonitoringInfo> repOrInsts)
         {
-            List<(string ServiceName, string ProcName, int Pid)> pids = new List<(string ServiceName, string ProcName, int Pid)>();
+            List<(string ServiceName, string ProcName, int Pid)> pids = new();
 
             foreach (var repOrInst in repOrInsts)
             {

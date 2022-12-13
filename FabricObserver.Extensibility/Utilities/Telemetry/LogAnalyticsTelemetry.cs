@@ -8,34 +8,28 @@ using System.Collections.Generic;
 using System.Fabric;
 using System.Fabric.Health;
 using System.Net;
-using System.Net.Sockets;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Interfaces;
+using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.TelemetryLib;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
     // LogAnalyticsTelemetry class is partially (SendTelemetryAsync/GetSignature) based on public sample: https://dejanstojanovic.net/aspnet/2018/february/send-data-to-azure-log-analytics-from-c-code/
     public class LogAnalyticsTelemetry : ITelemetryProvider
     {
+        private const string ApiVersion = "2016-04-01";
         private readonly Logger logger;
 
         private string WorkspaceId
-        {
-            get;
-        }
-
-        public string Key
-        {
-            get; set;
-        }
-
-        private string ApiVersion
         {
             get;
         }
@@ -45,16 +39,89 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get;
         }
 
+        private string TargetUri => $"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}";
+
+        public string Key
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// Sends telemetry data to Azure LogAnalytics via REST.
+        /// </summary>
+        /// <param name="payload">Json string containing telemetry data.</param>
+        /// <param name="cancellationToken">CancellationToken instance.</param>
+        /// <returns>A completed task or task containing exception info.</returns>
+        private async Task SendTelemetryAsync(string payload, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(payload) || cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            try
+            {
+                string date = DateTime.UtcNow.ToString("r");
+                string signature = GetSignature("POST", payload.Length, "application/json", date, "/api/logs");
+                byte[] content = Encoding.UTF8.GetBytes(payload);
+                using HttpClient httpClient = new();
+                using HttpRequestMessage request = new(HttpMethod.Post, TargetUri);
+                request.Headers.Authorization = AuthenticationHeaderValue.Parse(signature);
+                request.Content = new ByteArrayContent(content);
+                request.Content.Headers.Add("Content-Type", "application/json");
+                request.Content.Headers.Add("Log-Type", LogType);
+                request.Content.Headers.Add("x-ms-date", date);
+                using var response = await httpClient.SendAsync(request, cancellationToken);
+
+                if (response != null && (response.StatusCode == HttpStatusCode.OK || response.StatusCode == HttpStatusCode.Accepted))
+                {
+                    return;
+                }
+
+                if (response != null)
+                {
+                    logger.LogWarning(
+                        $"Unexpected response from server in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{response.StatusCode}: {response.ReasonPhrase}");
+                }
+            }
+            catch (Exception e) when (e is HttpRequestException || e is InvalidOperationException)
+            {
+                logger.LogInfo($"Exception sending telemetry to LogAnalytics service:{Environment.NewLine}{e.Message}");
+            }
+            catch (Exception e)
+            {
+                // Do not take down FO with a telemetry fault. Log it. Warning level will always log.
+                // This means there is either a bug in this code or something else that needs your attention.
+#if DEBUG
+                logger.LogWarning($"Exception sending telemetry to LogAnalytics service:{Environment.NewLine}{e}");
+#else
+                logger.LogWarning($"Exception sending telemetry to LogAnalytics service: {e.Message}");
+#endif
+            }
+        }
+
+        private string GetSignature(
+                        string method,
+                        int contentLength,
+                        string contentType,
+                        string date,
+                        string resource)
+        {
+            string message = $"{method}\n{contentLength}\n{contentType}\nx-ms-date:{date}\n{resource}";
+            byte[] bytes = Encoding.UTF8.GetBytes(message);
+            using HMACSHA256 encryptor = new(Convert.FromBase64String(Key));
+
+            return $"SharedKey {WorkspaceId}:{Convert.ToBase64String(encryptor.ComputeHash(bytes))}";
+        }
+
         public LogAnalyticsTelemetry(
                 string workspaceId,
                 string sharedKey,
-                string logType,
-                string apiVersion = "2016-04-01")
+                string logType)
         {
             WorkspaceId = workspaceId;
             Key = sharedKey;
             LogType = logType;
-            ApiVersion = apiVersion;
             logger = new Logger("TelemetryLogger");
         }
 
@@ -273,90 +340,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                         CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// Sends telemetry data to Azure LogAnalytics via REST.
-        /// </summary>
-        /// <param name="payload">Json string containing telemetry data.</param>
-        /// <param name="cancellationToken">CancellationToken instance.</param>
-        /// <returns>A completed task or task containing exception info.</returns>
-        private async Task SendTelemetryAsync(string payload, CancellationToken cancellationToken)
-        {
-            if (string.IsNullOrWhiteSpace(payload) || cancellationToken.IsCancellationRequested)
-            {
-                return;
-            }
-
-            Uri requestUri = new Uri($"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}");
-            string date = DateTime.UtcNow.ToString("r");
-            string signature = GetSignature("POST", payload.Length, "application/json", date, "/api/logs");
-            
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(requestUri);
-            request.ContentType = "application/json";
-            request.Method = "POST";
-            request.Headers["Log-Type"] = LogType;
-            request.Headers["x-ms-date"] = date;
-            request.Headers["Authorization"] = signature;
-            byte[] content = Encoding.UTF8.GetBytes(payload);
-
-            if (cancellationToken.IsCancellationRequested)
-            {
-                return;
-            }
-
-            try
-            {
-                using (var requestStreamAsync = await request.GetRequestStreamAsync())
-                {
-                    await requestStreamAsync.WriteAsync(content, 0, content.Length, cancellationToken);
-
-                    using (var responseAsync = await request.GetResponseAsync() as HttpWebResponse)
-                    {
-                        if (cancellationToken.IsCancellationRequested)
-                        {
-                            return;
-                        }
-
-                        if (responseAsync != null && (responseAsync.StatusCode == HttpStatusCode.OK || responseAsync.StatusCode == HttpStatusCode.Accepted))
-                        {
-                            return;
-                        }
-
-                        if (responseAsync != null)
-                        {
-                            logger.LogWarning(
-                                $"Unexpected response from server in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{responseAsync.StatusCode}: {responseAsync.StatusDescription}");
-                        }
-                    }
-                }
-            }
-            catch (Exception e) when (e is SocketException || e is WebException)
-            {
-                logger.LogInfo($"Exception sending telemetry to LogAnalytics service:{Environment.NewLine}{e}");
-            }
-            catch (Exception e)
-            {
-                // Do not take down FO with a telemetry fault. Log it. Warning level will always log.
-                // This means there is either a bug in this code or something else that needs your attention..
-                logger.LogWarning($"Unhandled exception sending telemetry to LogAnalytics service:{Environment.NewLine}{e}");
-            }
-        }
-
-        private string GetSignature(
-                          string method,
-                          int contentLength,
-                          string contentType,
-                          string date,
-                          string resource)
-        {
-            string message = $"{method}\n{contentLength}\n{contentType}\nx-ms-date:{date}\n{resource}";
-            byte[] bytes = Encoding.UTF8.GetBytes(message);
-
-            using (var encryptor = new HMACSHA256(Convert.FromBase64String(Key)))
-            {
-                return $"SharedKey {WorkspaceId}:{Convert.ToBase64String(encryptor.ComputeHash(bytes))}";
-            }
         }
     }
 }

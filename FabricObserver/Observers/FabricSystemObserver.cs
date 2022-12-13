@@ -895,7 +895,7 @@ namespace FabricObserver.Observers
                 procId = NativeMethods.GetProcessIdFromName(procName);
             }
 
-            Stopwatch timer = new Stopwatch();
+            Stopwatch timer = new();
 
             try
             {

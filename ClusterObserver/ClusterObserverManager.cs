@@ -623,7 +623,7 @@ namespace ClusterObserver
                     EmitLogEvent = true
                 };
 
-                ObserverHealthReporter healthReporter = new ObserverHealthReporter(Logger);
+                ObserverHealthReporter healthReporter = new(Logger);
                 healthReporter.ReportHealthToServiceFabric(healthReport);
             }
 

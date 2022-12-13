@@ -41,12 +41,12 @@ namespace FabricObserverTests
         // Change this to suit your test env.
         private const string EtwTestsLogFolder = @"C:\temp\FOTests";
 
-        private static readonly Uri TestServiceName = new Uri("fabric:/app/service");
+        private static readonly Uri TestServiceName = new("fabric:/app/service");
         private static readonly bool IsSFRuntimePresentOnTestMachine = IsLocalSFRuntimePresent();
-        private static readonly CancellationToken Token = new CancellationToken();
+        private static readonly CancellationToken Token = new();
         private static readonly ICodePackageActivationContext CodePackageContext = null;
         private static readonly StatelessServiceContext TestServiceContext = null;
-        private static readonly Logger _logger = new Logger("TestLogger", EtwTestsLogFolder, 1)
+        private static readonly Logger _logger = new("TestLogger", EtwTestsLogFolder, 1)
         {
             EnableETWLogging = true,
             EnableVerboseLogging = true,
@@ -107,7 +107,7 @@ namespace FabricObserverTests
                 string configXml = File.ReadAllText(configPath);
 
                 // Safe XML pattern - *Do not use LoadXml*.
-                XmlDocument xdoc = new XmlDocument { XmlResolver = null };
+                XmlDocument xdoc = new() { XmlResolver = null };
                 sreader = new StringReader(configXml);
                 xreader = XmlReader.Create(sreader, new XmlReaderSettings { XmlResolver = null });
                 xdoc.Load(xreader);
@@ -194,11 +194,11 @@ namespace FabricObserverTests
             NameValueCollection nameValueCollection = new NameValueCollection();
             nameValueCollection.Add("foo", "bar");
             */
-            ApplicationDescription appDesc = new ApplicationDescription(new Uri(appName), appType, appVersion/*, nameValueCollection */);
+            ApplicationDescription appDesc = new(new Uri(appName), appType, appVersion/*, nameValueCollection */);
             await FabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
 
             // Create the HealthMetrics service descriptions.
-            StatefulServiceDescription serviceDescription1 = new StatefulServiceDescription
+            StatefulServiceDescription serviceDescription1 = new()
             {
                 ApplicationName = new Uri(appName),
                 MinReplicaSetSize = 1,
@@ -207,7 +207,7 @@ namespace FabricObserverTests
                 ServiceTypeName = serviceType1
             };
 
-            StatefulServiceDescription serviceDescription2 = new StatefulServiceDescription
+            StatefulServiceDescription serviceDescription2 = new()
             {
                 ApplicationName = new Uri(appName),
                 MinReplicaSetSize = 1,
@@ -262,7 +262,7 @@ namespace FabricObserverTests
             await FabricClient.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
 
             // Create HealthMetrics app instance.
-            ApplicationDescription appDesc = new ApplicationDescription(new Uri(appName), appType, appVersion);
+            ApplicationDescription appDesc = new(new Uri(appName), appType, appVersion);
             await FabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
 
             // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
@@ -306,7 +306,7 @@ namespace FabricObserverTests
             await FabricClient.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
 
             // Create HealthMetrics app instance.
-            ApplicationDescription appDesc = new ApplicationDescription(new Uri(appName), appType, appVersion);
+            ApplicationDescription appDesc = new(new Uri(appName), appType, appVersion);
             await FabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
 
             // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
@@ -329,7 +329,7 @@ namespace FabricObserverTests
 
         private static async Task CleanupTestHealthReportsAsync()
         {
-            Logger logger = new Logger("TestLogger");
+            Logger logger = new("TestLogger");
             var fabricClient = new FabricClient();
             var apps = await fabricClient.QueryManager.GetApplicationListAsync();
 
@@ -512,13 +512,13 @@ namespace FabricObserverTests
                 fabricClient.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
 
                 // Delete services.
-                DeleteServiceDescription deleteServiceDescription1 = new DeleteServiceDescription(new Uri(serviceName1));
-                DeleteServiceDescription deleteServiceDescription2 = new DeleteServiceDescription(new Uri(serviceName2));
+                DeleteServiceDescription deleteServiceDescription1 = new(new Uri(serviceName1));
+                DeleteServiceDescription deleteServiceDescription2 = new(new Uri(serviceName2));
                 await fabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription1);
                 await fabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription2);
 
                 // Delete an application instance from the application type.
-                DeleteApplicationDescription deleteApplicationDescription = new DeleteApplicationDescription(new Uri(appName));
+                DeleteApplicationDescription deleteApplicationDescription = new(new Uri(appName));
                 await fabricClient.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
 
                 // Un-provision the application type.

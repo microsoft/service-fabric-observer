@@ -31,7 +31,7 @@ namespace FabricObserver.Observers.Utilities
 
         // Netstat Impl (launches console, calls netstat -qno -p tcp, parses output, fills this cache).
         private readonly ConcurrentDictionary<int, string> netstatOutput = null;
-        private readonly object _lock = new object();
+        private readonly object _lock = new();
         private (int LowPort, int HighPort, int NumberOfPorts) windowsDynamicPortRange = (-1, -1, 0);
         private DateTime LastDynamicRangeCacheUpdate = DateTime.MinValue;
         private DateTime LastCacheUpdate = DateTime.MinValue;
@@ -58,32 +58,62 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
+#pragma warning disable CA1416 // Validate platform compatibility
                 win32OsInfo = new ManagementObjectSearcher(
                                     "SELECT Caption,Version,Status,OSLanguage,NumberOfProcesses,FreePhysicalMemory,FreeVirtualMemory," +
                                     "TotalVirtualMemorySize,TotalVisibleMemorySize,InstallDate,LastBootUpTime FROM Win32_OperatingSystem");
+#pragma warning restore CA1416 // Validate platform compatibility
 
+#pragma warning disable CA1416 // Validate platform compatibility
                 results = win32OsInfo.Get();
+#pragma warning restore CA1416 // Validate platform compatibility
 
+#pragma warning disable CA1416 // Validate platform compatibility
                 using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = results.GetEnumerator())
                 {
+#pragma warning disable CA1416 // Validate platform compatibility
                     while (enumerator.MoveNext())
                     {
                         cancellationToken.ThrowIfCancellationRequested();
+#pragma warning disable CA1416 // Validate platform compatibility
                         ManagementObject mObj = (ManagementObject)enumerator.Current;
+#pragma warning restore CA1416 // Validate platform compatibility
 
                         try
                         {
+#pragma warning disable CA1416 // Validate platform compatibility
                             object captionObj = mObj.Properties["Caption"].Value;
+#pragma warning restore CA1416 // Validate platform compatibility
+#pragma warning disable CA1416 // Validate platform compatibility
                             object versionObj = mObj.Properties["Version"].Value;
+#pragma warning restore CA1416 // Validate platform compatibility
+#pragma warning disable CA1416 // Validate platform compatibility
                             object statusObj = mObj.Properties["Status"].Value;
+#pragma warning restore CA1416 // Validate platform compatibility
+#pragma warning disable CA1416 // Validate platform compatibility
                             object osLanguageObj = mObj.Properties["OSLanguage"].Value;
+#pragma warning restore CA1416 // Validate platform compatibility
+#pragma warning disable CA1416 // Validate platform compatibility
                             object numProcsObj = mObj.Properties["NumberOfProcesses"].Value;
+#pragma warning restore CA1416 // Validate platform compatibility
+#pragma warning disable CA1416 // Validate platform compatibility
                             object freePhysicalObj = mObj.Properties["FreePhysicalMemory"].Value;
+#pragma warning restore CA1416 // Validate platform compatibility
+#pragma warning disable CA1416 // Validate platform compatibility
                             object freeVirtualTotalObj = mObj.Properties["FreeVirtualMemory"].Value;
+#pragma warning restore CA1416 // Validate platform compatibility
+#pragma warning disable CA1416 // Validate platform compatibility
                             object totalVirtualObj = mObj.Properties["TotalVirtualMemorySize"].Value;
+#pragma warning restore CA1416 // Validate platform compatibility
+#pragma warning disable CA1416 // Validate platform compatibility
                             object totalVisibleObj = mObj.Properties["TotalVisibleMemorySize"].Value;
+#pragma warning restore CA1416 // Validate platform compatibility
+#pragma warning disable CA1416 // Validate platform compatibility
                             object installDateObj = mObj.Properties["InstallDate"].Value;
+#pragma warning restore CA1416 // Validate platform compatibility
+#pragma warning disable CA1416 // Validate platform compatibility
                             object lastBootDateObj = mObj.Properties["LastBootUpTime"].Value;
+#pragma warning restore CA1416 // Validate platform compatibility
 
                             osInfo.Name = captionObj?.ToString();
 
@@ -99,8 +129,12 @@ namespace FabricObserver.Observers.Utilities
                             osInfo.Status = statusObj?.ToString();
                             osInfo.Language = osLanguageObj?.ToString();
                             osInfo.Version = versionObj?.ToString();
+#pragma warning disable CA1416 // Validate platform compatibility
                             osInfo.InstallDate = ManagementDateTimeConverter.ToDateTime(installDateObj?.ToString()).ToUniversalTime().ToString("o");
+#pragma warning restore CA1416 // Validate platform compatibility
+#pragma warning disable CA1416 // Validate platform compatibility
                             osInfo.LastBootUpTime = ManagementDateTimeConverter.ToDateTime(lastBootDateObj?.ToString()).ToUniversalTime().ToString("o");
+#pragma warning restore CA1416 // Validate platform compatibility
                             osInfo.FreePhysicalMemoryKB = ulong.TryParse(freePhysicalObj?.ToString(), out ulong freePhysical) ? freePhysical : 0;
                             osInfo.FreeVirtualMemoryKB = ulong.TryParse(freeVirtualTotalObj?.ToString(), out ulong freeVirtual) ? freeVirtual : 0;
                             osInfo.TotalVirtualMemorySizeKB = ulong.TryParse(totalVirtualObj?.ToString(), out ulong totalVirtual) ? totalVirtual : 0;
@@ -116,7 +150,9 @@ namespace FabricObserver.Observers.Utilities
                         }
                         finally
                         {
+#pragma warning disable CA1416 // Validate platform compatibility
                             mObj?.Dispose();
+#pragma warning restore CA1416 // Validate platform compatibility
                             mObj = null;
                         }
                     }
@@ -124,7 +160,9 @@ namespace FabricObserver.Observers.Utilities
             }
             finally
             {
+#pragma warning disable CA1416 // Validate platform compatibility
                 results?.Dispose();
+#pragma warning restore CA1416 // Validate platform compatibility
                 results = null;
                 win32OsInfo?.Dispose();
                 win32OsInfo = null;
@@ -171,7 +209,7 @@ namespace FabricObserver.Observers.Utilities
         {
             try
             {
-                NativeMethods.PerformanceInformation pi = new NativeMethods.PerformanceInformation();
+                NativeMethods.PerformanceInformation pi = new();
                 
                 if (!NativeMethods.GetSytemPerformanceInfo(ref pi))
                 {

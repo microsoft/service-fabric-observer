@@ -22,7 +22,9 @@ namespace FabricObserver.Observers.Utilities
         {
             try
             {
+#pragma warning disable CA1416 // Validate platform compatibility
                 return (string)Registry.GetValue(ServiceFabricWindowsRegistryPath, name, null);
+#pragma warning restore CA1416 // Validate platform compatibility
             }
             catch (Exception e) when (e is ArgumentException || e is IOException || e is SecurityException)
             {
@@ -34,7 +36,9 @@ namespace FabricObserver.Observers.Utilities
         {
             try
             { 
+#pragma warning disable CA1416 // Validate platform compatibility
                 return (int)Registry.GetValue(ServiceFabricWindowsRegistryPath, name, 0);
+#pragma warning restore CA1416 // Validate platform compatibility
             }
             catch (Exception e) when (e is ArgumentException || e is IOException || e is SecurityException)
             {

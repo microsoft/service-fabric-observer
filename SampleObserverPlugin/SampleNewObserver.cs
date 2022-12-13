@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 using Polly;
+using Polly.Retry;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
@@ -26,6 +27,7 @@ namespace FabricObserver.Observers
     public class SampleNewObserver : ObserverBase
     {
         private readonly StringBuilder message;
+        private readonly AsyncRetryPolicy retryPolicy;
 
         /// <summary>
         /// 
@@ -35,6 +37,20 @@ namespace FabricObserver.Observers
         public SampleNewObserver(FabricClient fabricClient, StatelessServiceContext context) : base(fabricClient, context)
         {
             message = new StringBuilder();
+            
+            // Polly retry policy for when FabricException or TimeoutException is thrown by its Execute predicate.
+            // The purpose of using Polly here is to show how you deal with external (to FO) dependencies (put them all in the same folder where your
+            // plugin dll lives, including the dependencies, if any, of the primary dependencies you employ).
+            retryPolicy = Policy.Handle<FabricException>()
+                                    .Or<TimeoutException>()
+                                    .WaitAndRetryAsync(
+                                        new[]
+                                        {
+                                            TimeSpan.FromSeconds(1),
+                                            TimeSpan.FromSeconds(3),
+                                            TimeSpan.FromSeconds(5),
+                                            TimeSpan.FromSeconds(10),
+                                        });
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -68,27 +84,12 @@ namespace FabricObserver.Observers
                                                                                          ConfigurationSettings.AsyncTimeout,
                                                                                          Token),
                                              Token);*/
-
-            // Polly retry policy for when FabricException is thrown by its Execute predicate (GetDeployedApplicationPagedListAsync).
-            // The purpose of using Polly here is to show how you deal with dependencies (put them all in the same folder where your
-            // plugin dll lives, including the dependencies, if any, of the primary dependencies you employ).
-            var policy = Policy.Handle<FabricException>()
-                                   .Or<TimeoutException>()
-                                   .WaitAndRetryAsync(
-                                        new[]
-                                        {
-                                            TimeSpan.FromSeconds(1),
-                                            TimeSpan.FromSeconds(3),
-                                            TimeSpan.FromSeconds(5),
-                                            TimeSpan.FromSeconds(10),
-                                        });
-
             var appList = 
-                await policy.ExecuteAsync(
-                                () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                        deployedAppQueryDesc,
-                                        ConfigurationSettings.AsyncTimeout,
-                                        Token));
+                await retryPolicy.ExecuteAsync(
+                        () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
+                                deployedAppQueryDesc,
+                                ConfigurationSettings.AsyncTimeout,
+                                Token));
 
             // DeployedApplicationList is a wrapper around List, but does not support AddRange.. Thus, cast it ToList and add to the temp list, then iterate through it.
             // In reality, this list will never be greater than, say, 1000 apps deployed to a node, but it's a good idea to be prepared since AppObserver supports
@@ -111,11 +112,11 @@ namespace FabricObserver.Observers
                                                 Token),
                                         Token);*/
 
-                appList = await policy.ExecuteAsync(
-                                        () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                deployedAppQueryDesc,
-                                                ConfigurationSettings.AsyncTimeout,
-                                                Token));
+                appList = await retryPolicy.ExecuteAsync(
+                                  () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
+                                          deployedAppQueryDesc,
+                                          ConfigurationSettings.AsyncTimeout,
+                                          Token));
 
                 apps.AddRange(appList.ToList());
 
@@ -128,33 +129,39 @@ namespace FabricObserver.Observers
 
             foreach (var app in apps)
             {
-                var services = await FabricClientInstance.QueryManager.GetServiceListAsync(
-                                        app.ApplicationName,
-                                        null,
-                                        AsyncClusterOperationTimeoutSeconds,
-                                        token);
+                var services = 
+                    await retryPolicy.ExecuteAsync(
+                            () => FabricClientInstance.QueryManager.GetServiceListAsync(
+                                    app.ApplicationName,
+                                    null,
+                                    AsyncClusterOperationTimeoutSeconds,
+                                    token));
 
                 totalNumberOfDeployedServices += services.Count;
                 servicesInWarningError += services.Count(s => s.HealthState == HealthState.Warning || s.HealthState == HealthState.Error);
 
                 foreach (var service in services)
                 {
-                    var partitions = await FabricClientInstance.QueryManager.GetPartitionListAsync(
-                                            service.ServiceName,
-                                            null,
-                                            AsyncClusterOperationTimeoutSeconds,
-                                            token);
+                    var partitions = 
+                        await retryPolicy.ExecuteAsync(
+                               () => FabricClientInstance.QueryManager.GetPartitionListAsync(
+                                        service.ServiceName,
+                                        null,
+                                        AsyncClusterOperationTimeoutSeconds,
+                                        token));
 
                     totalNumberOfPartitions += partitions.Count;
                     partitionsInWarningError += partitions.Count(p => p.HealthState == HealthState.Warning || p.HealthState == HealthState.Error);
 
                     foreach (var partition in partitions)
                     {
-                        var replicas = await FabricClientInstance.QueryManager.GetReplicaListAsync(
-                                                partition.PartitionInformation.Id,
-                                                null,
-                                                AsyncClusterOperationTimeoutSeconds,
-                                                token);
+                        var replicas = 
+                            await retryPolicy.ExecuteAsync(
+                                    () => FabricClientInstance.QueryManager.GetReplicaListAsync(
+                                            partition.PartitionInformation.Id,
+                                            null,
+                                            AsyncClusterOperationTimeoutSeconds,
+                                            token));
 
                         totalNumberOfReplicas += replicas.Count;
                         replicasInWarningError += replicas.Count(r => r.HealthState == HealthState.Warning || r.HealthState == HealthState.Error);
@@ -195,7 +202,11 @@ namespace FabricObserver.Observers
 
             try
             {
-                var nodes = await FabricClientInstance.QueryManager.GetNodeListAsync(nodeName ?? this.NodeName, ConfigurationSettings.AsyncTimeout, Token);
+                var nodes = await retryPolicy.ExecuteAsync(
+                                    () => FabricClientInstance.QueryManager.GetNodeListAsync(
+                                            nodeName ?? this.NodeName,
+                                            ConfigurationSettings.AsyncTimeout,
+                                            Token));
 
                 if (nodes?.Count == 0)
                 {
@@ -238,7 +249,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is TimeoutException)
             {
-                ObserverLogger.LogWarning($"Failed to generate node stats:{Environment.NewLine}{e}");
+                ObserverLogger.LogWarning($"Failed to generate node stats:{Environment.NewLine}{e.Message}");
                 // Retry or try again later..
             }
         }

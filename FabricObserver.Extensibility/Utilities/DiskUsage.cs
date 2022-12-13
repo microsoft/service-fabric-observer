@@ -134,7 +134,7 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (Exception e)
             {
-                Logger logger = new Logger("Utilities");
+                Logger logger = new("Utilities");
 
                 if (e is ArgumentNullException || e is PlatformNotSupportedException || e is Win32Exception || e is UnauthorizedAccessException)
                 {

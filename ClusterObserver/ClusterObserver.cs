@@ -23,8 +23,8 @@ namespace ClusterObserver
 {
     public sealed class ClusterObserver : ObserverBase
     {
-        private readonly Uri repairManagerServiceUri = new Uri($"{ClusterObserverConstants.SystemAppName}/RepairManagerService");
-        private readonly Uri fabricSystemAppUri = new Uri(ClusterObserverConstants.SystemAppName);
+        private readonly Uri repairManagerServiceUri = new($"{ClusterObserverConstants.SystemAppName}/RepairManagerService");
+        private readonly Uri fabricSystemAppUri = new(ClusterObserverConstants.SystemAppName);
         private readonly bool ignoreDefaultQueryTimeout;
 
         private HealthState LastKnownClusterHealthState

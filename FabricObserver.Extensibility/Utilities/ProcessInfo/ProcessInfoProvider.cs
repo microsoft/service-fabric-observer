@@ -14,7 +14,7 @@ namespace FabricObserver.Observers.Utilities
     public abstract class ProcessInfoProvider : IProcessInfoProvider
     {
         private static IProcessInfoProvider instance;
-        private static readonly object lockObj = new object();
+        private static readonly object lockObj = new();
 
         public static IProcessInfoProvider Instance
         {

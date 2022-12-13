@@ -45,7 +45,7 @@ namespace FabricObserver.Observers.Utilities
             string bin = $"{configPath}/elevated_proc_fd";
             float result;
 
-            ProcessStartInfo startInfo = new ProcessStartInfo
+            ProcessStartInfo startInfo = new()
             {
                 Arguments = arg,
                 FileName = bin,
@@ -59,7 +59,7 @@ namespace FabricObserver.Observers.Utilities
             string error = string.Empty;
             string output = string.Empty;
 
-            using (Process process = new Process())
+            using (Process process = new())
             {
                 process.ErrorDataReceived += (sender, e) => { error += e.Data; };
                 process.OutputDataReceived += (sender, e) => { if (!string.IsNullOrWhiteSpace(e.Data)) { output += e.Data; } };

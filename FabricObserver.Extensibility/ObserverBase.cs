@@ -32,7 +32,7 @@ namespace FabricObserver.Observers
         private const int TtlAddMinutes = 5;
         private bool disposed;
         private ConcurrentDictionary<string, (int DumpCount, DateTime LastDumpDate)> ServiceDumpCountDictionary;
-        private readonly object lockObj = new object();
+        private readonly object lockObj = new();
         private bool _isWindows;
 
         public static StatelessServiceContext FabricServiceContext
@@ -368,7 +368,17 @@ namespace FabricObserver.Observers
         {
             ObserverName = GetType().Name;
             ConfigurationSectionName = ObserverName + "Configuration";
-            IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+
+            try
+            {
+                IsWindows = Environment.OSVersion.Platform == PlatformID.Win32NT;
+            }
+            catch (InvalidOperationException e)
+            {
+                ObserverLogger.LogWarning($"Unable to determine OS platform: {e.Message}");
+                throw;
+            }
+
             ApplicationName = new Uri(serviceContext.CodePackageActivationContext.ApplicationName);
             NodeName = serviceContext.NodeContext.NodeName;
             NodeType = serviceContext.NodeContext.NodeType;
@@ -554,7 +564,7 @@ namespace FabricObserver.Observers
                 ServiceDumpCountDictionary = new ConcurrentDictionary<string, (int DumpCount, DateTime LastDump)>();
             }
 
-            StringBuilder sb = new StringBuilder(metric);
+            StringBuilder sb = new(metric);
             string metricName = sb.Replace("Total", string.Empty)
                                   .Replace("(MB)", string.Empty)
                                   .Replace("(Percent)", string.Empty)

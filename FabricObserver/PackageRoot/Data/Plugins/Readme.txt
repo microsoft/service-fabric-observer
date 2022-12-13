@@ -4,7 +4,7 @@ Your Observer plugins must live in this folder.
 
 Note that the observer API lives in its own library, FabricObserver.Extensibility.dll. FO also uses this library for its internal observer impls.
 
-1. Create a new .NET core library project. You should target net6.0 in your csproj because that is the target net SDK version that FabricObserver is built for.
+1. Create a new .NET core library project. You should target net6.0 in your csproj because that is the target net SDK version that both FabricObserver and FabricObserver.Extensibility target.
 
 2. Install the same version of the Microsoft.ServiceFabricApps.FabricObserver.Extensibility nupkg from https://www.nuget.org/profiles/ServiceFabricApps as the version of FabricObserver you are deploying. 
    E.g., 3.2.4 if you are going to deploy FO 3.2.4.831/960.
@@ -67,5 +67,5 @@ cd C:\Users\me\source\repos\service-fabric-observer
 ./Build-FabricObserver
 ./Build-NugetPackages
 
-The output from the above commands, FabricObserver platform-specific nupkgs and a package you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.0.nupkg, would be located in 
+The output from the above commands contains FabricObserver platform-specific nupkgs and a package you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.0.nupkg. Nupkg files from above command would be located in 
 C:\Users\me\source\repos\service-fabric-observer\bin\release\FabricObserver\Nugets.

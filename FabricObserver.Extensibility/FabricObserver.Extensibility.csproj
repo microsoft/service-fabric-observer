@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>netstandard2.0</TargetFramework>
+		<TargetFramework>net6.0</TargetFramework>
 		<Platforms>x64</Platforms>
 		<RootNamespace>FabricObserver</RootNamespace>
 		<Copyright>Copyright © 2022</Copyright>

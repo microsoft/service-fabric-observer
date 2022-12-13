@@ -12,8 +12,8 @@ namespace FabricObserver.Observers.Utilities
     public abstract class OSInfoProvider
     {
         private static OSInfoProvider instance;
-        private static readonly object _instanceLock = new object();
-        private static readonly object _loggerLock = new object();
+        private static readonly object _instanceLock = new();
+        private static readonly object _loggerLock = new();
         private static Logger _logger = null;
 
         public static OSInfoProvider Instance

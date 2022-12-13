@@ -11,7 +11,7 @@ namespace FabricObserver.Observers.Utilities
     {
         public abstract float GetProcessorTimePercentage();
         private static CpuUtilizationProvider instance;
-        private static readonly object lockObj = new object();
+        private static readonly object lockObj = new();
 
         public static CpuUtilizationProvider Instance
         {
