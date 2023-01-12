@@ -7,8 +7,8 @@
     <AssemblyName>TelemetryLib</AssemblyName>
     <TargetFramework>net6.0</TargetFramework>
     <Platforms>x64</Platforms>
-    <AssemblyVersion>2.0.0.0</AssemblyVersion>
-    <FileVersion>2.0.0.0</FileVersion>
+    <AssemblyVersion>2.1.0.0</AssemblyVersion>
+    <FileVersion>2.1.0.0</FileVersion>
     <Copyright>Copyright ©  2022</Copyright>
     <Product>TelemetryLib</Product>
   </PropertyGroup>
@@ -20,7 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights" Version="2.21.0" />
-	<PackageReference Include="Microsoft.ServiceFabric.Services" Version="5.0.516" />
+	<PackageReference Include="Microsoft.ServiceFabric.Services" Version="6.0.1017" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="5.0.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
   </ItemGroup>

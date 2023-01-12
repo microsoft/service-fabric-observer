@@ -16,10 +16,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Interfaces;
-using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.TelemetryLib;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
@@ -340,6 +338,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                         CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
+        }
+
+        public async Task ReportNodeSnapshotAsync(NodeSnapshotTelemetryData nodeSnapshotTelem, CancellationToken cancellationToken)
+        {
+            string jsonPayload = JsonConvert.SerializeObject(nodeSnapshotTelem);
+            await SendTelemetryAsync(jsonPayload, cancellationToken);
         }
     }
 }

@@ -45,7 +45,7 @@ namespace ClusterObserver
             get;
         }
 
-        private bool TelemetryEnabled => ClusterObserverManager.TelemetryEnabled;
+        private static bool TelemetryEnabled => ClusterObserverManager.TelemetryEnabled;
 
         private static bool EtwEnabled => ClusterObserverManager.EtwEnabled;
 

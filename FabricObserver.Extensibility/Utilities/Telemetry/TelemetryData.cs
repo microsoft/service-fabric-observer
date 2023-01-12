@@ -8,9 +8,6 @@ using Newtonsoft.Json;
 using FabricObserver.Observers.Interfaces;
 using System.Fabric.Health;
 using System;
-using System.Fabric;
-using System.Fabric.Query;
-using System.Fabric.Description;
 using System.Diagnostics.Tracing;
 
 namespace FabricObserver.Observers.Utilities.Telemetry

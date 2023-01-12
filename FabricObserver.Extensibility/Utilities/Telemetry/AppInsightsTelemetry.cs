@@ -160,7 +160,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
             catch (Exception e)
             {
-                logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e}");
+                logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e.Message}");
             }
 
             return Task.CompletedTask;
@@ -185,6 +185,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 var properties = new Dictionary<string, string>
                 {
                     { "ClusterId", telemetryData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId },
+                    { "EntityType", telemetryData.EntityType.ToString() },
                     { "HealthState", Enum.GetName(typeof(HealthState), telemetryData.HealthState) },
                     { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
                     { "ApplicationTypeName", telemetryData.ApplicationType ?? string.Empty },
@@ -193,8 +194,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "ServiceKind", telemetryData.ServiceKind ?? string.Empty },
                     { "ServicePackageActivationMode", telemetryData.ServicePackageActivationMode ?? string.Empty },
                     { "ProcessId", telemetryData.ProcessId == 0 ? string.Empty : telemetryData.ProcessId.ToString() },
-                    { "ProcessName", telemetryData.ProcessName },
-                    { "ProcessStartTime", telemetryData.ProcessStartTime },
+                    { "ProcessName", telemetryData.ProcessName ?? string.Empty },
+                    { "ProcessStartTime", telemetryData.ProcessStartTime ?? string.Empty },
                     { "ErrorCode", telemetryData.Code ?? string.Empty },
                     { "Description", telemetryData.Description ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
@@ -203,16 +204,16 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "ReplicaId", telemetryData.ReplicaId.ToString() },
                     { "RGEnabled", telemetryData.RGMemoryEnabled.ToString() },
                     { "RGMemoryLimitMb", telemetryData.RGAppliedMemoryLimitMb.ToString() },
-                    { "ObserverName", telemetryData.ObserverName },
+                    { "ObserverName", telemetryData.ObserverName ?? string.Empty },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
                     { "OS", telemetryData.OS ?? string.Empty }
                 };
 
-                telemetryClient.TrackEvent(ObserverConstants.FabricObserverETWEventName, properties);
+                telemetryClient.TrackEvent("FabricObserver.EntityHealthData", properties);
             }
             catch (Exception e)
             {
-                logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e}");
+                logger.LogWarning($"Unhandled exception in AppInsights ReportHealthAsync impl:{Environment.NewLine}{e.Message}");
             }
 
             return Task.CompletedTask;
@@ -262,7 +263,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 var properties = new Dictionary<string, string>
                 {
                     { "ClusterId", telemetryData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId },
-                    { "HealthState", Enum.GetName(typeof(HealthState), telemetryData.HealthState) },
+                    { "EntityType", telemetryData.EntityType.ToString() },
                     { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
                     { "ApplicationTypeName", telemetryData.ApplicationType ?? string.Empty },
                     { "ServiceName", telemetryData.ServiceName ?? string.Empty },
@@ -270,17 +271,15 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "ServiceKind", telemetryData.ServiceKind ?? string.Empty },
                     { "ServicePackageActivationMode", telemetryData.ServicePackageActivationMode?.ToString() ?? string.Empty },
                     { "ProcessId", telemetryData.ProcessId == 0 ? string.Empty : telemetryData.ProcessId.ToString() },
-                    { "ProcessName", telemetryData.ProcessName },
-                    { "ProcessStartTime", telemetryData.ProcessStartTime },
-                    { "ErrorCode", telemetryData.Code ?? string.Empty },
-                    { "Description", telemetryData.Description ?? string.Empty },
+                    { "ProcessName", telemetryData.ProcessName ?? string.Empty },
+                    { "ProcessStartTime", telemetryData.ProcessStartTime ?? string.Empty },
                     { "Metric", telemetryData.Metric ?? string.Empty },
                     { "Value", telemetryData.Value.ToString() },
                     { "PartitionId", telemetryData.PartitionId != null ? telemetryData.PartitionId.ToString() : string.Empty },
                     { "ReplicaId", telemetryData.ReplicaId.ToString() },
                     { "RGEnabled", telemetryData.RGMemoryEnabled.ToString() },
                     { "RGMemoryLimitMb", telemetryData.RGAppliedMemoryLimitMb.ToString() },
-                    { "ObserverName", telemetryData.ObserverName },
+                    { "ObserverName", telemetryData.ObserverName ?? string.Empty },
                     { "NodeName", telemetryData.NodeName ?? string.Empty },
                     { "OS", telemetryData.OS ?? string.Empty },
                 };
@@ -290,11 +289,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { telemetryData.Metric, telemetryData.Value }
                 };
 
-                telemetryClient.TrackEvent(ObserverConstants.FabricObserverETWEventName, properties, metric);
+                telemetryClient.TrackEvent("FabricObserver.EntityMetricData", properties, metric);
             }
             catch (Exception e)
             {
-                logger.LogWarning($"Unhandled exception in TelemetryClient.ReportMetricAsync:{Environment.NewLine}{e}");
+                logger.LogWarning($"Unhandled exception in AppInsights ReportMetricAsync impl:{Environment.NewLine}{e.Message}");
             }
 
             return Task.CompletedTask;
@@ -340,7 +339,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                         { $"{telemData.Metric} (Parent + Descendants)", telemData.Value }
                     };
 
-                    telemetryClient.TrackEvent(ObserverConstants.FabricObserverETWEventName, properties, metrics);
+                    telemetryClient.TrackEvent("FabricObserver.ChildProcessTelemetryData", properties, metrics);
                 }
                 catch (Exception e)
                 {
@@ -404,7 +403,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     _ = properties.Remove("HotFixes");
                 }
 
-                telemetryClient.TrackEvent(ObserverConstants.FabricObserverETWEventName, properties);
+                telemetryClient.TrackEvent("FabricObserver.MachineTelemetryData", properties);
             }
             catch (Exception e)
             {
@@ -523,6 +522,45 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             {
                 // Telemetry is non-critical and should not take down FH.
                 logger.LogWarning($"Failure in ReportApplicationUpgradeStatus:{Environment.NewLine}{e}");
+            }
+
+            return Task.CompletedTask;
+        }
+
+        public Task ReportNodeSnapshotAsync(NodeSnapshotTelemetryData nodeSnapshotTelem, CancellationToken cancellationToken)
+        {
+            if (nodeSnapshotTelem == null || cancellationToken.IsCancellationRequested)
+            {
+                return Task.CompletedTask;
+            }
+
+            try
+            {
+                var properties = new Dictionary<string, string>
+                {
+                    { "SnapshotId", nodeSnapshotTelem.SnapshotId },
+                    { "SnapshotTimestamp", nodeSnapshotTelem.SnapshotTimestamp },
+                    { "NodeName", nodeSnapshotTelem.NodeName },
+                    { "NodeType", nodeSnapshotTelem.NodeType },
+                    { "NodeId", nodeSnapshotTelem.NodeId },
+                    { "NodeInstanceId", nodeSnapshotTelem.NodeInstanceId },
+                    { "NodeStatus", nodeSnapshotTelem.NodeStatus },
+                    { "NodeUpAt", nodeSnapshotTelem.NodeUpAt },
+                    { "NodeDownAt", nodeSnapshotTelem.NodeDownAt },
+                    { "CodeVersion", nodeSnapshotTelem.CodeVersion },
+                    { "ConfigVersion", nodeSnapshotTelem.ConfigVersion },
+                    { "HealthState", nodeSnapshotTelem.HealthState },
+                    { "IpAddressOrFQDN", nodeSnapshotTelem.IpAddressOrFQDN },
+                    { "UpgradeDomain", nodeSnapshotTelem.UpgradeDomain},
+                    { "FaultDomain", nodeSnapshotTelem.FaultDomain },
+                    { "IsSeedNode", nodeSnapshotTelem.IsSeedNode }
+                };
+
+                telemetryClient.TrackEvent("FabricObserver.NodeSnapshotData", properties);
+            }
+            catch (Exception e)
+            {
+                logger.LogWarning($"Unhandled exception in AppInsights impl: ReportNodeSnapshotAsync:{Environment.NewLine}{e.Message}");
             }
 
             return Task.CompletedTask;

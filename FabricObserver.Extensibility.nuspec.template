@@ -19,7 +19,7 @@
 		<dependencies>
 			<group targetFramework="net6.0">
 				<dependency id="Microsoft.Win32.Registry" version="5.0.0" />
-				<dependency id="Microsoft.ServiceFabric.Services" version="5.0.516" />
+				<dependency id="Microsoft.ServiceFabric.Services" version="6.0.1017" />
 				<dependency id="Microsoft.ApplicationInsights" version="2.21.0" />
 				<dependency id="Microsoft.ApplicationInsights.DependencyCollector" version="2.21.0" />
 				<dependency id="Microsoft.ApplicationInsights.NLogTarget" version="2.21.0" />

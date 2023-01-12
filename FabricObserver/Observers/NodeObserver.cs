@@ -6,6 +6,7 @@
 using System;
 using System.Diagnostics;
 using System.Fabric;
+using System.Fabric.Query;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Utilities;
@@ -35,6 +36,7 @@ namespace FabricObserver.Observers
         // Holds data for percentage of total configured file descriptors that are in use.
         public FabricResourceUsageData<double> LinuxFileHandlesDataPercentAllocated;
         public FabricResourceUsageData<int> LinuxFileHandlesDataTotalAllocated;
+        private DateTime lastNodeSnapshotTaken;
 
         public float CpuErrorUsageThresholdPct
         {
@@ -128,6 +130,11 @@ namespace FabricObserver.Observers
             get; set;
         }
 
+        public bool EnableNodeSnapshots 
+        { 
+            get; set; 
+        }
+
         /// <summary>
         /// Creates a new instance of the type.
         /// </summary>
@@ -165,7 +172,7 @@ namespace FabricObserver.Observers
             LastRunDateTime = DateTime.Now;
         }
 
-        public override Task ReportAsync(CancellationToken token)
+        public override async Task ReportAsync(CancellationToken token)
         {
             try
             {
@@ -394,7 +401,12 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                return Task.CompletedTask;
+                // node snapshot (once a day).
+                if (EnableNodeSnapshots && DateTime.Now.Subtract(lastNodeSnapshotTaken) > TimeSpan.FromDays(1))
+                {
+                    await EmitNodeSnapshotDetailsAsync();
+                    lastNodeSnapshotTaken = DateTime.Now;
+                }
             }
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
             {
@@ -489,7 +501,7 @@ namespace FabricObserver.Observers
 
             Token.ThrowIfCancellationRequested();
 
-            var cpuError = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverCpuErrorLimitPct);
+            string cpuError = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverCpuErrorLimitPct);
 
             if (!string.IsNullOrEmpty(cpuError) && float.TryParse(cpuError, out float cpuErrorUsageThresholdPct))
             {
@@ -499,42 +511,42 @@ namespace FabricObserver.Observers
                 }
             }
 
-            var memError = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverMemoryErrorLimitMb);
+            string memError = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverMemoryErrorLimitMb);
 
             if (!string.IsNullOrEmpty(memError) && int.TryParse(memError, out int memErrorUsageThresholdMb))
             {
                 MemErrorUsageThresholdMb = memErrorUsageThresholdMb;
             }
 
-            var portsErr = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverNetworkErrorActivePorts);
+            string portsErr = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverNetworkErrorActivePorts);
 
             if (!string.IsNullOrEmpty(portsErr) && !int.TryParse(portsErr, out int activePortsErrorThreshold))
             {
                 ActivePortsErrorThreshold = activePortsErrorThreshold;
             }
 
-            var ephemeralPortsRawErr = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverNetworkErrorEphemeralPorts);
+            string ephemeralPortsRawErr = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverNetworkErrorEphemeralPorts);
 
             if (!string.IsNullOrEmpty(ephemeralPortsRawErr) && int.TryParse(ephemeralPortsRawErr, out int ephemeralPortsRawErrorThreshold))
             {
                 EphemeralPortsRawErrorThreshold = ephemeralPortsRawErrorThreshold;
             }
 
-            var ephemeralPortsPercentageErr = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverNetworkErrorEphemeralPortsPercentage);
+            string ephemeralPortsPercentageErr = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverNetworkErrorEphemeralPortsPercentage);
 
             if (!string.IsNullOrEmpty(ephemeralPortsPercentageErr) && double.TryParse(ephemeralPortsPercentageErr, out double ephemeralPortsPercentageErrThreshold))
             {
                 EphemeralPortsPercentErrorThreshold = ephemeralPortsPercentageErrThreshold;
             }
 
-            var errFirewallRules = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverNetworkErrorFirewallRules);
+            string errFirewallRules = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverNetworkErrorFirewallRules);
 
             if (!string.IsNullOrEmpty(errFirewallRules) && int.TryParse(errFirewallRules, out int firewallRulesErrorThreshold))
             {
                 FirewallRulesErrorThreshold = firewallRulesErrorThreshold;
             }
 
-            var errMemPercentUsed = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverMemoryUsePercentError);
+            string errMemPercentUsed = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverMemoryUsePercentError);
 
             if (!string.IsNullOrEmpty(errMemPercentUsed) && double.TryParse(errMemPercentUsed, out double memoryPercentUsedErrorThreshold))
             {
@@ -547,7 +559,7 @@ namespace FabricObserver.Observers
             // Linux FDs.
             if (!IsWindows)
             {
-                var errFileHandlesPercentUsed = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverLinuxFileHandlesErrorLimitPct);
+                string errFileHandlesPercentUsed = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverLinuxFileHandlesErrorLimitPct);
 
                 if (!string.IsNullOrEmpty(errFileHandlesPercentUsed) && double.TryParse(errFileHandlesPercentUsed, out double fdsPercentUsedErrorThreshold))
                 {
@@ -557,7 +569,7 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                var errFileHandlesCount = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverLinuxFileHandlesErrorTotalAllocated);
+                string errFileHandlesCount = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverLinuxFileHandlesErrorTotalAllocated);
 
                 if (!string.IsNullOrEmpty(errFileHandlesCount) && int.TryParse(errFileHandlesCount, out int fdsErrorCountThreshold))
                 {
@@ -572,7 +584,7 @@ namespace FabricObserver.Observers
 
             Token.ThrowIfCancellationRequested();
 
-            var cpuWarn = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverCpuWarningLimitPct);
+            string cpuWarn = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverCpuWarningLimitPct);
 
             if (!string.IsNullOrEmpty(cpuWarn) && int.TryParse(cpuWarn, out int cpuWarningUsageThresholdPct))
             {
@@ -582,42 +594,42 @@ namespace FabricObserver.Observers
                 }
             }
 
-            var memWarn = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverMemoryWarningLimitMb);
+            string memWarn = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverMemoryWarningLimitMb);
 
             if (!string.IsNullOrEmpty(memWarn) && int.TryParse(memWarn, out int memWarningUsageThresholdMb))
             {
                 MemWarningUsageThresholdMb = memWarningUsageThresholdMb;
             }
 
-            var portsWarn = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverNetworkWarningActivePorts);
+            string portsWarn = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverNetworkWarningActivePorts);
 
             if (!string.IsNullOrEmpty(portsWarn) && int.TryParse(portsWarn, out int activePortsWarningThreshold))
             {
                 ActivePortsWarningThreshold = activePortsWarningThreshold;
             }
 
-            var ephemeralPortsWarn = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverNetworkWarningEphemeralPorts);
+            string ephemeralPortsWarn = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverNetworkWarningEphemeralPorts);
 
             if (!string.IsNullOrEmpty(ephemeralPortsWarn) && int.TryParse(ephemeralPortsWarn, out int ephemeralPortsWarningThreshold))
             {
                 EphemeralPortsRawWarningThreshold = ephemeralPortsWarningThreshold;
             }
 
-            var ephemeralPortsPercentageWarn = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverNetworkWarningEphemeralPortsPercentage);
+            string ephemeralPortsPercentageWarn = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverNetworkWarningEphemeralPortsPercentage);
 
             if (!string.IsNullOrEmpty(ephemeralPortsPercentageWarn) && double.TryParse(ephemeralPortsPercentageWarn, out double ephemeralPortsPercentageWarnThreshold))
             {
                 EphemeralPortsPercentWarningThreshold = ephemeralPortsPercentageWarnThreshold;
             }
 
-            var warnFirewallRules = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverNetworkWarningFirewallRules);
+            string warnFirewallRules = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverNetworkWarningFirewallRules);
 
             if (!string.IsNullOrEmpty(warnFirewallRules) && int.TryParse(warnFirewallRules, out int firewallRulesWarningThreshold))
             {
                 FirewallRulesWarningThreshold = firewallRulesWarningThreshold;
             }
 
-            var warnMemPercentUsed = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverMemoryUsePercentWarning);
+            string warnMemPercentUsed = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverMemoryUsePercentWarning);
 
             if (!string.IsNullOrEmpty(warnMemPercentUsed) && double.TryParse(warnMemPercentUsed, out double memoryPercentUsedWarningThreshold))
             {
@@ -627,6 +639,16 @@ namespace FabricObserver.Observers
                 }
             }
 
+            // Node snapshots.
+            string enableNodeSnapshots = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverEnableNodeSnapshot);
+
+            if (string.IsNullOrEmpty(enableNodeSnapshots) || !bool.TryParse(enableNodeSnapshots, out bool enableSnapshot))
+            {
+                return;
+            }
+
+            EnableNodeSnapshots = enableSnapshot;
+
             /* Linux FDs */
 
             if (IsWindows)
@@ -634,7 +656,7 @@ namespace FabricObserver.Observers
                 return;
             }
 
-            var warnFileHandlesPercentUsed = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverLinuxFileHandlesWarningLimitPct);
+            string warnFileHandlesPercentUsed = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverLinuxFileHandlesWarningLimitPct);
 
             if (!string.IsNullOrEmpty(warnFileHandlesPercentUsed) && double.TryParse(warnFileHandlesPercentUsed, out double fdsPercentUsedWarningThreshold))
             {
@@ -644,7 +666,7 @@ namespace FabricObserver.Observers
                 }
             }
 
-            var warnFileHandlesCount = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverLinuxFileHandlesWarningTotalAllocated);
+            string warnFileHandlesCount = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.NodeObserverLinuxFileHandlesWarningTotalAllocated);
 
             if (string.IsNullOrEmpty(warnFileHandlesCount) || !int.TryParse(warnFileHandlesCount, out int fdsWarningCountThreshold))
             {
@@ -806,6 +828,76 @@ namespace FabricObserver.Observers
 
                 // Fix the bug..
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Emits a Telemetry/ETW event containing Fabric node data for the current node.
+        /// </summary>
+        /// <returns>Task</returns>
+        private async Task EmitNodeSnapshotDetailsAsync()
+        {
+            // This function isn't useful if you don't enable ETW or Telemetry for NodeObserver.
+            if (!IsEtwEnabled && !IsTelemetryEnabled)
+            {
+                return;
+            }
+
+            try
+            {
+                NodeList nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                    () => FabricClientInstance.QueryManager.GetNodeListAsync(
+                                            this.NodeName,
+                                            ConfigurationSettings.AsyncTimeout,
+                                            Token), Token);
+
+                if (nodes?.Count == 0)
+                {
+                    return;
+                }
+
+                Node node = nodes[0];
+                string SnapshotId = Guid.NewGuid().ToString();
+                string NodeName = node.NodeName, IpAddressOrFQDN = node.IpAddressOrFQDN, NodeType = node.NodeType, CodeVersion = node.CodeVersion, ConfigVersion = node.ConfigVersion;
+                string NodeUpAt = node.NodeUpAt.ToString("o"), NodeDownAt = node.NodeDownAt.ToString("o");
+                string HealthState = node.HealthState.ToString(), UpgradeDomain = node.UpgradeDomain;
+                string FaultDomain = node.FaultDomain.OriginalString, NodeId = node.NodeId.ToString(), NodeInstanceId = node.NodeInstanceId.ToString(), NodeStatus = node.NodeStatus.ToString();
+                bool IsSeedNode = node.IsSeedNode;
+
+                var nodeSnapshotTelem = new NodeSnapshotTelemetryData
+                {
+                    SnapshotId= SnapshotId,
+                    SnapshotTimestamp = DateTime.UtcNow.ToString("o"),
+                    NodeName = NodeName,    
+                    NodeType = NodeType,
+                    NodeId = NodeId,
+                    NodeInstanceId = NodeInstanceId,
+                    NodeStatus = NodeStatus,
+                    NodeUpAt = NodeUpAt,
+                    NodeDownAt= NodeDownAt,
+                    CodeVersion = CodeVersion,
+                    ConfigVersion = ConfigVersion,
+                    HealthState = HealthState,
+                    IpAddressOrFQDN = IpAddressOrFQDN,
+                    UpgradeDomain = UpgradeDomain,
+                    FaultDomain = FaultDomain,
+                    IsSeedNode = IsSeedNode.ToString()
+                };
+
+                if (IsTelemetryEnabled) 
+                {
+                    await TelemetryClient.ReportNodeSnapshotAsync(nodeSnapshotTelem, Token);
+                }
+
+                if (IsEtwEnabled)
+                {
+                    ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, nodeSnapshotTelem);
+                }
+            }
+            catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is TimeoutException)
+            {
+                ObserverLogger.LogWarning($"Failed to generate node stats:{Environment.NewLine}{e.Message}");
+                // Retry or try again later..
             }
         }
 

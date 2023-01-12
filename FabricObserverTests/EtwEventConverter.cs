@@ -33,6 +33,11 @@ namespace FabricObserverTests
             get; private set;
         }
 
+        internal NodeSnapshotTelemetryData NodeSnapshotTelemetryData
+        {
+            get; private set;
+        }
+
         internal List<List<ChildProcessTelemetryData>> ChildProcessTelemetry
         {
             get; private set;
@@ -85,6 +90,12 @@ namespace FabricObserverTests
                 {
                     Logger.LogInfo($"JSON-serialized MachineTelemetryData{Environment.NewLine}{json}");
                     MachineTelemetryData = machineTelemetryData;
+                }
+                // NodeSnapshotTelemetryData (only from NodeObserver).
+                else if (JsonHelper.TryDeserializeObject(json, out NodeSnapshotTelemetryData nodeSnapshotTelemetryData))
+                {
+                    Logger.LogInfo($"JSON-serialized nodeSnapshotTelemetryData{Environment.NewLine}{json}");
+                    NodeSnapshotTelemetryData = nodeSnapshotTelemetryData;
                 }
                 else // ignore..
                 {

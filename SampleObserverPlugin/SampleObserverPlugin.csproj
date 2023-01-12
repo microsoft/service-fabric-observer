@@ -5,7 +5,6 @@
 		<RootNamespace>FabricObserver.Observers</RootNamespace>
 		<AssemblyName>SampleNewObserver</AssemblyName>
 		<Platforms>x64</Platforms>
-		<UserSecretsId>eb82b47d-80c3-4f06-8177-861fe0ea33c3</UserSecretsId>
 	</PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
 		<DefineConstants>DEBUG;TRACE</DefineConstants>

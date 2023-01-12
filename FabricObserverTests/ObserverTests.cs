@@ -3,10 +3,19 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using ClusterObserver;
+using FabricObserver.Observers;
+using FabricObserver.Observers.Utilities;
+using FabricObserver.Observers.Utilities.Telemetry;
+using FabricObserver.Utilities.ServiceFabric;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using ServiceFabric.Mocks;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Fabric;
+using System.Fabric.Description;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
@@ -15,18 +24,9 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using ClusterObserver;
-using FabricObserver.Observers;
-using FabricObserver.Observers.Utilities;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
-using ServiceFabric.Mocks;
-using static ServiceFabric.Mocks.MockConfigurationPackage;
-using System.Fabric.Description;
 using System.Xml;
-using FabricObserver.Observers.Utilities.Telemetry;
-using FabricObserver.Utilities.ServiceFabric;
-using Microsoft.Extensions.DependencyInjection;
+using static ServiceFabric.Mocks.MockConfigurationPackage;
+using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 /***PLEASE RUN ALL OF THESE TESTS ON YOUR LOCAL DEV MACHINE WITH A RUNNING SF CLUSTER BEFORE SUBMITTING A PULL REQUEST***/
 
@@ -2880,6 +2880,61 @@ namespace FabricObserverTests
                 Assert.IsTrue(t.Source == $"{t.ObserverName}({t.Code})");
                 Assert.IsTrue(t.Value > 0.0);
             }
+
+        }
+
+        // NodeObserver: NodeSnapshotTelemetryData \\
+
+        [TestMethod]
+        public async Task NodeObserver_ETW_EventData_IsNodeSnapshotTelemetryData()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+            var startDateTime = DateTime.Now;
+            ObserverManager.FabricServiceContext = TestServiceContext;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = true;
+
+            using var obs = new NodeObserver(TestServiceContext)
+            {
+                IsEnabled = true,
+                MonitorDuration = TimeSpan.FromSeconds(5),
+                CpuWarningUsageThresholdPct = 90,
+                ActivePortsWarningThreshold = 10000,
+                MemoryWarningLimitPercent = 90,
+                EphemeralPortsPercentWarningThreshold = 30,
+                FirewallRulesWarningThreshold = 3000,
+                IsEtwProviderEnabled = true
+            };
+
+            await obs.ObserveAsync(Token);
+            NodeSnapshotTelemetryData telemData = foEtwListener.foEtwConverter.NodeSnapshotTelemetryData;
+
+            Assert.IsNotNull(telemData);
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.SnapshotId));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.SnapshotTimestamp));
+            
+            string lastSnapshotTimestamp = telemData.SnapshotTimestamp;
+
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.CodeVersion));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.ConfigVersion));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.FaultDomain));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.NodeId));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.NodeInstanceId));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.NodeName));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.NodeType));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.NodeDownAt));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.NodeUpAt));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.UpgradeDomain));
+
+            // Make sure that another snapshot is not taken (NodeObserver takes 1 snapshot every 24 hrs). \\
+
+            // Run NodeObserver again (same instance as the previous run, so volatile state is preserved).
+            await obs.ObserveAsync(Token);
+            // Refresh telemData (the ETW data should not change if the snapshot did not take place).
+            telemData = foEtwListener.foEtwConverter.NodeSnapshotTelemetryData;
+            Assert.IsTrue(telemData.SnapshotTimestamp.Equals(lastSnapshotTimestamp));
         }
 
         // OSObserver: MachineTelemetryData \\

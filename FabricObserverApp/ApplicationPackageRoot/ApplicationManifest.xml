@@ -202,6 +202,7 @@
     <Parameter Name="NodeObserverNetworkWarningEphemeralPorts" DefaultValue="20000" />
     <Parameter Name="NodeObserverNetworkErrorEphemeralPortsPercentage" DefaultValue="" />
     <Parameter Name="NodeObserverNetworkWarningEphemeralPortsPercentage" DefaultValue="90" />
+    <Parameter Name="NodeObserverEnableNodeSnapshot" DefaultValue="false" />
     <!-- The below settings only make sense for Linux. -->
     <Parameter Name="NodeObserverLinuxFileHandlesErrorLimitPercent" DefaultValue="" />
     <Parameter Name="NodeObserverLinuxFileHandlesWarningLimitPercent" DefaultValue="90" />
@@ -328,6 +329,7 @@
             <Parameter Name="EnableTelemetry" Value="[NodeObserverEnableTelemetry]" />
             <Parameter Name="EnableCSVDataLogging" Value="[NodeObserverEnableCSVDataLogging]" />
             <Parameter Name="EnableEtw" Value="[NodeObserverEnableEtw]" />
+            <Parameter Name="EnableNodeSnapshot" Value="[NodeObserverEnableNodeSnapshot]" />
             <Parameter Name="EnableVerboseLogging" Value="[NodeObserverEnableVerboseLogging]" />
             <Parameter Name="MonitorDuration" Value="[NodeObserverMonitorDuration]" />
             <Parameter Name="RunInterval" Value="[NodeObserverRunInterval]" />

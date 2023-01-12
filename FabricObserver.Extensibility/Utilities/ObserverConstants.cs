@@ -142,6 +142,7 @@ namespace FabricObserver.Observers.Utilities
         public const string NodeObserverNetworkWarningEphemeralPortsPercentage = "NetworkWarningEphemeralPortsPercentage";
         public const string NodeObserverNetworkErrorFirewallRules = "NetworkErrorFirewallRules";
         public const string NodeObserverNetworkWarningFirewallRules = "NetworkWarningFirewallRules";
+        public const string NodeObserverEnableNodeSnapshot = "EnableNodeSnapshot";
 
         // For use by Linux File Descriptors monitor.
         public const string NodeObserverLinuxFileHandlesErrorLimitPct = "LinuxFileHandlesErrorLimitPercent";
