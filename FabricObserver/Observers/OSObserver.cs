@@ -110,13 +110,12 @@ namespace FabricObserver.Observers
                     // This means this observer created a Warning or Error SF Health Report
                     HasActiveFabricErrorOrWarning = true;
 
-                    var telemetryData = new TelemetryData()
+                    var telemetryData = new NodeTelemetryData()
                     {
                         Description = healthMessage,
                         HealthState = HealthState.Error,
                         Metric = "OS Health",
                         NodeName = NodeName,
-                        ObserverName = ObserverName,
                         Source = ObserverConstants.FabricObserverName
                     };
 
@@ -142,13 +141,12 @@ namespace FabricObserver.Observers
                         CurrentErrorCount--;
                     }
 
-                    var telemetryData = new TelemetryData()
+                    var telemetryData = new NodeTelemetryData()
                     {
                         Description = healthMessage,
                         HealthState = HealthState.Ok,
                         Metric = "OS Health",
                         NodeName = NodeName,
-                        ObserverName = ObserverName,
                         Source = ObserverConstants.FabricObserverName
                     };
 
@@ -231,13 +229,12 @@ namespace FabricObserver.Observers
 
                     HealthReporter.ReportHealthToServiceFabric(report);
 
-                    var telemetryData = new TelemetryData()
+                    var telemetryData = new NodeTelemetryData()
                     {
                         Description = auServiceEnabledMessage,
                         HealthState = HealthState.Warning,
                         Metric = "WUAutoDownloadEnabled",
                         NodeName = NodeName,
-                        ObserverName = ObserverName,
                         Source = ObserverConstants.FabricObserverName
                     };
 

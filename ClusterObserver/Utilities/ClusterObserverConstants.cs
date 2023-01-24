@@ -14,6 +14,7 @@ namespace ClusterObserver.Utilities
         public const string ObserverRunIntervalParameter = "RunInterval";
         public const string ObserverEnabledParameter = "Enabled";
         public const string AiKey = "AppInsightsInstrumentationKey";
+        public const string AppInsightsConnectionString = "AppInsightsConnectionString";
         public const string AsyncOperationTimeoutSeconds = "AsyncOperationTimeoutSeconds";
         public const string ClusterObserverETWEventName = "ClusterObserverDataEvent";
         public const string DefaultEventSourceProviderName = "ClusterObserverETWProvider";

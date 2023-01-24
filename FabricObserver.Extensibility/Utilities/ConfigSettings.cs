@@ -41,8 +41,7 @@ namespace FabricObserver.Observers.Utilities
 
         public bool IsObserverTelemetryEnabled
         {
-            get;
-            private set;
+            get; set;
         }
 
         public TimeSpan AsyncTimeout
@@ -63,8 +62,7 @@ namespace FabricObserver.Observers.Utilities
 
         public bool IsObserverEtwEnabled
         {
-            get;
-            private set;
+            get; set;
         }
 
         public ConfigurationSection ConfigSection

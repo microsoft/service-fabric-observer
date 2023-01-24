@@ -5,6 +5,7 @@
 
 using System;
 using System.Diagnostics.Tracing;
+using System.Fabric.Query;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
@@ -43,6 +44,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         [EventField]
         public string FaultDomain { get; set; }
         [EventField]
-        public string IsSeedNode { get; set; }
+        public bool IsSeedNode { get; set; }
+        [EventField]
+        public string InfrastructurePlacementID { get; set; }
+        [EventField]
+        public NodeDeactivationResult NodeDeactivationInfo { get; set; }
+        [EventField]
+        public bool IsNodeByNodeUpgradeInProgress { get; set; }
     }
 }

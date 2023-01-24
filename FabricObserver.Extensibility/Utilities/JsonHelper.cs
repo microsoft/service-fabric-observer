@@ -16,8 +16,9 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         /// <typeparam name="T">Type to be evaluated.</typeparam>
         /// <param name="text">Json string.</param>
+        /// <param name="treatMissingMembersAsError">Optional boolean to treat missing type members as Error or not.</param>
         /// <returns>True if the string is a serialized instance of type T. False otherwise.</returns>
-        public static bool IsJson<T>(string text)
+        public static bool IsJson<T>(string text, bool treatMissingMembersAsError = false)
         {
             if (string.IsNullOrWhiteSpace(text))
             {
@@ -26,12 +27,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                JsonSerializerSettings jsonSerializerSettings = new()
-                { 
-                    MissingMemberHandling = MissingMemberHandling.Ignore
-                };
-
-                return TryDeserializeObject<T>(text, out _, jsonSerializerSettings);
+                return TryDeserializeObject<T>(text, out _, treatMissingMembersAsError);
             }
             catch (JsonException)
             {
@@ -45,7 +41,7 @@ namespace FabricObserver.Observers.Utilities
         /// <typeparam name="T">Input type.</typeparam>
         /// <param name="obj">Instance of type T.</param>
         /// <param name="data">out: the Json-serialized instance of the supplied type T.</param>
-        /// <returns>A Json (string) representation of the supplied instance of type T.</returns>
+        /// <returns>A Json (string) representation of the supplied instance of type T or null upon failure.</returns>
         public static bool TrySerializeObject<T>(T obj, out string data)
         {
             if (obj == null)
@@ -74,8 +70,9 @@ namespace FabricObserver.Observers.Utilities
         /// <typeparam name="T">Target type.</typeparam>
         /// <param name="obj">Json string representing an instance of type T.</param>
         /// <param name="data">out: an instance of type T.</param>
-        /// <returns>An instance of the specified type T or null if the string can't be deserialized into the specified type T. Note: Missing members are treated as Error.</returns>
-        public static bool TryDeserializeObject<T>(string obj, out T data, JsonSerializerSettings jsonSerializerSettings = null)
+        /// <param name="treatMissingMembersAsError">Optional boolean to treat missing type members as Error or not.</param>
+        /// <returns>An instance of the specified type T or null if the string can't be deserialized into the specified type T.</returns>
+        public static bool TryDeserializeObject<T>(string obj, out T data, bool treatMissingMembersAsError = false)
         {
             if (string.IsNullOrWhiteSpace(obj))
             {
@@ -85,12 +82,10 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                if (jsonSerializerSettings == null)
+                var jsonSerializerSettings = new JsonSerializerSettings
                 {
-                    // Being strict here is the default behavior. This is important because ChildProcessTelemetryData is close enough in structure to TelemetryData
-                    // that without this setting either serialized type would deserialize to TelemetryData successfully, which is not the right behavior.
-                    jsonSerializerSettings = new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Error };
-                }
+                    MissingMemberHandling = treatMissingMembersAsError ? MissingMemberHandling.Error : MissingMemberHandling.Ignore
+                };
 
                 data = JsonConvert.DeserializeObject<T>(obj, jsonSerializerSettings);
                 return true;
@@ -109,9 +104,8 @@ namespace FabricObserver.Observers.Utilities
             using (StreamReader r = new(stream))
             {
                 string json = r.ReadToEnd();
-                var jsonSerializerSettings = new JsonSerializerSettings { MissingMemberHandling = MissingMemberHandling.Ignore };
-                
-                if (TryDeserializeObject(json, out T data, jsonSerializerSettings))
+
+                if (TryDeserializeObject(json, out T data))
                 {
                     return data;
                 }

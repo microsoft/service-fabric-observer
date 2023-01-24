@@ -145,13 +145,14 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
                 if (!string.IsNullOrEmpty(unhealthyEvaluations))
                 {
-                    healthInfo += $"{Environment.NewLine}{unhealthyEvaluations}";
+                    healthInfo += unhealthyEvaluations;
                 }
 
                 var tt = new TraceTelemetry(
-                    $"{Enum.GetName(typeof(HealthState), state)} from {source}:{Environment.NewLine}" +
-                    $"{propertyName}{Environment.NewLine}" +
-                    $"{healthInfo}", sev);
+                                $"{state} from {source}:{Environment.NewLine}" +
+                                $"{propertyName}{Environment.NewLine}" +
+                                $"{healthInfo}",
+                                sev);
 
                 tt.Context.Cloud.RoleName = serviceName;
                 tt.Context.Cloud.RoleInstance = instanceName;
@@ -172,7 +173,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <param name="telemetryData">TelemetryData instance.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
         /// <returns>a Task.</returns>
-        public Task ReportHealthAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
+        public Task ReportHealthAsync(TelemetryDataBase telemetryData, CancellationToken cancellationToken)
         {
             if (!IsEnabled || cancellationToken.IsCancellationRequested || telemetryData == null)
             {
@@ -182,34 +183,107 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             try
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                var properties = new Dictionary<string, string>
-                {
-                    { "ClusterId", telemetryData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId },
-                    { "EntityType", telemetryData.EntityType.ToString() },
-                    { "HealthState", Enum.GetName(typeof(HealthState), telemetryData.HealthState) },
-                    { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
-                    { "ApplicationTypeName", telemetryData.ApplicationType ?? string.Empty },
-                    { "ServiceName", telemetryData.ServiceName ?? string.Empty },
-                    { "ReplicaRole", telemetryData.ReplicaRole ?? string.Empty },
-                    { "ServiceKind", telemetryData.ServiceKind ?? string.Empty },
-                    { "ServicePackageActivationMode", telemetryData.ServicePackageActivationMode ?? string.Empty },
-                    { "ProcessId", telemetryData.ProcessId == 0 ? string.Empty : telemetryData.ProcessId.ToString() },
-                    { "ProcessName", telemetryData.ProcessName ?? string.Empty },
-                    { "ProcessStartTime", telemetryData.ProcessStartTime ?? string.Empty },
-                    { "ErrorCode", telemetryData.Code ?? string.Empty },
-                    { "Description", telemetryData.Description ?? string.Empty },
-                    { "Metric", telemetryData.Metric ?? string.Empty },
-                    { "Value", telemetryData.Value.ToString() },
-                    { "PartitionId", telemetryData.PartitionId != null ? telemetryData.PartitionId.ToString() : string.Empty },
-                    { "ReplicaId", telemetryData.ReplicaId.ToString() },
-                    { "RGEnabled", telemetryData.RGMemoryEnabled.ToString() },
-                    { "RGMemoryLimitMb", telemetryData.RGAppliedMemoryLimitMb.ToString() },
-                    { "ObserverName", telemetryData.ObserverName ?? string.Empty },
-                    { "NodeName", telemetryData.NodeName ?? string.Empty },
-                    { "OS", telemetryData.OS ?? string.Empty }
-                };
 
-                telemetryClient.TrackEvent("FabricObserver.EntityHealthData", properties);
+                Dictionary<string, string> properties = null;
+
+                if (telemetryData is ServiceTelemetryData serviceTelemData)
+                {
+                    properties = new Dictionary<string, string>
+                    {
+                        { "ClusterId", serviceTelemData.ClusterId },
+                        { "EntityType", serviceTelemData.EntityType.ToString() },
+                        { "HealthState", Enum.GetName(typeof(HealthState), serviceTelemData.HealthState) },
+                        { "ApplicationName", serviceTelemData.ApplicationName },
+                        { "ApplicationTypeName", serviceTelemData.ApplicationType },
+                        { "ServiceName", serviceTelemData.ServiceName },
+                        { "ReplicaRole", serviceTelemData.ReplicaRole },
+                        { "ServiceKind", serviceTelemData.ServiceKind },
+                        { "ServicePackageActivationMode", serviceTelemData.ServiceName != null ? serviceTelemData.ServicePackageActivationMode : null },
+                        { "ProcessId", serviceTelemData.ProcessId == 0 ? null : serviceTelemData.ProcessId.ToString() },
+                        { "ProcessName", serviceTelemData.ProcessName },
+                        { "ProcessStartTime", serviceTelemData.ProcessStartTime },
+                        { "ErrorCode", serviceTelemData.Code },
+                        { "Description", serviceTelemData.Description },
+                        { "PartitionId", serviceTelemData.PartitionId?.ToString() },
+                        { "ReplicaId", serviceTelemData.ReplicaId > 0 ? serviceTelemData.ReplicaId.ToString() : null },
+                        { "RGMemoryEnabled", serviceTelemData.ServiceName != null ? serviceTelemData.RGMemoryEnabled.ToString() : null },
+                        { "RGMemoryLimitMb", serviceTelemData.RGMemoryEnabled ? serviceTelemData.RGAppliedMemoryLimitMb.ToString() : null },
+                        { "ObserverName", serviceTelemData.ObserverName },
+                        { "NodeName", serviceTelemData.NodeName },
+                        { "OS", serviceTelemData.OS }
+                    };
+                }
+                else if (telemetryData is NodeTelemetryData nodeTelemData)
+                {
+                    properties = new Dictionary<string, string>
+                    {
+                        { "ClusterId", nodeTelemData.ClusterId },
+                        { "EntityType", nodeTelemData.EntityType.ToString() },
+                        { "HealthState", Enum.GetName(typeof(HealthState), nodeTelemData.HealthState) },
+                        { "ErrorCode", nodeTelemData.Code },
+                        { "Description", nodeTelemData.Description },
+                        { "ObserverName", nodeTelemData.ObserverName },
+                        { "NodeName", nodeTelemData.NodeName },
+                        { "NodeType", nodeTelemData.NodeType },
+                        { "OS", nodeTelemData.OS }
+                    };
+                }
+                else if (telemetryData is DiskTelemetryData diskTelemData)
+                {
+                    properties = new Dictionary<string, string>
+                    {
+                        { "ClusterId", diskTelemData.ClusterId },
+                        { "EntityType", diskTelemData.EntityType.ToString() },
+                        { "HealthState", Enum.GetName(typeof(HealthState), diskTelemData.HealthState) },
+                        { "ErrorCode", diskTelemData.Code },
+                        { "Description", diskTelemData.Description },
+                        { "ObserverName", diskTelemData.ObserverName },
+                        { "NodeName", diskTelemData.NodeName },
+                        { "DriveName", diskTelemData.DriveName },
+                        { "FolderName", diskTelemData.FolderName },
+                        { "OS", diskTelemData.OS }
+                    };
+                }
+                else if (telemetryData is ClusterTelemetryData clusterTelemData)
+                {
+                    properties = new Dictionary<string, string>
+                    {
+                        { "ClusterId", clusterTelemData.ClusterId },
+                        { "EntityType", EntityType.Cluster.ToString() },
+                        { "HealthState", Enum.GetName(typeof(HealthState), clusterTelemData.HealthState) },
+                        { "Metric", clusterTelemData.Metric },
+                        { "Description", clusterTelemData.Description },
+                        { "ObserverName", clusterTelemData.ObserverName },
+                        { "OS", clusterTelemData.OS }
+                    };
+                }
+                else
+                {
+                    properties = new Dictionary<string, string>
+                    {
+                        { "ClusterId", telemetryData.ClusterId },
+                        { "EntityType", telemetryData.EntityType.ToString() },
+                        { "HealthState", Enum.GetName(typeof(HealthState), telemetryData.HealthState) },
+                        { "Description", telemetryData.Description },
+                        { "ObserverName", telemetryData.ObserverName },
+                        { "OS", telemetryData.OS }
+                    };
+                }
+
+                Dictionary<string, double> metric = null;
+                
+                if (telemetryData is not ClusterTelemetryData && telemetryData.Metric != null)
+                {
+                    metric = new Dictionary<string, double>
+                    {
+                        { telemetryData.Metric, telemetryData.Value }
+                    };
+                }
+
+                if (properties != null)
+                {
+                    telemetryClient.TrackEvent("FabricObserver.EntityHealthData", properties, metric);
+                }
             }
             catch (Exception e)
             {
@@ -251,7 +325,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <param name="telemetryData">TelemetryData instance.</param>
         /// <param name="cancellationToken">Cancellation token.</param>
         /// <returns>A task.</returns>
-        public Task ReportMetricAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
+        public Task ReportMetricAsync(TelemetryDataBase telemetryData, CancellationToken cancellationToken)
         {
             if (telemetryData == null)
             {
@@ -260,36 +334,106 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             try
             {
-                var properties = new Dictionary<string, string>
-                {
-                    { "ClusterId", telemetryData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId },
-                    { "EntityType", telemetryData.EntityType.ToString() },
-                    { "ApplicationName", telemetryData.ApplicationName ?? string.Empty },
-                    { "ApplicationTypeName", telemetryData.ApplicationType ?? string.Empty },
-                    { "ServiceName", telemetryData.ServiceName ?? string.Empty },
-                    { "ReplicaRole", telemetryData.ReplicaRole ?? string.Empty },
-                    { "ServiceKind", telemetryData.ServiceKind ?? string.Empty },
-                    { "ServicePackageActivationMode", telemetryData.ServicePackageActivationMode?.ToString() ?? string.Empty },
-                    { "ProcessId", telemetryData.ProcessId == 0 ? string.Empty : telemetryData.ProcessId.ToString() },
-                    { "ProcessName", telemetryData.ProcessName ?? string.Empty },
-                    { "ProcessStartTime", telemetryData.ProcessStartTime ?? string.Empty },
-                    { "Metric", telemetryData.Metric ?? string.Empty },
-                    { "Value", telemetryData.Value.ToString() },
-                    { "PartitionId", telemetryData.PartitionId != null ? telemetryData.PartitionId.ToString() : string.Empty },
-                    { "ReplicaId", telemetryData.ReplicaId.ToString() },
-                    { "RGEnabled", telemetryData.RGMemoryEnabled.ToString() },
-                    { "RGMemoryLimitMb", telemetryData.RGAppliedMemoryLimitMb.ToString() },
-                    { "ObserverName", telemetryData.ObserverName ?? string.Empty },
-                    { "NodeName", telemetryData.NodeName ?? string.Empty },
-                    { "OS", telemetryData.OS ?? string.Empty },
-                };
+                Dictionary<string, string> properties = null;
 
-                var metric = new Dictionary<string, double>
+                if (telemetryData is ServiceTelemetryData serviceTelemData)
                 {
-                    { telemetryData.Metric, telemetryData.Value }
-                };
+                    properties = new Dictionary<string, string>
+                    {
+                        { "ClusterId", serviceTelemData.ClusterId },
+                        { "EntityType", serviceTelemData.EntityType.ToString() },
+                        { "HealthState", Enum.GetName(typeof(HealthState), serviceTelemData.HealthState) },
+                        { "ApplicationName", serviceTelemData.ApplicationName },
+                        { "ApplicationTypeName", serviceTelemData.ApplicationType },
+                        { "ServiceName", serviceTelemData.ServiceName },
+                        { "ReplicaRole", serviceTelemData.ReplicaRole },
+                        { "ServiceKind", serviceTelemData.ServiceKind },
+                        { "ServicePackageActivationMode", serviceTelemData.ServiceName != null ? serviceTelemData.ServicePackageActivationMode : null },
+                        { "ProcessId", serviceTelemData.ProcessId == 0 ? null : serviceTelemData.ProcessId.ToString() },
+                        { "ProcessName", serviceTelemData.ProcessName },
+                        { "ProcessStartTime", serviceTelemData.ProcessStartTime },
+                        { "ErrorCode", serviceTelemData.Code },
+                        { "Description", serviceTelemData.Description },
+                        { "PartitionId", serviceTelemData.PartitionId?.ToString() },
+                        { "ReplicaId", serviceTelemData.ReplicaId > 0 ? serviceTelemData.ReplicaId.ToString() : null },
+                        { "RGMemoryEnabled", serviceTelemData.ServiceName != null ? serviceTelemData.RGMemoryEnabled.ToString() : null },
+                        { "RGMemoryLimitMb", serviceTelemData.RGMemoryEnabled ? serviceTelemData.RGAppliedMemoryLimitMb.ToString() : null },
+                        { "ObserverName", serviceTelemData.ObserverName },
+                        { "NodeName", serviceTelemData.NodeName },
+                        { "OS", serviceTelemData.OS }
+                    };
+                }
+                else if (telemetryData is NodeTelemetryData nodeTelemData)
+                {
+                    properties = new Dictionary<string, string>
+                    {
+                        { "ClusterId", nodeTelemData.ClusterId },
+                        { "EntityType", nodeTelemData.EntityType.ToString() },
+                        { "HealthState", Enum.GetName(typeof(HealthState), nodeTelemData.HealthState) },
+                        { "ErrorCode", nodeTelemData.Code },
+                        { "Description", nodeTelemData.Description },
+                        { "ObserverName", nodeTelemData.ObserverName },
+                        { "NodeName", nodeTelemData.NodeName },
+                        { "NodeType", nodeTelemData.NodeType },
+                        { "OS", nodeTelemData.OS }
+                    };
+                }
+                else if (telemetryData is DiskTelemetryData diskTelemData)
+                {
+                    properties = new Dictionary<string, string>
+                    {
+                        { "ClusterId", diskTelemData.ClusterId },
+                        { "EntityType", diskTelemData.EntityType.ToString() },
+                        { "HealthState", Enum.GetName(typeof(HealthState), diskTelemData.HealthState) },
+                        { "ErrorCode", diskTelemData.Code },
+                        { "Description", diskTelemData.Description },
+                        { "ObserverName", diskTelemData.ObserverName },
+                        { "NodeName", diskTelemData.NodeName },
+                        { "DriveName", diskTelemData.DriveName },
+                        { "FolderName", diskTelemData.FolderName },
+                        { "OS", diskTelemData.OS }
+                    };
+                }
+                else if (telemetryData is ClusterTelemetryData clusterTelemData)
+                {
+                    properties = new Dictionary<string, string>
+                    {
+                        { "ClusterId", clusterTelemData.ClusterId },
+                        { "EntityType", EntityType.Cluster.ToString() },
+                        { "HealthState", Enum.GetName(typeof(HealthState), clusterTelemData.HealthState) },
+                        { "Metric", clusterTelemData.Metric },
+                        { "Description", clusterTelemData.Description },
+                        { "ObserverName", clusterTelemData.ObserverName },
+                        { "OS", clusterTelemData.OS }
+                    };
+                }
+                else
+                {
+                    properties = new Dictionary<string, string>
+                    {
+                        { "ClusterId", telemetryData.ClusterId },
+                        { "EntityType", telemetryData.EntityType.ToString() },
+                        { "HealthState", Enum.GetName(typeof(HealthState), telemetryData.HealthState) },
+                        { "Description", telemetryData.Description },
+                        { "ObserverName", telemetryData.ObserverName },
+                        { "OS", telemetryData.OS }
+                    };
+                }
 
-                telemetryClient.TrackEvent("FabricObserver.EntityMetricData", properties, metric);
+                Dictionary<string, double> metric = null;
+
+                if (telemetryData is not ClusterTelemetryData && telemetryData.Metric != null)
+                {
+                    metric = new Dictionary<string, double>
+                    {
+                        { telemetryData.Metric, telemetryData.Value }
+                    };
+                }
+
+                if (properties != null)
+                {
+                    telemetryClient.TrackEvent("FabricObserver.EntityMetricData", properties, metric);
+                }
             }
             catch (Exception e)
             {
@@ -321,8 +465,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     var properties = new Dictionary<string, string>
                     {
                         { "ClusterId", ClusterInformation.ClusterInfoTuple.ClusterId },
-                        { "ApplicationName", telemData.ApplicationName ?? string.Empty },
-                        { "ServiceName", telemData.ServiceName ?? string.Empty },
+                        { "ApplicationName", telemData.ApplicationName },
+                        { "ServiceName", telemData.ServiceName },
                         { "ProcessId", telemData.ProcessId.ToString() },
                         { "ProcessName", telemData.ProcessName },
                         { "ChildProcessInfo", JsonConvert.SerializeObject(telemData.ChildProcessInfo) },
@@ -380,7 +524,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "FabricApplicationTcpPortRange", machineTelemetryData.FabricApplicationTcpPortRange },
                     { "AvailablePhysicalMemoryGB", machineTelemetryData.AvailablePhysicalMemoryGB.ToString(CultureInfo.InvariantCulture) },
                     { $"{virtMem}", machineTelemetryData.FreeVirtualMemoryGB.ToString(CultureInfo.InvariantCulture) },
-                    { "HotFixes", machineTelemetryData.HotFixes ?? string.Empty },
+                    { "HotFixes", machineTelemetryData.HotFixes },
                     { "LastBootUpTime", machineTelemetryData.LastBootUpTime },
                     { "Level", machineTelemetryData.HealthState },
                     { "LogicalDriveCount", machineTelemetryData.LogicalDriveCount.ToString() },
@@ -450,7 +594,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 {
                     { "EventName", "ClusterUpgradeEvent" },
                     { "TaskName", eventData.TaskName },
-                    { "ClusterId", eventData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId },
+                    { "ClusterId", eventData.ClusterId },
                     { "Timestamp", DateTime.UtcNow.ToString("o") },
                     { "OS", eventData.OS },
                     { "UpgradeTargetCodeVersion", eventData.FabricUpgradeProgress.UpgradeDescription?.TargetCodeVersion },
@@ -495,7 +639,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 {
                     { "EventName", "ApplicationUpgradeEvent" },
                     { "TaskName", eventData.TaskName },
-                    { "ClusterId", eventData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId },
+                    { "ClusterId", eventData.ClusterId },
                     { "Timestamp", DateTime.UtcNow.ToString("o") },
                     { "OS", eventData.OS },
                     { "ApplicationName", eventData.ApplicationUpgradeProgress.ApplicationName?.OriginalString },
@@ -536,6 +680,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             try
             {
+                _ = JsonHelper.TrySerializeObject(nodeSnapshotTelem.NodeDeactivationInfo, out string deactivationInfo);
+
                 var properties = new Dictionary<string, string>
                 {
                     { "SnapshotId", nodeSnapshotTelem.SnapshotId },
@@ -545,15 +691,18 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "NodeId", nodeSnapshotTelem.NodeId },
                     { "NodeInstanceId", nodeSnapshotTelem.NodeInstanceId },
                     { "NodeStatus", nodeSnapshotTelem.NodeStatus },
+                    { "HealthState", nodeSnapshotTelem.HealthState },
                     { "NodeUpAt", nodeSnapshotTelem.NodeUpAt },
                     { "NodeDownAt", nodeSnapshotTelem.NodeDownAt },
                     { "CodeVersion", nodeSnapshotTelem.CodeVersion },
                     { "ConfigVersion", nodeSnapshotTelem.ConfigVersion },
-                    { "HealthState", nodeSnapshotTelem.HealthState },
-                    { "IpAddressOrFQDN", nodeSnapshotTelem.IpAddressOrFQDN },
-                    { "UpgradeDomain", nodeSnapshotTelem.UpgradeDomain},
                     { "FaultDomain", nodeSnapshotTelem.FaultDomain },
-                    { "IsSeedNode", nodeSnapshotTelem.IsSeedNode }
+                    { "InfrastructurePlacementId", nodeSnapshotTelem.InfrastructurePlacementID },
+                    { "IpAddressOrFQDN", nodeSnapshotTelem.IpAddressOrFQDN },
+                    { "IsSeedNode", nodeSnapshotTelem.IsSeedNode.ToString() },
+                    { "IsNodeByNodeUpgradeInProgress", nodeSnapshotTelem.IsNodeByNodeUpgradeInProgress.ToString() },
+                    { "UpgradeDomain", nodeSnapshotTelem.UpgradeDomain },
+                    { "NodeDeactivationInfo", deactivationInfo }
                 };
 
                 telemetryClient.TrackEvent("FabricObserver.NodeSnapshotData", properties);

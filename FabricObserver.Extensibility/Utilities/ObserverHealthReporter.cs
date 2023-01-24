@@ -69,7 +69,7 @@ namespace FabricObserver.Observers.Utilities
                 timeToLive = healthReport.HealthReportTimeToLive;
             }
 
-            TelemetryData healthData = healthReport.HealthData;
+            var healthData = healthReport.HealthData;
             string errWarnPreamble = string.Empty;
 
             if (healthReport.State == HealthState.Error || healthReport.State == HealthState.Warning)
@@ -95,35 +95,17 @@ namespace FabricObserver.Observers.Utilities
 
             if (string.IsNullOrEmpty(healthReport.Property))
             {
-                switch(healthReport.Observer)
+                healthReport.Property = healthReport.Observer switch
                 {
-                    case ObserverConstants.AppObserverName:
-                        healthReport.Property = "ApplicationHealth";
-                        break;
-                    case ObserverConstants.CertificateObserverName:
-                        healthReport.Property = "SecurityHealth";
-                        break;
-                    case ObserverConstants.DiskObserverName:
-                        healthReport.Property = "DiskHealth";
-                        break;
-                    case ObserverConstants.FabricSystemObserverName:
-                        healthReport.Property = "FabricSystemServiceHealth";
-                        break;
-                    case ObserverConstants.NetworkObserverName:
-                        healthReport.Property = "NetworkHealth";
-                        break;
-                    case ObserverConstants.OSObserverName:
-                        healthReport.Property = "MachineInformation";
-                        break;
-                    case ObserverConstants.NodeObserverName:
-                        healthReport.Property = "MachineResourceHealth";
-                        break;
-
-                    default:
-                        healthReport.Property = $"{healthReport.Observer}_{(!string.IsNullOrWhiteSpace(healthReport.ResourceUsageDataProperty) ? healthReport.ResourceUsageDataProperty : "GenericHealth")}";
-                        break;
-
-                }
+                    ObserverConstants.AppObserverName => "ApplicationHealth",
+                    ObserverConstants.CertificateObserverName => "SecurityHealth",
+                    ObserverConstants.DiskObserverName => "DiskHealth",
+                    ObserverConstants.FabricSystemObserverName => "FabricSystemServiceHealth",
+                    ObserverConstants.NetworkObserverName => "NetworkHealth",
+                    ObserverConstants.OSObserverName => "MachineInformation",
+                    ObserverConstants.NodeObserverName => "MachineResourceHealth",
+                    _ => $"{healthReport.Observer}_{(!string.IsNullOrWhiteSpace(healthReport.ResourceUsageDataProperty) ? healthReport.ResourceUsageDataProperty : "GenericHealth")}",
+                };
             }
 
             var healthInformation = new HealthInformation(healthReport.SourceId, healthReport.Property, healthReport.State)

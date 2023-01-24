@@ -120,7 +120,7 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// TelemetryData instance (this will be JSON-serialized and used as the Description of the generated health event).
         /// </summary>
-        public TelemetryData HealthData
+        public TelemetryDataBase HealthData
         {
             get; set;
         }

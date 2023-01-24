@@ -3,19 +3,15 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using Newtonsoft.Json;
 using System;
 using System.Diagnostics.Tracing;
+using Newtonsoft.Json;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
-    /// <summary>
-    /// This is for backwards compatitibilty with the older telemetry data model. There are now three types of telemetry data based on observer:
-    /// ServiceTelemetryData (AppObserver/ContainerObserver/FabricSystemObserver), DiskTelemetryData (DiskObserver), NodeTelemetryData (NodeObserver).
-    /// </summary>
     [EventData]
     [Serializable]
-    public class TelemetryData : TelemetryDataBase
+    public class ServiceTelemetryData : TelemetryDataBase
     {
         [EventField]
         public string ApplicationName
@@ -111,9 +107,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         {
             get; set;
         }
-
         [JsonConstructor]
-        public TelemetryData() : base()
+        public ServiceTelemetryData() : base()
         {
 
         }

@@ -5,6 +5,7 @@
 
 namespace FabricObserverTests
 {
+    using FabricObserver.Observers;
     using FabricObserver.Observers.Utilities;
     using FabricObserver.Observers.Utilities.Telemetry;
     using System.Diagnostics.Tracing;
@@ -17,6 +18,7 @@ namespace FabricObserverTests
         private readonly object lockObj = new();
         private readonly Logger logger;
         internal readonly EtwEventConverter foEtwConverter;
+        //internal readonly FabricObserverMetrics foMetrics;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricObserverEtwListener"/> class.
@@ -26,6 +28,7 @@ namespace FabricObserverTests
         {
             logger = observerLogger;
             foEtwConverter = new EtwEventConverter(logger);
+            //foMetrics = new FabricObserverMetrics(logger);
             StartFoEventSourceListener();
             logger.LogInfo($"FabricObserverEtwListenerInfo: Started FabricObserverEtwListener.");
         }
@@ -53,6 +56,9 @@ namespace FabricObserverTests
                 
                 // Parse the event data as TelemetryData and publish as Azure metrics.
                 foEtwConverter.EventDataToTelemetryData(eventData);
+
+                // FO metrics (MDMObserver).
+                //foMetrics.EventDataToTelemetryData(eventData);
             }
         }
 

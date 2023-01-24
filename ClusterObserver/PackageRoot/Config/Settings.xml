@@ -27,14 +27,21 @@
 		<Parameter Name="AsyncOperationTimeoutSeconds" Value="120" />
 		<!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
 		<Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
-		<!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
+		
+		<!-- AzureApplicationInsights -->
+		<!-- OBSOLETE: Use AppInsightsConnectionString instead. Setting this has no effect. -->
 		<Parameter Name="AppInsightsInstrumentationKey" Value="" />
+		<!-- Required-If TelemetryProvider is AzureApplicationInsights. Your Connection String. -->
+		<Parameter Name="AppInsightsConnectionString" Value="" />
+		
+		<!-- AzureLogAnalytics -->
 		<!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Workspace Id. -->
 		<Parameter Name="LogAnalyticsWorkspaceId" Value="" />
 		<!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Shared Key. -->
 		<Parameter Name="LogAnalyticsSharedKey" Value="" />
 		<!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
 		<Parameter Name="LogAnalyticsLogType" Value="ClusterObserver" />
+		
 		<!-- Optional: Amount of time in seconds to wait before ObserverManager signals shutdown. -->
 		<Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="1" />
 	</Section>
@@ -54,6 +61,7 @@
          only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
 		<Parameter Name="EnableEtw" Value="" MustOverride="true"/>
 		<Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
+		<Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
 		<!-- Optional: Emit health details for both Warning and Error for aggregated cluster health? 
          Aggregated Error evaluations will always be transmitted regardless of this setting. -->
 		<Parameter Name="EmitHealthWarningEvaluationDetails" Value="" MustOverride="true" />

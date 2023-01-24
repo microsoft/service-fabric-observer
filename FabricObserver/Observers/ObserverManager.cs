@@ -293,14 +293,13 @@ namespace FabricObserver.Observers
                 // Telemetry.
                 if (TelemetryEnabled)
                 {
-                    var telemetryData = new TelemetryData()
+                    var telemetryData = new NodeTelemetryData()
                     {
                         Description = message,
                         HealthState = HealthState.Error,
                         Metric = $"{ObserverConstants.FabricObserverName}_ServiceHealth",
                         NodeName = nodeName,
-                        ObserverName = ObserverConstants.ObserverManagerName,
-                        Source = ObserverConstants.FabricObserverName
+                        Source = ObserverConstants.ObserverManagerName
                     };
 
                     await TelemetryClient.ReportHealthAsync(telemetryData, token);
@@ -1135,7 +1134,7 @@ namespace FabricObserver.Observers
                         // Telemetry.
                         if (TelemetryEnabled)
                         {
-                            var telemetryData = new TelemetryData()
+                            var telemetryData = new NodeTelemetryData()
                             {
                                 Description = observerHealthWarning,
                                 HealthState = HealthState.Error,
@@ -1320,7 +1319,7 @@ namespace FabricObserver.Observers
                     // Generate a Service Fabric Health Report.
                     HealthReporter.ReportHealthToServiceFabric(healthReport);
 
-                    var telemetryData = new TelemetryData
+                    var telemetryData = new ServiceTelemetryData
                     {
                         ApplicationName = $"fabric:/{ObserverConstants.FabricObserverName}",
                         Description = message,

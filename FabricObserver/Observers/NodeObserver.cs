@@ -36,7 +36,6 @@ namespace FabricObserver.Observers
         // Holds data for percentage of total configured file descriptors that are in use.
         public FabricResourceUsageData<double> LinuxFileHandlesDataPercentAllocated;
         public FabricResourceUsageData<int> LinuxFileHandlesDataTotalAllocated;
-        private DateTime lastNodeSnapshotTaken;
 
         public float CpuErrorUsageThresholdPct
         {
@@ -401,11 +400,10 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                // node snapshot (once a day).
-                if (EnableNodeSnapshots && DateTime.Now.Subtract(lastNodeSnapshotTaken) > TimeSpan.FromDays(1))
+                // node snapshot.
+                if (EnableNodeSnapshots)
                 {
                     await EmitNodeSnapshotDetailsAsync();
-                    lastNodeSnapshotTaken = DateTime.Now;
                 }
             }
             catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
@@ -766,26 +764,26 @@ namespace FabricObserver.Observers
                     double usedPct = OSInfoProvider.Instance.GetActiveEphemeralPortCountPercentage();
                     EphemeralPortsDataPercent.AddData(usedPct);
 
-                /* Raw ETW - Unrelated to Warnings */
-                if (IsEtwEnabled)
-                {
-                    (int LowPort, int HighPort, int NumberOfPorts) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
-
-                    var telemData = new TelemetryData()
+                    /* Raw ETW - Unrelated to Warnings */
+                    if (IsEtwEnabled)
                     {
-                        ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
-                        EntityType = EntityType.Machine,
-                        Metric = ErrorWarningProperty.TotalEphemeralPorts,
-                        NodeName = NodeName,
-                        NodeType = NodeType,
-                        ObserverName = ObserverName,
-                        Property = $"{LowPort} - {HighPort}",
-                        Source = ObserverName,
-                        Value = NumberOfPorts
-                    };
+                        (int LowPort, int HighPort, int NumberOfPorts) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
 
-                    ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, telemData);
-                }
+                        var telemData = new NodeTelemetryData()
+                        {
+                            ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
+                            EntityType = EntityType.Machine,
+                            Metric = ErrorWarningProperty.TotalEphemeralPorts,
+                            NodeName = NodeName,
+                            NodeType = NodeType,
+                            Property = $"{LowPort} - {HighPort}",
+                            ObserverName = ObserverName,
+                            Source = ObserverConstants.FabricObserverName,
+                            Value = NumberOfPorts
+                        };
+
+                        ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, telemData);
+                    }
                 }
 
                 timer.Start();
@@ -859,29 +857,33 @@ namespace FabricObserver.Observers
                 Node node = nodes[0];
                 string SnapshotId = Guid.NewGuid().ToString();
                 string NodeName = node.NodeName, IpAddressOrFQDN = node.IpAddressOrFQDN, NodeType = node.NodeType, CodeVersion = node.CodeVersion, ConfigVersion = node.ConfigVersion;
-                string NodeUpAt = node.NodeUpAt.ToString("o"), NodeDownAt = node.NodeDownAt.ToString("o");
+                string NodeUpAt = node.NodeUpAt.ToString("o"), NodeDownAt = node.NodeDownAt.ToString("o"), InfrastructurePlacementID = node.InfrastructurePlacementID;
                 string HealthState = node.HealthState.ToString(), UpgradeDomain = node.UpgradeDomain;
                 string FaultDomain = node.FaultDomain.OriginalString, NodeId = node.NodeId.ToString(), NodeInstanceId = node.NodeInstanceId.ToString(), NodeStatus = node.NodeStatus.ToString();
-                bool IsSeedNode = node.IsSeedNode;
+                bool IsSeedNode = node.IsSeedNode, IsNodeByNodeUpgradeInProgress = node.IsNodeByNodeUpgradeInProgress;
+                NodeDeactivationResult NodeDeactivationInfo = node.NodeDeactivationInfo;
 
                 var nodeSnapshotTelem = new NodeSnapshotTelemetryData
                 {
-                    SnapshotId= SnapshotId,
+                    SnapshotId = SnapshotId,
                     SnapshotTimestamp = DateTime.UtcNow.ToString("o"),
-                    NodeName = NodeName,    
+                    NodeName = NodeName,
                     NodeType = NodeType,
                     NodeId = NodeId,
                     NodeInstanceId = NodeInstanceId,
                     NodeStatus = NodeStatus,
                     NodeUpAt = NodeUpAt,
-                    NodeDownAt= NodeDownAt,
-                    CodeVersion = CodeVersion,
-                    ConfigVersion = ConfigVersion,
-                    HealthState = HealthState,
+                    NodeDownAt = NodeDownAt,
+                    IsNodeByNodeUpgradeInProgress = IsNodeByNodeUpgradeInProgress,
+                    IsSeedNode = IsSeedNode,
+                    InfrastructurePlacementID = InfrastructurePlacementID,
                     IpAddressOrFQDN = IpAddressOrFQDN,
-                    UpgradeDomain = UpgradeDomain,
+                    HealthState = HealthState,
+                    ConfigVersion = ConfigVersion,
+                    CodeVersion = CodeVersion,
                     FaultDomain = FaultDomain,
-                    IsSeedNode = IsSeedNode.ToString()
+                    UpgradeDomain = UpgradeDomain,
+                    NodeDeactivationInfo = NodeDeactivationInfo
                 };
 
                 if (IsTelemetryEnabled) 

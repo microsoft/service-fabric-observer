@@ -138,7 +138,7 @@ namespace FabricObserver.Observers
 
                         // Send Health Telemetry (perhaps it signals an Alert in AppInsights or LogAnalytics).
                         // This will also be serialized into the health event Description.
-                        var telemetryData = new TelemetryData()
+                        var telemetryData = new ServiceTelemetryData()
                         {
                             ApplicationName = conn.TargetApp,
                             Code = FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
@@ -213,7 +213,7 @@ namespace FabricObserver.Observers
 
                         HealthReporter.ReportHealthToServiceFabric(report);
 
-                        var telemetryData = new TelemetryData()
+                        var telemetryData = new ServiceTelemetryData()
                         {
                             ApplicationName = conn.TargetApp,
                             Code = FOErrorWarningCodes.Ok,

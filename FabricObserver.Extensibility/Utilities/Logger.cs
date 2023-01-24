@@ -148,7 +148,7 @@ namespace FabricObserver.Observers.Utilities
 
             EventKeywords keywords = ServiceEventSource.Keywords.ResourceUsage;
 
-            if (eventData is TelemetryData telemData)
+            if (eventData is TelemetryDataBase telemData)
             {
                 if (telemData.HealthState == HealthState.Error || telemData.HealthState == HealthState.Warning)
                 {

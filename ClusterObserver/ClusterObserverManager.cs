@@ -228,7 +228,7 @@ namespace ClusterObserver
             {
                 string telemetryProviderType = GetConfigSettingValue(ClusterObserverConstants.TelemetryProviderTypeParameter, settings);
 
-                if (string.IsNullOrEmpty(telemetryProviderType))
+                if (string.IsNullOrWhiteSpace(telemetryProviderType))
                 {
                     TelemetryEnabled = false;
                     return;
@@ -248,7 +248,7 @@ namespace ClusterObserver
                         string logAnalyticsSharedKey = GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter, settings);
                         string logAnalyticsWorkspaceId = GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter, settings);
 
-                        if (string.IsNullOrEmpty(logAnalyticsSharedKey) || string.IsNullOrEmpty(logAnalyticsWorkspaceId))
+                        if (string.IsNullOrWhiteSpace(logAnalyticsSharedKey) || string.IsNullOrWhiteSpace(logAnalyticsWorkspaceId))
                         {
                             TelemetryEnabled = false;
                             return;
@@ -258,21 +258,19 @@ namespace ClusterObserver
                                                 logAnalyticsWorkspaceId,
                                                 logAnalyticsSharedKey,
                                                 logAnalyticsLogType);
-
                         break;
                     
                     case TelemetryProviderType.AzureApplicationInsights:
-                    
-                        string aiKey = GetConfigSettingValue(ObserverConstants.AiKey, settings);
 
-                        if (string.IsNullOrEmpty(aiKey))
+                        string aiConnString = GetConfigSettingValue(ObserverConstants.AppInsightsConnectionString, settings);
+                        
+                        if (string.IsNullOrWhiteSpace(aiConnString))
                         {
                             TelemetryEnabled = false;
                             return;
                         }
 
-                        TelemetryClient = new AppInsightsTelemetry(aiKey);
-
+                        TelemetryClient = new AppInsightsTelemetry(aiConnString);
                         break;
                 }
             }

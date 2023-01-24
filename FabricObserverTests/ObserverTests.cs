@@ -13,6 +13,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ServiceFabric.Mocks;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Description;
@@ -167,6 +168,7 @@ namespace FabricObserverTests
                 return;
             }
 
+            
             string appType = "HealthMetricsType";
             string appVersion = "1.0.0.0";
             string serviceName1 = "fabric:/HealthMetrics/BandActorService";
@@ -180,50 +182,57 @@ namespace FabricObserverTests
             string serviceType2 = "DoctorActorServiceType";
             string packagePath = Path.Combine(Environment.CurrentDirectory, "HealthMetricsApp", "HealthMetrics", "pkg", "Debug");
 
-            // Unzip the compressed HealthMetrics app package.
-            System.IO.Compression.ZipFile.ExtractToDirectory(packagePathZip, "HealthMetricsApp", true);
-
-            // Copy the HealthMetrics app package to a location in the image store.
-            FabricClient.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
-
-            // Provision the HealthMetrics application.          
-            await FabricClient.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
-
-            // Create HealthMetrics app instance.
-            /* override app params..
-            NameValueCollection nameValueCollection = new NameValueCollection();
-            nameValueCollection.Add("foo", "bar");
-            */
-            ApplicationDescription appDesc = new(new Uri(appName), appType, appVersion/*, nameValueCollection */);
-            await FabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
-
-            // Create the HealthMetrics service descriptions.
-            StatefulServiceDescription serviceDescription1 = new()
+            try
             {
-                ApplicationName = new Uri(appName),
-                MinReplicaSetSize = 1,
-                PartitionSchemeDescription = new SingletonPartitionSchemeDescription(),
-                ServiceName = new Uri(serviceName1),
-                ServiceTypeName = serviceType1
-            };
+                // Unzip the compressed HealthMetrics app package.
+                System.IO.Compression.ZipFile.ExtractToDirectory(packagePathZip, "HealthMetricsApp", true);
 
-            StatefulServiceDescription serviceDescription2 = new()
+                // Copy the HealthMetrics app package to a location in the image store.
+                FabricClient.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
+
+                // Provision the HealthMetrics application.          
+                await FabricClient.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
+
+                // Create HealthMetrics app instance.
+                /* override app params..
+                NameValueCollection nameValueCollection = new NameValueCollection();
+                nameValueCollection.Add("foo", "bar");
+                */
+                ApplicationDescription appDesc = new(new Uri(appName), appType, appVersion/*, nameValueCollection */);
+                await FabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
+
+                // Create the HealthMetrics service descriptions.
+                StatefulServiceDescription serviceDescription1 = new()
+                {
+                    ApplicationName = new Uri(appName),
+                    MinReplicaSetSize = 1,
+                    PartitionSchemeDescription = new SingletonPartitionSchemeDescription(),
+                    ServiceName = new Uri(serviceName1),
+                    ServiceTypeName = serviceType1
+                };
+
+                StatefulServiceDescription serviceDescription2 = new()
+                {
+                    ApplicationName = new Uri(appName),
+                    MinReplicaSetSize = 1,
+                    PartitionSchemeDescription = new SingletonPartitionSchemeDescription(),
+                    ServiceName = new Uri(serviceName2),
+                    ServiceTypeName = serviceType2
+                };
+
+                // Create the HealthMetrics app services. If any of the services are declared as a default service in the ApplicationManifest.xml,
+                // then the service instance is already running and this call will fail..
+                await FabricClient.ServiceManager.CreateServiceAsync(serviceDescription1);
+                await FabricClient.ServiceManager.CreateServiceAsync(serviceDescription2);
+
+                // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
+                // You may need to increase this value depending upon your dev machine? You'll find out..
+                await Task.Delay(TimeSpan.FromSeconds(10));
+            }
+            catch (FabricException)
             {
-                ApplicationName = new Uri(appName),
-                MinReplicaSetSize = 1,
-                PartitionSchemeDescription = new SingletonPartitionSchemeDescription(),
-                ServiceName = new Uri(serviceName2),
-                ServiceTypeName = serviceType2
-            };
 
-            // Create the HealthMetrics app services. If any of the services are declared as a default service in the ApplicationManifest.xml,
-            // then the service instance is already running and this call will fail..
-            await FabricClient.ServiceManager.CreateServiceAsync(serviceDescription1);
-            await FabricClient.ServiceManager.CreateServiceAsync(serviceDescription2);
-
-            // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
-            // You may need to increase this value depending upon your dev machine? You'll find out..
-            await Task.Delay(TimeSpan.FromSeconds(10));
+            }
         }
 
         private static async Task DeployTestApp42Async()
@@ -252,22 +261,29 @@ namespace FabricObserverTests
             string packagePathZip = Path.Combine(Environment.CurrentDirectory, "TestApp42.zip");
             string packagePath = Path.Combine(Environment.CurrentDirectory, "TestApp42", "Release");
 
-            // Unzip the compressed HealthMetrics app package.
-            System.IO.Compression.ZipFile.ExtractToDirectory(packagePathZip, "TestApp42", true);
+            try
+            {
+                // Unzip the compressed HealthMetrics app package.
+                System.IO.Compression.ZipFile.ExtractToDirectory(packagePathZip, "TestApp42", true);
 
-            // Copy the HealthMetrics app package to a location in the image store.
-            FabricClient.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
+                // Copy the HealthMetrics app package to a location in the image store.
+                FabricClient.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
 
-            // Provision the HealthMetrics application.          
-            await FabricClient.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
+                // Provision the HealthMetrics application.          
+                await FabricClient.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
 
-            // Create HealthMetrics app instance.
-            ApplicationDescription appDesc = new(new Uri(appName), appType, appVersion);
-            await FabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
+                // Create HealthMetrics app instance.
+                ApplicationDescription appDesc = new(new Uri(appName), appType, appVersion);
+                await FabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
 
-            // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
-            // You may need to increase this value depending upon your dev machine? You'll find out..
-            await Task.Delay(TimeSpan.FromSeconds(15));
+                // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
+                // You may need to increase this value depending upon your dev machine? You'll find out..
+                await Task.Delay(TimeSpan.FromSeconds(15));
+            }
+            catch (FabricException)
+            {
+
+            }
         }
 
         private async Task DeployVotingAppAsync()
@@ -296,22 +312,29 @@ namespace FabricObserverTests
             string packagePathZip = Path.Combine(Environment.CurrentDirectory, "VotingApp.zip");
             string packagePath = Path.Combine(Environment.CurrentDirectory, "VotingApp");
 
-            // Unzip the compressed HealthMetrics app package.
-            System.IO.Compression.ZipFile.ExtractToDirectory(packagePathZip, "VotingApp", true);
+            try
+            {
+                // Unzip the compressed HealthMetrics app package.
+                System.IO.Compression.ZipFile.ExtractToDirectory(packagePathZip, "VotingApp", true);
 
-            // Copy the HealthMetrics app package to a location in the image store.
-            FabricClient.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
+                // Copy the HealthMetrics app package to a location in the image store.
+                FabricClient.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
 
-            // Provision the HealthMetrics application.          
-            await FabricClient.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
+                // Provision the HealthMetrics application.          
+                await FabricClient.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
 
-            // Create HealthMetrics app instance.
-            ApplicationDescription appDesc = new(new Uri(appName), appType, appVersion);
-            await FabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
+                // Create HealthMetrics app instance.
+                ApplicationDescription appDesc = new(new Uri(appName), appType, appVersion);
+                await FabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
 
-            // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
-            // You may need to increase this value depending upon your dev machine? You'll find out..
-            await Task.Delay(TimeSpan.FromSeconds(15));
+                // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
+                // You may need to increase this value depending upon your dev machine? You'll find out..
+                await Task.Delay(TimeSpan.FromSeconds(15));
+            }
+            catch (FabricException)
+            {
+
+            }
         }
 
         private static bool IsLocalSFRuntimePresent()
@@ -602,10 +625,10 @@ namespace FabricObserverTests
         public void AAAInitializeTestInfra()
         {
             Assert.IsTrue(IsLocalSFRuntimePresent());
-
             DeployHealthMetricsAppAsync().Wait();
             DeployTestApp42Async().Wait();
             DeployVotingAppAsync().Wait();
+
         }
 
         [TestMethod]
@@ -1437,24 +1460,173 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task ClusterObserver_ObserveAsync_Successful_IsHealthy()
+        public async Task ClusterObserver_ObserveAsync_AppMonitor_Successful_IsHealthy_Detects_Warning()
         {
             Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
 
+            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
+            {
+                await DeployVotingAppAsync();
+                await Task.Delay(TimeSpan.FromSeconds(15));
+            }
+
+            var serviceTelemetryData = new ServiceTelemetryData
+            {
+                ApplicationName = "fabric:/Voting",
+                Code = FOErrorWarningCodes.AppErrorPrivateBytesMb,
+                Description = "Service Test warning for CO test.",
+                EntityType = EntityType.Service,
+                Metric = ErrorWarningProperty.PrivateBytesMb,
+                NodeName = NodeName,
+                HealthState = HealthState.Warning,
+                ObserverName = ObserverConstants.AppObserverName,
+                Property = "ClusterObserver_App",
+                ServiceName = "fabric:/Voting/VotingWeb",
+                Source = "FOTest",
+                Value = 1024
+            };
+
+            var serviceHealthReport = new HealthReport
+            {
+                AppName = new Uri(serviceTelemetryData.ApplicationName),
+                Code = FOErrorWarningCodes.AppErrorPrivateBytesMb,
+                HealthData = serviceTelemetryData,
+                EntityType = EntityType.Service,
+                HealthMessage = "Service Test warning for CO test.",
+                HealthReportTimeToLive = TimeSpan.FromSeconds(60),
+                NodeName = NodeName,
+                Observer = ObserverConstants.AppObserverName,
+                ServiceName = new Uri(serviceTelemetryData.ServiceName),
+                SourceId = "ClusterObserver_App",
+                State = serviceTelemetryData.HealthState,
+            };
+
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
             var startDateTime = DateTime.Now;
 
             ClusterObserverManager.FabricServiceContext = TestServiceContext;
             ClusterObserverManager.EtwEnabled = true;
             ClusterObserverManager.TelemetryEnabled = true;
 
+            var healtherReporter = new ObserverHealthReporter(_logger);
+            healtherReporter.ReportHealthToServiceFabric(serviceHealthReport);
+
+            await Task.Delay(TimeSpan.FromSeconds(5));
+
             // On a one-node cluster like your dev machine, pass true for ignoreDefaultQueryTimeout otherwise each FabricClient query will take 2 minutes 
             // to timeout in ClusterObserver.
             var obs = new ClusterObserver.ClusterObserver(TestServiceContext, ignoreDefaultQueryTimeout: true)
             {
-
+                IsEtwProviderEnabled = true,
+                EmitWarningDetails = true,
+                ConfigurationSettings = new ConfigSettings(default, null)
+                {
+                    IsObserverEtwEnabled = true
+                }
             };
 
             await obs.ObserveAsync(Token);
+
+            // ClusterObserver will emit (ETW) the serialized instance of TelemetryDataBase type (ServiceTelemetry in this case).
+            List<ServiceTelemetryData> serviceTelemData = foEtwListener.foEtwConverter.ServiceTelemetryData;
+
+            Assert.IsNotNull(serviceTelemData);
+            Assert.IsTrue(serviceTelemData.Count > 0);
+
+            foreach (var data in serviceTelemData.Where(d => d.Property == "ClusterObserver_App"))
+            {
+                Assert.IsTrue(data.EntityType == EntityType.Service);
+                Assert.IsTrue(data.HealthState == HealthState.Warning);
+                Assert.IsTrue(data.Code == FOErrorWarningCodes.AppErrorPrivateBytesMb);
+                Assert.IsTrue(data.Description == "Service Test warning for CO test.");
+                Assert.IsTrue(data.Metric == ErrorWarningProperty.PrivateBytesMb);
+                Assert.IsTrue(data.NodeName == NodeName);
+                Assert.IsTrue(data.ObserverName == ObserverConstants.AppObserverName);
+                Assert.IsTrue(data.Source == "FOTest");
+                Assert.IsTrue(data.Value == 1024);
+            }
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+        }
+
+        [TestMethod]
+        public async Task ClusterObserver_ObserveAsync_NodeMonitor_Successful_IsHealthy_Detects_Warning()
+        {
+            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
+
+            var nodeTelemetryData = new NodeTelemetryData
+            {
+                Code = FOErrorWarningCodes.NodeWarningMemoryPercent,
+                Description = "Machine Test warning for CO test.",
+                EntityType = EntityType.Machine,
+                Metric = ErrorWarningProperty.MemoryConsumptionPercentage,
+                NodeName = NodeName,
+                ObserverName = ObserverConstants.NodeObserverName,
+                HealthState = HealthState.Warning,
+                Property = "ClusterObserver_Node",
+                Source = "FOTest",
+                Value = 90
+            };
+
+            var nodeHealthReport = new HealthReport
+            {
+                Code = FOErrorWarningCodes.NodeErrorCpuPercent,
+                EntityType = EntityType.Machine,
+                HealthData = nodeTelemetryData,
+                HealthMessage = "Machine Test warning for CO test.",
+                HealthReportTimeToLive = TimeSpan.FromSeconds(60),
+                NodeName = NodeName,
+                Observer = ObserverConstants.NodeObserverName,
+                SourceId = "ClusterObserver_Node",
+                State = HealthState.Warning
+            };
+
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+            var startDateTime = DateTime.Now;
+
+            ClusterObserverManager.FabricServiceContext = TestServiceContext;
+            ClusterObserverManager.EtwEnabled = true;
+            ClusterObserverManager.TelemetryEnabled = true;
+
+            var healtherReporter = new ObserverHealthReporter(_logger);
+            healtherReporter.ReportHealthToServiceFabric(nodeHealthReport);
+
+            await Task.Delay(TimeSpan.FromSeconds(5));
+
+            // On a one-node cluster like your dev machine, pass true for ignoreDefaultQueryTimeout otherwise each FabricClient query will take 2 minutes 
+            // to timeout in ClusterObserver.
+            var obs = new ClusterObserver.ClusterObserver(TestServiceContext, ignoreDefaultQueryTimeout: true)
+            {
+                IsEtwProviderEnabled = true,
+                EmitWarningDetails = true,
+                ConfigurationSettings = new ConfigSettings(default, null)
+                {
+                    IsObserverEtwEnabled = true
+                }
+            };
+
+            await obs.ObserveAsync(Token);
+
+            // ClusterObserver will emit (ETW) the serialized instance of TelemetryDataBase type (NodeTelemetryData in this case).
+            List<NodeTelemetryData> nodeTelemData = foEtwListener.foEtwConverter.NodeTelemetryData;
+
+            Assert.IsNotNull(nodeTelemData);
+            Assert.IsTrue(nodeTelemData.Count > 0);
+
+            foreach (var data in nodeTelemData.Where(d => d.Property == "NodeObserver_App"))
+            {
+                Assert.IsTrue(data.EntityType == EntityType.Machine);
+                Assert.IsTrue(data.HealthState == HealthState.Warning);
+                Assert.IsTrue(data.Code == FOErrorWarningCodes.NodeWarningMemoryPercent);
+                Assert.IsTrue(data.Description.Contains("Machine Test warning for CO test."));
+                Assert.IsTrue(data.Metric == ErrorWarningProperty.MemoryConsumptionPercentage);
+                Assert.IsTrue(data.NodeName == NodeName);
+                Assert.IsTrue(data.ObserverName == ObserverConstants.NodeObserverName);
+                Assert.IsTrue(data.Property == "ClusterObserver_Node");
+                Assert.IsTrue(data.Source == "FOTest");
+                Assert.IsTrue(data.Value == 90);
+            }
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -2401,39 +2573,38 @@ namespace FabricObserverTests
 
             await AppObserver_ObserveAsync_Successful_IsHealthy();
 
-            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            List<ServiceTelemetryData> telemData = foEtwListener.foEtwConverter.ServiceTelemetryData;
             
             Assert.IsNotNull(telemData);
             Assert.IsTrue(telemData.Count > 0);
 
-            foreach (var t in telemData)
+            foreach (var data in telemData)
             {
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ApplicationName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ApplicationType));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeType));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ClusterId));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Metric));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ObserverName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ProcessName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ServiceName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.OS));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ApplicationName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ApplicationType));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.NodeName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ClusterId));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.Metric));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ObserverName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ProcessName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ServiceName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.OS));
 
                 Assert.IsFalse(
-                    string.IsNullOrWhiteSpace(t.ProcessStartTime)
-                    && DateTime.TryParse(t.ProcessStartTime, out DateTime startDate)
+                    string.IsNullOrWhiteSpace(data.ProcessStartTime)
+                    && DateTime.TryParse(data.ProcessStartTime, out DateTime startDate)
                     && startDate > DateTime.MinValue);
 
-                Assert.IsTrue(t.EntityType == EntityType.Service || t.EntityType == EntityType.Process);
-                Assert.IsTrue(t.ServicePackageActivationMode == "ExclusiveProcess"
-                              || t.ServicePackageActivationMode == "SharedProcess");
-                Assert.IsTrue(t.HealthState == HealthState.Invalid);
-                Assert.IsTrue(t.ProcessId > 0);
-                Assert.IsTrue(t.ObserverName == ObserverConstants.AppObserverName);
-                Assert.IsTrue(t.Code == null);
-                Assert.IsTrue(t.Description == null);
-                Assert.IsTrue(t.Source == ObserverConstants.AppObserverName);
-                Assert.IsTrue(t.Value >= 0.0);
+                Assert.IsTrue(data.EntityType == EntityType.Service || data.EntityType == EntityType.Process);
+                Assert.IsTrue(data.ServicePackageActivationMode == "ExclusiveProcess"
+                              || data.ServicePackageActivationMode == "SharedProcess");
+                Assert.IsTrue(data.HealthState == HealthState.Invalid);
+                Assert.IsTrue(data.ProcessId > 0);
+                Assert.IsTrue(data.ObserverName == ObserverConstants.AppObserverName);
+                Assert.IsTrue(data.Code == null);
+                Assert.IsTrue(data.Description == null);
+                Assert.IsTrue(data.Source == ObserverConstants.FabricObserverName);
+                Assert.IsTrue(data.Value >= 0.0);
             }
         }
 
@@ -2452,7 +2623,7 @@ namespace FabricObserverTests
 
             await AppObserver_ObserveAsync_Successful_WarningsGenerated();
 
-            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            List<ServiceTelemetryData> telemData = foEtwListener.foEtwConverter.ServiceTelemetryData;
             
             Assert.IsNotNull(telemData);
             Assert.IsTrue(telemData.Count > 0);
@@ -2460,35 +2631,34 @@ namespace FabricObserverTests
             var warningEvents = telemData.Where(t => t.HealthState == HealthState.Warning);
             Assert.IsTrue(warningEvents.Any());
 
-            foreach (var t in warningEvents)
+            foreach (var data in warningEvents)
             {
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ApplicationName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ApplicationType));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Code));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Description));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Property));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeType));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ClusterId));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Metric));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ObserverName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ProcessName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ServiceName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.OS));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ApplicationName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ApplicationType));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.Code));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.Description));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.Property));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.NodeName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ClusterId));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.Metric));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ObserverName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ProcessName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ServiceName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.OS));
 
                 Assert.IsFalse(
-                    string.IsNullOrWhiteSpace(t.ProcessStartTime)
-                    && DateTime.TryParse(t.ProcessStartTime, out DateTime startDate)
+                    string.IsNullOrWhiteSpace(data.ProcessStartTime)
+                    && DateTime.TryParse(data.ProcessStartTime, out DateTime startDate)
                     && startDate > DateTime.MinValue);
 
-                Assert.IsTrue(t.EntityType == EntityType.Service || t.EntityType == EntityType.Process);
-                Assert.IsTrue(t.ServicePackageActivationMode == "ExclusiveProcess"
-                              || t.ServicePackageActivationMode == "SharedProcess");
-                Assert.IsTrue(t.HealthState == HealthState.Warning);
-                Assert.IsTrue(t.ProcessId > 0);
-                Assert.IsTrue(t.Value > 0.0);
-                Assert.IsTrue(t.ObserverName == ObserverConstants.AppObserverName);
-                Assert.IsTrue(t.Source == $"{t.ObserverName}({t.Code})");
+                Assert.IsTrue(data.EntityType == EntityType.Service || data.EntityType == EntityType.Process);
+                Assert.IsTrue(data.ServicePackageActivationMode == "ExclusiveProcess"
+                              || data.ServicePackageActivationMode == "SharedProcess");
+                Assert.IsTrue(data.HealthState == HealthState.Warning);
+                Assert.IsTrue(data.ProcessId > 0);
+                Assert.IsTrue(data.Value > 0.0);
+                Assert.IsTrue(data.ObserverName == ObserverConstants.AppObserverName);
+                Assert.IsTrue(data.Source == $"{data.ObserverName}({data.Code})");
             }
         }
 
@@ -2508,7 +2678,7 @@ namespace FabricObserverTests
 
             await AppObserver_ObserveAsync_Successful_IsHealthy();
 
-            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            List<ServiceTelemetryData> telemData = foEtwListener.foEtwConverter.ServiceTelemetryData;
 
             Assert.IsNotNull(telemData);
             Assert.IsTrue(telemData.Count > 0);
@@ -2516,40 +2686,39 @@ namespace FabricObserverTests
             telemData = telemData.Where(t => t.ApplicationName == "fabric:/Voting").ToList();
             Assert.IsTrue(telemData.Any());
 
-            foreach (var t in telemData)
+            foreach (var data in telemData)
             {
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ApplicationName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ApplicationType));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeType));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ClusterId));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Metric));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ObserverName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ProcessName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ServiceName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.OS));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ApplicationName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ApplicationType));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.NodeName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ClusterId));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.Metric));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ObserverName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ProcessName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ServiceName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.OS));
                 Assert.IsFalse(
-                    string.IsNullOrWhiteSpace(t.ProcessStartTime)
-                    && DateTime.TryParse(t.ProcessStartTime, out DateTime startDate)
+                    string.IsNullOrWhiteSpace(data.ProcessStartTime)
+                    && DateTime.TryParse(data.ProcessStartTime, out DateTime startDate)
                     && startDate > DateTime.MinValue);
 
-                Assert.IsTrue(t.EntityType == EntityType.Service || t.EntityType == EntityType.Process);
-                Assert.IsTrue(t.ServicePackageActivationMode == "ExclusiveProcess"
-                              || t.ServicePackageActivationMode == "SharedProcess");
-                Assert.IsTrue(t.HealthState == HealthState.Invalid);
-                Assert.IsTrue(t.ProcessId > 0);
-                Assert.IsTrue(t.ObserverName == ObserverConstants.AppObserverName);
-                Assert.IsTrue(t.Code == null);
-                Assert.IsTrue(t.Description == null);
-                Assert.IsTrue(t.Source == ObserverConstants.AppObserverName);
+                Assert.IsTrue(data.EntityType == EntityType.Service || data.EntityType == EntityType.Process);
+                Assert.IsTrue(data.ServicePackageActivationMode == "ExclusiveProcess"
+                              || data.ServicePackageActivationMode == "SharedProcess");
+                Assert.IsTrue(data.HealthState == HealthState.Invalid);
+                Assert.IsTrue(data.ProcessId > 0);
+                Assert.IsTrue(data.ObserverName == ObserverConstants.AppObserverName);
+                Assert.IsTrue(data.Code == null);
+                Assert.IsTrue(data.Description == null);
+                Assert.IsTrue(data.Source == ObserverConstants.FabricObserverName);
                 
                 // RG
-                if (t.ProcessName == "VotingData" || t.ProcessName == "VotingWeb" || t.ProcessName == "ConsoleApp6" || t.ProcessName == "ConsoleApp7")
+                if (data.ProcessName == "VotingData" || data.ProcessName == "VotingWeb" || data.ProcessName == "ConsoleApp6" || data.ProcessName == "ConsoleApp7")
                 {
-                    Assert.IsTrue(t.RGMemoryEnabled && t.RGAppliedMemoryLimitMb > 0);     
+                    Assert.IsTrue(data.RGMemoryEnabled && data.RGAppliedMemoryLimitMb > 0);     
                 }
 
-                Assert.IsTrue(t.Value >= 0.0);
+                Assert.IsTrue(data.Value >= 0.0);
             }
         }
 
@@ -2567,7 +2736,7 @@ namespace FabricObserverTests
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
             await AppObserver_ObserveAsync_PrivateBytes_Successful_WarningsGenerated();
-            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            List<ServiceTelemetryData> telemData = foEtwListener.foEtwConverter.ServiceTelemetryData;
 
             Assert.IsNotNull(telemData);
             Assert.IsTrue(telemData.Count > 0);
@@ -2594,7 +2763,7 @@ namespace FabricObserverTests
             await Task.Delay(TimeSpan.FromSeconds(10));
             using var foEtwListener = new FabricObserverEtwListener(_logger);
             await AppObserver_ObserveAsync_PrivateBytes_Successful_WarningsGenerated();
-            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            List<ServiceTelemetryData> telemData = foEtwListener.foEtwConverter.ServiceTelemetryData;
             List<List<ChildProcessTelemetryData>> childProcessTelemetryData = foEtwListener.foEtwConverter.ChildProcessTelemetry;
 
             Assert.IsNotNull(telemData);
@@ -2609,13 +2778,13 @@ namespace FabricObserverTests
             
             // Ensure parent service is put into warning.
             telemData = telemData.Where(
-                t => t.ApplicationName == "fabric:/TestApp42" && t.HealthState == HealthState.Warning).ToList();
+                t => (t as ServiceTelemetryData).ApplicationName == "fabric:/TestApp42" && (t as ServiceTelemetryData).HealthState == HealthState.Warning).ToList();
 
             // TestApp42 service launches 3 child processes.
             Assert.IsTrue(childProcessTelemetryData[0][0].ChildProcessInfo.Count == 3);
 
             // 1 service code package (with 2 children) * 1 metric = 1 warning (parent).
-            Assert.IsTrue(telemData.Count(t => t.ApplicationName == "fabric:/TestApp42" && t.Metric == ErrorWarningProperty.PrivateBytesMb) == 1);
+            Assert.IsTrue(telemData.Count(t => (t as ServiceTelemetryData).ApplicationName == "fabric:/TestApp42" && (t as ServiceTelemetryData).Metric == ErrorWarningProperty.PrivateBytesMb) == 1);
 
             // All children should definitely have more than 0 bytes committed.
             Assert.IsTrue(childProcessTelemetryData.All(
@@ -2636,7 +2805,7 @@ namespace FabricObserverTests
 
             using var foEtwListener = new FabricObserverEtwListener(_logger);
             await AppObserver_ObserveAsync_Successful_RGLimitWarningGenerated();
-            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            List<ServiceTelemetryData> telemData = foEtwListener.foEtwConverter.ServiceTelemetryData;
 
             Assert.IsNotNull(telemData);
             Assert.IsTrue(telemData.Count > 0);
@@ -2645,7 +2814,7 @@ namespace FabricObserverTests
                 t => t.ApplicationName == "fabric:/Voting" && t.HealthState == HealthState.Warning).ToList();
 
             // 2 service code packages + 2 helper code packages (VotingData) * 1 metric = 4 warnings...
-            Assert.IsTrue(telemData.All(t => t.Metric == ErrorWarningProperty.RGMemoryUsagePercent) && telemData.Count == 4);
+            Assert.IsTrue(telemData.All(t => t.Metric == ErrorWarningProperty.RGMemoryUsagePercent && telemData.Count == 4));
         }
 
         // DiskObserver: TelemetryData \\
@@ -2659,27 +2828,31 @@ namespace FabricObserverTests
 
             await DiskObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors();
 
-            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            List<DiskTelemetryData> telemData = foEtwListener.foEtwConverter.DiskTelemetryData;
             
             Assert.IsNotNull(telemData);
             Assert.IsTrue(telemData.Count > 0);
 
-            foreach (var t in telemData)
+            foreach (var data in telemData)
             {
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeType));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ClusterId));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Metric));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ObserverName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.OS));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Property));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ObserverName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.DriveName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.NodeName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ClusterId));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.Metric));
+                if (data.Metric == ErrorWarningProperty.FolderSizeMB)
+                {
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(data.FolderName));
+                }
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.OS));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.Property));
 
-                Assert.IsTrue(t.EntityType == EntityType.Disk);
-                Assert.IsTrue(t.HealthState == HealthState.Invalid);
-                Assert.IsTrue(t.ObserverName == ObserverConstants.DiskObserverName);
-                Assert.IsTrue(t.Code == null);
-                Assert.IsTrue(t.Description == null);
-                Assert.IsTrue(t.Value > 0.0);
+                Assert.IsTrue(data.EntityType == EntityType.Disk);
+                Assert.IsTrue(data.HealthState == HealthState.Invalid);
+                Assert.IsTrue(data.ObserverName == ObserverConstants.DiskObserverName);
+                Assert.IsTrue(data.Code == null);
+                Assert.IsTrue(data.Description == null);
+                Assert.IsTrue(data.Value > 0.0);
             }
         }
 
@@ -2692,7 +2865,7 @@ namespace FabricObserverTests
 
             await DiskObserver_ObserveAsync_Successful_IsHealthy_WarningsOrErrors();
 
-            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            List<DiskTelemetryData> telemData = foEtwListener.foEtwConverter.DiskTelemetryData;
             
             Assert.IsNotNull(telemData);
             Assert.IsTrue(telemData.Count > 0);
@@ -2700,23 +2873,27 @@ namespace FabricObserverTests
             telemData = telemData.Where(d => d.HealthState == HealthState.Warning).ToList();
             Assert.IsTrue(telemData.Any());
 
-            foreach (var t in telemData)
+            foreach (var data in telemData)
             {
-                Assert.IsTrue(t.EntityType == EntityType.Disk);
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeType));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ClusterId));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Code));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Description));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Metric));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ObserverName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.OS));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Property));
+                Assert.IsTrue(data.EntityType == EntityType.Disk);
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.NodeName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.DriveName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ClusterId));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.Code));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.Description));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.Metric));
+                if (data.Metric == ErrorWarningProperty.FolderSizeMB)
+                {
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(data.FolderName));
+                }
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ObserverName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.OS));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.Property));
 
-                Assert.IsTrue(t.HealthState == HealthState.Warning);
-                Assert.IsTrue(t.ObserverName == ObserverConstants.DiskObserverName);
-                Assert.IsTrue(t.Value > 0.0);
-                Assert.IsTrue(t.Source == $"{t.ObserverName}({t.Code})");
+                Assert.IsTrue(data.ObserverName == ObserverConstants.DiskObserverName);
+                Assert.IsTrue(data.HealthState == HealthState.Warning);
+                Assert.IsTrue(data.Value > 0.0);
+                Assert.IsTrue(data.Source == $"{data.ObserverName}({data.Code})");
             }
         }
 
@@ -2731,35 +2908,34 @@ namespace FabricObserverTests
 
             await FabricSystemObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors();
 
-            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            List<ServiceTelemetryData> telemData = foEtwListener.foEtwConverter.ServiceTelemetryData;
             
             Assert.IsNotNull(telemData);
             Assert.IsTrue(telemData.Count > 0);
 
-            foreach (var t in telemData)
+            foreach (var data in telemData)
             {
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ApplicationName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeType));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ClusterId));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Metric));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ObserverName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ProcessName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.OS));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ApplicationName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.NodeName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ClusterId));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.Metric));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ObserverName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ProcessName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.OS));
 
                 Assert.IsFalse(
-                    string.IsNullOrWhiteSpace(t.ProcessStartTime)
-                    && DateTime.TryParse(t.ProcessStartTime, out DateTime startDate)
+                    string.IsNullOrWhiteSpace(data.ProcessStartTime)
+                    && DateTime.TryParse(data.ProcessStartTime, out DateTime startDate)
                     && startDate > DateTime.MinValue);
 
-                Assert.IsTrue(t.EntityType == EntityType.Application);
-                Assert.IsTrue(t.HealthState == HealthState.Invalid);
-                Assert.IsTrue(t.ProcessId > 0);
-                Assert.IsTrue(t.ObserverName == ObserverConstants.FabricSystemObserverName);
-                Assert.IsTrue(t.Code == null);
-                Assert.IsTrue(t.Description == null);
-                Assert.IsTrue(t.Source == ObserverConstants.FabricSystemObserverName);
-                Assert.IsTrue(t.Value >= 0.0);
+                Assert.IsTrue(data.EntityType == EntityType.Application);
+                Assert.IsTrue(data.HealthState == HealthState.Invalid);
+                Assert.IsTrue(data.ProcessId > 0);
+                Assert.IsTrue(data.ObserverName == ObserverConstants.FabricSystemObserverName);
+                Assert.IsTrue(data.Code == null);
+                Assert.IsTrue(data.Description == null);
+                Assert.IsTrue(data.Source == ObserverConstants.FabricObserverName);
+                Assert.IsTrue(data.Value >= 0.0);
             }
         }
 
@@ -2772,7 +2948,7 @@ namespace FabricObserverTests
 
             await FabricSystemObserver_ObserveAsync_Successful_IsHealthy_MemoryWarningsOrErrorsDetected();
 
-            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            List<ServiceTelemetryData> telemData = foEtwListener.foEtwConverter.ServiceTelemetryData;
             
             Assert.IsNotNull(telemData);
             Assert.IsTrue(telemData.Count > 0);
@@ -2780,31 +2956,30 @@ namespace FabricObserverTests
             telemData = telemData.Where(d => d.HealthState == HealthState.Warning).ToList();
             Assert.IsTrue(telemData.Any());
 
-            foreach (var t in telemData)
+            foreach (var data in telemData)
             {
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ApplicationName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeType));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ClusterId));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Metric));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ObserverName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ProcessName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.OS));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ApplicationName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.NodeName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ClusterId));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.Metric));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ObserverName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ProcessName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.OS));
 
                 Assert.IsFalse(
-                    string.IsNullOrWhiteSpace(t.ProcessStartTime)
-                    && DateTime.TryParse(t.ProcessStartTime, out DateTime startDate)
+                    string.IsNullOrWhiteSpace(data.ProcessStartTime)
+                    && DateTime.TryParse(data.ProcessStartTime, out DateTime startDate)
                     && startDate > DateTime.MinValue);
 
-                Assert.IsTrue(t.EntityType == EntityType.Application);
-                Assert.IsTrue(t.HealthState == HealthState.Warning);
-                Assert.IsTrue(t.ProcessId > 0);
-                Assert.IsTrue(t.ObserverName == ObserverConstants.FabricSystemObserverName);
-                Assert.IsTrue(t.Code != null);
-                Assert.IsTrue(t.Description != null);
-                Assert.IsTrue(t.Property != null);
-                Assert.IsTrue(t.Source == $"{t.ObserverName}({t.Code})");
-                Assert.IsTrue(t.Value > 0.0);
+                Assert.IsTrue(data.EntityType == EntityType.Application);
+                Assert.IsTrue(data.HealthState == HealthState.Warning);
+                Assert.IsTrue(data.ProcessId > 0);
+                Assert.IsTrue(data.ObserverName == ObserverConstants.FabricSystemObserverName);
+                Assert.IsTrue(data.Code != null);
+                Assert.IsTrue(data.Description != null);
+                Assert.IsTrue(data.Property != null);
+                Assert.IsTrue(data.Source == $"{data.ObserverName}({data.Code})");
+                Assert.IsTrue(data.Value > 0.0);
             }
         }
 
@@ -2819,28 +2994,27 @@ namespace FabricObserverTests
 
             await NodeObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrorsDetected();
 
-            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            List<NodeTelemetryData> telemData = foEtwListener.foEtwConverter.NodeTelemetryData;
             
             Assert.IsNotNull(telemData);
             Assert.IsTrue(telemData.Count > 0);
 
-            foreach (var t in telemData)
+            foreach (var data in telemData)
             {
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeType));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ClusterId));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Metric));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ObserverName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.OS));
-                Assert.IsFalse(t.Property == null);
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.NodeName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.NodeType));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ClusterId));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.Metric));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ObserverName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.OS));
+                Assert.IsFalse(data.Property == null);
 
-                Assert.IsTrue(t.EntityType == EntityType.Machine);
-                Assert.IsTrue(t.HealthState == HealthState.Invalid);
-                Assert.IsTrue(t.ObserverName == ObserverConstants.NodeObserverName);
-                Assert.IsTrue(t.Code == null);
-                Assert.IsTrue(t.Description == null);
-                Assert.IsTrue(t.Source == ObserverConstants.NodeObserverName);
-                Assert.IsTrue(t.Value >= 0.0);
+                Assert.IsTrue(data.EntityType == EntityType.Machine);
+                Assert.IsTrue(data.HealthState == HealthState.Invalid);
+                Assert.IsTrue(data.ObserverName == ObserverConstants.NodeObserverName);
+                Assert.IsTrue(data.Code == null);
+                Assert.IsTrue(data.Description == null);
+                Assert.IsTrue(data.Value >= 0.0);
             }
         }
 
@@ -2853,7 +3027,7 @@ namespace FabricObserverTests
 
             await NodeObserver_ObserveAsync_Successful_IsHealthy_WarningsOrErrorsDetected();
 
-            List<TelemetryData> telemData = foEtwListener.foEtwConverter.TelemetryData;
+            List<NodeTelemetryData> telemData = foEtwListener.foEtwConverter.NodeTelemetryData;
             
             Assert.IsNotNull(telemData);
             Assert.IsTrue(telemData.Count > 0);
@@ -2861,24 +3035,24 @@ namespace FabricObserverTests
             telemData = telemData.Where(d => d.HealthState == HealthState.Warning).ToList();
             Assert.IsTrue(telemData.Any());
 
-            foreach (var t in telemData)
+            foreach (var data in telemData)
             {
-                Assert.IsTrue(t.ObserverName == ObserverConstants.NodeObserverName);
-                Assert.IsTrue(t.EntityType == EntityType.Machine);
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.NodeName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.NodeType));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ClusterId));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.Metric));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ObserverName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.OS));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.Code));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.Property));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.Description));
 
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.NodeType));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ClusterId));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Metric));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.ObserverName));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.OS));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Code));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Property));
-                Assert.IsFalse(string.IsNullOrWhiteSpace(t.Description));
 
-                Assert.IsTrue(t.HealthState == HealthState.Warning);
-                Assert.IsTrue(t.Source == $"{t.ObserverName}({t.Code})");
-                Assert.IsTrue(t.Value > 0.0);
+                Assert.IsTrue(data.EntityType == EntityType.Machine);
+                Assert.IsTrue(data.ObserverName == ObserverConstants.NodeObserverName);
+                Assert.IsTrue(data.HealthState == HealthState.Warning);
+                Assert.IsTrue(data.Source == $"{data.ObserverName}({data.Code})");
+                Assert.IsTrue(data.Value > 0.0);
             }
 
         }
@@ -2914,9 +3088,6 @@ namespace FabricObserverTests
             Assert.IsNotNull(telemData);
             Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.SnapshotId));
             Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.SnapshotTimestamp));
-            
-            string lastSnapshotTimestamp = telemData.SnapshotTimestamp;
-
             Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.CodeVersion));
             Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.ConfigVersion));
             Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.FaultDomain));
@@ -2927,14 +3098,12 @@ namespace FabricObserverTests
             Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.NodeDownAt));
             Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.NodeUpAt));
             Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.UpgradeDomain));
-
-            // Make sure that another snapshot is not taken (NodeObserver takes 1 snapshot every 24 hrs). \\
-
-            // Run NodeObserver again (same instance as the previous run, so volatile state is preserved).
-            await obs.ObserveAsync(Token);
-            // Refresh telemData (the ETW data should not change if the snapshot did not take place).
-            telemData = foEtwListener.foEtwConverter.NodeSnapshotTelemetryData;
-            Assert.IsTrue(telemData.SnapshotTimestamp.Equals(lastSnapshotTimestamp));
+            Assert.IsTrue(string.IsNullOrWhiteSpace(telemData.InfrastructurePlacementID));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.NodeStatus));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.HealthState));
+            Assert.IsFalse(string.IsNullOrWhiteSpace(telemData.IpAddressOrFQDN));
+            Assert.IsFalse(telemData.IsNodeByNodeUpgradeInProgress);
+            Assert.IsFalse(telemData.NodeDeactivationInfo == null);
         }
 
         // OSObserver: MachineTelemetryData \\

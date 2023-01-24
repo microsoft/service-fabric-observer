@@ -14,6 +14,7 @@
     <!-- ClusterObserver settings. -->
     <Parameter Name="ClusterObserverEnabled" DefaultValue="true" />
     <Parameter Name="ClusterObserverEnableETW" DefaultValue="true" />
+    <Parameter Name="ClusterObserverEnableTelemetry" DefaultValue="true" />
     <Parameter Name="ClusterObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="MaxTimeNodeStatusNotOk" DefaultValue="02:00:00" />
     <Parameter Name="EmitHealthWarningEvaluationDetails" DefaultValue="true" />
@@ -45,6 +46,7 @@
           <Section Name="ClusterObserverConfiguration">
             <Parameter Name="Enabled" Value="[ClusterObserverEnabled]" />
             <Parameter Name="EnableEtw" Value="[ClusterObserverEnableETW]" />
+            <Parameter Name="EnableTelemetry" Value="[ClusterObserverEnableTelemetry]" />
             <Parameter Name="EnableVerboseLogging" Value="[ClusterObserverEnableVerboseLogging]" />
             <Parameter Name="EmitHealthWarningEvaluationDetails" Value="[EmitHealthWarningEvaluationDetails]" />
             <Parameter Name="MaxTimeNodeStatusNotOk" Value="[MaxTimeNodeStatusNotOk]" />

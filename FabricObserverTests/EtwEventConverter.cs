@@ -22,8 +22,17 @@ namespace FabricObserverTests
         {
             get;
         }
+        internal List<DiskTelemetryData> DiskTelemetryData
+        {
+            get; private set;
+        }
 
-        internal List<TelemetryData> TelemetryData
+        internal List<NodeTelemetryData> NodeTelemetryData
+        {
+            get; private set;
+        }
+
+        internal List<ServiceTelemetryData> ServiceTelemetryData
         {
             get; private set;
         }
@@ -71,31 +80,65 @@ namespace FabricObserverTests
                 // available in the payload. These will always be FabricObserverDataEvent events.
                 string json = eventData.Payload[0].ToString();
 
-                // ChildProcessTelemetryData (only from AppObserver).
-                if (JsonHelper.TryDeserializeObject(json, out List<ChildProcessTelemetryData> childProcTelemData))
+                // ChildProcessTelemetryData. Strict type member handling.
+                if (JsonHelper.TryDeserializeObject(json, out List<ChildProcessTelemetryData> childProcTelemData, treatMissingMembersAsError: true))
                 {
                     Logger.LogInfo($"JSON-serialized List<ChildProcessTelemetryData>{Environment.NewLine}{json}");
                     ChildProcessTelemetry ??= new List<List<ChildProcessTelemetryData>>();
                     ChildProcessTelemetry.Add(childProcTelemData);
                 }
-                // TelemetryData (from all observers but OSObserver).
-                else if (JsonHelper.TryDeserializeObject(json, out TelemetryData telemetryData))
-                {
-                    Logger.LogInfo($"JSON-serialized TelemetryData{Environment.NewLine}{json}");
-                    TelemetryData ??= new List<TelemetryData>();
-                    TelemetryData.Add(telemetryData); 
-                }
-                // MachineTelemetryData (only from OSObserver).
-                else if (JsonHelper.TryDeserializeObject(json, out MachineTelemetryData machineTelemetryData))
+                // MachineTelemetryData. Strict type member handling.
+                else if (JsonHelper.TryDeserializeObject(json, out MachineTelemetryData machineTelemetryData, treatMissingMembersAsError: true))
                 {
                     Logger.LogInfo($"JSON-serialized MachineTelemetryData{Environment.NewLine}{json}");
                     MachineTelemetryData = machineTelemetryData;
                 }
-                // NodeSnapshotTelemetryData (only from NodeObserver).
-                else if (JsonHelper.TryDeserializeObject(json, out NodeSnapshotTelemetryData nodeSnapshotTelemetryData))
+                // NodeSnapshotTelemetryData. Strict type member handling.
+                else if (JsonHelper.TryDeserializeObject(json, out NodeSnapshotTelemetryData nodeSnapshotTelemetryData, treatMissingMembersAsError: true))
                 {
                     Logger.LogInfo($"JSON-serialized nodeSnapshotTelemetryData{Environment.NewLine}{json}");
                     NodeSnapshotTelemetryData = nodeSnapshotTelemetryData;
+                }
+                // TelemetryData: Specific Observer telemetry. Don't enforce strict type member handling in Json deserialization.
+                else if (JsonHelper.TryDeserializeObject(json, out TelemetryData telemetryData))
+                {
+                    Logger.LogInfo($"JSON-serialized TelemetryDataBase{Environment.NewLine}{json}");
+                    
+                    switch (telemetryData.ObserverName)
+                    {
+                        case ObserverConstants.AppObserverName:
+                        case ObserverConstants.ContainerObserverName:
+                        case ObserverConstants.FabricSystemObserverName:
+
+                            if (JsonHelper.TryDeserializeObject(json, out ServiceTelemetryData serviceTelemetryData))
+                            {
+                                ServiceTelemetryData ??= new List<ServiceTelemetryData>();
+                                ServiceTelemetryData.Add(serviceTelemetryData);
+                            }
+                            break;
+
+                        case ObserverConstants.DiskObserverName:
+
+                            // enforce strict type member handling in Json deserialization as this type has specific properties that are unique to it.
+                            if (JsonHelper.TryDeserializeObject(json, out DiskTelemetryData diskTelemetryData, treatMissingMembersAsError: true))
+                            {
+                                DiskTelemetryData ??= new List<DiskTelemetryData>();
+                                DiskTelemetryData.Add(diskTelemetryData);
+                            }
+                            break;
+
+                        case ObserverConstants.NodeObserverName:
+
+                            if (JsonHelper.TryDeserializeObject(json, out NodeTelemetryData nodeTelemetryData))
+                            {
+                                NodeTelemetryData ??= new List<NodeTelemetryData>();
+                                NodeTelemetryData.Add(nodeTelemetryData);
+                            }
+                            break;
+
+                        default:
+                            return;
+                    }
                 }
                 else // ignore..
                 {

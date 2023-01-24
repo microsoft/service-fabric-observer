@@ -133,41 +133,93 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                             string instanceName = null)
         {
             string jsonPayload = JsonConvert.SerializeObject(
-                new
+                    new
+                    {
+                        ClusterInformation.ClusterInfoTuple.ClusterId,
+                        source,
+                        property = propertyName,
+                        healthState = state.ToString(),
+                        healthEvaluation = unhealthyEvaluations,
+                        serviceName = serviceName ?? string.Empty,
+                        instanceName = instanceName ?? string.Empty,
+                        osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux"
+                    });
+
+            await SendTelemetryAsync(jsonPayload, cancellationToken);
+        }
+
+        public async Task ReportHealthAsync(TelemetryDataBase telemetryData, CancellationToken cancellationToken)
+        {
+            if (telemetryData == null || cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            if (telemetryData is ServiceTelemetryData serviceTelemData)
+            {
+                if (JsonHelper.TrySerializeObject(serviceTelemData, out string jsonPayload))
                 {
-                    ClusterInformation.ClusterInfoTuple.ClusterId,
-                    source,
-                    property = propertyName,
-                    healthState = state.ToString(),
-                    healthEvaluation = unhealthyEvaluations,
-                    serviceName = serviceName ?? string.Empty,
-                    instanceName = instanceName ?? string.Empty,
-                    osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux"
-                });
-
-            await SendTelemetryAsync(jsonPayload, cancellationToken);
+                    await SendTelemetryAsync(jsonPayload, cancellationToken);
+                }
+            }
+            else if (telemetryData is NodeTelemetryData nodeTelemData)
+            {
+                if (JsonHelper.TrySerializeObject(nodeTelemData, out string jsonPayload))
+                {
+                    await SendTelemetryAsync(jsonPayload, cancellationToken);
+                }
+            }
+            else if (telemetryData is DiskTelemetryData diskTelemData)
+            {
+                if (JsonHelper.TrySerializeObject(diskTelemData, out string jsonPayload))
+                {
+                    await SendTelemetryAsync(jsonPayload, cancellationToken);
+                }
+            }
+            else if (telemetryData is ClusterTelemetryData clusterTelemData)
+            {
+                if (JsonHelper.TrySerializeObject(clusterTelemData, out string jsonPayload))
+                {
+                    await SendTelemetryAsync(jsonPayload, cancellationToken);
+                }
+            }
         }
 
-        public async Task ReportHealthAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
+        public async Task ReportMetricAsync(TelemetryDataBase telemetryData, CancellationToken cancellationToken)
         {
             if (telemetryData == null || cancellationToken.IsCancellationRequested)
             {
                 return;
             }
 
-            string jsonPayload = JsonConvert.SerializeObject(telemetryData);
-            await SendTelemetryAsync(jsonPayload, cancellationToken);
-        }
-
-        public async Task ReportMetricAsync(TelemetryData telemetryData, CancellationToken cancellationToken)
-        {
-            if (telemetryData == null || cancellationToken.IsCancellationRequested)
+            if (telemetryData is ServiceTelemetryData serviceTelemData)
             {
-                return;
+                if (JsonHelper.TrySerializeObject(serviceTelemData, out string jsonPayload))
+                {
+                    await SendTelemetryAsync(jsonPayload, cancellationToken);
+                }
             }
-
-            string jsonPayload = JsonConvert.SerializeObject(telemetryData);
-            await SendTelemetryAsync(jsonPayload, cancellationToken);
+            else if (telemetryData is NodeTelemetryData nodeTelemData)
+            {
+                if (JsonHelper.TrySerializeObject(nodeTelemData, out string jsonPayload))
+                {
+                    await SendTelemetryAsync(jsonPayload, cancellationToken);
+                }
+            }
+            else if (telemetryData is DiskTelemetryData diskTelemData)
+            {
+                if (JsonHelper.TrySerializeObject(diskTelemData, out string jsonPayload))
+                {
+                    await SendTelemetryAsync(jsonPayload, cancellationToken);
+                }
+            }
+            else if (telemetryData is ClusterTelemetryData clusterTelemData)
+            {
+                if (JsonHelper.TrySerializeObject(clusterTelemData, out string jsonPayload))
+                {
+                    await SendTelemetryAsync(jsonPayload, cancellationToken);
+                }
+            }
         }
 
         public async Task ReportMetricAsync(List<ChildProcessTelemetryData> telemetryData, CancellationToken cancellationToken)
@@ -177,8 +229,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 return;
             }
 
-            string jsonPayload = JsonConvert.SerializeObject(telemetryData);
-            await SendTelemetryAsync(jsonPayload, cancellationToken);
+            if (JsonHelper.TrySerializeObject(telemetryData, out string jsonPayload))
+            {
+                await SendTelemetryAsync(jsonPayload, cancellationToken);
+            }
         }
 
         public async Task ReportMetricAsync(MachineTelemetryData machineTelemetryData, CancellationToken cancellationToken)
@@ -188,8 +242,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 return;
             }
 
-            string jsonPayload = JsonConvert.SerializeObject(machineTelemetryData);
-            await SendTelemetryAsync(jsonPayload, cancellationToken);
+            if (JsonHelper.TrySerializeObject(machineTelemetryData, out string jsonPayload))
+            {
+                await SendTelemetryAsync(jsonPayload, cancellationToken);
+            }
         }
 
         public async Task<bool> ReportMetricAsync<T>(
@@ -199,15 +255,15 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                                     CancellationToken cancellationToken)
         {
             string jsonPayload = JsonConvert.SerializeObject(
-                new
-                {
-                    id = $"FO_{Guid.NewGuid()}",
-                    datetime = DateTime.UtcNow,
-                    ClusterInformation.ClusterInfoTuple.ClusterId,
-                    source,
-                    property = name,
-                    value
-                });
+                    new
+                    {
+                        id = $"FO_{Guid.NewGuid()}",
+                        datetime = DateTime.UtcNow,
+                        ClusterInformation.ClusterInfoTuple.ClusterId,
+                        source,
+                        property = name,
+                        value
+                    });
 
             await SendTelemetryAsync(jsonPayload, cancellationToken);
 
@@ -280,6 +336,14 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
         }
 
+        public async Task ReportNodeSnapshotAsync(NodeSnapshotTelemetryData nodeSnapshotTelem, CancellationToken cancellationToken)
+        {
+            if (JsonHelper.TrySerializeObject(nodeSnapshotTelem, out string jsonPayload))
+            {
+                await SendTelemetryAsync(jsonPayload, cancellationToken);
+            }
+        }
+
         // Implement functions below as you need.
         public Task ReportAvailabilityAsync(
                         Uri serviceUri,
@@ -338,12 +402,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                         CancellationToken cancellationToken)
         {
             return Task.CompletedTask;
-        }
-
-        public async Task ReportNodeSnapshotAsync(NodeSnapshotTelemetryData nodeSnapshotTelem, CancellationToken cancellationToken)
-        {
-            string jsonPayload = JsonConvert.SerializeObject(nodeSnapshotTelem);
-            await SendTelemetryAsync(jsonPayload, cancellationToken);
         }
     }
 }

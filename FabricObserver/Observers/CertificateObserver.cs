@@ -195,15 +195,14 @@ namespace FabricObserver.Observers
                 };
 
                 HasActiveFabricErrorOrWarning = false;
-                var telemetryData = new TelemetryData()
+                var telemetryData = new NodeTelemetryData()
                 {
                     ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                     Description = "All cluster and monitored app certificates are healthy.",
                     HealthState = HealthState.Ok,
                     NodeName = NodeName,
                     NodeType = NodeType,
-                    ObserverName = ObserverName,
-                    Source = ObserverConstants.FabricObserverName
+                    Source = ObserverName
                 };
 
                 if (IsTelemetryEnabled)
@@ -236,7 +235,7 @@ namespace FabricObserver.Observers
 
                 HasActiveFabricErrorOrWarning = true;
                 CurrentWarningCount++;
-                var telemetryData = new TelemetryData()
+                var telemetryData = new NodeTelemetryData()
                 {
                     ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                     Code = FOErrorWarningCodes.WarningCertificateExpiration,
@@ -245,8 +244,7 @@ namespace FabricObserver.Observers
                     Metric = ErrorWarningProperty.CertificateExpiration,
                     NodeName = NodeName,
                     NodeType = NodeType,
-                    ObserverName = ObserverName,
-                    Source = ObserverConstants.FabricObserverName,
+                    Source = ObserverName,
                 };
 
                 if (IsTelemetryEnabled)

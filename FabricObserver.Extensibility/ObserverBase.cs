@@ -33,7 +33,6 @@ namespace FabricObserver.Observers
         private bool disposed;
         private ConcurrentDictionary<string, (int DumpCount, DateTime LastDumpDate)> ServiceDumpCountDictionary;
         private readonly object lockObj = new();
-        private bool _isWindows;
 
         public static StatelessServiceContext FabricServiceContext
         {
@@ -153,6 +152,13 @@ namespace FabricObserver.Observers
 
                 return false;
             }
+            set
+            {
+                if (ConfigurationSettings != null)
+                {
+                    ConfigurationSettings.IsObserverTelemetryEnabled = value;
+                }
+            }
         }
 
         public bool IsEtwEnabled
@@ -165,6 +171,13 @@ namespace FabricObserver.Observers
                 }
 
                 return false;
+            }
+            set
+            {
+                if (ConfigurationSettings != null)
+                {
+                    ConfigurationSettings.IsObserverTelemetryEnabled = value;
+                }
             }
         }
 
@@ -375,8 +388,8 @@ namespace FabricObserver.Observers
             }
             catch (InvalidOperationException e)
             {
-                ObserverLogger.LogWarning($"Unable to determine OS platform: {e.Message}");
-                throw;
+                ObserverLogger.LogWarning($"Unable to determine OS platform: {e.Message}. Trying a different API.");
+                IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
             }
 
             ApplicationName = new Uri(serviceContext.CodePackageActivationContext.ApplicationName);
@@ -430,8 +443,6 @@ namespace FabricObserver.Observers
                     GetSettingParameterValue(
                         ObserverConstants.ObserverManagerConfigurationSectionName,
                         ObserverConstants.ObserverWebApiEnabled), out bool obsWeb) && obsWeb && IsObserverWebApiAppInstalled();
-
-            _isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         }
 
         private void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
@@ -787,7 +798,7 @@ namespace FabricObserver.Observers
             HealthState healthState = HealthState.Ok;
             Uri appName = null;
             Uri serviceName = null;
-            TelemetryData telemetryData;
+            TelemetryDataBase telemetryData = null;
 
             if (entityType == EntityType.Application || entityType == EntityType.Service)
             {
@@ -887,7 +898,7 @@ namespace FabricObserver.Observers
                 // The health event description will be a serialized instance of telemetryData,
                 // so it should be completely constructed (filled with data) regardless
                 // of user telemetry settings.
-                telemetryData = new TelemetryData()
+                telemetryData = new ServiceTelemetryData()
                 {
                     ApplicationName = appName?.OriginalString ?? null,
                     ApplicationType = appType,
@@ -912,14 +923,14 @@ namespace FabricObserver.Observers
                     ServiceTypeName = serviceTypeName,
                     ServiceTypeVersion = serviceTypeVersion,
                     ServicePackageActivationMode = replicaOrInstance?.ServicePackageActivationMode.ToString(),
-                    Source = ObserverName,
+                    Source = ObserverConstants.FabricObserverName,
                     Value = data.AverageDataValue
                 };
 
                 // Container
                 if (!string.IsNullOrWhiteSpace(replicaOrInstance?.ContainerId))
                 {
-                    telemetryData.ContainerId = replicaOrInstance.ContainerId;
+                    (telemetryData as ServiceTelemetryData).ContainerId = replicaOrInstance.ContainerId;
                 }
 
                 // Telemetry - This is informational, per reading telemetry, healthstate is irrelevant here. If the process has children, then don't emit this raw data since it will already
@@ -944,18 +955,39 @@ namespace FabricObserver.Observers
                 id = data.Id;
 
                 // Report raw data.
-                telemetryData = new TelemetryData()
+
+                if (ObserverName == ObserverConstants.NodeObserverName)
                 {
-                    ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
-                    EntityType = entityType,
-                    NodeName = NodeName,
-                    NodeType = NodeType,
-                    ObserverName = ObserverName,
-                    Property = id,
-                    Metric = data.Property,
-                    Source = ObserverName,
-                    Value = data.AverageDataValue
-                };
+                    telemetryData = new NodeTelemetryData()
+                    {
+                        ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
+                        EntityType = entityType,
+                        NodeName = NodeName,
+                        NodeType = NodeType,
+                        ObserverName = ObserverName,
+                        Property = $"{NodeName}_{id}",
+                        Metric = data.Property,
+                        Source = ObserverConstants.FabricObserverName,
+                        Value = data.AverageDataValue
+                    };
+                }
+                else if (ObserverName == ObserverConstants.DiskObserverName)
+                {
+                    telemetryData = new DiskTelemetryData()
+                    {
+                        ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
+                        EntityType = entityType,
+                        DriveName = id[..2],
+                        FolderName = data.Property == ErrorWarningProperty.FolderSizeMB ? id : null,
+                        NodeName = NodeName,
+                        NodeType = NodeType,
+                        ObserverName = ObserverName,
+                        Property = id,
+                        Metric = data.Property,
+                        Source = ObserverConstants.FabricObserverName,
+                        Value = data.AverageDataValue
+                    };
+                }
 
                 if (IsTelemetryEnabled)
                 {
@@ -981,10 +1013,7 @@ namespace FabricObserver.Observers
                 {
                     if (!string.IsNullOrWhiteSpace(DumpsPath))
                     {
-                        if (ServiceDumpCountDictionary == null)
-                        {
-                            ServiceDumpCountDictionary = new ConcurrentDictionary<string, (int DumpCount, DateTime LastDump)>();
-                        }
+                        ServiceDumpCountDictionary ??= new ConcurrentDictionary<string, (int DumpCount, DateTime LastDump)>();
 
                         try
                         {
@@ -1024,10 +1053,7 @@ namespace FabricObserver.Observers
                 {
                     if (!string.IsNullOrWhiteSpace(DumpsPath))
                     {
-                        if (ServiceDumpCountDictionary == null)
-                        {
-                            ServiceDumpCountDictionary = new ConcurrentDictionary<string, (int DumpCount, DateTime LastDump)>();
-                        }
+                        ServiceDumpCountDictionary ??= new ConcurrentDictionary<string, (int DumpCount, DateTime LastDump)>();
 
                         try
                         {
@@ -1245,13 +1271,18 @@ namespace FabricObserver.Observers
 
                 if (!string.IsNullOrWhiteSpace(replicaOrInstance?.ContainerId))
                 {
-                    telemetryData.ContainerId = replicaOrInstance.ContainerId;
+                    (telemetryData as ServiceTelemetryData).ContainerId = replicaOrInstance.ContainerId;
                 }
 
                 telemetryData.HealthState = healthState;
                 telemetryData.Description = healthMessage.ToString();
                 telemetryData.Source = $"{ObserverName}({errorWarningCode})";
                 telemetryData.Property = entityType == EntityType.Disk ? $"{id} {data.Property}" : id;
+
+                if (telemetryData.ObserverName == ObserverConstants.NodeObserverName)
+                {
+                    telemetryData.Property = $"{NodeName}_{id}";
+                }
 
                 // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
                 if (IsTelemetryEnabled)
@@ -1310,7 +1341,7 @@ namespace FabricObserver.Observers
 
                     if (!string.IsNullOrWhiteSpace(replicaOrInstance?.ContainerId))
                     {
-                        telemetryData.ContainerId = replicaOrInstance.ContainerId;
+                        (telemetryData as ServiceTelemetryData).ContainerId = replicaOrInstance.ContainerId;
                     }
 
                     telemetryData.HealthState = HealthState.Ok;
@@ -1528,14 +1559,12 @@ namespace FabricObserver.Observers
             if (string.IsNullOrWhiteSpace(telemetryProviderType))
             {
                 IsTelemetryProviderEnabled = false;
-
                 return;
             }
 
             if (!Enum.TryParse(telemetryProviderType, out TelemetryProviderType telemetryProvider))
             {
                 IsTelemetryProviderEnabled = false;
-
                 return;
             }
 
@@ -1562,7 +1591,6 @@ namespace FabricObserver.Observers
                     }
 
                     TelemetryClient = new LogAnalyticsTelemetry(logAnalyticsWorkspaceId, logAnalyticsSharedKey, logAnalyticsLogType);
-
                     break;
 
                 case TelemetryProviderType.AzureApplicationInsights:

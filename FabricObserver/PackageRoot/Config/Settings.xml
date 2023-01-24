@@ -101,7 +101,7 @@
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
     <Parameter Name="LogAnalyticsLogType" Value="FabricObserver" />
 	  
-    <!-- OBSOLETE: FabricObserverWebApi is no longer supported or maintained. This setting is here for legacy purposes only. 
+    <!-- OBSOLETE: FabricObserverWebApi is no longer supported or maintained. This setting/feature exists for legacy purposes only. 
 	     If you deploy the FabricObserverWebApi app, set this to true. -->
     <Parameter Name="ObserverWebApiEnabled" Value="false" />
   </Section>

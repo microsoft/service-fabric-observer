@@ -57,6 +57,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// <summary>
         /// Disk type.
         /// </summary>
-        Disk
+        Disk,
+        /// <summary>
+        /// Cluster type.
+        /// </summary>
+        Cluster
     }
 }

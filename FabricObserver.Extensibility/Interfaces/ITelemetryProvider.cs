@@ -73,7 +73,7 @@ namespace FabricObserver.Observers.Interfaces
         /// <param name="telemetryData">MachineTelemetryData instance.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
         Task ReportHealthAsync(
-            TelemetryData telemetryData,
+            TelemetryDataBase telemetryData,
             CancellationToken cancellationToken);
 
         /// <summary>
@@ -96,7 +96,7 @@ namespace FabricObserver.Observers.Interfaces
         /// <param name="telemetryData">TelemetryData instance.</param>
         /// <param name="cancellationToken">CancellationToken instance.</param>
         Task ReportMetricAsync(
-          TelemetryData telemetryData,
+          TelemetryDataBase telemetryData,
           CancellationToken cancellationToken);
 
         /// <summary>

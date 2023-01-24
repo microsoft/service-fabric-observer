@@ -5,6 +5,7 @@
 		<version>2.2.2</version>
 		<releaseNotes>
 ClusterObserver in this release must be deployed to SF clusters running SF runtime version 9.0 and above. ClusterObserver is a .NET 6 application and targets SF SDK versions 6.0.1017 and higher. It requires FabricObserver.Extensibility library version 3.2.5.
+This version contains bug fixes (Telemetry) and adds support for FabricObserver's updated data model. It is recommended that you update to this version if you also deploy FabricObserver 3.2.5.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

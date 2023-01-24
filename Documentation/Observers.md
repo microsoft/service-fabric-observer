@@ -648,7 +648,7 @@ network failures which will result in Fabric Health warnings that live until the
 
 ## NodeObserver
  This observer monitors VM level resource usage across CPU, Memory, firewall rules, static and dynamic ports (aka ephemeral ports).
- Thresholds for Erorr and Warning signals are user-supplied in ApplicationManifest.xml.  
+ Thresholds for Erorr and Warning signals are user-supplied and set in ApplicationManifest.xml as application paramaters.  
 
 **Input - ApplicationManifest.xml**:
 ```xml
@@ -670,6 +670,7 @@ network failures which will result in Fabric Health warnings that live until the
 <Parameter Name="NodeObserverNetworkWarningEphemeralPorts" DefaultValue="20000" />
 <Parameter Name="NodeObserverNetworkErrorEphemeralPortsPercentage" DefaultValue="" />
 <Parameter Name="NodeObserverNetworkWarningEphemeralPortsPercentage" DefaultValue="90" />
+<Parameter Name="NodeObserverEnableNodeSnapshot" DefaultValue="false" />
 <!-- The below settings only make sense for Linux. -->
 <Parameter Name="NodeObserverLinuxFileHandlesErrorLimitPercent" DefaultValue="" />
 <Parameter Name="NodeObserverLinuxFileHandlesWarningLimitPercent" DefaultValue="90" />
@@ -679,30 +680,31 @@ network failures which will result in Fabric Health warnings that live until the
 
 | Setting | Description |
 | :--- | :--- | 
-| **CpuErrorLimitPercent** | Maximum CPU percentage that should generate an Error |  
-| **CpuWarningLimitPercent** | Minimum CPU percentage that should generate a Warning | 
-| **EnableTelemetry** | Whether or not to send Observer data to diagnostics/log analytics service. |  
-| **MemoryErrorLimitMb** | Maximum amount of committed memory on machine that will generate an Error. | 
-| **MemoryWarningLimitMb** | Minimum amount of committed memory that will generate a Warning. |  
-| **MemoryErrorLimitPercent** | Maximum percentage of memory in use on machine that will generate an Error. | 
-| **MemoryWarningLimitPercent** | Minimum percentage of memory in use on machine that will generate a Warning. |  
-| **MonitorDuration** | The amount of time this observer conducts resource usage probing. | 
-| **NetworkErrorFirewallRules** | Number of established Firewall Rules that will generate a Health Warning. |  
-| **NetworkWarningFirewallRules** |  Number of established Firewall Rules that will generate a Health Error. |  
-| **NetworkErrorActivePorts** | Maximum number of established ports in use by all processes on node that will generate a Fabric Error. |
-| **NetworkWarningActivePorts** | Minimum number of established TCP ports in use by all processes on machine that will generate a Fabric Warning. |
-| **NetworkErrorEphemeralPorts** | Maximum number of established ephemeral TCP ports in use all processes on machine that will generate a Fabric Error. |
-| **NetworkWarningEphemeralPorts** | Minimum number of established ephemeral TCP ports in use by all processes on machine that will generate a Fabric warning. |
-| **NetworkErrorEphemeralPortsPercentage** | Maximum percentage of configured ephemeral TCP ports in use by all processes on machine that will generate a Fabric Error. |
-| **NetworkWarningEphemeralPortsPercentage** | Minimum percentage of configured ephemeral TCP ports in use by all processes on machine that will generate a Fabric warning. |
-| **UseCircularBuffer** | You can choose between of `List<T>` or a `CircularBufferCollection<T>` for observer data storage. | 
-| **ResourceUsageDataCapacity** | Required-If UseCircularBuffer = True: This represents the number of items to hold in the data collection instance for the observer. | 
-| **LinuxFileHandlesErrorLimitPercent** | Maximum percentage of allocated file handles (as a percentage of maximum FDs configured) in use on Linux machine that will generate an Error. | 
-| **LinuxFileHandlesWarningLimitPercent** | Minumum percentage of allocated file handles (as a percentage of maximum FDs configured) in use on Linux machine that will generate a Warning. |
-| **LinuxFileHandlesErrorLimitTotal** | Total number of allocated file handles in use on Linux machine that will generate an Error. | 
-| **LinuxFileHandlesWarningLimitTotal** | Total number of allocated file handles in use on Linux machine that will generate a Warning. |
+| **NodeObserverCpuErrorLimitPercent** | Maximum CPU percentage that should generate an Error |  
+| **NodeObserverCpuWarningLimitPercent** | Minimum CPU percentage that should generate a Warning | 
+| **NodeObserverEnableTelemetry** | Whether or not to capture and emit NodeObserver monitoring Telemetry/ETW. |  
+| **NodeObserverEnableNodeSnapshot** | Whether or not to capture and emit Fabric node state/configuration each time NodeObserver runs. This only makes sense if you also enable Telemetry or ETW for NodeObserver. |  
+| **NodeObserverMemoryErrorLimitMb** | Maximum amount of committed memory on machine that will generate an Error. | 
+| **NodeObserverMemoryWarningLimitMb** | Minimum amount of committed memory that will generate a Warning. |  
+| **NodeObserverMemoryErrorLimitPercent** | Maximum percentage of memory in use on machine that will generate an Error. | 
+| **NodeObserverMemoryWarningLimitPercent** | Minimum percentage of memory in use on machine that will generate a Warning. |  
+| **NodeObserverMonitorDuration** | The amount of time NodeObserver conducts resource usage probing. | 
+| **NodeObserverNetworkErrorFirewallRules** | Number of established Firewall Rules that will generate a Health Warning. |  
+| **NodeObserverNetworkWarningFirewallRules** |  Number of established Firewall Rules that will generate a Health Error. |  
+| **NodeObserverNetworkErrorActivePorts** | Maximum number of established ports in use by all processes on node that will generate a Fabric Error. |
+| **NodeObserverNetworkWarningActivePorts** | Minimum number of established TCP ports in use by all processes on machine that will generate a Fabric Warning. |
+| **NodeObserverNetworkErrorEphemeralPorts** | Maximum number of established ephemeral TCP ports in use all processes on machine that will generate a Fabric Error. |
+| **NodeObserverNetworkWarningEphemeralPorts** | Minimum number of established ephemeral TCP ports in use by all processes on machine that will generate a Fabric warning. |
+| **NodeObserverNetworkErrorEphemeralPortsPercentage** | Maximum percentage of configured ephemeral TCP ports in use by all processes on machine that will generate a Fabric Error. |
+| **NodeObserverNetworkWarningEphemeralPortsPercentage** | Minimum percentage of configured ephemeral TCP ports in use by all processes on machine that will generate a Fabric warning. |
+| **NodeObserverUseCircularBuffer** | You can choose between of `List<T>` or a `CircularBufferCollection<T>` for observer data storage. | 
+| **NodeObserverResourceUsageDataCapacity** | Required-If UseCircularBuffer = True: This represents the number of items to hold in the data collection instance for the observer. | 
+| **NodeObserverLinuxFileHandlesErrorLimitPercent** | Maximum percentage of allocated file handles (as a percentage of maximum FDs configured) in use on Linux machine that will generate an Error. | 
+| **NodeObserverLinuxFileHandlesWarningLimitPercent** | Minumum percentage of allocated file handles (as a percentage of maximum FDs configured) in use on Linux machine that will generate a Warning. |
+| **NodeObserverLinuxFileHandlesErrorLimitTotal** | Total number of allocated file handles in use on Linux machine that will generate an Error. | 
+| **NodeObserverLinuxFileHandlesWarningLimitTotal** | Total number of allocated file handles in use on Linux machine that will generate a Warning. |
 
-**Output**: Log text(Error/Warning), Node Level Service Fabric Health Reports (Ok/Warning/Error), structured telemetry (ApplicationInsights, LogAnalytics), ETW, optional HTML output for FO Web API service. 
+**Output**: Log text(Error/Warning), Node Level Service Fabric Health Reports (Ok/Warning/Error), structured telemetry (ApplicationInsights, LogAnalytics), ETW. 
 
 
 Example SFX Output (Warning - Memory Consumption):  

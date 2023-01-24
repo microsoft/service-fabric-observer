@@ -276,7 +276,7 @@ namespace FabricObserver.Observers
             healthReporter.ReportHealthToServiceFabric(healthReport);
 
             // Emit Telemetry - This will use whatever telemetry provider you have configured in FabricObserver Settings.xml.
-            var telemetryData = new TelemetryData()
+            var telemetryData = new TelemetryData
             {
                 Code = FOErrorWarningCodes.Ok,
                 Description = message.ToString(),
