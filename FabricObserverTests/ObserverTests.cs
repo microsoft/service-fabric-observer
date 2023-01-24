@@ -229,9 +229,18 @@ namespace FabricObserverTests
                 // You may need to increase this value depending upon your dev machine? You'll find out..
                 await Task.Delay(TimeSpan.FromSeconds(10));
             }
-            catch (FabricException)
+            catch (FabricException fe)
             {
-
+                if (fe.ErrorCode == FabricErrorCode.ApplicationAlreadyExists)
+                {
+                    await FabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true});
+                    await DeployHealthMetricsAppAsync();
+                }
+                else if (fe.ErrorCode == FabricErrorCode.ApplicationTypeAlreadyExists)
+                {
+                    await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+                    await DeployHealthMetricsAppAsync();
+                }
             }
         }
 
@@ -280,9 +289,18 @@ namespace FabricObserverTests
                 // You may need to increase this value depending upon your dev machine? You'll find out..
                 await Task.Delay(TimeSpan.FromSeconds(15));
             }
-            catch (FabricException)
+            catch (FabricException fe)
             {
-
+                if (fe.ErrorCode == FabricErrorCode.ApplicationAlreadyExists)
+                {
+                    await FabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
+                    await DeployTestApp42Async();
+                }
+                else if (fe.ErrorCode == FabricErrorCode.ApplicationTypeAlreadyExists)
+                {
+                    await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+                    await DeployTestApp42Async();
+                }
             }
         }
 
@@ -331,9 +349,18 @@ namespace FabricObserverTests
                 // You may need to increase this value depending upon your dev machine? You'll find out..
                 await Task.Delay(TimeSpan.FromSeconds(15));
             }
-            catch (FabricException)
+            catch (FabricException fe)
             {
-
+                if (fe.ErrorCode == FabricErrorCode.ApplicationAlreadyExists)
+                {
+                    await FabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
+                    await DeployVotingAppAsync();
+                }
+                else if (fe.ErrorCode == FabricErrorCode.ApplicationTypeAlreadyExists)
+                {
+                    await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+                    await DeployVotingAppAsync();
+                }
             }
         }
 
@@ -2778,13 +2805,13 @@ namespace FabricObserverTests
             
             // Ensure parent service is put into warning.
             telemData = telemData.Where(
-                t => (t as ServiceTelemetryData).ApplicationName == "fabric:/TestApp42" && (t as ServiceTelemetryData).HealthState == HealthState.Warning).ToList();
+                t => t.ApplicationName == "fabric:/TestApp42" && t.HealthState == HealthState.Warning).ToList();
 
             // TestApp42 service launches 3 child processes.
             Assert.IsTrue(childProcessTelemetryData[0][0].ChildProcessInfo.Count == 3);
 
             // 1 service code package (with 2 children) * 1 metric = 1 warning (parent).
-            Assert.IsTrue(telemData.Count(t => (t as ServiceTelemetryData).ApplicationName == "fabric:/TestApp42" && (t as ServiceTelemetryData).Metric == ErrorWarningProperty.PrivateBytesMb) == 1);
+            Assert.IsTrue(telemData.Count(t => t.ApplicationName == "fabric:/TestApp42" && t.Metric == ErrorWarningProperty.PrivateBytesMb) == 1);
 
             // All children should definitely have more than 0 bytes committed.
             Assert.IsTrue(childProcessTelemetryData.All(
