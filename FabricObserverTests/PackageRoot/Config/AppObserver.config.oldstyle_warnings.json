@@ -17,10 +17,10 @@
     "memoryWarningLimitPercent": 0.005
   },
   {
-    "targetApp": "Health Metrics",
+    "targetApp": "HealthMetrics",
     "serviceIncludeList": "DoctorActorService",
     "cpuWarningLimitPercent": 50,
-    "memoryWarningLimitPercent": 0.05
+    "memoryWarningLimitPercent": 0.005
   },
   {
     "targetApp": "GettingStartedApplication",
@@ -31,6 +31,6 @@
     "targetApp": "fabric:/BadApp",
     "cpuWarningLimitPercent": 60,
     "memoryWarningLimitPercent": 30,
-    "memoryWarningLimitMb": 50
+    "memoryWarningLimitMb": 10
   }
 ]
