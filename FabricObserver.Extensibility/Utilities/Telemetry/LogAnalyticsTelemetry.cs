@@ -183,6 +183,13 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     await SendTelemetryAsync(jsonPayload, cancellationToken);
                 }
             }
+            else
+            {
+                if (JsonHelper.TrySerializeObject(telemetryData, out string jsonPayload))
+                {
+                    await SendTelemetryAsync(jsonPayload, cancellationToken);
+                }
+            }
         }
 
         public async Task ReportMetricAsync(TelemetryDataBase telemetryData, CancellationToken cancellationToken)
@@ -216,6 +223,13 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             else if (telemetryData is ClusterTelemetryData clusterTelemData)
             {
                 if (JsonHelper.TrySerializeObject(clusterTelemData, out string jsonPayload))
+                {
+                    await SendTelemetryAsync(jsonPayload, cancellationToken);
+                }
+            }
+            else
+            {
+                if (JsonHelper.TrySerializeObject(telemetryData, out string jsonPayload))
                 {
                     await SendTelemetryAsync(jsonPayload, cancellationToken);
                 }

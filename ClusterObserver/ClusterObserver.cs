@@ -286,7 +286,7 @@ namespace ClusterObserver
 #endif
                     }
                 }
-                    
+
                 // Process Application/Service health.
                 if (clusterHealth.ApplicationHealthStates != null && clusterHealth.ApplicationHealthStates.Count > 0)
                 {
@@ -325,12 +325,7 @@ namespace ClusterObserver
                             ObserverLogger.LogInfo($"Handled Exception in ReportClusterHealthAsync::Application:{Environment.NewLine}{e.Message}");
 #endif
                         }
-                    } 
-                }
-
-                if (clusterHealth.NodeHealthStates?.Count == 0 && clusterHealth.ApplicationHealthStates?.Count == 0) 
-                {
-                    await ProcessGenericEntityHealthAsync(clusterHealth.UnhealthyEvaluations, Token);
+                    }
                 }
 
                 // Track current aggregated health state for use in next run.
@@ -554,42 +549,17 @@ namespace ClusterObserver
                 }
                 else
                 {
-                    if (!string.IsNullOrWhiteSpace(healthEvent.HealthInformation.Description))
+                    // Apps.
+                    foreach (var healthState in appHealth.DeployedApplicationHealthStates)
                     {
-                        telemetryDescription += healthEvent.HealthInformation.Description;
-                    }
-                    else
-                    {
-                        telemetryDescription += string.Join($"{Environment.NewLine}", appHealth.UnhealthyEvaluations);
+                        await ProcessGenericEntityHealthAsync(appHealth.ServiceHealthStates, Token);
                     }
 
-                    var telemetryData = new ServiceTelemetryData()
+                    // Services.
+                    foreach (var healthState in appHealth.ServiceHealthStates)
                     {
-                        ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
-                        ApplicationName = appName.OriginalString,
-                        EntityType = EntityType.Application,
-                        HealthState = appHealth.AggregatedHealthState,
-                        Description = telemetryDescription,
-                        Source = ObserverName
-                    };
-
-                    // Telemetry.
-                    if (IsTelemetryEnabled)
-                    {
-                        if (TelemetryClient != null)
-                        {
-                            await TelemetryClient.ReportHealthAsync(telemetryData, Token);
-                        }
+                        await ProcessGenericEntityHealthAsync(appHealth.ServiceHealthStates, Token);
                     }
-
-                    // ETW.
-                    if (IsEtwEnabled)
-                    {
-                        ObserverLogger.LogEtw(ClusterObserverConstants.ClusterObserverETWEventName, telemetryData);
-                    }
-
-                    // Reset 
-                    telemetryDescription = string.Empty;
                 }
             }
         }
@@ -602,7 +572,7 @@ namespace ClusterObserver
             ServiceHealth serviceHealth = await FabricClientInstance.HealthManager.GetServiceHealthAsync(serviceName, ConfigurationSettings.AsyncTimeout, Token);
             ApplicationNameResult name = await FabricClientInstance.QueryManager.GetApplicationNameAsync(serviceName, ConfigurationSettings.AsyncTimeout, Token);
             appName = name.ApplicationName;
-            var healthEvents = serviceHealth.HealthEvents;
+            IList<HealthEvent> healthEvents = serviceHealth.HealthEvents;
 
             if (!healthEvents.Any(h => h.HealthInformation.HealthState == HealthState.Error || h.HealthInformation.HealthState == HealthState.Warning))
             {
@@ -626,6 +596,11 @@ namespace ClusterObserver
                                     replicaHealth.HealthEvents.Where(h => h.HealthInformation.HealthState == HealthState.Warning 
                                     || h.HealthInformation.HealthState == HealthState.Error).ToList();
 
+                                if (!healthEvents.Any(h => JsonHelper.TryDeserializeObject<TelemetryDataBase>(h.HealthInformation.Description, out _)))
+                                {
+                                    await ProcessGenericEntityHealthAsync(replicaHealth, Token);
+                                }
+
                                 break;
                             }
                         }
@@ -633,7 +608,7 @@ namespace ClusterObserver
                     }
                     else
                     {
-                        await ProcessGenericEntityHealthAsync(partitionHealth.UnhealthyEvaluations, Token);
+                        await ProcessGenericEntityHealthAsync(partitionHealth, Token);
                     }
                 }
             }
@@ -645,7 +620,7 @@ namespace ClusterObserver
                     continue;
                 }
 
-                // Description == serialized instance of ITelemetryData type?
+                // Description == serialized instance of TelemetryDataBase type?
                 if (TryGetTelemetryData(healthEvent, out TelemetryDataBase foTelemetryData))
                 {
                     foTelemetryData.Description += telemetryDescription;
@@ -670,43 +645,7 @@ namespace ClusterObserver
                 }
                 else
                 {
-                    if (!string.IsNullOrWhiteSpace(healthEvent.HealthInformation.Description))
-                    {
-                        telemetryDescription += healthEvent.HealthInformation.Description;
-                    }
-                    else
-                    {
-                        telemetryDescription += string.Join($"{Environment.NewLine}", serviceHealth.UnhealthyEvaluations);
-                    }
-
-                    var telemetryData = new ServiceTelemetryData()
-                    {
-                        ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
-                        ApplicationName = appName.OriginalString,
-                        EntityType = EntityType.Service,
-                        ServiceName = serviceName.OriginalString,
-                        HealthState = serviceHealth.AggregatedHealthState,
-                        Description = telemetryDescription,
-                        Source = ObserverName
-                    };
-
-                    // Telemetry.
-                    if (IsTelemetryEnabled)
-                    {
-                        if (TelemetryClient != null)
-                        {
-                            await TelemetryClient.ReportHealthAsync(telemetryData, Token);
-                        }
-                    }
-
-                    // ETW.
-                    if (IsEtwEnabled)
-                    {
-                        ObserverLogger.LogEtw(ClusterObserverConstants.ClusterObserverETWEventName, telemetryData);
-                    }
-
-                    // Reset 
-                    telemetryDescription = string.Empty;
+                    await ProcessGenericEntityHealthAsync(healthEvent, Token);
                 }
             }
         }
@@ -827,38 +766,348 @@ namespace ClusterObserver
             }
         }
 
-        private async Task ProcessGenericEntityHealthAsync(IList<HealthEvaluation> evaluations, CancellationToken Token)
+        private async Task ProcessGenericEntityHealthAsync<T>(T entity, CancellationToken Token)
         {
-            foreach (var evaluation in evaluations)
+            try
             {
-                Token.ThrowIfCancellationRequested();
-
-                string telemetryDescription = evaluation.Description;
-
-                var telemtryData = new ClusterTelemetryData
+                if (entity is ServiceHealth serviceHealth)
                 {
-                    ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
-                    EntityType = EntityType.Cluster,
-                    Metric = "SF Entity Health",
-                    Description = telemetryDescription,
-                    HealthState = evaluation.AggregatedHealthState,
-                    Source = ObserverName
-                };
+                    ApplicationNameResult appNameResult =
+                        await FabricClientInstance.QueryManager.GetApplicationNameAsync(serviceHealth.ServiceName, ConfigurationSettings.AsyncTimeout, Token);
 
-                // Telemetry.
-                if (IsTelemetryEnabled)
-                {
-                    if (TelemetryClient != null)
+                    if (appNameResult == null)
                     {
-                        await TelemetryClient.ReportHealthAsync(telemtryData, Token);
+                        return;
+                    }
+
+                    ServiceList serviceList =
+                        await FabricClientInstance.QueryManager.GetServiceListAsync(appNameResult.ApplicationName, serviceHealth.ServiceName, ConfigurationSettings.AsyncTimeout, Token);
+
+                    if (serviceList == null || serviceList.Count == 0)
+                    {
+                        return;
+                    }
+
+                    if (serviceHealth.HealthEvents == null || serviceHealth.HealthEvents.Count == 0)
+                    {
+                        return;
+                    }
+
+                    foreach (var healthEvent in serviceHealth.HealthEvents.Where(
+                                e => e.HealthInformation.HealthState == HealthState.Error || e.HealthInformation.HealthState == HealthState.Warning))
+                    {
+                        var telemetryData = new ServiceTelemetryData
+                        {
+                            ApplicationName = appNameResult?.ApplicationName.OriginalString,
+                            ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
+                            EntityType = EntityType.Service,
+                            Metric = "ServiceHealth",
+                            Property = healthEvent.HealthInformation.Property,
+                            ServiceName = serviceHealth.ServiceName.OriginalString,
+                            ServiceKind = serviceList[0].ServiceKind.ToString(),
+                            ServiceTypeName = serviceList[0].ServiceTypeName,
+                            ServiceTypeVersion = serviceList[0].ServiceManifestVersion,
+                            Description = healthEvent.HealthInformation.Description,
+                            HealthState = healthEvent.HealthInformation.HealthState,
+                            Source = healthEvent.HealthInformation.SourceId
+                        };
+
+                        // Telemetry.
+                        if (IsTelemetryEnabled)
+                        {
+                            if (TelemetryClient != null)
+                            {
+                                await TelemetryClient.ReportHealthAsync(telemetryData, Token);
+                            }
+                        }
+
+                        // ETW.
+                        if (IsEtwEnabled)
+                        {
+                            ObserverLogger.LogEtw(ClusterObserverConstants.ClusterObserverETWEventName, telemetryData);
+                        }
                     }
                 }
-
-                // ETW.
-                if (IsEtwEnabled)
+                else if (entity is NodeHealth nodeHealth)
                 {
-                    ObserverLogger.LogEtw(ClusterObserverConstants.ClusterObserverETWEventName, telemtryData);
+                    if (nodeHealth.HealthEvents == null || nodeHealth.HealthEvents.Count == 0)
+                    {
+                        return;
+                    }
+
+                    foreach (var healthEvent in nodeHealth.HealthEvents.Where(
+                                e => e.HealthInformation.HealthState == HealthState.Error || e.HealthInformation.HealthState == HealthState.Warning))
+                    {
+                        var telemetryData = new NodeTelemetryData
+                        {
+                            ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
+                            EntityType = EntityType.Node,
+                            Metric = "NodeHealth",
+                            NodeName = nodeHealth.NodeName,
+                            Property = healthEvent.HealthInformation.Property,
+                            Description = healthEvent.HealthInformation.Description,
+                            HealthState = healthEvent.HealthInformation.HealthState,
+                            Source = healthEvent.HealthInformation.SourceId
+                        };
+
+                        // Telemetry.
+                        if (IsTelemetryEnabled)
+                        {
+                            if (TelemetryClient != null)
+                            {
+                                await TelemetryClient.ReportHealthAsync(telemetryData, Token);
+                            }
+                        }
+
+                        // ETW.
+                        if (IsEtwEnabled)
+                        {
+                            ObserverLogger.LogEtw(ClusterObserverConstants.ClusterObserverETWEventName, telemetryData);
+                        }
+                    }
                 }
+                else if (entity is PartitionHealth partitionHealth)
+                {
+                    if (partitionHealth.HealthEvents == null || partitionHealth.HealthEvents.Count == 0)
+                    {
+                        return;
+                    }
+
+                    foreach (var healthEvent in partitionHealth.HealthEvents.Where(
+                                e => e.HealthInformation.HealthState == HealthState.Error || e.HealthInformation.HealthState == HealthState.Warning))
+                    {
+                        var telemetryData = new ServiceTelemetryData
+                        {
+                            ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
+                            EntityType = EntityType.Partition,
+                            Metric = "PartitionHealth",
+                            Property = healthEvent.HealthInformation.Property,
+                            PartitionId = partitionHealth.PartitionId,
+                            Description = healthEvent.HealthInformation.Description,
+                            HealthState = healthEvent.HealthInformation.HealthState,
+                            Source = healthEvent.HealthInformation.SourceId
+                        };
+
+                        // Telemetry.
+                        if (IsTelemetryEnabled)
+                        {
+                            if (TelemetryClient != null)
+                            {
+                                await TelemetryClient.ReportHealthAsync(telemetryData, Token);
+                            }
+                        }
+
+                        // ETW.
+                        if (IsEtwEnabled)
+                        {
+                            ObserverLogger.LogEtw(ClusterObserverConstants.ClusterObserverETWEventName, telemetryData);
+                        }
+                    }
+                }
+                else if (entity is ApplicationHealth appHealth)
+                {
+                    if (appHealth.HealthEvents == null || appHealth.HealthEvents.Count == 0)
+                    {
+                        return;
+                    }
+
+                    foreach (var healthEvent in appHealth.HealthEvents.Where(
+                                e => e.HealthInformation.HealthState == HealthState.Error || e.HealthInformation.HealthState == HealthState.Warning))
+                    {
+                        var telemetryData = new ServiceTelemetryData
+                        {
+                            ApplicationName = appHealth.ApplicationName.OriginalString,
+                            ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
+                            EntityType = EntityType.Application,
+                            Metric = "AppHealth",
+                            Property = healthEvent.HealthInformation.Property,
+                            Description = healthEvent.HealthInformation.Description,
+                            HealthState = healthEvent.HealthInformation.HealthState,
+                            Source = healthEvent.HealthInformation.SourceId
+                        };
+
+                        // Telemetry.
+                        if (IsTelemetryEnabled)
+                        {
+                            if (TelemetryClient != null)
+                            {
+                                await TelemetryClient.ReportHealthAsync(telemetryData, Token);
+                            }
+                        }
+
+                        // ETW.
+                        if (IsEtwEnabled)
+                        {
+                            ObserverLogger.LogEtw(ClusterObserverConstants.ClusterObserverETWEventName, telemetryData);
+                        }
+                    }
+                }
+                else if (entity is DeployedApplicationHealth deployedAppHealth)
+                {
+                    if (deployedAppHealth.HealthEvents != null || deployedAppHealth.HealthEvents.Count == 0)
+                    {
+                        return;
+                    }
+
+                    foreach (var healthEvent in deployedAppHealth.HealthEvents.Where(
+                                e => e.HealthInformation.HealthState == HealthState.Error || e.HealthInformation.HealthState == HealthState.Warning))
+                    {
+                        var telemetryData = new ServiceTelemetryData
+                        {
+                            ApplicationName = deployedAppHealth.ApplicationName.OriginalString,
+                            ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
+                            EntityType = EntityType.Application,
+                            Metric = "AppHealth",
+                            NodeName = deployedAppHealth.NodeName,
+                            Property = healthEvent.HealthInformation.Property,
+                            Description = healthEvent.HealthInformation.Description,
+                            HealthState = healthEvent.HealthInformation.HealthState,
+                            Source = healthEvent.HealthInformation.SourceId
+                        };
+
+                        // Telemetry.
+                        if (IsTelemetryEnabled)
+                        {
+                            if (TelemetryClient != null)
+                            {
+                                await TelemetryClient.ReportHealthAsync(telemetryData, Token);
+                            }
+                        }
+
+                        // ETW.
+                        if (IsEtwEnabled)
+                        {
+                            ObserverLogger.LogEtw(ClusterObserverConstants.ClusterObserverETWEventName, telemetryData);
+                        }
+                    }
+                }
+                else if (entity is ReplicaHealth replicaHealth)
+                {
+                    if (replicaHealth.HealthEvents == null || replicaHealth.HealthEvents.Count == 0)
+                    {
+                        return;
+                    }
+
+                    var replicaList =
+                            await FabricClientInstance.QueryManager.GetReplicaListAsync(
+                                    replicaHealth.PartitionId,
+                                    replicaHealth.Id,
+                                    ConfigurationSettings.AsyncTimeout,
+                                    Token);
+
+                    if (replicaList?.Count == 0)
+                    {
+                        return;
+                    }
+
+                    string serviceKind = replicaList[0].ServiceKind.ToString();
+                    string nodeName = replicaList[0].NodeName;
+
+                    foreach (var healthEvent in replicaHealth.HealthEvents.Where(
+                                e => e.HealthInformation.HealthState == HealthState.Error || e.HealthInformation.HealthState == HealthState.Warning))
+                    {
+
+
+                        var telemetryData = new ServiceTelemetryData
+                        {
+                            ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
+                            EntityType = EntityType.Replica,
+                            Metric = "ReplicaHealth",
+                            NodeName = nodeName,
+                            Property = healthEvent.HealthInformation.Property,
+                            PartitionId = replicaHealth.PartitionId,
+                            ReplicaId = replicaHealth.Id,
+                            Description = healthEvent.HealthInformation.Description,
+                            HealthState = healthEvent.HealthInformation.HealthState,
+                            ServiceKind = serviceKind,
+                            Source = healthEvent.HealthInformation.SourceId
+                        };
+
+                        // Telemetry.
+                        if (IsTelemetryEnabled)
+                        {
+                            if (TelemetryClient != null)
+                            {
+                                await TelemetryClient.ReportHealthAsync(telemetryData, Token);
+                            }
+                        }
+
+                        // ETW.
+                        if (IsEtwEnabled)
+                        {
+                            ObserverLogger.LogEtw(ClusterObserverConstants.ClusterObserverETWEventName, telemetryData);
+                        }
+                    }
+                }
+                else if (entity is EntityHealth entityHealth)
+                {
+                    if (entityHealth.HealthEvents == null || entityHealth.HealthEvents.Count == 0)
+                    {
+                        return;
+                    }
+
+                    foreach (HealthEvent healthEvent in entityHealth.HealthEvents.Where(
+                                e => e.HealthInformation.HealthState == HealthState.Error || e.HealthInformation.HealthState == HealthState.Warning))
+                    {
+                        var telemetryData = new ClusterTelemetryData
+                        {
+                            ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
+                            EntityType = EntityType.Cluster,
+                            Metric = "Generic Entity Health",
+                            Property = healthEvent.HealthInformation.Property,
+                            Description = healthEvent.HealthInformation.Description,
+                            HealthState = healthEvent.HealthInformation.HealthState,
+                            Source = healthEvent.HealthInformation.SourceId
+                        };
+
+                        // Telemetry.
+                        if (IsTelemetryEnabled)
+                        {
+                            if (TelemetryClient != null)
+                            {
+                                await TelemetryClient.ReportHealthAsync(telemetryData, Token);
+                            }
+                        }
+
+                        // ETW.
+                        if (IsEtwEnabled)
+                        {
+                            ObserverLogger.LogEtw(ClusterObserverConstants.ClusterObserverETWEventName, telemetryData);
+                        }
+                    }
+                }
+                else if (entity is HealthEvent hEvent)
+                {
+                    var telemetryData = new ClusterTelemetryData
+                    {
+                        ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
+                        EntityType = EntityType.Cluster,
+                        Metric = "Generic Entity Health",
+                        Property = hEvent.HealthInformation.Property,
+                        Description = hEvent.HealthInformation.Description,
+                        HealthState = hEvent.HealthInformation.HealthState,
+                        Source = hEvent.HealthInformation.SourceId
+                    };
+
+                    // Telemetry.
+                    if (IsTelemetryEnabled)
+                    {
+                        if (TelemetryClient != null)
+                        {
+                            await TelemetryClient.ReportHealthAsync(telemetryData, Token);
+                        }
+                    }
+
+                    // ETW.
+                    if (IsEtwEnabled)
+                    {
+                        ObserverLogger.LogEtw(ClusterObserverConstants.ClusterObserverETWEventName, telemetryData);
+                    }
+                }
+            }
+            catch (FabricException fe)
+            {
+                ObserverLogger.LogWarning($"Exception in ProcessGenericHealthEntityAsync: {fe.Message}.");
             }
         }
 
@@ -984,13 +1233,6 @@ namespace ClusterObserver
             }
         }
 
-        /// <summary>
-        /// This function determines if a HealthEvent.HealthInformation.Description is a JSON-serialized instance of TelemetryData type.
-        /// If so, then it will deserialize the JSON string to an instance of TelemetryData and set telemetryData (out) as the instance.
-        /// </summary>
-        /// <param name="healthEvent">A Fabric Health event.</param>
-        /// <param name="telemetryData">Will be an instance of TelemetryData if successful. Otherwise, null.</param>
-        /// <returns>true if deserialization to TelemetryData type succeeds. Otherwise, false.</returns>
         private static bool TryGetTelemetryData(HealthEvent healthEvent, out TelemetryDataBase telemetryData)
         {
             if (JsonHelper.TryDeserializeObject(healthEvent.HealthInformation.Description, out TelemetryData telemData))
@@ -1038,11 +1280,6 @@ namespace ClusterObserver
             return false;
         }
 
-        /// <summary>
-        /// Checks if the RepairManager System app service is deployed in the cluster.
-        /// </summary>
-        /// <param name="cancellationToken">cancellation Token to stop the async operation</param>
-        /// <returns>true if RepairManager service is present in cluster, otherwise false</returns>
         private async Task<bool> IsRepairManagerDeployedAsync(CancellationToken cancellationToken)
         {
             try
@@ -1063,15 +1300,6 @@ namespace ClusterObserver
             }
         }
 
-        /// <summary>
-        /// This function returns a list of active Fabric repair tasks (RM) in the cluster.
-        /// If a VM is being updated by VMSS, for example, then there will be a Fabric Repair task in play and
-        /// this will cause changes in Fabric node status like Disabling, Disabled, Down, Enabling, etc.
-        /// These are expected, so you should make action decisions based on this information to ensure you don't
-        /// try and heal where no healing is needed.
-        /// These could be custom repair tasks, Azure Tenant repair tasks (like Azure platform updates), etc.
-        /// </summary>
-        /// <returns>List of repair tasks in Active, Approved, or Executing State.</returns>
         private async Task<RepairTaskList> GetRepairTasksCurrentlyProcessingAsync(CancellationToken cancellationToken)
         {
             if (!await IsRepairManagerDeployedAsync(cancellationToken))
