@@ -23,8 +23,8 @@ namespace ClusterObserver
 {
     public sealed class ClusterObserver : ObserverBase
     {
-        private readonly Uri repairManagerServiceUri = new($"{ClusterObserverConstants.SystemAppName}/RepairManagerService");
-        private readonly Uri fabricSystemAppUri = new(ClusterObserverConstants.SystemAppName);
+        private readonly Uri repairManagerServiceUri = new($"{ObserverConstants.SystemAppName}/RepairManagerService");
+        private readonly Uri fabricSystemAppUri = new(ObserverConstants.SystemAppName);
         private readonly bool ignoreDefaultQueryTimeout;
 
         private HealthState LastKnownClusterHealthState
@@ -296,6 +296,11 @@ namespace ClusterObserver
 
                         try
                         {
+                            if (app.ApplicationName.OriginalString == ObserverConstants.SystemAppName)
+                            {
+                                await ProcessApplicationHealthAsync(app, Token);
+                            }
+
                             var appHealth =
                                 await FabricClientInstance.HealthManager.GetApplicationHealthAsync(
                                         app.ApplicationName,
@@ -527,8 +532,6 @@ namespace ClusterObserver
                 // TelemetryData?
                 if (TryGetTelemetryData(healthEvent, out TelemetryDataBase foTelemetryData))
                 { 
-                    foTelemetryData.Description += telemetryDescription;
-
                     // Telemetry.
                     if (IsTelemetryEnabled)
                     {
@@ -543,22 +546,42 @@ namespace ClusterObserver
                     {
                         ObserverLogger.LogEtw(ClusterObserverConstants.ClusterObserverETWEventName, foTelemetryData);
                     }
-
-                    // Reset 
-                    telemetryDescription = string.Empty;
                 }
                 else
                 {
                     // Apps.
                     foreach (var healthState in appHealth.DeployedApplicationHealthStates)
                     {
-                        await ProcessGenericEntityHealthAsync(appHealth.ServiceHealthStates, Token);
+                        if (healthState.AggregatedHealthState == HealthState.Ok)
+                        {
+                            continue;
+                        }
+
+                        var depAppHealth =
+                            await FabricClientInstance.HealthManager.GetDeployedApplicationHealthAsync(
+                                    healthState.ApplicationName,
+                                    healthState.NodeName,
+                                    ConfigurationSettings.AsyncTimeout,
+                                    Token);
+
+                        await ProcessGenericEntityHealthAsync(depAppHealth, Token);
                     }
 
                     // Services.
                     foreach (var healthState in appHealth.ServiceHealthStates)
                     {
-                        await ProcessGenericEntityHealthAsync(appHealth.ServiceHealthStates, Token);
+                        if (healthState.AggregatedHealthState == HealthState.Ok)
+                        {
+                            continue;
+                        }
+
+                        var serviceHealth =
+                            await FabricClientInstance.HealthManager.GetServiceHealthAsync(
+                                    healthState.ServiceName,
+                                    ConfigurationSettings.AsyncTimeout,
+                                    Token);
+
+                        await ProcessGenericEntityHealthAsync(serviceHealth, Token);
                     }
                 }
             }
@@ -766,11 +789,11 @@ namespace ClusterObserver
             }
         }
 
-        private async Task ProcessGenericEntityHealthAsync<T>(T entity, CancellationToken Token)
+        private async Task ProcessGenericEntityHealthAsync<T>(T entityHealth, CancellationToken Token)
         {
             try
             {
-                if (entity is ServiceHealth serviceHealth)
+                if (entityHealth is ServiceHealth serviceHealth)
                 {
                     ApplicationNameResult appNameResult =
                         await FabricClientInstance.QueryManager.GetApplicationNameAsync(serviceHealth.ServiceName, ConfigurationSettings.AsyncTimeout, Token);
@@ -828,7 +851,7 @@ namespace ClusterObserver
                         }
                     }
                 }
-                else if (entity is NodeHealth nodeHealth)
+                else if (entityHealth is NodeHealth nodeHealth)
                 {
                     if (nodeHealth.HealthEvents == null || nodeHealth.HealthEvents.Count == 0)
                     {
@@ -866,7 +889,7 @@ namespace ClusterObserver
                         }
                     }
                 }
-                else if (entity is PartitionHealth partitionHealth)
+                else if (entityHealth is PartitionHealth partitionHealth)
                 {
                     if (partitionHealth.HealthEvents == null || partitionHealth.HealthEvents.Count == 0)
                     {
@@ -904,7 +927,7 @@ namespace ClusterObserver
                         }
                     }
                 }
-                else if (entity is ApplicationHealth appHealth)
+                else if (entityHealth is ApplicationHealth appHealth)
                 {
                     if (appHealth.HealthEvents == null || appHealth.HealthEvents.Count == 0)
                     {
@@ -942,7 +965,7 @@ namespace ClusterObserver
                         }
                     }
                 }
-                else if (entity is DeployedApplicationHealth deployedAppHealth)
+                else if (entityHealth is DeployedApplicationHealth deployedAppHealth)
                 {
                     if (deployedAppHealth.HealthEvents != null || deployedAppHealth.HealthEvents.Count == 0)
                     {
@@ -981,7 +1004,7 @@ namespace ClusterObserver
                         }
                     }
                 }
-                else if (entity is ReplicaHealth replicaHealth)
+                else if (entityHealth is ReplicaHealth replicaHealth)
                 {
                     if (replicaHealth.HealthEvents == null || replicaHealth.HealthEvents.Count == 0)
                     {
@@ -1039,14 +1062,14 @@ namespace ClusterObserver
                         }
                     }
                 }
-                else if (entity is EntityHealth entityHealth)
+                else if (entityHealth is EntityHealth entityHealthBase)
                 {
-                    if (entityHealth.HealthEvents == null || entityHealth.HealthEvents.Count == 0)
+                    if (entityHealthBase.HealthEvents == null || entityHealthBase.HealthEvents.Count == 0)
                     {
                         return;
                     }
 
-                    foreach (HealthEvent healthEvent in entityHealth.HealthEvents.Where(
+                    foreach (HealthEvent healthEvent in entityHealthBase.HealthEvents.Where(
                                 e => e.HealthInformation.HealthState == HealthState.Error || e.HealthInformation.HealthState == HealthState.Warning))
                     {
                         var telemetryData = new ClusterTelemetryData
@@ -1076,7 +1099,7 @@ namespace ClusterObserver
                         }
                     }
                 }
-                else if (entity is HealthEvent hEvent)
+                else if (entityHealth is HealthEvent hEvent)
                 {
                     var telemetryData = new ClusterTelemetryData
                     {
