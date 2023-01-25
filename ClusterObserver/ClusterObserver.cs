@@ -547,42 +547,16 @@ namespace ClusterObserver
                         ObserverLogger.LogEtw(ClusterObserverConstants.ClusterObserverETWEventName, foTelemetryData);
                     }
                 }
-                else
+                else // Not from FO/FHProxy.
                 {
-                    // Apps.
-                    foreach (var healthState in appHealth.DeployedApplicationHealthStates)
-                    {
-                        if (healthState.AggregatedHealthState == HealthState.Ok)
-                        {
-                            continue;
-                        }
+                    var entityHealth =
+                        await FabricClientInstance.HealthManager.GetApplicationHealthAsync(
+                                appName,
+                                ConfigurationSettings.AsyncTimeout,
+                                Token);
 
-                        var depAppHealth =
-                            await FabricClientInstance.HealthManager.GetDeployedApplicationHealthAsync(
-                                    healthState.ApplicationName,
-                                    healthState.NodeName,
-                                    ConfigurationSettings.AsyncTimeout,
-                                    Token);
-
-                        await ProcessGenericEntityHealthAsync(depAppHealth, Token);
-                    }
-
-                    // Services.
-                    foreach (var healthState in appHealth.ServiceHealthStates)
-                    {
-                        if (healthState.AggregatedHealthState == HealthState.Ok)
-                        {
-                            continue;
-                        }
-
-                        var serviceHealth =
-                            await FabricClientInstance.HealthManager.GetServiceHealthAsync(
-                                    healthState.ServiceName,
-                                    ConfigurationSettings.AsyncTimeout,
-                                    Token);
-
-                        await ProcessGenericEntityHealthAsync(serviceHealth, Token);
-                    }
+                    await ProcessEntityHealthAsync(entityHealth, Token);
+                    
                 }
             }
         }
@@ -591,51 +565,65 @@ namespace ClusterObserver
         {
             Uri appName;
             Uri serviceName = serviceHealthState.ServiceName;
-            string telemetryDescription = string.Empty;
-            ServiceHealth serviceHealth = await FabricClientInstance.HealthManager.GetServiceHealthAsync(serviceName, ConfigurationSettings.AsyncTimeout, Token);
-            ApplicationNameResult name = await FabricClientInstance.QueryManager.GetApplicationNameAsync(serviceName, ConfigurationSettings.AsyncTimeout, Token);
+            ServiceHealth serviceHealth =
+                await FabricClientInstance.HealthManager.GetServiceHealthAsync(serviceName, ConfigurationSettings.AsyncTimeout, Token);
+
+            ApplicationNameResult name =
+                await FabricClientInstance.QueryManager.GetApplicationNameAsync(serviceName, ConfigurationSettings.AsyncTimeout, Token);
+
             appName = name.ApplicationName;
             IList<HealthEvent> healthEvents = serviceHealth.HealthEvents;
 
-            if (!healthEvents.Any(h => h.HealthInformation.HealthState == HealthState.Error || h.HealthInformation.HealthState == HealthState.Warning))
+            if (serviceHealth.PartitionHealthStates.Any(
+                    p => p.AggregatedHealthState == HealthState.Error || p.AggregatedHealthState == HealthState.Warning))
             {
-                var partitionHealthStates = serviceHealth.PartitionHealthStates.Where(p => p.AggregatedHealthState == HealthState.Warning || p.AggregatedHealthState == HealthState.Error);
+                var partitionHealthStates =
+                    serviceHealth.PartitionHealthStates.Where(
+                        p => p.AggregatedHealthState == HealthState.Warning || p.AggregatedHealthState == HealthState.Error);
 
                 foreach (var partitionHealthState in partitionHealthStates)
                 {
-                    var partitionHealth = await FabricClientInstance.HealthManager.GetPartitionHealthAsync(partitionHealthState.PartitionId, ConfigurationSettings.AsyncTimeout, Token);
-                    var replicaHealthStates = partitionHealth.ReplicaHealthStates.Where(p => p.AggregatedHealthState == HealthState.Warning || p.AggregatedHealthState == HealthState.Error).ToList();
+                    var partitionHealth =
+                        await FabricClientInstance.HealthManager.GetPartitionHealthAsync(
+                                partitionHealthState.PartitionId,
+                                ConfigurationSettings.AsyncTimeout,
+                                Token);
 
-                    if (replicaHealthStates != null && replicaHealthStates.Count > 0)
+                    await ProcessEntityHealthAsync(partitionHealth, Token);
+
+                    var replicaHealthStates =
+                        partitionHealth.ReplicaHealthStates.Where(
+                            p => p.AggregatedHealthState == HealthState.Warning || p.AggregatedHealthState == HealthState.Error);
+
+                    if (replicaHealthStates != null && replicaHealthStates.Any())
                     {
                         foreach (var replica in replicaHealthStates)
                         {
                             var replicaHealth =
-                                await FabricClientInstance.HealthManager.GetReplicaHealthAsync(partitionHealthState.PartitionId, replica.Id, ConfigurationSettings.AsyncTimeout, Token);
+                                await FabricClientInstance.HealthManager.GetReplicaHealthAsync(
+                                        partitionHealthState.PartitionId,
+                                        replica.Id,
+                                        ConfigurationSettings.AsyncTimeout,
+                                        Token);
 
                             if (replicaHealth != null)
                             {
-                                healthEvents = 
-                                    replicaHealth.HealthEvents.Where(h => h.HealthInformation.HealthState == HealthState.Warning 
-                                    || h.HealthInformation.HealthState == HealthState.Error).ToList();
+                                var replicaEvents =
+                                    replicaHealth.HealthEvents.Where(
+                                        h => h.HealthInformation.HealthState == HealthState.Warning
+                                          || h.HealthInformation.HealthState == HealthState.Error).ToList();
 
-                                if (!healthEvents.Any(h => JsonHelper.TryDeserializeObject<TelemetryDataBase>(h.HealthInformation.Description, out _)))
+                                if (!replicaEvents.Any(h => JsonHelper.TryDeserializeObject<TelemetryDataBase>(h.HealthInformation.Description, out _)))
                                 {
-                                    await ProcessGenericEntityHealthAsync(replicaHealth, Token);
+                                    await ProcessEntityHealthAsync(replicaHealth, Token);
                                 }
-
-                                break;
                             }
                         }
-                        break;
-                    }
-                    else
-                    {
-                        await ProcessGenericEntityHealthAsync(partitionHealth, Token);
                     }
                 }
             }
 
+            // From FO/FHProxy or some other service/component created an SF health event.
             foreach (HealthEvent healthEvent in healthEvents.OrderByDescending(f => f.SourceUtcTimestamp))
             {
                 if (healthEvent.HealthInformation.HealthState != HealthState.Error && healthEvent.HealthInformation.HealthState != HealthState.Warning)
@@ -643,11 +631,9 @@ namespace ClusterObserver
                     continue;
                 }
 
-                // Description == serialized instance of TelemetryDataBase type?
+                // HealthInformation.Description == serialized instance of TelemetryDataBase type?
                 if (TryGetTelemetryData(healthEvent, out TelemetryDataBase foTelemetryData))
                 {
-                    foTelemetryData.Description += telemetryDescription;
-
                     // Telemetry.
                     if (IsTelemetryEnabled)
                     {
@@ -662,13 +648,13 @@ namespace ClusterObserver
                     {
                         ObserverLogger.LogEtw(ClusterObserverConstants.ClusterObserverETWEventName, foTelemetryData);
                     }
-
-                    // Reset 
-                    telemetryDescription = string.Empty;
                 }
-                else
+                else // Not from FO/FHProxy.
                 {
-                    await ProcessGenericEntityHealthAsync(healthEvent, Token);
+                    var entityHealth = 
+                        await FabricClientInstance.HealthManager.GetServiceHealthAsync(serviceName, ConfigurationSettings.AsyncTimeout, Token);
+
+                    await ProcessEntityHealthAsync(entityHealth, Token);
                 }
             }
         }
@@ -789,7 +775,7 @@ namespace ClusterObserver
             }
         }
 
-        private async Task ProcessGenericEntityHealthAsync<T>(T entityHealth, CancellationToken Token)
+        private async Task ProcessEntityHealthAsync<T>(T entityHealth, CancellationToken Token)
         {
             try
             {
@@ -819,6 +805,7 @@ namespace ClusterObserver
                     foreach (var healthEvent in serviceHealth.HealthEvents.Where(
                                 e => e.HealthInformation.HealthState == HealthState.Error || e.HealthInformation.HealthState == HealthState.Warning))
                     {
+                        
                         var telemetryData = new ServiceTelemetryData
                         {
                             ApplicationName = appNameResult?.ApplicationName.OriginalString,
@@ -1029,8 +1016,6 @@ namespace ClusterObserver
                     foreach (var healthEvent in replicaHealth.HealthEvents.Where(
                                 e => e.HealthInformation.HealthState == HealthState.Error || e.HealthInformation.HealthState == HealthState.Warning))
                     {
-
-
                         var telemetryData = new ServiceTelemetryData
                         {
                             ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
