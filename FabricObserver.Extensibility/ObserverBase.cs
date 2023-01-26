@@ -1349,6 +1349,11 @@ namespace FabricObserver.Observers
                     telemetryData.Source = $"{ObserverName}({data.ActiveErrorOrWarningCode})";
                     telemetryData.Value = data.AverageDataValue;
 
+                    if (telemetryData.ObserverName == ObserverConstants.NodeObserverName)
+                    {
+                        telemetryData.Property = $"{NodeName}_{id}";
+                    }
+
                     // Telemetry
                     if (IsTelemetryEnabled)
                     {
