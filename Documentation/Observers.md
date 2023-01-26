@@ -189,8 +189,10 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **networkWarningEphemeralPorts** | Minimum number of established TCP ports (within a dynamic port range) in use by service process that will generate a Warning. | 
 | **networkErrorEphemeralPortsPercent** | Maximum percentage of ephemeral TCP ports (within a dynamic port range) in use by service process that will generate an Error. |
 | **networkWarningEphemeralPortsPercent** | Minimum percentage of established TCP ports (within a dynamic port range) in use by service process that will generate a Warning. |   
-| **errorOpenFileHandles** | Maximum number of open file handles in use by an service process that will generate an Error. |  
-| **warningOpenFileHandles** | Minimum number of open file handles in use by service process that will generate a Warning. |  
+| **errorOpenFileHandles** | **Legacy (supported)**. Maximum number of handles opened by a service process that will generate an Error. This is a legacy metric name and is equivalent to errorHandleCount, a more accurate metric name. |  
+| **warningOpenFileHandles** | **Legacy (supported)**. Minimum number of handles opened by a service process that will generate a Warning. This is a legacy metric name and is equivalent to warningHandleCount, a more accurate metric name. |  
+| **errorHandleCount** | Maximum number of handles opened by a service process that will generate an Error. |  
+| **warningHandleCount** | Minimum number of handles opened by service process that will generate a Warning. |  
 | **errorThreadCount** | Maximum number of threads in use by an service process that will generate an Error. |  
 | **warningThreadCount** | Minimum number of threads in use by service process that will generate a Warning. |  
 | **errorPrivateBytesMb** | Windows-only. Maximum amount of Private Bytes (or Commit Charge) for a service process in megabytes that will generate an Error. Think of this as the total amount of private memory that the memory manager has committed for your service. |  

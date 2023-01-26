@@ -118,7 +118,7 @@ namespace FabricObserver.Observers.Utilities
         public static float GetAverageDiskQueueLength(string instance)
         {
             // We do not support this on Linux for now.
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            if (OperatingSystem.IsLinux())
             {
                 return 0F;
             }

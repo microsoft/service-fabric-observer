@@ -95,7 +95,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         [JsonConstructor]
         public TelemetryDataBase()
         {
-            _os = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
+            _os = OperatingSystem.IsWindows() ? "Windows" : "Linux";
         }
     }
 }

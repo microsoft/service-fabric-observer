@@ -26,7 +26,7 @@ namespace FabricObserver.Observers.Utilities
                     {
                         if (instance == null)
                         {
-                            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                            if (OperatingSystem.IsWindows())
                             {
                                 instance = new WindowsProcessInfoProvider();
                             }

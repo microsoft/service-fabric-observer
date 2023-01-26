@@ -478,7 +478,7 @@ namespace FabricObserverTests
 
         private static bool InstallCerts()
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            if (OperatingSystem.IsLinux())
             {
                 // We cannot install certs into local machine store on Linux
                 return false;
@@ -3158,7 +3158,7 @@ namespace FabricObserverTests
             Assert.IsFalse(string.IsNullOrWhiteSpace(machineTelemetryData.OSName));
             Assert.IsFalse(string.IsNullOrWhiteSpace(machineTelemetryData.OSVersion));
 
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (OperatingSystem.IsWindows())
             {
                 Assert.IsTrue(machineTelemetryData.ActiveFirewallRules > 0);
             }

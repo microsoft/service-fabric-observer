@@ -152,7 +152,7 @@ namespace FabricObserver.TelemetryLib
 
         private static string GetTenantId()
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            if (OperatingSystem.IsWindows())
             {
                 return GetTenantIdWindows();
             }

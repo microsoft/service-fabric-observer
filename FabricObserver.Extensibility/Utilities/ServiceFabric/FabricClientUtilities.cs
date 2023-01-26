@@ -108,7 +108,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                 this.nodeName = nodeName;
             }
 
-            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            isWindows = OperatingSystem.IsWindows();
         }
 
         /// <summary>

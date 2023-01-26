@@ -3,6 +3,8 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System;
+
 namespace FabricObserver.Observers.Utilities
 {
     /// <summary>
@@ -81,13 +83,25 @@ namespace FabricObserver.Observers.Utilities
         public const string TotalEphemeralPorts = "Total Ephemeral Ports";
 
         /// <summary>
-        /// Allocated File Handle
+        /// Legacy Handle property metric name. Use HandleCount instead.
         /// </summary>
         public const string AllocatedFileHandles = "Allocated File Handles";
+
         /// <summary>
-        /// Allocated File Handles (Percent)
+        /// Legacy Handle property metric name. Use HandleCountPercentage instead.
+        /// Linux-only: machine-wide handle usage as a percentage of total handles available.
         /// </summary>
         public const string AllocatedFileHandlesPct = "Allocated File Handles (Percent)";
+
+        /// <summary>
+        /// Handle Count
+        /// </summary>
+        public const string HandleCount = "Handle Count";
+
+        /// <summary>
+        /// Handle Count. Linux-only: machine-wide handle usage as a percentage of total handles available.
+        /// </summary>
+        public const string HandleCountPercentage = "Handle Count (Percent)";
 
         /// <summary>
         /// Thread Count

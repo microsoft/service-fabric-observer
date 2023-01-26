@@ -19,11 +19,11 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public const string Ok = "FO000";
         /// <summary>
-        /// FO001   Percentage of total CPU usage has exceeded configured Error threshold for an app service process.
+        /// FO001   Percentage of total CPU usage has exceeded configured Error threshold for a service process.
         /// </summary>
         public const string AppErrorCpuPercent = "FO001";
         /// <summary>
-        /// FO002	Percentage of total CPU usage has exceeded configured Warning threshold for an app service process.
+        /// FO002	Percentage of total CPU usage has exceeded configured Warning threshold for a service process.
         /// </summary>
         public const string AppWarningCpuPercent = "FO002";
         /// <summary>
@@ -67,19 +67,19 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public const string NodeWarningDiskAverageQueueLength = "FO012";
         /// <summary>
-        /// FO013	Percentage of total physical memory usage has exceeded configured Error threshold for an app service process.
+        /// FO013	Percentage of total physical memory usage has exceeded configured Error threshold for a service process.
         /// </summary>
         public const string AppErrorMemoryPercent = "FO013";
         /// <summary>
-        /// FO014	Percentage of total physical memory usage has exceeded configured Warning threshold for an app service process.
+        /// FO014	Percentage of total physical memory usage has exceeded configured Warning threshold for a service process.
         /// </summary>
         public const string AppWarningMemoryPercent = "FO014";
         /// <summary>
-        /// FO015	Committed memory (MB) has exceeded configured Error threshold for an app service process.
+        /// FO015	Committed memory (MB) has exceeded configured Error threshold for a service process.
         /// </summary>
         public const string AppErrorMemoryMB = "FO015";
         /// <summary>
-        /// FO016	Committed memory (MB) has exceeded configured Warning threshold for an app service process.
+        /// FO016	Committed memory (MB) has exceeded configured Warning threshold for a service process.
         /// </summary>
         public const string AppWarningMemoryMB = "FO016";
         /// <summary>
@@ -107,11 +107,11 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public const string AppWarningNetworkEndpointUnreachable = "FO022";
         /// <summary>
-        /// FO023	Number of active TCP ports at or exceeding configured Error threshold for an app service process.
+        /// FO023	Number of active TCP ports at or exceeding configured Error threshold for a a service process.
         /// </summary>
         public const string AppErrorTooManyActiveTcpPorts = "FO023";
         /// <summary>
-        /// FO024	Number of active TCP ports at or exceeding configured Warning threshold for an app service process.
+        /// FO024	Number of active TCP ports at or exceeding configured Warning threshold for an a service process.
         /// </summary>
         public const string AppWarningTooManyActiveTcpPorts = "FO024";
         /// <summary>
@@ -147,35 +147,35 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public const string NodeWarningTooManyActiveEphemeralPorts = "FO032";
         /// <summary>
-        /// FO033	Number of allocated File Handles is at or exceeding configured Error threshold for an app service process.
+        /// FO033	Number of open handles is at or exceeding configured Error threshold for a service process.
         /// </summary>
-        public const string AppErrorTooManyOpenFileHandles = "FO033";
+        public const string AppErrorTooManyOpenHandles = "FO033";
         /// <summary>
-        /// FO034	Number of allocated File Handles is at or exceeding configured Warning threshold for an app service process.
+        /// FO034	Number of open handles is at or exceeding configured Warning threshold for a service process.
         /// </summary>
-        public const string AppWarningTooManyOpenFileHandles = "FO034";
+        public const string AppWarningTooManyOpenHandles = "FO034";
         /// <summary>
-        /// FO035	Percentage of Maximum number of File Descriptors in use is at or exceeding configured Error threshold on a Linux machine.
+        /// FO035	Percent usage of Total handles available is at or exceeding configured Error threshold on a Linux machine.
         /// </summary>
-        public const string NodeErrorTotalOpenFileHandlesPercent = "FO035";
+        public const string NodeErrorTotalOpenHandlesPercent = "FO035";
         /// <summary>
-        /// FO036	Percentage of Maximum number of File Descriptors in use is at or exceeding configured Warning threshold on a Linux machine.
+        /// FO036	Percent usage of Total handles available is at or exceeding configured Warning threshold on a Linux machine.
         /// </summary>
-        public const string NodeWarningTotalOpenFileHandlesPercent = "FO036";
+        public const string NodeWarningTotalOpenHandlesPercent = "FO036";
         /// <summary>
-        /// FO037	Number of allocated File Handles is at or exceeding configured Error threshold on a Linux a machine.
+        /// FO037	Number of open handles is at or exceeding configured Error threshold on a Linux a machine.
         /// </summary>
-        public const string NodeErrorTooManyOpenFileHandles = "FO037";
+        public const string NodeErrorTooManyOpenHandles = "FO037";
         /// <summary>
-        /// FO038	Number of allocated File Handles is at or exceeding configured Warning threshold on a Linux a machine.
+        /// FO038	Number of open handles is at or exceeding configured Warning threshold on a Linux a machine.
         /// </summary>
-        public const string NodeWarningTooManyOpenFileHandles = "FO038";
+        public const string NodeWarningTooManyOpenHandles = "FO038";
         /// <summary>
-        /// FO039	Number of threads at or exceeding configured Error threshold for an app service process.
+        /// FO039	Number of threads at or exceeding configured Error threshold for a service process.
         /// </summary>
         public const string AppErrorTooManyThreads = "FO039";
         /// <summary>
-        /// FO040	Number of threads at or exceeding configured Warning threshold for an app service process.
+        /// FO040	Number of threads at or exceeding configured Warning threshold for a service process.
         /// </summary>
         public const string AppWarningTooManyThreads = "FO040";
         /// <summary>
@@ -192,11 +192,11 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public const string NodeWarningFolderSizeMB = "FO043";
         /// <summary>
-        /// FO044	Percentage of active Ephemeral TCP ports in use is at or exceeding configured Error threshold for an app service process.
+        /// FO044	Percentage of active Ephemeral TCP ports in use is at or exceeding configured Error threshold for an a service process.
         /// </summary>
         public const string AppErrorActiveEphemeralPortsPercent = "FO044";
         /// <summary>
-        /// FO045	Percentage of active Ephemeral TCP ports in use is at or exceeding configured Error threshold for an app service process.
+        /// FO045	Percentage of active Ephemeral TCP ports in use is at or exceeding configured Error threshold for a service process.
         /// </summary>
         public const string AppWarningActiveEphemeralPortsPercent = "FO045";
         /// <summary>
@@ -208,19 +208,19 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public const string NodeWarningActiveEphemeralPortsPercent = "FO047";
         /// <summary>
-        /// FO048  Private Bytes usage (Commit) MB is at or exceeding Error threshold for an app service process.
+        /// FO048  Private Bytes usage (Commit) MB is at or exceeding Error threshold for a service process.
         /// </summary>
         public const string AppErrorPrivateBytesMb = "FO048";
         /// <summary>
-        /// FO049  Private Bytes usage (Commit) MB is at or exceeding Warning threshold for an app service process.
+        /// FO049  Private Bytes usage (Commit) MB is at or exceeding Warning threshold for a service process.
         /// </summary>
         public const string AppWarningPrivateBytesMb = "FO049";
         /// <summary>
-        /// FO050  Private Bytes usage (Commit) Percentage is at or exceeding Error threshold for an app service process.
+        /// FO050  Private Bytes usage (Commit) Percentage is at or exceeding Error threshold for a service process.
         /// </summary>
         public const string AppErrorPrivateBytesPercent = "FO050";
         /// <summary>
-        /// FO051  Private Bytes usage (Commit) Percentage is at or exceeding Warning threshold for an app service process.
+        /// FO051  Private Bytes usage (Commit) Percentage is at or exceeding Warning threshold for a service process.
         /// </summary>
         public const string AppWarningPrivateBytesPercent = "FO051";
         /// <summary>
@@ -251,8 +251,8 @@ namespace FabricObserver.Observers.Utilities
                 { AppWarningTooManyActiveEphemeralPorts, "AppWarningTooManyActiveEphemeralPorts" },
                 { AppErrorActiveEphemeralPortsPercent, "AppErrorActiveEphemeralPortsPercent" },
                 { AppWarningActiveEphemeralPortsPercent, "AppWarningActiveEphemeralPortsPercent" },
-                { AppErrorTooManyOpenFileHandles, "AppErrorTooManyOpenFileHandles" },
-                { AppWarningTooManyOpenFileHandles, "AppWarningTooManyOpenFileHandles" },
+                { AppErrorTooManyOpenHandles, "AppErrorTooManyOpenHandles" },
+                { AppWarningTooManyOpenHandles, "AppWarningTooManyOpenHandles" },
                 { AppErrorTooManyThreads, "AppErrorTooManyThreads" },
                 { AppWarningTooManyThreads, "AppWarningTooManyThreads" },
                 { AppWarningKvsLvidsPercentUsed, "AppWarningKvsLvidsPercentUsed"},
@@ -296,10 +296,10 @@ namespace FabricObserver.Observers.Utilities
                 { NodeWarningTooManyActiveEphemeralPorts, "NodeWarningTooManyActiveEphemeralPorts" },
                 { NodeErrorActiveEphemeralPortsPercent, "NodeErrorActiveEphemeralPortsPercent" },
                 { NodeWarningActiveEphemeralPortsPercent, "NodeWarningActiveEphemeralPortsPercent" },
-                { NodeErrorTotalOpenFileHandlesPercent, "NodeErrorTotalOpenFileHandlesPercent" },
-                { NodeWarningTotalOpenFileHandlesPercent, "NodeWarningTotalOpenFileHandlesPercent" },
-                { NodeErrorTooManyOpenFileHandles, "NodeErrorTooManyOpenFileHandles" },
-                { NodeWarningTooManyOpenFileHandles, "NodeWarningTooManyOpenFileHandles" }
+                { NodeErrorTotalOpenHandlesPercent, "NodeErrorTotalOpenHandlesPercent" },
+                { NodeWarningTotalOpenHandlesPercent, "NodeWarningTotalOpenHandlesPercent" },
+                { NodeErrorTooManyOpenHandles, "NodeErrorTooManyOpenHandles" },
+                { NodeWarningTooManyOpenHandles, "NodeWarningTooManyOpenHandles" }
             };
 
 

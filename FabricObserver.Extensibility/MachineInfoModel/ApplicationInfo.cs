@@ -121,12 +121,28 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
+        /// <summary>
+        /// Legacy handle count metric name. Use ErrorHandleCount instead.
+        /// </summary>
         public int ErrorOpenFileHandles 
         { 
             get; set; 
         }
 
+        /// <summary>
+        /// Legacy handle count metric name. Use WarningHandleCount instead.
+        /// </summary>
         public int WarningOpenFileHandles
+        {
+            get; set;
+        }
+
+        public int ErrorHandleCount
+        {
+            get; set;
+        }
+
+        public int WarningHandleCount
         {
             get; set;
         }
@@ -189,8 +205,8 @@ namespace FabricObserver.Observers.MachineInfoModel
                                              $"NetworkWarningEphemeralPortsPercent: {NetworkWarningEphemeralPortsPercent}{Environment.NewLine}" +
                                              $"DumpProcessOnError: {DumpProcessOnError}{Environment.NewLine}" +
                                              $"DumpProcessOnWarning: {DumpProcessOnWarning}{Environment.NewLine}" +
-                                             $"ErrorOpenFileHandles: {ErrorOpenFileHandles}{Environment.NewLine}" +
-                                             $"WarningOpenFileHandles: {WarningOpenFileHandles}{Environment.NewLine}" +
+                                             $"ErrorHandleCount: {ErrorHandleCount}{Environment.NewLine}" +
+                                             $"WarningHandleCount: {WarningHandleCount}{Environment.NewLine}" +
                                              $"ErrorThreadCount: {ErrorThreadCount}{Environment.NewLine}" +
                                              $"WarningThreadCount: {WarningThreadCount}{Environment.NewLine}" +
                                              $"ErrorPrivateBytesMb: {ErrorPrivateBytesMb}{Environment.NewLine}" +

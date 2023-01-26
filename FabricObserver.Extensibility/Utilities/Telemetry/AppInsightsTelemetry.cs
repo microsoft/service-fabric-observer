@@ -456,7 +456,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 return Task.CompletedTask;
             }
 
-            string OS = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
+            string OS = OperatingSystem.IsWindows() ? "Windows" : "Linux";
 
             foreach (var telemData in telemetryDataList)
             {
@@ -510,7 +510,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             try
             {
                 string virtMem = "AvailableVirtualMemoryGB";
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+
+                if (OperatingSystem.IsLinux())
                 {
                     virtMem = "SwapFreeGB";
                 }
@@ -540,7 +541,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     { "WindowsUpdateAutoDownloadEnabled", machineTelemetryData.WindowsUpdateAutoDownloadEnabled.ToString() }
                 };
 
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                if (OperatingSystem.IsLinux())
                 {
                     _ = properties.Remove("ActiveFirewallRules");
                     _ = properties.Remove("WindowsUpdateAutoDownloadEnabled");
