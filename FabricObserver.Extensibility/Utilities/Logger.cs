@@ -224,7 +224,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 logFolderBase = LogFolderBasePath;
 
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                if (OperatingSystem.IsWindows())
                 {
                     // Add current drive letter if not supplied for Windows path target.
                     if (!LogFolderBasePath.Substring(0, 3).Contains(":\\"))
@@ -244,7 +244,7 @@ namespace FabricObserver.Observers.Utilities
             }
             else
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                if (OperatingSystem.IsWindows())
                 {
                     string windrive = Environment.SystemDirectory.Substring(0, 3);
                     logFolderBase = windrive + "fabric_observer_logs";

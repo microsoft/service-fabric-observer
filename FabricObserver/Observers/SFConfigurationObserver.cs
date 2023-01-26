@@ -305,8 +305,8 @@ namespace FabricObserver.Observers
 
                                 if (procId > -1)
                                 {
-                                    ports = OSInfoProvider.Instance.GetActiveTcpPortCount(procId, RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? ConfigPackage.Path : null);
-                                    ephemeralPorts = OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? ConfigPackage.Path : null);
+                                    ports = OSInfoProvider.Instance.GetActiveTcpPortCount(procId, OperatingSystem.IsLinux() ? ConfigPackage.Path : null);
+                                    ephemeralPorts = OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, OperatingSystem.IsLinux() ? ConfigPackage.Path : null);
                                 }
 
                                 _ = sb.AppendLine("\tService Name: " + serviceName.OriginalString);

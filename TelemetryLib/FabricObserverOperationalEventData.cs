@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
@@ -45,6 +46,6 @@ namespace FabricObserver.TelemetryLib
             get; set;
         }
 
-        public string OS => RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
+        public string OS => OperatingSystem.IsWindows() ? "Windows" : "Linux";
     }
 }

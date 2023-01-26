@@ -39,10 +39,7 @@ namespace FabricObserver.Observers
             get; private set;
         }
 
-        public bool IsWindows
-        {
-            get;
-        }
+        public bool IsWindows => OperatingSystem.IsWindows();
 
         // Process dump settings. Only AppObserver and Windows is supported. \\
         public string DumpsPath
@@ -381,17 +378,6 @@ namespace FabricObserver.Observers
         {
             ObserverName = GetType().Name;
             ConfigurationSectionName = ObserverName + "Configuration";
-
-            try
-            {
-                IsWindows = Environment.OSVersion.Platform == PlatformID.Win32NT;
-            }
-            catch (InvalidOperationException e)
-            {
-                ObserverLogger.LogWarning($"Unable to determine OS platform: {e.Message}. Trying a different API.");
-                IsWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
-            }
-
             ApplicationName = new Uri(serviceContext.CodePackageActivationContext.ApplicationName);
             NodeName = serviceContext.NodeContext.NodeName;
             NodeType = serviceContext.NodeContext.NodeType;
@@ -1192,10 +1178,16 @@ namespace FabricObserver.Observers
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorActiveEphemeralPortsPercent : FOErrorWarningCodes.NodeWarningActiveEphemeralPortsPercent;
                         break;
-
+                        
+                    // Support for legacy Handles property name.
                     case ErrorWarningProperty.AllocatedFileHandles when entityType == EntityType.Application || entityType == EntityType.Service:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FOErrorWarningCodes.AppErrorTooManyOpenFileHandles : FOErrorWarningCodes.AppWarningTooManyOpenFileHandles;
+                            FOErrorWarningCodes.AppErrorTooManyOpenHandles : FOErrorWarningCodes.AppWarningTooManyOpenHandles;
+                        break;
+
+                    case ErrorWarningProperty.HandleCount when entityType == EntityType.Application || entityType == EntityType.Service:
+                        errorWarningCode = (healthState == HealthState.Error) ?
+                            FOErrorWarningCodes.AppErrorTooManyOpenHandles : FOErrorWarningCodes.AppWarningTooManyOpenHandles;
                         break;
 
                     case ErrorWarningProperty.ThreadCount when entityType == EntityType.Application || entityType == EntityType.Service:
@@ -1210,12 +1202,18 @@ namespace FabricObserver.Observers
 
                     case ErrorWarningProperty.AllocatedFileHandles when entityType == EntityType.Machine || entityType == EntityType.Node:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FOErrorWarningCodes.NodeErrorTooManyOpenFileHandles : FOErrorWarningCodes.NodeWarningTooManyOpenFileHandles;
+                            FOErrorWarningCodes.NodeErrorTooManyOpenHandles : FOErrorWarningCodes.NodeWarningTooManyOpenHandles;
                         break;
 
+                    // Support for legacy Handles (Percent) property name.
                     case ErrorWarningProperty.AllocatedFileHandlesPct when entityType == EntityType.Machine || entityType == EntityType.Node:
                         errorWarningCode = (healthState == HealthState.Error) ?
-                            FOErrorWarningCodes.NodeErrorTotalOpenFileHandlesPercent : FOErrorWarningCodes.NodeWarningTotalOpenFileHandlesPercent;
+                            FOErrorWarningCodes.NodeErrorTotalOpenHandlesPercent : FOErrorWarningCodes.NodeWarningTotalOpenHandlesPercent;
+                        break;
+
+                    case ErrorWarningProperty.HandleCountPercentage when entityType == EntityType.Machine || entityType == EntityType.Node:
+                        errorWarningCode = (healthState == HealthState.Error) ?
+                            FOErrorWarningCodes.NodeErrorTotalOpenHandlesPercent : FOErrorWarningCodes.NodeWarningTotalOpenHandlesPercent;
                         break;
 
                     // Process Private Bytes (MB).

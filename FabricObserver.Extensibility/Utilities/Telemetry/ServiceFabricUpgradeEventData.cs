@@ -45,7 +45,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         [JsonConstructor]
         public ServiceFabricUpgradeEventData()
         {
-            _os = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux";
+            _os = OperatingSystem.IsWindows() ? "Windows" : "Linux";
         }
     }
 }

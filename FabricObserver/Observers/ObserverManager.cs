@@ -150,7 +150,7 @@ namespace FabricObserver.Observers
             FabricServiceContext ??= serviceProvider.GetRequiredService<StatelessServiceContext>();
             nodeName = FabricServiceContext.NodeContext.NodeName;
             FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
-            isWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
+            isWindows = OperatingSystem.IsWindows();
             sfVersion = GetServiceFabricRuntimeVersion();
 
             // Observer Logger setup.

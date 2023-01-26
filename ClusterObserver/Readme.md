@@ -1,5 +1,5 @@
-### ClusterObserver 2.2.0.960
-#### This version requires SF Runtime >= 9.0 and targets .NET 6
+### ClusterObserver 2.2.2
+#### This version - and all subsequent versions - requires SF Runtime >= 9.0 and targets .NET 6
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-observer%2Fnet6%2FDocumentation%2FDeployment%2Fservice-fabric-cluster-observer.json)
 
@@ -15,7 +15,7 @@ you want by implementing the IObserverTelemetryProvider interface. As stated, th
 
 The core idea is that you use the aggregated cluster error/warning/Ok health state information from ClusterObserver to fire alerts and/or trigger some other action that gets your attention and/or some SF on-call's enagement via auto-creating a support incident (and an Ok signal would mean auto-mitigate the related incident/ticket).  
 
-```As of version 2.2.0.831, ClusterObserver supports the FabricObserver extensibility model. This means you can extend the behavior of ClusterObserver by writing your own observer plugins just as you can do with FabricObserver.```
+```As of version 2.2.0.831/960, ClusterObserver supports the FabricObserver extensibility model. This means you can extend the behavior of ClusterObserver by writing your own observer plugins just as you can do with FabricObserver.```
 
 [FabricObserver plugin documentation](https://github.com/microsoft/service-fabric-observer/blob/main/Documentation/Plugins.md) applies to ClusterObserver as well. The difference, of course, is that you will copy your plugin dll and its dependencies into ClusterObserver\PackageRoot\Data folder.
 
@@ -46,89 +46,95 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -
 ```XML
 <?xml version="1.0" encoding="utf-8" ?>
 <Settings xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://schemas.microsoft.com/2011/01/fabric">
-    <Section Name="ObserverManagerConfiguration">
-        <!-- Required: Amount of time, in seconds, to sleep before the next iteration of clusterobserver run loop. Internally, the run loop will sleep for 15 seconds if this
-        setting is not greater than 0. -->
-        <Parameter Name="ObserverLoopSleepTimeSeconds" Value="" MustOverride="true" />
-        <!-- Required: Amount of time, in seconds, ClusterObserver is allowed to complete a run. If this time is exceeded, 
-        then the offending observer will be marked as broken and will not run again. 
-        Below setting represents 60 minutes. -->
-        <Parameter Name="ObserverExecutionTimeout" Value="" MustOverride="true" />
-        <!-- Required: Location on disk to store observer data, including ObserverManager. 
-        ClusterObserver will write to its own directory on this path.
-        **NOTE: For Linux runtime target, just supply the name of the directory (not a path with drive letter like you for Windows).** -->
-        <Parameter Name="ObserverLogPath" Value="" MustOverride="true" />
-        <!-- Required: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
-        will be locally logged. This is the recommended setting. Note that file logging is generally
-        only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
-        <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
-        <Parameter Name="ObserverFailureHealthStateLevel" Value="" MustOverride="true" />
-        <Parameter Name="EnableETWProvider" Value="" MustOverride="true" />
-        <Parameter Name="ETWProviderName" Value="" MustOverride="true" />
-        <Parameter Name="EnableTelemetryProvider" Value="" MustOverride="true" />
-        <Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
-	  
-        <!-- Non-overridable. -->
-	  
-        <Parameter Name="AsyncOperationTimeoutSeconds" Value="120" />
-        <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
-        <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
-        <!-- Required-If TelemetryProvider is AzureApplicationInsights. -->
-        <Parameter Name="AppInsightsInstrumentationKey" Value="" />
-        <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Workspace Id. -->
-        <Parameter Name="LogAnalyticsWorkspaceId" Value="" />
-        <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Shared Key. -->
-        <Parameter Name="LogAnalyticsSharedKey" Value="" />
-        <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
-        <Parameter Name="LogAnalyticsLogType" Value="ClusterObserver" />
-        <!-- Optional: Amount of time in seconds to wait before ObserverManager signals shutdown. -->
-        <Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="1" />
-    </Section>
-    <!-- ClusterObserver Configuration Settings. NOTE: These are overridable settings, see ApplicationManifest.xml. 
-    The Values for these will be overriden by ApplicationManifest Parameter settings. Set DefaultValue for each
-    overridable parameter in that file, not here, as the parameter DefaultValues in ApplicationManifest.xml will be used, by default. 
-    This design is to enable unversioned application-parameter-only updates. This means you will be able to change
-    any of the MustOverride parameters below at runtime by doing an ApplicationUpdate with ApplicationParameters flag. 
-    See: https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-application-upgrade-advanced#upgrade-application-parameters-independently-of-version -->
-    <Section Name="ClusterObserverConfiguration">
-        <!-- Maximum amount of time to wait for an async operation to complete (e.g., any of the SF API calls..) -->
-        <Parameter Name="AsyncOperationTimeoutSeconds" Value="" MustOverride="true" />
-        <!-- Required: To enable or not enable, that is the question.-->
-        <Parameter Name="Enabled" Value="" MustOverride="true" />
-        <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
-        will be locally logged. This is the recommended setting. Note that file logging is generally
-        only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
-        <Parameter Name="EnableEtw" Value="" MustOverride="true"/>
-        <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
-        <!-- Optional: Emit health details for both Warning and Error for aggregated cluster health? 
-        Aggregated Error evaluations will always be transmitted regardless of this setting. -->
-        <Parameter Name="EmitHealthWarningEvaluationDetails" Value="" MustOverride="true" />
-        <!-- Maximum amount of time a node can be in disabling/disabled/down state before
-        emitting a Warning signal.-->
-        <Parameter Name="MaxTimeNodeStatusNotOk" Value="" MustOverride="true" />
-        <!-- How often to run ClusterObserver. This is a Timespan value, e.g., 00:10:00 means every 10 minutes, for example. -->
-        <Parameter Name="RunInterval" Value="" MustOverride="true" />
-        <!-- Report on currently executing Repair Jobs in the cluster. -->
-        <Parameter Name="MonitorRepairJobs" Value="" MustOverride="true" />
-        <!-- Monitor Cluster and Application Upgrades. -->
-        <Parameter Name="MonitorUpgrades" Value="" MustOverride="true" />
-    </Section>
-    <!-- Plugin model sample. Just add the configuration info here that your observer needs.
-    **NOTE**: You must name these Sections in the following way: [ObserverName]Configuration.
-    Example: SampleNewObserverConfiguration, where SampleNewObserver is the type name of the observer plugin.
-    See the SampleObserverPlugin project for a complete example of implementing an observer plugin. 
+	<Section Name="ObserverManagerConfiguration">
+		<!-- Required: Amount of time, in seconds, to sleep before the next iteration of clusterobserver run loop. Internally, the run loop will sleep for 15 seconds if this
+         setting is not greater than 0. -->
+		<Parameter Name="ObserverLoopSleepTimeSeconds" Value="" MustOverride="true" />
+		<!-- Required: Amount of time, in seconds, ClusterObserver is allowed to complete a run. If this time is exceeded, 
+         then the offending observer will be marked as broken and will not run again. 
+         Below setting represents 60 minutes. -->
+		<Parameter Name="ObserverExecutionTimeout" Value="" MustOverride="true" />
+		<!-- Required: Location on disk to store observer data, including ObserverManager. 
+         ClusterObserver will write to its own directory on this path.
+         **NOTE: For Linux runtime target, just supply the name of the directory (not a path with drive letter like you for Windows).** -->
+		<Parameter Name="ObserverLogPath" Value="" MustOverride="true" />
+		<!-- Required: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
+         will be locally logged. This is the recommended setting. Note that file logging is generally
+         only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
+		<Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
+		<Parameter Name="ObserverFailureHealthStateLevel" Value="" MustOverride="true" />
+		<Parameter Name="EnableETWProvider" Value="" MustOverride="true" />
+		<Parameter Name="ETWProviderName" Value="" MustOverride="true" />
+		<Parameter Name="EnableTelemetryProvider" Value="" MustOverride="true" />
+		<Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
+
+		<!-- Non-overridable. -->
+
+		<Parameter Name="AsyncOperationTimeoutSeconds" Value="120" />
+		<!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
+		<Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
+		
+		<!-- AzureApplicationInsights -->
+		<!-- OBSOLETE: Use AppInsightsConnectionString instead. Setting this has no effect. -->
+		<Parameter Name="AppInsightsInstrumentationKey" Value="" />
+		<!-- Required-If TelemetryProvider is AzureApplicationInsights. Your Connection String. -->
+		<Parameter Name="AppInsightsConnectionString" Value="" />
+		
+		<!-- AzureLogAnalytics -->
+		<!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Workspace Id. -->
+		<Parameter Name="LogAnalyticsWorkspaceId" Value="" />
+		<!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Shared Key. -->
+		<Parameter Name="LogAnalyticsSharedKey" Value="" />
+		<!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
+		<Parameter Name="LogAnalyticsLogType" Value="ClusterObserver" />
+		
+		<!-- Optional: Amount of time in seconds to wait before ObserverManager signals shutdown. -->
+		<Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="1" />
+	</Section>
+	<!-- ClusterObserver Configuration Settings. NOTE: These are overridable settings, see ApplicationManifest.xml. 
+       The Values for these will be overriden by ApplicationManifest Parameter settings. Set DefaultValue for each
+       overridable parameter in that file, not here, as the parameter DefaultValues in ApplicationManifest.xml will be used, by default. 
+       This design is to enable unversioned application-parameter-only updates. This means you will be able to change
+       any of the MustOverride parameters below at runtime by doing an ApplicationUpdate with ApplicationParameters flag. 
+       See: https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-application-upgrade-advanced#upgrade-application-parameters-independently-of-version -->
+	<Section Name="ClusterObserverConfiguration">
+		<!-- Maximum amount of time to wait for an async operation to complete (e.g., any of the SF API calls..) -->
+		<Parameter Name="AsyncOperationTimeoutSeconds" Value="" MustOverride="true" />
+		<!-- Required: To enable or not enable, that is the question.-->
+		<Parameter Name="Enabled" Value="" MustOverride="true" />
+		<!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
+         will be locally logged. This is the recommended setting. Note that file logging is generally
+         only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
+		<Parameter Name="EnableEtw" Value="" MustOverride="true"/>
+		<Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
+		<Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+		<!-- Optional: Emit health details for both Warning and Error for aggregated cluster health? 
+         Aggregated Error evaluations will always be transmitted regardless of this setting. -->
+		<Parameter Name="EmitHealthWarningEvaluationDetails" Value="" MustOverride="true" />
+		<!-- Maximum amount of time a node can be in disabling/disabled/down state before
+         emitting a Warning signal.-->
+		<Parameter Name="MaxTimeNodeStatusNotOk" Value="" MustOverride="true" />
+		<!-- How often to run ClusterObserver. This is a Timespan value, e.g., 00:10:00 means every 10 minutes, for example. -->
+		<Parameter Name="RunInterval" Value="" MustOverride="true" />
+		<!-- Report on currently executing Repair Jobs in the cluster. -->
+		<Parameter Name="MonitorRepairJobs" Value="" MustOverride="true" />
+		<!-- Monitor Cluster and Application Upgrades. -->
+		<Parameter Name="MonitorUpgrades" Value="" MustOverride="true" />
+	</Section>
+	<!-- Plugin model sample. Just add the configuration info here that your observer needs.
+       **NOTE**: You must name these Sections in the following way: [ObserverName]Configuration.
+       Example: SampleNewObserverConfiguration, where SampleNewObserver is the type name of the observer plugin.
+       See the SampleObserverPlugin project for a complete example of implementing an observer plugin. 
 	   
-    If you want to enable versionless parameter-only application upgrades, then add MustOverride to the Parameters you want to be 
-    able to change without redeploying CO and add them to ApplicationManifest.xml just like for ClusterObserver.
-	   
-    All observers are enabled by default, so even you do not supply any parameters here (like, leave this commented out) your observer plugin will run.
-    <Section Name="MyClusterObserverPluginConfiguration">
-        <Parameter Name="Enabled" Value="true" />
-        <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
-        <Parameter Name="EnableEtw" Value="false" />
-        <Parameter Name="EnableVerboseLogging" Value="false" />
-        <Parameter Name="RunInterval" Value=""  />
-    </Section> -->
+       If you want to enable versionless parameter-only application upgrades, then add MustOverride to the Parameters you want to be 
+       able to change without redeploying CO and add them to ApplicationManifest.xml just like for ClusterObserver.
+  <Section Name="MyClusterObserverPluginConfiguration">
+    <Parameter Name="Enabled" Value="true" />
+    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
+    <Parameter Name="EnableEtw" Value="false" />
+    <Parameter Name="EnableVerboseLogging" Value="false" />
+    <Parameter Name="RunInterval" Value=""  />
+  </Section> -->
 </Settings>
 ``` 
 
@@ -136,7 +142,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -
 
 ``` XML
 <?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.2.0.960" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.2.2" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- ClusterObserverManager settings. -->
     <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
@@ -151,6 +157,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -
     <!-- ClusterObserver settings. -->
     <Parameter Name="ClusterObserverEnabled" DefaultValue="true" />
     <Parameter Name="ClusterObserverEnableETW" DefaultValue="true" />
+    <Parameter Name="ClusterObserverEnableTelemetry" DefaultValue="true" />
     <Parameter Name="ClusterObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="MaxTimeNodeStatusNotOk" DefaultValue="02:00:00" />
     <Parameter Name="EmitHealthWarningEvaluationDetails" DefaultValue="true" />
@@ -164,7 +171,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.2.0.960" />
+    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.2.2" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -182,6 +189,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -
           <Section Name="ClusterObserverConfiguration">
             <Parameter Name="Enabled" Value="[ClusterObserverEnabled]" />
             <Parameter Name="EnableEtw" Value="[ClusterObserverEnableETW]" />
+            <Parameter Name="EnableTelemetry" Value="[ClusterObserverEnableTelemetry]" />
             <Parameter Name="EnableVerboseLogging" Value="[ClusterObserverEnableVerboseLogging]" />
             <Parameter Name="EmitHealthWarningEvaluationDetails" Value="[EmitHealthWarningEvaluationDetails]" />
             <Parameter Name="MaxTimeNodeStatusNotOk" Value="[MaxTimeNodeStatusNotOk]" />

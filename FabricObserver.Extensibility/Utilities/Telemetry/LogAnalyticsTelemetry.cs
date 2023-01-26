@@ -142,7 +142,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                         healthEvaluation = unhealthyEvaluations,
                         serviceName = serviceName ?? string.Empty,
                         instanceName = instanceName ?? string.Empty,
-                        osPlatform = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "Windows" : "Linux"
+                        osPlatform = OperatingSystem.IsWindows() ? "Windows" : "Linux"
                     });
 
             await SendTelemetryAsync(jsonPayload, cancellationToken);

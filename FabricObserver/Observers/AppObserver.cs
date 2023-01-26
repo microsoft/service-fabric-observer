@@ -570,7 +570,7 @@ namespace FabricObserver.Observers
                         processId);
                 }
 
-                // Allocated (in use) Handles
+                // Handles
                 if (AllAppHandlesData.ContainsKey(id))
                 {
                     var parentFrud = AllAppHandlesData[id];
@@ -582,8 +582,8 @@ namespace FabricObserver.Observers
 
                     ProcessResourceDataReportHealth(
                         parentFrud,
-                        app.ErrorOpenFileHandles,
-                        app.WarningOpenFileHandles,
+                        app.ErrorOpenFileHandles > 0 ? app.ErrorOpenFileHandles : app.ErrorHandleCount,
+                        app.WarningOpenFileHandles > 0 ? app.WarningOpenFileHandles : app.WarningHandleCount,
                         TTL,
                         EntityType.Service,
                         processName,
@@ -959,9 +959,15 @@ namespace FabricObserver.Observers
                         // DumpOnWarning
                         existingAppConfig[j].DumpProcessOnWarning = application.DumpProcessOnWarning == existingAppConfig[j].DumpProcessOnWarning ? application.DumpProcessOnWarning : existingAppConfig[j].DumpProcessOnWarning;
 
-                        // Handles
+                        // Handles \\
+
+                        // Legacy support (naming).
                         existingAppConfig[j].ErrorOpenFileHandles = existingAppConfig[j].ErrorOpenFileHandles == 0 && application.ErrorOpenFileHandles > 0 ? application.ErrorOpenFileHandles : existingAppConfig[j].ErrorOpenFileHandles;
                         existingAppConfig[j].WarningOpenFileHandles = existingAppConfig[j].WarningOpenFileHandles == 0 && application.WarningOpenFileHandles > 0 ? application.WarningOpenFileHandles : existingAppConfig[j].WarningOpenFileHandles;
+                        
+                        // Updated naming.
+                        existingAppConfig[j].ErrorHandleCount = existingAppConfig[j].ErrorHandleCount == 0 && application.ErrorHandleCount > 0 ? application.ErrorHandleCount : existingAppConfig[j].ErrorHandleCount;
+                        existingAppConfig[j].WarningHandleCount = existingAppConfig[j].WarningHandleCount == 0 && application.WarningHandleCount > 0 ? application.WarningHandleCount : existingAppConfig[j].WarningHandleCount;
 
                         // Threads
                         existingAppConfig[j].ErrorThreadCount = existingAppConfig[j].ErrorThreadCount == 0 && application.ErrorThreadCount > 0 ? application.ErrorThreadCount : existingAppConfig[j].ErrorThreadCount;
@@ -995,8 +1001,13 @@ namespace FabricObserver.Observers
                         NetworkWarningEphemeralPortsPercent = application.NetworkWarningEphemeralPortsPercent,
                         DumpProcessOnError = application.DumpProcessOnError,
                         DumpProcessOnWarning = application.DumpProcessOnWarning,
+                        
+                        // Supported Legacy Handle property naming.
                         ErrorOpenFileHandles = application.ErrorOpenFileHandles,
                         WarningOpenFileHandles = application.WarningOpenFileHandles,
+                        
+                        ErrorHandleCount = application.ErrorHandleCount,
+                        WarningHandleCount = application.WarningHandleCount,
                         ErrorThreadCount = application.ErrorThreadCount,
                         WarningThreadCount = application.WarningThreadCount,
                         ErrorPrivateBytesMb = application.ErrorPrivateBytesMb,
@@ -1609,9 +1620,17 @@ namespace FabricObserver.Observers
                                             dump = true;
                                         }
                                         break;
-
+                                    
+                                         // Legacy Handle metric name.
                                     case ErrorWarningProperty.AllocatedFileHandles:
                                         if (frud.Value.IsUnhealthy(app.ErrorOpenFileHandles) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.WarningOpenFileHandles)))
+                                        {
+                                            dump = true;
+                                        }
+                                        break;
+
+                                    case ErrorWarningProperty.HandleCount:
+                                        if (frud.Value.IsUnhealthy(app.ErrorHandleCount) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.WarningHandleCount)))
                                         {
                                             dump = true;
                                         }
@@ -2045,10 +2064,11 @@ namespace FabricObserver.Observers
                         checkPercentageEphemeralPorts = true;
                     }
 
-                    // File Handles
-                    if (application.ErrorOpenFileHandles > 0 || application.WarningOpenFileHandles > 0)
+                    // Handles
+                    if (application.ErrorOpenFileHandles > 0 || application.WarningOpenFileHandles > 0
+                        || application.ErrorHandleCount > 0 || application.WarningHandleCount > 0)
                     {
-                        _ = AllAppHandlesData.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.AllocatedFileHandles, id, 1, false, EnableConcurrentMonitoring));
+                        _ = AllAppHandlesData.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.HandleCount, id, 1, false, EnableConcurrentMonitoring));
                     }
 
                     if (AllAppHandlesData.ContainsKey(id))
@@ -2184,7 +2204,7 @@ namespace FabricObserver.Observers
                             _ = AllAppHandlesData.TryAdd(
                                     $"{id}:{procName}{procId}",
                                     new FabricResourceUsageData<float>(
-                                        ErrorWarningProperty.AllocatedFileHandles,
+                                        ErrorWarningProperty.HandleCount,
                                         $"{id}:{procName}{procId}",
                                         capacity,
                                         false,
