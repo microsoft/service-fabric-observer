@@ -724,7 +724,7 @@ $appVersion = "3.2.5"
 $myApplication = Get-ServiceFabricApplication -ApplicationName $appName
 $appParamCollection = $myApplication.ApplicationParameters
 
-# Create a key-value collection to hold the *existing* app parameter name/value pairs.
+# Create a key-value collection to hold the new and *existing* app parameter name/value pairs.
 $applicationParameterMap = @{}
 
 # Fill the new map with the existing application parameter pairs.
