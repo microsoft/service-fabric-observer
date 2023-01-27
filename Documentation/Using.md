@@ -713,10 +713,34 @@ Then execute the application upgrade with
 Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.2.5 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```  
 
-**Important**: This action will overwrite previous changes that were made this way. If you want to preserve any earlier changes, then you will need to
-supply those parameter values again along with the new ones. This is because these updates reset all observers' ConfigurationSettings. In a future release, this
-behavior will be changed, but for now this is how it works.
+**Important**: This action will overwrite previous app paramemter changes that were made in an earlier application upgrade, for example. If you want to preserve any earlier changes, then you will need to
+supply those parameter values again along with the new ones. You do this in the following, simple way: 
 
-**Important**: On *Linux*, this will restart FO processes (one at a time, UD Walk with safety checks) due to the way Linux Capabilites work. 
+```PowerShell
+$appName = "fabric:/FabricObserver"
+$appVersion = "3.2.5"
+
+# Get current application parameters map.
+$myApplication = Get-ServiceFabricApplication -ApplicationName $appName
+$appParamCollection = $myApplication.ApplicationParameters
+
+# Create a key-value collection to hold the *existing* app parameter name/value pairs.
+$applicationParameterMap = @{}
+
+# Fill the new map with the existing application parameter pairs.
+foreach ($pair in $appParamCollection)
+{
+    $applicationParameterMap.Add($pair.Name, $pair.Value);
+}
+
+# Now, add your updated target app parameter(s) to the new map. This guarantees that older upgraded app parameter settings are not reset to default values.
+$applicationParameterMap.Add("FabricSystemObserverEnabled", "true");
+$applicationParameterMap.Add("FabricSystemObserverMemoryWarningLimitMb", "4096");
+
+$ Supply the new map as part of the versionless (because the version is not changing), parameter-only application upgrade.
+Start-ServiceFabricApplicationUpgrade -ApplicationName $appName -ApplicationTypeVersion $appVersion -ApplicationParameter $applicationParameterMap -Monitored -FailureAction Rollback
+```
+
+**For Linux, FO app parameter upgrades will restart FO processes** (one at a time, UD Walk with safety checks) due to the way Linux Capabilites work. 
 In a nutshell, for any kind of application upgrade, we have to re-run the FO setup script to get the Capabilities in place, which requires restarting FabricObserver (which is just fine given that it is a stateless service).
-For Windows, FO processes will NOT be restarted.
+**For Windows, FO processes will NOT be restarted as part of the upgrade UD walk**.
