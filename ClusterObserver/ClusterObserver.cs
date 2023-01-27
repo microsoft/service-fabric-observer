@@ -219,7 +219,7 @@ namespace ClusterObserver
                                     Token),
                             Token);
 
-                // Previous run generated unhealthy evaluation report. It's now Ok.
+                // Previous aggregated cluster health state was Error or Warning. It's now Ok.
                 if (clusterHealth.AggregatedHealthState == HealthState.Ok && (LastKnownClusterHealthState == HealthState.Error
                     || (EmitWarningDetails && LastKnownClusterHealthState == HealthState.Warning)))
                 {
@@ -230,7 +230,7 @@ namespace ClusterObserver
                         ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                         EntityType = EntityType.Cluster,
                         HealthState = HealthState.Ok,
-                        Description = "Cluster has recovered from previous Error/Warning state.",
+                        Description = $"Cluster has recovered from previous {LastKnownClusterHealthState} state.",
                         Metric = "AggregatedClusterHealth",
                         Source = ObserverName
                     };
