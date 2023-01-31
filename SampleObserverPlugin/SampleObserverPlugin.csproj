@@ -1,5 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
+		<!-- You could target netstandard2.0 instead, if you need to. But you probably do not need to.. -->
 		<TargetFramework>net6.0</TargetFramework>
 		<RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
 		<RootNamespace>FabricObserver.Observers</RootNamespace>
@@ -9,11 +10,25 @@
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
 		<DefineConstants>DEBUG;TRACE</DefineConstants>
 	</PropertyGroup>
+	<!-- If you build with the full FO nupkg, e.g, <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" Version="3.2.5" />,
+	     then you the post-build copies below will move the plugin dll, the Polly library dependency for this sample project, and plugin pdb file to the output directory's
+		 FabricObserverPkg\Data\Plugins folder. This is not going to work (the plugin dll + pdb file copy for builds that employ only the Extensibility lib reference).-->
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
-		<Exec Command="copy &quot;$(SolutionDir)packages\polly\7.2.3\lib\netstandard2.0\Polly.dll&quot; &quot;$(OutDir)&quot;" />
+		<Exec Command="copy &quot;$(SolutionDir)packages\polly\7.2.3\lib\netstandard2.0\Polly.dll&quot; &quot;$(OutDir)&quot;&#xD;&#xA;" />
+		<!-- If you build with the full FO nuget pkg, uncomment.
+		<Exec Command="copy &quot;$(OutDir)*.dll&quot; &quot;$(OutDir)FabricObserverPkg\Data\Plugins&quot;&#xD;&#xA;copy &quot;$(OutDir)*.pdb&quot; &quot;$(OutDir)FabricObserverPkg\Data\Plugins&quot;" /> -->
 	</Target>
     <ItemGroup>
-	    <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" Version="3.2.5" />
-	    <PackageReference Include="Polly" Version="7.2.3" />
+		<!-- To build with the full 3.2.5 FO nupkg. The output dir will contain a FabricObserverPkg folder with Code/Config/Data. So, you can deploy directly from there.
+		<PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" Version="3.2.5" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
+		<PackageReference Include="Microsoft.ServiceFabric.Services" Version="6.0.1017" /> -->
+		<!-- OR -->
+		<!-- To build with just FabricObserver.Extensibility 3.2.5. There will be no FabricObserverPkg folder in outdir. This is the simplest way to build a plugin, then you woul
+		     copy it (and its dependcies) to the FabricObserverPkg folder you already have in place for the same version of the product. -->
+		<PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" Version="3.2.5" />
+		
+		<!-- This is a nupkg that this plugin sample requires. -->
+		<PackageReference Include="Polly" Version="7.2.3" />
     </ItemGroup>
 </Project>
