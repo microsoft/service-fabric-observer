@@ -8,7 +8,7 @@
 	<Nullable>disable</Nullable>
 	<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
 	<ServerGarbageCollection>False</ServerGarbageCollection>
-	<RuntimeIdentifiers>win7-x64;linux-x64</RuntimeIdentifiers>
+	<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
 	<TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
 	<Copyright>Copyright © 2022</Copyright>
 	<Product>ClusterObserver</Product>
