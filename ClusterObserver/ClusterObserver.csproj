@@ -17,7 +17,7 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <StartupObject>ClusterObserver.Program</StartupObject>
-    <Platforms>x64</Platforms>
+	<Platforms>x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Utilities\ClusterIdentificationUtility.cs" />

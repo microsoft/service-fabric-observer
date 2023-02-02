@@ -19,7 +19,7 @@
     <StartupObject>FabricObserver.Program</StartupObject>
     <NoWarn>CA1822;$(NoWarn)</NoWarn>
     <ResolveComReferenceSilent>true</ResolveComReferenceSilent>
-    <Platforms>x64</Platforms>
+	<Platforms>x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Connected Services\**" />
@@ -35,7 +35,7 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
     <PackageReference Include="Microsoft.ServiceFabric.Services" Version="6.0.1017" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
-    <PackageReference Include="Octokit" Version="4.0.3" />
+    <PackageReference Include="Octokit" Version="5.0.0" />
     <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="7.0.0" />
     <PackageReference Include="System.Diagnostics.EventLog" Version="7.0.0" />
     <PackageReference Include="System.IO" Version="4.3.0" />

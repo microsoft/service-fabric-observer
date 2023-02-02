@@ -4,13 +4,11 @@
 // ------------------------------------------------------------
 
 using Newtonsoft.Json;
-using System;
 using System.Diagnostics.Tracing;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
     [EventData]
-    [Serializable]
     public class ClusterTelemetryData : TelemetryDataBase
     {
         [JsonConstructor]

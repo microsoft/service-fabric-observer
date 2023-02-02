@@ -238,6 +238,7 @@ namespace FabricObserverTests
                 }
                 else if (fe.ErrorCode == FabricErrorCode.ApplicationTypeAlreadyExists)
                 {
+                    await FabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
                     await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
                     await DeployHealthMetricsAppAsync();
                 }
@@ -298,6 +299,7 @@ namespace FabricObserverTests
                 }
                 else if (fe.ErrorCode == FabricErrorCode.ApplicationTypeAlreadyExists)
                 {
+                    await FabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
                     await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
                     await DeployTestApp42Async();
                 }
@@ -358,6 +360,7 @@ namespace FabricObserverTests
                 }
                 else if (fe.ErrorCode == FabricErrorCode.ApplicationTypeAlreadyExists)
                 {
+                    await FabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
                     await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
                     await DeployVotingAppAsync();
                 }
@@ -649,12 +652,12 @@ namespace FabricObserverTests
         /* Simple Tests */
 
         [TestMethod]
-        public void AAAInitializeTestInfra()
+        public async Task AAAInitializeTestInfra()
         {
             Assert.IsTrue(IsLocalSFRuntimePresent());
-            DeployHealthMetricsAppAsync().Wait();
-            DeployTestApp42Async().Wait();
-            DeployVotingAppAsync().Wait();
+            await DeployHealthMetricsAppAsync();
+            await DeployTestApp42Async();
+            await DeployVotingAppAsync();
 
         }
 

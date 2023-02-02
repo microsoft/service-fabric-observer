@@ -10,15 +10,12 @@ using System.Diagnostics.Tracing;
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
     [EventData]
-    [Serializable]
     public class DiskTelemetryData : TelemetryDataBase
     {
-        [EventField]
         public string DriveName 
         { 
             get; set; 
         }
-        [EventField]
         public string FolderName 
         { 
             get; set; 

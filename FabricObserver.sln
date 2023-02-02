@@ -26,6 +26,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		FOAzurePipeline.yaml = FOAzurePipeline.yaml
 		foextlib.md = foextlib.md
 		fonuget.md = fonuget.md
+		global.json = global.json
 		icon.png = icon.png
 		Documentation\Observers.md = Documentation\Observers.md
 		Documentation\OperationalTelemetry.md = Documentation\OperationalTelemetry.md
@@ -33,8 +34,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		README.md = README.md
 		SECURITY.md = SECURITY.md
 		Documentation\Deployment\service-fabric-cluster-observer.json = Documentation\Deployment\service-fabric-cluster-observer.json
-		Documentation\Deployment\service-fabric-observer.json = Documentation\Deployment\service-fabric-observer.json
 		Documentation\Deployment\service-fabric-cluster-observer.v2.2.2.parameters.json = Documentation\Deployment\service-fabric-cluster-observer.v2.2.2.parameters.json
+		Documentation\Deployment\service-fabric-observer.json = Documentation\Deployment\service-fabric-observer.json
 		Documentation\Deployment\service-fabric-observer.v3.2.5.parameters.json = Documentation\Deployment\service-fabric-observer.v3.2.5.parameters.json
 		Documentation\Using.md = Documentation\Using.md
 	EndProjectSection
@@ -135,11 +136,10 @@ Global
 		{9C9D92E0-A246-4F74-92F4-CD8A9B76B1B5}.Release|x64.Build.0 = Release|x64
 		{2AC4F67C-015B-4655-AF8A-0A4285AA7067}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2AC4F67C-015B-4655-AF8A-0A4285AA7067}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2AC4F67C-015B-4655-AF8A-0A4285AA7067}.Debug|x64.ActiveCfg = Debug|x64
-		{2AC4F67C-015B-4655-AF8A-0A4285AA7067}.Debug|x64.Build.0 = Debug|x64
+		{2AC4F67C-015B-4655-AF8A-0A4285AA7067}.Debug|x64.ActiveCfg = Debug|Any CPU
 		{2AC4F67C-015B-4655-AF8A-0A4285AA7067}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2AC4F67C-015B-4655-AF8A-0A4285AA7067}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2AC4F67C-015B-4655-AF8A-0A4285AA7067}.Release|x64.ActiveCfg = Release|Any CPU
+		{2AC4F67C-015B-4655-AF8A-0A4285AA7067}.Release|x64.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
