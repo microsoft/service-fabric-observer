@@ -1,18 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <IsPackable>false</IsPackable>
-    <ProjectGuid>{48C88BEB-9960-4183-861B-DF25C193E4C9}</ProjectGuid>
     <RootNamespace>FabricObserverTests</RootNamespace>
 	<TargetFramework>net6.0</TargetFramework>
 	<Nullable>disable</Nullable>
-	<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
-	<ServerGarbageCollection>False</ServerGarbageCollection>
 	<RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
-	<TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
     <NoWarn>CS0414</NoWarn>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
-    <Copyright>Copyright ©  2022</Copyright>
     <Product>FabricObserverTests</Product>
     <AssemblyTitle>FabricObserverTests</AssemblyTitle>
 	<Platforms>x64</Platforms>
