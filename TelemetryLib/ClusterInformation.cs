@@ -8,7 +8,6 @@ using System.Fabric;
 using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -185,6 +184,11 @@ namespace FabricObserver.TelemetryLib
         [MethodImpl(MethodImplOptions.NoInlining)]
         private static string GetTenantIdWindows()
         {
+            if (!OperatingSystem.IsWindows())
+            {
+                return null;
+            }
+
             const string TenantIdValueName = "WATenantID";
 
             try
