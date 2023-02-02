@@ -20,6 +20,7 @@
     <NoWarn>CA1822;$(NoWarn)</NoWarn>
     <ResolveComReferenceSilent>true</ResolveComReferenceSilent>
 	<Platforms>x64</Platforms>
+	<NoWarn>CA1416</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <Compile Remove="Connected Services\**" />
