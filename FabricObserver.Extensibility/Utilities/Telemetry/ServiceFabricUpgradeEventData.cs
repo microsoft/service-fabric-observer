@@ -13,27 +13,22 @@ using System.Diagnostics.Tracing;
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
     [EventData]
-    [Serializable]
     public class ServiceFabricUpgradeEventData
     {
         private readonly string _os;
 
-        [EventField]
         public string ClusterId => ClusterInformation.ClusterInfoTuple.ClusterId;
 
-        [EventField]
         public string TaskName
         {
             get; set;
         }
 
-        [EventField]
         public ApplicationUpgradeProgress ApplicationUpgradeProgress
         {
             get; set;
         }
 
-        [EventField]
         public FabricUpgradeProgress FabricUpgradeProgress
         {
             get; set;

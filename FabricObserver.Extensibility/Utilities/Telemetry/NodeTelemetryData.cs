@@ -10,7 +10,6 @@ using Newtonsoft.Json;
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
     [EventData]
-    [Serializable]
     public class NodeTelemetryData : TelemetryDataBase
     {
         [JsonConstructor]
