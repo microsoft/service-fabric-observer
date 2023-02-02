@@ -15,7 +15,7 @@
     <Copyright>Copyright ©  2022</Copyright>
     <Product>FabricObserverTests</Product>
     <AssemblyTitle>FabricObserverTests</AssemblyTitle>
-    <Platforms>x64</Platforms>
+	<Platforms>x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
 	<PacakgeReference Include="Microsoft.ServiceFabric.Services" Version="6.0.1017" />
