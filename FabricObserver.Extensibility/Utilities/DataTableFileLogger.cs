@@ -5,7 +5,6 @@
 
 using System;
 using System.IO;
-using System.Runtime.InteropServices;
 using FabricObserver.Interfaces;
 using NLog;
 using NLog.Targets;

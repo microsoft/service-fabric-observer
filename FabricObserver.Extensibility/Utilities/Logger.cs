@@ -7,7 +7,6 @@ using System;
 using System.Diagnostics.Tracing;
 using System.Fabric.Health;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading;
 using FabricObserver.Observers.Interfaces;
 using FabricObserver.Observers.Utilities.Telemetry;
@@ -227,7 +226,7 @@ namespace FabricObserver.Observers.Utilities
                 if (OperatingSystem.IsWindows())
                 {
                     // Add current drive letter if not supplied for Windows path target.
-                    if (!LogFolderBasePath.Substring(0, 3).Contains(":\\"))
+                    if (!LogFolderBasePath[..3].Contains(":\\"))
                     {
                         string windrive = Environment.SystemDirectory.Substring(0, 3);
                         logFolderBase = windrive + LogFolderBasePath;
@@ -236,7 +235,7 @@ namespace FabricObserver.Observers.Utilities
                 else
                 {
                     // Remove supplied drive letter if Linux is the runtime target.
-                    if (LogFolderBasePath.Substring(0, 3).Contains(":\\"))
+                    if (LogFolderBasePath[..3].Contains(":\\"))
                     {
                         logFolderBase = LogFolderBasePath.Remove(0, 3).Replace("\\", "/");
                     }
@@ -298,11 +297,18 @@ namespace FabricObserver.Observers.Utilities
             TimeSource.Current = new AccurateUtcTimeSource();
             OLogger = LogManager.GetLogger(loggerName);
 
-            // Clean out old log files. This is to ensure the supplied policy is enforced if FO is restarted before the MaxArchiveFileLifetimeDays has been reached.
-            // This is because Logger FileTarget settings are not preserved across FO deployments.
+            // FileTarget settings are not preserved across FO deployments, so try and clean old files on FO start up. \\
+            
+            if (string.IsNullOrWhiteSpace(FolderName))
+            {
+                return;
+            }
+
+            string folder = Path.Combine(logFolderBase, FolderName);
+
             if (MaxArchiveFileLifetimeDays > 0)
             {
-                TryCleanFolder(Path.Combine(logFolderBase, FolderName), "*.log", TimeSpan.FromDays(MaxArchiveFileLifetimeDays));
+                TryCleanFolder(folder, "*.log", TimeSpan.FromDays(MaxArchiveFileLifetimeDays));
             }
         }
 
@@ -313,7 +319,7 @@ namespace FabricObserver.Observers.Utilities
                 return;
             }
 
-            string[] files = new string[] { };
+            string[] files = Array.Empty<string>();
 
             try
             {
@@ -335,7 +341,7 @@ namespace FabricObserver.Observers.Utilities
                 }
                 catch (Exception e) when (e is ArgumentException || e is AggregateException)
                 {
-                    LogWarning($"Unable to delete file {file}:{Environment.NewLine}{e}");
+                    LogWarning($"Unable to delete file {file}:{Environment.NewLine}{e.Message}");
                 }
             }
         }

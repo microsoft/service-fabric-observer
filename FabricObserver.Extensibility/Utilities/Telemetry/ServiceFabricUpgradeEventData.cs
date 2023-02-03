@@ -5,7 +5,6 @@
 
 using Newtonsoft.Json;
 using System.Fabric;
-using System.Runtime.InteropServices;
 using FabricObserver.TelemetryLib;
 using System;
 using System.Diagnostics.Tracing;

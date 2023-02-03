@@ -20,7 +20,6 @@ using System.Fabric.Description;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
