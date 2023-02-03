@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Fabric.Health;
 using System.Globalization;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Interfaces;

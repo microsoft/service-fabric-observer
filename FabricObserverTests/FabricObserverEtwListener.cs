@@ -5,7 +5,6 @@
 
 namespace FabricObserverTests
 {
-    using FabricObserver.Observers;
     using FabricObserver.Observers.Utilities;
     using FabricObserver.Observers.Utilities.Telemetry;
     using System.Diagnostics.Tracing;
