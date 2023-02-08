@@ -1508,14 +1508,10 @@ namespace FabricObserver.Observers.Utilities
 
         private static bool FindInStringArray(string[] arr, string s)
         {
-            if (arr == null || arr.Length == 0 || string.IsNullOrWhiteSpace(s))
-            {
-                return false;
-            }
-
             for (int i = 0; i < arr.Length; i++)
             {
-                if (arr[i] != s)
+                // 0 means the two strings are equal.
+                if (string.CompareOrdinal(s, arr[i]) != 0)
                 { 
                     continue;
                 }
