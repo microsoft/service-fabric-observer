@@ -737,7 +737,7 @@ foreach ($pair in $appParamCollection)
 $applicationParameterMap.Add("FabricSystemObserverEnabled", "true");
 $applicationParameterMap.Add("FabricSystemObserverMemoryWarningLimitMb", "4096");
 
-$ Supply the new map as part of the versionless (because the version is not changing), parameter-only application upgrade.
+# Supply the new map as part of the versionless (because the version is not changing), parameter-only application upgrade.
 Start-ServiceFabricApplicationUpgrade -ApplicationName $appName -ApplicationTypeVersion $appVersion -ApplicationParameter $applicationParameterMap -Monitored -FailureAction Rollback
 ```
 
