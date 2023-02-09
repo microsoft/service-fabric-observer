@@ -895,7 +895,7 @@ namespace FabricObserver.Observers
                     NodeName = NodeName,
                     NodeType = NodeType,
                     ObserverName = ObserverName,
-                    PartitionId = replicaOrInstance?.PartitionId,
+                    PartitionId = replicaOrInstance?.PartitionId.ToString(),
                     ProcessId = procId,
                     ProcessName = processName,
                     ProcessStartTime = processStartTime,
