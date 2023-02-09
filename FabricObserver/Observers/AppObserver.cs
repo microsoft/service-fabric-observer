@@ -2647,17 +2647,6 @@ namespace FabricObserver.Observers
 
                         if (replicasOrInstances?.Count > 0)
                         {
-                            /* TOTHINK: Filter out SharedProcess replicas to only include a single element in the ReplicaOrInstanceList list;
-                            // so, only one SharedHost activated service entry with the same host process id should be added to the global replica list,
-                            // which is used in multiple code paths by AppObserver.
-                            foreach (var rep in replicasOrInstances)
-                            {
-                                if (!ReplicaOrInstanceList.Any(r => r.HostProcessId == rep.HostProcessId))
-                                {
-                                    ReplicaOrInstanceList.Add(rep);
-                                }
-                            }*/
-
                             ReplicaOrInstanceList.AddRange(replicasOrInstances);
 
                             var targets = userTargetList.Where(x => x.TargetApp != null && x.TargetApp == userTarget.TargetApp
@@ -2875,17 +2864,6 @@ namespace FabricObserver.Observers
                             break;
                         }
                 }
-
-                // TOTHINK: Filter out SharedProcess replicas if one is already present in the list since they are all hosted in the same process,
-                // and FO can only operate at the process level for resource monitoring. So, if you have 100 replicas in a shared host process, FO would monitor the same process
-                // 100 times, which is *extremely* redundant and inefficient.
-                /*if (replicaMonitoringList.Any(
-                        r => r.ServicePackageActivationMode == ServicePackageActivationMode.SharedProcess
-                          && r.HostProcessId == replicaInfo.HostProcessId))
-                {
-                    // return in a parallel loop is equivalent to continue in a sequential loop.
-                    return;
-                }*/
 
                 ProcessServiceConfiguration(appTypeName, deployedReplica.CodePackageName, replicaInfo);
 

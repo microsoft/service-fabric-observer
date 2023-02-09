@@ -955,7 +955,7 @@ namespace ClusterObserver
                             EntityType = EntityType.Partition,
                             Metric = "PartitionHealth",
                             Property = healthEvent.HealthInformation.Property,
-                            PartitionId = partitionHealth.PartitionId,
+                            PartitionId = partitionHealth.PartitionId.ToString(),
                             Description = healthEvent.HealthInformation.Description,
                             HealthState = healthEvent.HealthInformation.HealthState,
                             Source = healthEvent.HealthInformation.SourceId
@@ -1009,7 +1009,7 @@ namespace ClusterObserver
                             Metric = "ReplicaHealth",
                             NodeName = nodeName,
                             Property = healthEvent.HealthInformation.Property,
-                            PartitionId = replicaHealth.PartitionId,
+                            PartitionId = replicaHealth.PartitionId.ToString(),
                             ReplicaId = replicaHealth.Id,
                             Description = healthEvent.HealthInformation.Description,
                             HealthState = healthEvent.HealthInformation.HealthState,

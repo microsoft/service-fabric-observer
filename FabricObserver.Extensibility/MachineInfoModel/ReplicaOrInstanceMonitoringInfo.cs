@@ -46,10 +46,10 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
-        public Guid? PartitionId
+        public Guid PartitionId
         {
             get; set;
-        }
+        } = Guid.Empty;
 
         public long ReplicaOrInstanceId
         {
