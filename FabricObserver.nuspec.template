@@ -5,7 +5,7 @@
 		<version>3.2.5</version>
 		<releaseNotes>
 - New telemetry data types: NodeTelemetryData, ServiceTelemetryData, DiskTelemetryData. These types hold only the relevant information for the target entity. For backwards compatibility, TelemetryData type still exists.
-- FabricObserver is now only shipped as .NET 6 application. There is no longer support for the now-obsolete .NET Core 3.1.
+- FabricObserver is now only shipped as a .NET 6 application. There is no longer support for .NET Core 3.1.
 - FabricObserver targets the Service Fabric 9.x runtime and SF SDK versions 6.0.1017 and later. There are no longer multiple releases of FO that target different SF runtime/.NET versions.
 - NodeObserver can be configured to emit Node snapshots (only useful if you employ ApplicationInsights/LogAnalytics/ETW).
 - Bug fixes and code improvements.

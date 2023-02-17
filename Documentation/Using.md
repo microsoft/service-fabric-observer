@@ -720,24 +720,25 @@ supply those parameter values again along with the new ones. You do this in the 
 $appName = "fabric:/FabricObserver"
 $appVersion = "3.2.5"
 
-# Get current application parameters map.
 $myApplication = Get-ServiceFabricApplication -ApplicationName $appName
 $appParamCollection = $myApplication.ApplicationParameters
-
-# Create a key-value collection to hold the new and *existing* app parameter name/value pairs.
 $applicationParameterMap = @{}
 
-# Fill the new map with the existing application parameter pairs.
+# Fill the map with current app parameter settings.
 foreach ($pair in $appParamCollection)
 {
     $applicationParameterMap.Add($pair.Name, $pair.Value);
 }
 
-# Now, add your updated target app parameter(s) to the new map. This guarantees that older upgraded app parameter settings are not reset to default values.
-$applicationParameterMap.Add("FabricSystemObserverEnabled", "true");
-$applicationParameterMap.Add("FabricSystemObserverMemoryWarningLimitMb", "4096");
+# If replacing current upgrade parameters (so, from a previous parameter-only application upgrade), remove them from the list of current params first.
+if ($applicationParameterMap.ContainsKey("NodeObserverMemoryWarningLimitMb"))
+{
+    $applicationParameterMap.Remove("NodeObserverMemoryWarningLimitMb");
+}
 
-# Supply the new map as part of the versionless (because the version is not changing), parameter-only application upgrade.
+# Add the updated target app parameter(s) to the collection.
+$applicationParameterMap.Add("NodeObserverMemoryWarningLimitMb","8000")
+
 Start-ServiceFabricApplicationUpgrade -ApplicationName $appName -ApplicationTypeVersion $appVersion -ApplicationParameter $applicationParameterMap -Monitored -FailureAction Rollback
 ```
 
