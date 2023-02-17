@@ -78,6 +78,10 @@ FabricObserverDataEvent
 For information events like above (raw metrics), HealthState is always 0 (Invalid). When some metric crosses the line for a threshold you supplied, HealthState will be 2 (Warning) or 3 (Error), depending upon your related threshold configuration settings.
 FO emits more than Json-serialized TelemetryData ETW events. It also emits Json-serialized ChildProcessTelemetryData events (see above), MachineTelemetryData events (OSObserver emits these), and anonymously typed events (Json-serialized anonymous data type which is typically something like an informational or warning event from some observer or ObserverManager that is not a custom FO data type (class) related resource usage monitoring). 
 
+**NOTE** (for internal customers): You should configure MA to format the FabricObserverETWProvider event data as Json. This will result in a Kusto column named data that holds an actual Json string.
+So, you would only need to run parse_json(data) in your KQL query versus employing the extra string manipulation steps. This will increase query efficiency
+when querying over very large amounts of data from FabricObserver.
+
 ### API
 
 For [observer plugin](Plugins.md) authors, you can use your own event name and generate your own ETW using ```LogEtw<T>(string eventName, T data)``` which is a member of ObserverBase.ObserverLogger: 

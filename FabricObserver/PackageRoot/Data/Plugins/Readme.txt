@@ -4,10 +4,11 @@ Your Observer plugins must live in this folder.
 
 Note that the observer API lives in its own library, FabricObserver.Extensibility.dll. FO also uses this library for its internal observer impls.
 
-1. Create a new .NET core library project. You should target net6.0 in your csproj because that is the target net SDK version that both FabricObserver and FabricObserver.Extensibility target.
+1. Create a new .NET core library project. You should target net6.0 in your csproj because that is the .NET SDK version that both FabricObserver and FabricObserver.Extensibility target.
 
 2. Install the same version of the Microsoft.ServiceFabricApps.FabricObserver.Extensibility nupkg from https://www.nuget.org/profiles/ServiceFabricApps as the version of FabricObserver you are deploying. 
-   E.g., 3.2.4 if you are going to deploy FO 3.2.4.831/960.
+   E.g., 3.2.5 if you are going to deploy FO 3.2.5.
+   NOTE: You can also consume the entire FabricObserver 3.2.5 nupkg to build your plugin. Please see the SampleObserverPlugin project's csproj file for more information.
 
 3. Write an observer plugin!
 
@@ -53,8 +54,8 @@ Note that the observer API lives in its own library, FabricObserver.Extensibilit
    You can place your plugin dll and all of its dependencies in its own (*same*) folder under the Plugins directory (useful if you have multiple plugins). 
    Again, ALL plugin dll dependencies (and their dependencies, if any) need to live in the *same* folder as the plugin dll.
 
-6. Add a new config section for your observer in FabricObserver/PackageRoot/Config/Settings.xml (see example at bottom of that file)
-   Update ApplicationManifest.xml with Parameters if you want to support Versionless Application Parameter-only Upgrades for your plugin.
+6. Add a new config section for your observer in FabricObserver/PackageRoot/Config/Settings.xml (see example at bottom of that file).
+   Update ApplicationManifest.xml with App Parameters if you want to support Versionless Parameter-only Application Upgrades for your plugin. If not, then just use Settings.xml to host your setting values.
    Look at both FabricObserver/PackageRoot/Config/Settings.xml and FabricObserverApp/ApplicationPackageRoot/ApplicationManifest.xml for several examples of how to do this.
 
 7. Ship it! (Well, test it first =)
@@ -67,5 +68,5 @@ cd C:\Users\me\source\repos\service-fabric-observer
 ./Build-FabricObserver
 ./Build-NugetPackages
 
-The output from the above commands contains FabricObserver platform-specific nupkgs and a package you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.0.nupkg. Nupkg files from above command would be located in 
+The output from the above commands contains FabricObserver platform-specific nupkgs and a package you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.5.nupkg. Nupkg files from above command would be located in 
 C:\Users\me\source\repos\service-fabric-observer\bin\release\FabricObserver\Nugets.

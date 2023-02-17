@@ -42,10 +42,9 @@ namespace FabricObserverTests
         private const string EtwTestsLogFolder = @"C:\temp\FOTests";
 
         private static readonly Uri TestServiceName = new("fabric:/app/service");
-        private static readonly bool IsSFRuntimePresentOnTestMachine = IsLocalSFRuntimePresent();
         private static readonly CancellationToken Token = new();
-        private static readonly ICodePackageActivationContext CodePackageContext = null;
-        private static readonly StatelessServiceContext TestServiceContext = null;
+        private static ICodePackageActivationContext CodePackageContext = null;
+        private static StatelessServiceContext TestServiceContext = null;
         private static readonly Logger _logger = new("TestLogger", EtwTestsLogFolder, 1)
         {
             EnableETWLogging = true,
@@ -54,8 +53,14 @@ namespace FabricObserverTests
 
         private static FabricClient FabricClient => FabricClientUtilities.FabricClientSingleton;
 
-        static ObserverTests()
+        [ClassInitialize]
+        public static async Task TestClassStartUp(TestContext testContext)
         {
+            if (!IsLocalSFRuntimePresent())
+            {
+                throw new Exception("Can't run these tests without a local dev cluster");
+            }
+
             /* SF runtime mocking care of ServiceFabric.Mocks by loekd.
                https://github.com/loekd/ServiceFabric.Mocks */
 
@@ -88,6 +93,42 @@ namespace FabricObserverTests
                         null,
                         Guid.NewGuid(),
                         long.MaxValue);
+
+            // Install required SF test applications.
+            await DeployHealthMetricsAppAsync();
+            await DeployTestApp42Async();
+            await DeployVotingAppAsync();
+        }
+
+        [ClassCleanup]
+        public static async Task TestClassCleanupAsync()
+        {
+            Assert.IsTrue(IsLocalSFRuntimePresent());
+
+            // Remove any files generated.
+            try
+            {
+                var outputFolder = Path.Combine(Environment.CurrentDirectory, "fabric_logs");
+
+                if (Directory.Exists(outputFolder))
+                {
+                    Directory.Delete(outputFolder, true);
+                }
+
+                outputFolder = EtwTestsLogFolder;
+
+                if (Directory.Exists(outputFolder))
+                {
+                    Directory.Delete(outputFolder, true);
+                }
+            }
+            catch (IOException)
+            {
+
+            }
+
+            await CleanupTestHealthReportsAsync();
+            await RemoveTestApplicationsAsync();
         }
 
         /* Helpers */
@@ -305,7 +346,7 @@ namespace FabricObserverTests
             }
         }
 
-        private async Task DeployVotingAppAsync()
+        private static async Task DeployVotingAppAsync()
         {
             string appName = "fabric:/Voting";
 
@@ -514,37 +555,6 @@ namespace FabricObserverTests
             store.Remove(expiredCert);
         }
 
-        [ClassCleanup]
-        public static async Task TestClassCleanupAsync()
-        {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
-            // Remove any files generated.
-            try
-            {
-                var outputFolder = Path.Combine(Environment.CurrentDirectory, "fabric_logs");
-
-                if (Directory.Exists(outputFolder))
-                {
-                    Directory.Delete(outputFolder, true);
-                }
-
-                outputFolder = EtwTestsLogFolder;
-
-                if (Directory.Exists(outputFolder))
-                {
-                    Directory.Delete(outputFolder, true);
-                }
-            }
-            catch (IOException)
-            {
-
-            }
-
-            await CleanupTestHealthReportsAsync();
-            await RemoveTestApplicationsAsync();
-        }
-
         private static async Task RemoveTestApplicationsAsync()
         {
             // HealthMetrics \\
@@ -649,16 +659,6 @@ namespace FabricObserverTests
         /* End Helpers */
 
         /* Simple Tests */
-
-        [TestMethod]
-        public async Task AAAInitializeTestInfra()
-        {
-            Assert.IsTrue(IsLocalSFRuntimePresent());
-            await DeployHealthMetricsAppAsync();
-            await DeployTestApp42Async();
-            await DeployVotingAppAsync();
-
-        }
 
         [TestMethod]
         public void AppObserver_Constructor_Test()
@@ -814,8 +814,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_MalformedTargetAppValue_GeneratesWarning()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
@@ -836,8 +834,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_InvalidJson_GeneratesWarning()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
@@ -859,8 +855,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_NoConfigFound_GeneratesWarning()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
@@ -884,8 +878,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetAppType_ServiceExcludeList_EnsureExcluded()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
             {
                 await DeployHealthMetricsAppAsync();
@@ -911,8 +903,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetApp_ServiceExcludeList_EnsureExcluded()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
             {
                 await DeployHealthMetricsAppAsync();
@@ -938,8 +928,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetAppType_ServiceIncludeList_EnsureIncluded()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
             {
                 await DeployHealthMetricsAppAsync();
@@ -965,8 +953,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetApp_ServiceIncludeList_EnsureIncluded()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
             {
                 await DeployHealthMetricsAppAsync();
@@ -994,8 +980,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetAppType_MultiServiceExcludeList_EnsureNotExcluded()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
             {
                 await DeployHealthMetricsAppAsync();
@@ -1026,8 +1010,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetApp_MultiServiceExcludeList_EnsureNotExcluded()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
             {
                 await DeployHealthMetricsAppAsync();
@@ -1058,8 +1040,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetAppType_MultiServiceIncludeList_EnsureIncluded()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
             {
                 await DeployHealthMetricsAppAsync();
@@ -1085,8 +1065,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetApp_MultiServiceIncludeList_EnsureIncluded()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
             {
                 await DeployHealthMetricsAppAsync();
@@ -1120,8 +1098,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ObserveAsync_Successful_IsHealthy()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -1154,8 +1130,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ObserveAsync_Successful_WarningsGenerated()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -1186,8 +1160,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ObserveAsync_PrivateBytes_Successful_WarningsGenerated()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -1218,8 +1190,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ObserveAsync_Successful_RGLimitWarningGenerated()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-            
             if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
             {
                 await DeployVotingAppAsync();
@@ -1253,8 +1223,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ObserveAsync_Successful_RGLimit_Validate_Multiple_Memory_Specification()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
             {
                 await DeployVotingAppAsync();
@@ -1299,8 +1267,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ObserveAsync_OldConfigStyle_Successful_WarningsGenerated()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -1329,8 +1295,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ObserveAsync_OldConfigStyle_Successful_NoWarningsGenerated()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -1361,8 +1325,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_DumpProcessOnWarning_SuccessfulDumpCreation()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
             {
                 await DeployVotingAppAsync();
@@ -1411,8 +1373,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_DumpProcessOnError_SuccessfulDumpCreation()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
             {
                 await DeployVotingAppAsync();
@@ -1462,8 +1422,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task ContainerObserver_ObserveAsync_Successful_IsHealthy()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -1491,8 +1449,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task ClusterObserver_ObserveAsync_AppMonitor_Successful_IsHealthy_Detects_Warning()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
             {
                 await DeployVotingAppAsync();
@@ -1582,8 +1538,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task ClusterObserver_ObserveAsync_NodeMonitor_Successful_IsHealthy_Detects_Warning()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var nodeTelemetryData = new NodeTelemetryData
             {
                 Code = FOErrorWarningCodes.NodeWarningMemoryPercent,
@@ -1664,8 +1618,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task CertificateObserver_validCerts()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             if (!InstallCerts())
             {
                 Assert.Inconclusive("This test can only be run on Windows as an admin.");
@@ -1722,8 +1674,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task CertificateObserver_expiredAndexpiringCerts()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -1780,8 +1730,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NodeObserver_Integer_Greater_Than_100_CPU_Warn_Threshold_No_Fail()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -1810,8 +1758,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NodeObserver_Negative_Integer_CPU_Mem_Ports_Firewalls_Values_No_Exceptions_In_Intialize()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -1841,8 +1787,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NodeObserver_Negative_Integer_Thresholds_CPU_Mem_Ports_Firewalls_All_Data_Containers_Are_Null()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -1879,8 +1823,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task OSObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -1921,8 +1863,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task DiskObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -1969,8 +1909,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task DiskObserver_ObserveAsync_Successful_IsHealthy_WarningsOrErrors()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -2043,8 +1981,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NetworkObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -2069,8 +2005,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NetworkObserver_ObserveAsync_Successful_WritesLocalFile_ObsWebDeployed()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -2110,8 +2044,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NodeObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrorsDetected()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -2144,8 +2076,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NodeObserver_ObserveAsync_Successful_IsHealthy_WarningsOrErrorsDetected()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -2177,8 +2107,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task SFConfigurationObserver_ObserveAsync_Successful_IsHealthy()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -2219,8 +2147,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             using var client = new FabricClient();
             var nodeList = await client.QueryManager.GetNodeListAsync();
 
@@ -2264,8 +2190,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_MemoryWarningsOrErrorsDetected()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -2295,8 +2219,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_ActiveTcpPortsWarningsOrErrorsDetected()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
@@ -2333,8 +2255,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_EphemeralPortsWarningsOrErrorsDetected()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
@@ -2371,8 +2291,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_HandlesWarningsOrErrorsDetected()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
@@ -2409,8 +2327,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_Negative_Integer_CPU_Warn_Threshold_No_Unhandled_Exception()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             using var client = new FabricClient();
             var nodeList = await client.QueryManager.GetNodeListAsync();
 
@@ -2448,8 +2364,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_Integer_Greater_Than_100_CPU_Warn_Threshold_No_Unhandled_Exception()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
@@ -2536,8 +2450,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ETW_EventData_IsChildProcessTelemetryData()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             if (!await EnsureTestServicesExistAsync("fabric:/TestApp42"))
             {
                 await DeployTestApp42Async();
@@ -2590,8 +2502,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ETW_EventData_IsTelemetryData()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             if (!await EnsureTestServicesExistAsync("fabric:/TestApp42"))
             {
                 await DeployTestApp42Async();
@@ -2640,8 +2550,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ETW_EventData_IsTelemetryData_HealthWarnings()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
             {
                 await DeployHealthMetricsAppAsync();
@@ -2695,8 +2603,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ETW_EventData_RGEnabled_MemoryInMB_Or_MemoryInMBLimit_ValuesAreNonZero()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
             {
                 await DeployVotingAppAsync();
@@ -2755,8 +2661,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ETW_PrivateBytes_Multiple_CodePackages_ValuesAreNonZero_Warnings_MB_Percent()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
             {
                 await DeployVotingAppAsync();
@@ -2781,8 +2685,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ETW_PrivateBytes_Warning_ChildProcesses()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             if (!await EnsureTestServicesExistAsync("fabric:/TestApp42"))
             {
                 await DeployTestApp42Async();
@@ -2824,8 +2726,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ETW_RGMemoryLimitPercent_Warning()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
             {
                 await DeployVotingAppAsync();
@@ -2851,8 +2751,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task DiskObserver_ETW_EventData_IsTelemetryData()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
             await DiskObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors();
@@ -2888,8 +2786,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task DiskObserver_ETW_EventData_IsTelemetryData_Warnings()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
             await DiskObserver_ObserveAsync_Successful_IsHealthy_WarningsOrErrors();
@@ -2931,8 +2827,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ETW_EventData_IsTelemetryData()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
             await FabricSystemObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors();
@@ -2971,8 +2865,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ETW_EventData_IsTelemetryData_Warnings()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
             await FabricSystemObserver_ObserveAsync_Successful_IsHealthy_MemoryWarningsOrErrorsDetected();
@@ -3017,8 +2909,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NodeObserver_ETW_EventData_IsTelemetryData()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
             await NodeObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrorsDetected();
@@ -3050,8 +2940,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NodeObserver_ETW_EventData_IsTelemetryData_Warnings()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
             await NodeObserver_ObserveAsync_Successful_IsHealthy_WarningsOrErrorsDetected();
@@ -3091,8 +2979,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task NodeObserver_ETW_EventData_IsNodeSnapshotTelemetryData()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             using var foEtwListener = new FabricObserverEtwListener(_logger);
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -3140,8 +3026,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task OSObserver_ETW_EventData_IsMachineTelemetryData()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             using var foEtwListener = new FabricObserverEtwListener(_logger);
             await OSObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors();
             MachineTelemetryData machineTelemetryData = foEtwListener.foEtwConverter.MachineTelemetryData;
@@ -3183,8 +3067,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_Detects_Monitors_Multiple_Helper_CodePackages()
         {
-            Assert.IsTrue(IsSFRuntimePresentOnTestMachine);
-
             if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
             {
                 await DeployVotingAppAsync();
