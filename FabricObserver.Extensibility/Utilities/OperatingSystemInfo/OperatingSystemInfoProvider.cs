@@ -98,10 +98,10 @@ namespace FabricObserver.Observers.Utilities
         public abstract (int LowPort, int HighPort, int NumberOfPorts) TupleGetDynamicPortRange();
 
         /// <summary>
-        /// 
+        /// Provides details about the operating system state.
         /// </summary>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        /// <returns>An OSInfo object containing various OS properties. See OSInfo.cs.</returns>
         public abstract Task<OSInfo> GetOSInfoAsync(CancellationToken cancellationToken);
 
         /// <summary>
