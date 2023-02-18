@@ -14,6 +14,19 @@ namespace FabricObserver.Observers.Utilities
 {
     public class LinuxInfoProvider : OSInfoProvider
     {
+        /// <summary>
+        /// Linux OS info provider type.
+        /// </summary>
+        /// <exception cref="PlatformNotSupportedException"></exception>
+        public LinuxInfoProvider()
+        {
+            if (!OperatingSystem.IsLinux())
+            {
+                OSInfoLogger.LogWarning("LinuxInfoProvider cannot be created on Windows.");
+                throw new PlatformNotSupportedException("LinuxInfoProvider cannot be created on Windows.");
+            }
+        }
+
         public override (long TotalMemoryGb, long MemoryInUseMb, double PercentInUse) TupleGetSystemPhysicalMemoryInfo()
         {
             Dictionary<string, ulong> memInfo = LinuxProcFS.ReadMemInfo();

@@ -36,8 +36,18 @@ namespace FabricObserver.Observers.Utilities
         private DateTime LastDynamicRangeCacheUpdate = DateTime.MinValue;
         private DateTime LastCacheUpdate = DateTime.MinValue;
 
+        /// <summary>
+        /// Windows OS info provider type.
+        /// </summary>
+        /// <exception cref="PlatformNotSupportedException"></exception>
         public WindowsInfoProvider()
         {
+            if (!OperatingSystem.IsWindows())
+            {
+                OSInfoLogger.LogWarning("WindowsInfoProvider cannot be created on Linux.");
+                throw new PlatformNotSupportedException("WindowsInfoProvider cannot be created on Linux.");
+            }
+
             windowsDynamicPortRange = TupleGetDynamicPortRange();
 
             if (useNetstat)
@@ -50,71 +60,45 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
+        // This function will never be called on Linux. See OperatingSystemInfoProvider.cs.
         public override Task<OSInfo> GetOSInfoAsync(CancellationToken cancellationToken)
         {
+            // Adding this to suppress platform warnings during build and to prevent someone from calling this directly when FO is running on Linux.
+            if (!OperatingSystem.IsWindows())
+            {
+                OSInfoLogger.LogWarning("GetOSInfoAsync Windows override called on Linux.");
+                throw new PlatformNotSupportedException("Can't run GetOSInfoAsync Windows override on Linux. Please don't do this.");
+            }
+
             ManagementObjectSearcher win32OsInfo = null;
             ManagementObjectCollection results = null;
             OSInfo osInfo = default;
 
             try
             {
-#pragma warning disable CA1416 // Validate platform compatibility
                 win32OsInfo = new ManagementObjectSearcher(
                                     "SELECT Caption,Version,Status,OSLanguage,NumberOfProcesses,FreePhysicalMemory,FreeVirtualMemory," +
                                     "TotalVirtualMemorySize,TotalVisibleMemorySize,InstallDate,LastBootUpTime FROM Win32_OperatingSystem");
-#pragma warning restore CA1416 // Validate platform compatibility
-
-#pragma warning disable CA1416 // Validate platform compatibility
                 results = win32OsInfo.Get();
-#pragma warning restore CA1416 // Validate platform compatibility
-
-#pragma warning disable CA1416 // Validate platform compatibility
                 using (ManagementObjectCollection.ManagementObjectEnumerator enumerator = results.GetEnumerator())
                 {
-#pragma warning disable CA1416 // Validate platform compatibility
                     while (enumerator.MoveNext())
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-#pragma warning disable CA1416 // Validate platform compatibility
                         ManagementObject mObj = (ManagementObject)enumerator.Current;
-#pragma warning restore CA1416 // Validate platform compatibility
-
                         try
                         {
-#pragma warning disable CA1416 // Validate platform compatibility
                             object captionObj = mObj.Properties["Caption"].Value;
-#pragma warning restore CA1416 // Validate platform compatibility
-#pragma warning disable CA1416 // Validate platform compatibility
                             object versionObj = mObj.Properties["Version"].Value;
-#pragma warning restore CA1416 // Validate platform compatibility
-#pragma warning disable CA1416 // Validate platform compatibility
                             object statusObj = mObj.Properties["Status"].Value;
-#pragma warning restore CA1416 // Validate platform compatibility
-#pragma warning disable CA1416 // Validate platform compatibility
                             object osLanguageObj = mObj.Properties["OSLanguage"].Value;
-#pragma warning restore CA1416 // Validate platform compatibility
-#pragma warning disable CA1416 // Validate platform compatibility
                             object numProcsObj = mObj.Properties["NumberOfProcesses"].Value;
-#pragma warning restore CA1416 // Validate platform compatibility
-#pragma warning disable CA1416 // Validate platform compatibility
                             object freePhysicalObj = mObj.Properties["FreePhysicalMemory"].Value;
-#pragma warning restore CA1416 // Validate platform compatibility
-#pragma warning disable CA1416 // Validate platform compatibility
                             object freeVirtualTotalObj = mObj.Properties["FreeVirtualMemory"].Value;
-#pragma warning restore CA1416 // Validate platform compatibility
-#pragma warning disable CA1416 // Validate platform compatibility
                             object totalVirtualObj = mObj.Properties["TotalVirtualMemorySize"].Value;
-#pragma warning restore CA1416 // Validate platform compatibility
-#pragma warning disable CA1416 // Validate platform compatibility
                             object totalVisibleObj = mObj.Properties["TotalVisibleMemorySize"].Value;
-#pragma warning restore CA1416 // Validate platform compatibility
-#pragma warning disable CA1416 // Validate platform compatibility
                             object installDateObj = mObj.Properties["InstallDate"].Value;
-#pragma warning restore CA1416 // Validate platform compatibility
-#pragma warning disable CA1416 // Validate platform compatibility
                             object lastBootDateObj = mObj.Properties["LastBootUpTime"].Value;
-#pragma warning restore CA1416 // Validate platform compatibility
-
                             osInfo.Name = captionObj?.ToString();
 
                             if (int.TryParse(numProcsObj?.ToString(), out int numProcesses))
@@ -129,12 +113,8 @@ namespace FabricObserver.Observers.Utilities
                             osInfo.Status = statusObj?.ToString();
                             osInfo.Language = osLanguageObj?.ToString();
                             osInfo.Version = versionObj?.ToString();
-#pragma warning disable CA1416 // Validate platform compatibility
                             osInfo.InstallDate = ManagementDateTimeConverter.ToDateTime(installDateObj?.ToString()).ToUniversalTime().ToString("o");
-#pragma warning restore CA1416 // Validate platform compatibility
-#pragma warning disable CA1416 // Validate platform compatibility
                             osInfo.LastBootUpTime = ManagementDateTimeConverter.ToDateTime(lastBootDateObj?.ToString()).ToUniversalTime().ToString("o");
-#pragma warning restore CA1416 // Validate platform compatibility
                             osInfo.FreePhysicalMemoryKB = ulong.TryParse(freePhysicalObj?.ToString(), out ulong freePhysical) ? freePhysical : 0;
                             osInfo.FreeVirtualMemoryKB = ulong.TryParse(freeVirtualTotalObj?.ToString(), out ulong freeVirtual) ? freeVirtual : 0;
                             osInfo.TotalVirtualMemorySizeKB = ulong.TryParse(totalVirtualObj?.ToString(), out ulong totalVirtual) ? totalVirtual : 0;
@@ -150,9 +130,7 @@ namespace FabricObserver.Observers.Utilities
                         }
                         finally
                         {
-#pragma warning disable CA1416 // Validate platform compatibility
                             mObj?.Dispose();
-#pragma warning restore CA1416 // Validate platform compatibility
                             mObj = null;
                         }
                     }
@@ -160,9 +138,7 @@ namespace FabricObserver.Observers.Utilities
             }
             finally
             {
-#pragma warning disable CA1416 // Validate platform compatibility
                 results?.Dispose();
-#pragma warning restore CA1416 // Validate platform compatibility
                 results = null;
                 win32OsInfo?.Dispose();
                 win32OsInfo = null;
