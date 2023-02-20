@@ -28,5 +28,95 @@
         "protocol": "http"
       }
     ]
+  },
+  {
+    "targetApp": "fabric:/FabricMonitoringApp",
+    "endpoints": [
+      {
+        "hostname": "https://bing.com",
+        "port": 443,
+        "protocol": "http"
+      },
+      {
+        "hostname": "https://google.com",
+        "port": 443,
+        "protocol": "http"
+      },
+      {
+        "hostname": "https://bing.com",
+        "port": 443,
+        "protocol": "http"
+      },
+      {
+        "hostname": "https://google.com",
+        "port": 443,
+        "protocol": "http"
+      },
+      {
+        "hostname": "https://bing.com",
+        "port": 443,
+        "protocol": "http"
+      },
+      {
+        "hostname": "https://google.com",
+        "port": 443,
+        "protocol": "http"
+      }
+    ]
+  },
+  {
+    "targetApp": "fabric:/BadApp",
+    "endpoints": [
+      {
+        "hostname": "https://bing.com",
+        "port": 443,
+        "protocol": "http"
+      },
+      {
+        "hostname": "https://google.com",
+        "port": 443,
+        "protocol": "http"
+      },
+      {
+        "hostname": "https://bing.com",
+        "port": 443,
+        "protocol": "http"
+      },
+      {
+        "hostname": "https://12dd888cksl.grom",
+        "port": 443,
+        "protocol": "http"
+      },
+      {
+        "hostname": "https://bing.com",
+        "port": 443,
+        "protocol": "http"
+      },
+      {
+        "hostname": "https://google.com",
+        "port": 443,
+        "protocol": "http"
+      },
+      {
+        "hostname": "https://bing.com",
+        "port": 443,
+        "protocol": "http"
+      },
+      {
+        "hostname": "https://google.com",
+        "port": 443,
+        "protocol": "http"
+      },
+      {
+        "hostname": "https://bing.com",
+        "port": 443,
+        "protocol": "http"
+      },
+      {
+        "hostname": "https://google.com",
+        "port": 443,
+        "protocol": "http"
+      }
+    ]
   }
 ]

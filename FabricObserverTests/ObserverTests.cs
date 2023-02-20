@@ -37,15 +37,11 @@ namespace FabricObserverTests
     {
         // Change this to suit your test env.
         private const string NodeName = "_Node_0";
-
-        // Change this to suit your test env.
-        private const string EtwTestsLogFolder = @"C:\temp\FOTests";
-
         private static readonly Uri TestServiceName = new("fabric:/app/service");
         private static readonly CancellationToken Token = new();
         private static ICodePackageActivationContext CodePackageContext = null;
         private static StatelessServiceContext TestServiceContext = null;
-        private static readonly Logger _logger = new("TestLogger", EtwTestsLogFolder, 1)
+        private static readonly Logger _logger = new("TestLogger", Path.Combine(Environment.CurrentDirectory, "fabric_observer_logs"), 1)
         {
             EnableETWLogging = true,
             EnableVerboseLogging = true,
@@ -108,14 +104,7 @@ namespace FabricObserverTests
             // Remove any files generated.
             try
             {
-                var outputFolder = Path.Combine(Environment.CurrentDirectory, "fabric_logs");
-
-                if (Directory.Exists(outputFolder))
-                {
-                    Directory.Delete(outputFolder, true);
-                }
-
-                outputFolder = EtwTestsLogFolder;
+                var outputFolder = Path.Combine(Environment.CurrentDirectory, "fabric_observer_logs");
 
                 if (Directory.Exists(outputFolder))
                 {
@@ -278,7 +267,11 @@ namespace FabricObserverTests
                 }
                 else if (fe.ErrorCode == FabricErrorCode.ApplicationTypeAlreadyExists)
                 {
-                    await FabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
+                    var appList = await FabricClient.QueryManager.GetApplicationListAsync(new Uri(appName));
+                    if (appList.Count > 0)
+                    {
+                        await FabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
+                    }
                     await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
                     await DeployHealthMetricsAppAsync();
                 }
@@ -339,7 +332,11 @@ namespace FabricObserverTests
                 }
                 else if (fe.ErrorCode == FabricErrorCode.ApplicationTypeAlreadyExists)
                 {
-                    await FabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
+                    var appList = await FabricClient.QueryManager.GetApplicationListAsync(new Uri(appName));
+                    if (appList.Count > 0)
+                    {
+                        await FabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
+                    }
                     await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
                     await DeployTestApp42Async();
                 }
@@ -400,7 +397,11 @@ namespace FabricObserverTests
                 }
                 else if (fe.ErrorCode == FabricErrorCode.ApplicationTypeAlreadyExists)
                 {
-                    await FabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
+                    var appList = await FabricClient.QueryManager.GetApplicationListAsync(new Uri(appName));
+                    if (appList.Count > 0)
+                    {
+                        await FabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
+                    }
                     await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
                     await DeployVotingAppAsync();
                 }
@@ -422,7 +423,6 @@ namespace FabricObserverTests
 
         private static async Task CleanupTestHealthReportsAsync()
         {
-            Logger logger = new("TestLogger");
             var fabricClient = new FabricClient();
             var apps = await fabricClient.QueryManager.GetApplicationListAsync();
 
@@ -452,10 +452,39 @@ namespace FabricObserverTests
                             SourceId = evt.HealthInformation.SourceId
                         };
 
-                        var healthReporter = new ObserverHealthReporter(logger);
+                        var healthReporter = new ObserverHealthReporter(_logger);
                         healthReporter.ReportHealthToServiceFabric(healthReport);
                         await Task.Delay(250);
                     }
+                }
+            }
+
+            // NetworkObserver App reports.
+            foreach (var app in apps)
+            {
+                var appHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(app.ApplicationName);
+
+                foreach (var evt in appHealth.HealthEvents.Where(
+                              s => s.HealthInformation.SourceId.Contains(ObserverConstants.NetworkObserverName)
+                                && s.HealthInformation.HealthState == HealthState.Error
+                                || s.HealthInformation.HealthState == HealthState.Warning))
+                {
+                    var healthReport = new HealthReport
+                    {
+                        Code = FOErrorWarningCodes.Ok,
+                        EntityType = EntityType.Application,
+                        HealthMessage = $"Clearing existing NetworkObserver Test health reports.",
+                        State = HealthState.Ok,
+                        NodeName = NodeName,
+                        EmitLogEvent = false,
+                        AppName = app.ApplicationName,
+                        Property = evt.HealthInformation.Property,
+                        SourceId = evt.HealthInformation.SourceId
+                    };
+
+                    var healthReporter = new ObserverHealthReporter(_logger);
+                    healthReporter.ReportHealthToServiceFabric(healthReport);
+                    await Task.Delay(250);
                 }
             }
 
@@ -482,7 +511,7 @@ namespace FabricObserverTests
                         SourceId = evt.HealthInformation.SourceId
                     };
 
-                    var healthReporter = new ObserverHealthReporter(logger);
+                    var healthReporter = new ObserverHealthReporter(_logger);
                     healthReporter.ReportHealthToServiceFabric(healthReport);
                     await Task.Delay(250);
                 }
@@ -512,7 +541,7 @@ namespace FabricObserverTests
                         SourceId = evt.HealthInformation.SourceId
                     };
 
-                    var healthReporter = new ObserverHealthReporter(logger);
+                    var healthReporter = new ObserverHealthReporter(_logger);
                     healthReporter.ReportHealthToServiceFabric(healthReport);
                     await Task.Delay(250);
                 }
@@ -1341,7 +1370,7 @@ namespace FabricObserverTests
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_warnings_dmps.config.json"),
-                DumpsPath = Path.Combine(EtwTestsLogFolder, "AppObserver", "MemoryDumps")
+                DumpsPath = Path.Combine(_logger.LogFolderBasePath, "AppObserver", "MemoryDumps")
             };
 
             await obs.ObserveAsync(Token);
@@ -1389,7 +1418,7 @@ namespace FabricObserverTests
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_errors_dmps.config.json"),
-                DumpsPath = Path.Combine(EtwTestsLogFolder, "AppObserver", "MemoryDumps")
+                DumpsPath = Path.Combine(_logger.LogFolderBasePath, "AppObserver", "MemoryDumps")
             };
 
             await obs.ObserveAsync(Token);
@@ -1979,7 +2008,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task NetworkObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors()
+        public async Task NetworkObserver_ObserveAsync_Successful_Warnings()
         {
             var startDateTime = DateTime.Now;
 
@@ -1991,15 +2020,11 @@ namespace FabricObserverTests
             await obs.ObserveAsync(Token);
 
             // Observer ran to completion with no errors.
-            // The supplied config does not include deployed app network configs, so
-            // ObserveAsync will return in milliseconds.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
-            // observer detected no error conditions.
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
+            // The config file used for testing contains an endpoint that does not exist, so NetworkObserver
+            // will put the related Application entity into Warning state.
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
         }
 
         [TestMethod]
@@ -2023,14 +2048,7 @@ namespace FabricObserverTests
             // The supplied config does not include deployed app network configs, so
             // ObserveAsync will return in milliseconds.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // observer detected no error conditions.
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-
-            var outputFilePath = Path.Combine(Environment.CurrentDirectory, "fabric_observer_logs", "NetInfo.txt");
+            var outputFilePath = Path.Combine(_logger.LogFolderBasePath, "NetInfo.txt");
 
             // Output log file was created successfully during test.
             Assert.IsTrue(File.Exists(outputFilePath)

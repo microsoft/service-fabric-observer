@@ -15,9 +15,7 @@ using FabricObserver.TelemetryLib;
 
 namespace FabricObserver.Observers
 {
-    // This observer monitors VM level resource usage across CPU and Memory, and reports port and firewall rule counts.
-    // Thresholds for Error and Warning signals are user-supplied in NodeObserver.config.json.
-    // Health Report processor will also emit ETW telemetry if configured in Settings.xml.
+    // This observer monitors machine level resource usage across CPU, Memory, TCP ports, (Linux) File handles, and (Windows) firewall rules.
     public sealed class NodeObserver : ObserverBase
     {
         private readonly Stopwatch stopwatch;
@@ -155,7 +153,7 @@ namespace FabricObserver.Observers
             stopwatch.Start();
 
             Initialize();
-            await GetSystemCpuMemoryValuesAsync(token);
+            await ComputeMachineResourceUsage(token);
             await ReportAsync(token);
 
             // The time it took to run this observer.
@@ -677,7 +675,7 @@ namespace FabricObserver.Observers
             }
         }
 
-        private async Task GetSystemCpuMemoryValuesAsync(CancellationToken token)
+        private async Task ComputeMachineResourceUsage(CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
 
