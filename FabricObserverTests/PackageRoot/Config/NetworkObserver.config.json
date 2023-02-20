@@ -10,16 +10,6 @@
     ]
   },
   {
-    "targetApp": "fabric:/TestApp42",
-    "endpoints": [
-      {
-        "hostname": "bing.com",
-        "port": 443,
-        "protocol": "http"
-      }
-    ]
-  },
-  {
     "targetApp": "fabric:/HealthMetrics",
     "endpoints": [
       {
@@ -30,7 +20,7 @@
     ]
   },
   {
-    "targetApp": "fabric:/FabricMonitoringApp",
+    "targetApp": "fabric:/Voting",
     "endpoints": [
       {
         "hostname": "https://bing.com",
@@ -65,7 +55,7 @@
     ]
   },
   {
-    "targetApp": "fabric:/BadApp",
+    "targetApp": "fabric:/TestApp42",
     "endpoints": [
       {
         "hostname": "https://bing.com",
