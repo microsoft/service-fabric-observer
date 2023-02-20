@@ -30,7 +30,7 @@ namespace FabricObserver.Observers
     /// The output (a local file) is used by the API service and the HTML frontend (https://[domain:[port]]/api/ObserverManager).
     /// Health Report processor will also emit diagnostic telemetry if configured in Settings.xml.
     /// </summary>
-    public class NetworkObserver : ObserverBase
+    public sealed class NetworkObserver : ObserverBase
     {
         private const int MaxTcpConnTestRetries = 5;
         private readonly List<NetworkObserverConfig> defaultConfig = new()
@@ -58,7 +58,6 @@ namespace FabricObserver.Observers
                 }
             }
         };
-
         private readonly List<NetworkObserverConfig> userConfig = new();
         private readonly List<ConnectionState> connectionStatus = new();
         private readonly Dictionary<string, bool> connEndpointTestResults = new();
@@ -370,6 +369,8 @@ namespace FabricObserver.Observers
                 configList = userConfig;
             }
 
+            using HttpClient httpClient = new();
+
             foreach (var config in configList)
             {
                 Token.ThrowIfCancellationRequested();
@@ -414,24 +415,25 @@ namespace FabricObserver.Observers
                                 prefix = string.Empty;
                             }
 
-                            var httpClient = new HttpClient();
-                            HttpResponseMessage response =
-                                httpClient.Send(
-                                    new HttpRequestMessage(
-                                    HttpMethod.Get, new Uri($"{prefix}{endpoint.HostName}:{endpoint.Port}")),
-                                    HttpCompletionOption.ResponseHeadersRead, Token);
-
-                            HttpStatusCode status = response.StatusCode;
-
-                            // The target server responded with something. It doesn't really matter what it "said".
-                            if (status == HttpStatusCode.OK || response.Headers.Any())
+                            using (HttpResponseMessage response =
+                                    httpClient.Send(
+                                        new HttpRequestMessage(
+                                        HttpMethod.Get, new Uri($"{prefix}{endpoint.HostName}:{endpoint.Port}")),
+                                        HttpCompletionOption.ResponseHeadersRead, Token))
                             {
-                                passed = true;
+
+                                HttpStatusCode status = response.StatusCode;
+
+                                // The target server responded with something. It doesn't really matter what it "said".
+                                if (status == HttpStatusCode.OK || response.Headers.Any())
+                                {
+                                    passed = true;
+                                }
                             }
                         }
                         catch (Exception e) when (e is HttpRequestException || e is InvalidOperationException)
                         {
-
+                            ObserverLogger.LogWarning($"Handled NetworkObserver Failure:{Environment.NewLine}{e.Message}");
                         }
                         catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
                         {
@@ -439,9 +441,9 @@ namespace FabricObserver.Observers
                         }
                         catch (Exception e)
                         {
-                            ObserverLogger.LogWarning(e.ToString());
+                            ObserverLogger.LogWarning($"Unhandled NetworkObserver Failure:{Environment.NewLine}{e}");
 
-                            // Fix the bug..
+                            // Fix the bug.
                             throw;
                         }
                     }

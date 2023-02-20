@@ -1278,6 +1278,7 @@ namespace FabricObserver.Observers.Utilities
 
         /// <summary>
         /// Gets a list of TCPv4 connection info tuples for use in determining TCP ports in use per process or machine-wide.
+        /// Note that this does not consider BOUND state connections. If you need that information, then use the netstat-based API in OSProviderInfo platform impls.
         /// </summary>
         /// <returns>List of (ushort LocalPort, uint OwningProcessId, MIB_TCP_STATE State) tuples.</returns>
         public static List<(ushort LocalPort, uint OwningProcessId, MIB_TCP_STATE State)> GetAllTcpConnections()
@@ -1287,6 +1288,7 @@ namespace FabricObserver.Observers.Utilities
 
         /// <summary>
         /// Gets a list of TCPv6 connection info tuples for use in determining TCP ports in use per process or machine-wide.
+        /// Note that this does not consider BOUND state connections. If you need that information, then use the netstat-based API in OSProviderInfo platform impls.
         /// </summary>
         /// <returns>List of (ushort LocalPort, uint OwningProcessId, MIB_TCP_STATE State) tuples.</returns>
         public static List<(ushort LocalPort, uint OwningProcessId, MIB_TCP_STATE State)> GetAllTcp6Connections()
