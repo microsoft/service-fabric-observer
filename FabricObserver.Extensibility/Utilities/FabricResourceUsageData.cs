@@ -63,7 +63,7 @@ namespace FabricObserver.Observers.Utilities
                 Units = "MB";
             }
 
-            if (property.Contains("%") ||
+            if (property.Contains('%') ||
                 property.ToLower().Contains("cpu") ||
                 property.ToLower().Contains("percent"))
             {
@@ -139,7 +139,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 double average = 0.0;
 
-                if (Data == null || Data.Count() == 0)
+                if (Data == null || !Data.Any())
                 {
                     return average;
                 }
