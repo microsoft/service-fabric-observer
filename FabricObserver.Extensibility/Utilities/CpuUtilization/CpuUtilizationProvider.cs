@@ -3,15 +3,17 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using NLog;
 using System;
 
 namespace FabricObserver.Observers.Utilities
 {
     public abstract class CpuUtilizationProvider
     {
-        public abstract float GetProcessorTimePercentage();
         private static CpuUtilizationProvider instance;
-        private static readonly object lockObj = new();
+        private static readonly object instanceLock = new();
+        private static readonly object loggerLock = new();
+        private static Logger logger = null;
 
         public static CpuUtilizationProvider Instance
         {
@@ -19,7 +21,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 if (instance == null)
                 {
-                    lock (lockObj)
+                    lock (instanceLock)
                     {
                         if (instance == null)
                         {
@@ -43,6 +45,31 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
+        protected static Logger CpuInfoLogger
+        {
+            get
+            {
+                if (logger == null)
+                {
+                    lock (loggerLock)
+                    {
+                        logger ??= new Logger("CpuInfoProvider");
+                    }
+                }
+
+                return logger;
+            }
+        }
+
+        /// <summary>
+        /// Gets processor time percentage across all cores.
+        /// </summary>
+        /// <returns></returns>
+        public abstract float GetProcessorTimePercentage();
+
+        /// <summary>
+        /// Free resources owned by this instance.
+        /// </summary>
         public abstract void Dispose();
     }
 }

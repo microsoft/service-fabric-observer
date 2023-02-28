@@ -20,14 +20,25 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         /// <param name="procId">The target process identifier.</param>
         /// <param name="procName">The name of the process.</param>
-        /// <returns>CPU percentage in use as double value</returns>
+        /// <returns>CPU Time percentage for the process as double value. If the supplied procName is no longer mapped to the supplied procId,
+        /// then the result will be -1. If the function can't get a handle to the process object, then the result will be -1.</returns>
         public double GetCurrentCpuUsagePercentage(int procId, string procName)
         {
+            // Is procId still mapped to procName? If not, then this process is not the droid we're looking for.
+            if (NativeMethods.GetProcessNameFromId(procId) != procName)
+            {
+                ProcessInfoProvider.ProcessInfoLogger.LogWarning($"GetCurrentCpuUsagePercentage: {procId} is no longer mapped to {procName}");
+
+                // Caller should ignore this result. Don't want to use an Exception here.
+                return -1;
+            }
+
             SafeProcessHandle sProcHandle = NativeMethods.GetSafeProcessHandle((uint)procId);
-            
+
             if (sProcHandle.IsInvalid)
             {
-                return 0;
+                // Caller should ignore this result. Don't want to use an Exception here.
+                return -1;
             }
 
             try
@@ -80,7 +91,7 @@ namespace FabricObserver.Observers.Utilities
             systemTimesLastKernelTime.dwLowDateTime = systemTimesRawKernelTime.dwLowDateTime;
         }
 
-        private ulong SubtractTimes(FILETIME currentFileTime, FILETIME lastUpdateFileTime)
+        private static ulong SubtractTimes(FILETIME currentFileTime, FILETIME lastUpdateFileTime)
         {
             ulong currentTime = unchecked(((ulong)currentFileTime.dwHighDateTime << 32) | (uint)currentFileTime.dwLowDateTime);
             ulong lastUpdateTime = unchecked(((ulong)lastUpdateFileTime.dwHighDateTime << 32) | (uint)lastUpdateFileTime.dwLowDateTime);

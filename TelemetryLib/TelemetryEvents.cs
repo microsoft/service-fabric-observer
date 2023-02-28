@@ -72,7 +72,7 @@ namespace FabricObserver.TelemetryLib
                     { "ParallelCapable", foData.ParallelExecutionCapable.ToString() },
                     { "UpTime", foData.UpTime },
                     { "Timestamp", DateTime.UtcNow.ToString("o") },
-                    { "OS", foData.OS }
+                    { "OS", FabricObserverOperationalEventData.OS }
                 };
 
                 if (eventProperties.TryGetValue("ClusterType", out string clustType))
@@ -253,7 +253,7 @@ namespace FabricObserver.TelemetryLib
                     { "ErrorMessage", errorData.ErrorMessage },
                     { "Stack", errorData.ErrorStack },
                     { "Timestamp", DateTime.UtcNow.ToString("o") },
-                    { "OS", errorData.OS }
+                    { "OS", CriticalErrorEventData.OS }
                 };
 
                 string nodeHashString = string.Empty;
@@ -289,11 +289,13 @@ namespace FabricObserver.TelemetryLib
             // allow time for flushing.
             Thread.Sleep(1000);
             appInsightsTelemetryConf?.Dispose();
+
+            GC.SuppressFinalize(this);
         }
 
         const int Retries = 4;
 
-        private bool TryWriteLogFile(string path, string content)
+        private static bool TryWriteLogFile(string path, string content)
         {
             if (string.IsNullOrEmpty(content))
             {
@@ -345,7 +347,7 @@ namespace FabricObserver.TelemetryLib
                     { "ClusterType", clusterType },
                     { "COVersion", eventData.Version },
                     { "Timestamp", DateTime.UtcNow.ToString("o") },
-                    { "OS", eventData.OS }
+                    { "OS", ClusterObserverOperationalEventData.OS }
                 };
 
                 if (eventProperties.TryGetValue("ClusterType", out string clustType))
@@ -418,7 +420,7 @@ namespace FabricObserver.TelemetryLib
             }
         }
 
-        private bool TryDeserializeFOEventData(string json, out FabricObserverOperationalEventData obj)
+        private static bool TryDeserializeFOEventData(string json, out FabricObserverOperationalEventData obj)
         {
             try
             {

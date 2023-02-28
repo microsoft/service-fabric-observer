@@ -20,10 +20,11 @@ namespace FabricObserver.Observers.Utilities
         private TimeSpan currentTotalProcessorTime;
 
         /// <summary>
-        /// This function computes the total percentage of all cpus that the supplied process is currently using.
+        /// This function computes process CPU time as a percentage of all processors. It employs .NET core's Process object, which is efficient on Linux, but not
+        /// Windows. In the latter case, use CpuUsageWin32.GetCurrentCpuUsagePercentage instead.
         /// </summary>
         /// <param name="procId">Target Process object</param>
-        /// <returns>CPU percentage in use as double value</returns>
+        /// <returns>CPU Time percentage for supplied procId. If the process is no longer running, then -1 will be returned.</returns>
         public double GetCurrentCpuUsagePercentage(int procId, string procName = null)
         {
             try
@@ -50,10 +51,9 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (Exception e) when (e is ArgumentException || e is Win32Exception || e is InvalidOperationException || e is NotSupportedException)
             {
-
+                // Caller should ignore this result. Don't want to use an Exception here.
+                return -1;
             }
-
-            return 0.0;
         }
     }
 }

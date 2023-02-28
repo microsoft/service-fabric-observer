@@ -24,10 +24,9 @@ namespace FabricObserver.Observers.Utilities
         private static readonly object _lock = new();
         private readonly object _lockUpdate = new();
         private volatile bool hasWarnedProcessNameLength = false;
+        private readonly TimeSpan maxLifetimeForProcCache = TimeSpan.FromMinutes(3);
+        private readonly ConcurrentDictionary<string, List<(string InternalName, int Pid)>> _procCache = new();
         private DateTime sameNamedProcCacheLastUpdated = DateTime.MinValue;
-        private TimeSpan maxLifetimeForProcCache = TimeSpan.FromMinutes(3);
-        private readonly ConcurrentDictionary<string, List<(string InternalName, int Pid)>> _procCache =
-            new();
 
         public override float GetProcessWorkingSetMb(int processId, string procName, CancellationToken token, bool getPrivateWorkingSet = false)
         {
@@ -203,7 +202,7 @@ namespace FabricObserver.Observers.Utilities
                     }
                     catch (InvalidOperationException e)
                     {
-                        Logger.LogWarning($"GetProcessKvsLvidsUsagePercentage (Returning -1): Handled Exception from GetInternalProcessName.{Environment.NewLine}" +
+                        ProcessInfoLogger.LogWarning($"GetProcessKvsLvidsUsagePercentage (Returning -1): Handled Exception from GetInternalProcessName.{Environment.NewLine}" +
                                           $"The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for: {e.Message}");
                         return -1;
                     }
@@ -237,12 +236,12 @@ namespace FabricObserver.Observers.Utilities
             catch (InvalidOperationException ioe)
             {
                 // The Counter layout for the Category specified is invalid? This can happen if a user messes around with Reg key values. Not likely.
-                Logger.LogWarning($"GetProcessKvsLvidsUsagePercentage: Handled Win32Exception:{Environment.NewLine}{ioe.Message}");
+                ProcessInfoLogger.LogWarning($"GetProcessKvsLvidsUsagePercentage: Handled Win32Exception:{Environment.NewLine}{ioe.Message}");
             }
             catch (Win32Exception we)
             {
                 // Internal exception querying counter (Win32 code). There is nothing to do here. Log the details. Most likely transient.
-                Logger.LogWarning($"GetProcessKvsLvidsUsagePercentage: Handled Win32Exception:{Environment.NewLine}{we.Message}");
+                ProcessInfoLogger.LogWarning($"GetProcessKvsLvidsUsagePercentage: Handled Win32Exception:{Environment.NewLine}{we.Message}");
             }
             finally
             {
@@ -253,7 +252,7 @@ namespace FabricObserver.Observers.Utilities
             return -1;
         }
 
-        private List<(string procName, int pid)> TupleGetChildProcessesWin32(int processId, NativeMethods.SafeObjectHandle handleToSnapshot)
+        private static List<(string procName, int pid)> TupleGetChildProcessesWin32(int processId, NativeMethods.SafeObjectHandle handleToSnapshot)
         {
             try
             {
@@ -269,19 +268,19 @@ namespace FabricObserver.Observers.Utilities
 
             catch (Exception e) when (e is Win32Exception) // e.g., process is no longer running.
             {
-                Logger.LogWarning($"Handled Exception in TupleGetChildProcessesWin32:{Environment.NewLine}{e.Message}");
+                ProcessInfoLogger.LogWarning($"Handled Exception in TupleGetChildProcessesWin32:{Environment.NewLine}{e.Message}");
             }
             catch (Exception e)
             {
                 // Log the full error(including stack trace) for debugging purposes.
-                Logger.LogError($"Unhandled Exception in TupleGetChildProcessesWin32:{Environment.NewLine}{e}");
+                ProcessInfoLogger.LogError($"Unhandled Exception in TupleGetChildProcessesWin32:{Environment.NewLine}{e}");
                 throw;
             }
 
             return null;
         }
 
-        private int GetProcessHandleCountWin32(int processId)
+        private static int GetProcessHandleCountWin32(int processId)
         {
             SafeProcessHandle handle = null;
 
@@ -295,7 +294,7 @@ namespace FabricObserver.Observers.Utilities
                     // The related Observer will have logged any privilege related failure.
                     if (Marshal.GetLastWin32Error() != 5)
                     {
-                        Logger.LogWarning($"GetProcessHandleCountWin32 for process id {processId}: Failed with Win32 error code {Marshal.GetLastWin32Error()}.");
+                        ProcessInfoLogger.LogWarning($"GetProcessHandleCountWin32 for process id {processId}: Failed with Win32 error code {Marshal.GetLastWin32Error()}.");
                     }
                 }
 
@@ -306,7 +305,7 @@ namespace FabricObserver.Observers.Utilities
                 // Access denied (FO is running as a less privileged user than the target process).
                 if (e is Win32Exception && (e as Win32Exception).NativeErrorCode != 5)
                 {
-                    Logger.LogWarning($"GetProcessHandleCountWin32: Exception getting working set for process {processId}:{Environment.NewLine}{e.Message}");
+                    ProcessInfoLogger.LogWarning($"GetProcessHandleCountWin32: Exception getting working set for process {processId}:{Environment.NewLine}{e.Message}");
                 }
 
                 return -1;
@@ -325,11 +324,11 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="getPrivateBytes">Whether or not to return Private Bytes (The Commit Charge value in bytes for this process. 
         /// Commit Charge is the total amount of private memory that the memory manager has committed for a running process.)</param>
         /// <returns>Process memory usage expressed as Megabytes.</returns>
-        private float GetProcessMemoryMbWin32(int processId, bool getPrivateBytes = false)
+        private static float GetProcessMemoryMbWin32(int processId, bool getPrivateBytes = false)
         {
             if (processId < 1)
             {
-                Logger.LogWarning($"GetProcessMemoryMbWin32: Process ID is an unsupported value ({processId}). Returning 0F.");
+                ProcessInfoLogger.LogWarning($"GetProcessMemoryMbWin32: Process ID is an unsupported value ({processId}). Returning 0F.");
                 return 0F;
             }
 
@@ -355,7 +354,7 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
             {
-                Logger.LogWarning($"GetProcessMemoryMbWin32: Exception getting working set for process {processId}: {e.Message}");
+                ProcessInfoLogger.LogWarning($"GetProcessMemoryMbWin32: Exception getting working set for process {processId}: {e.Message}");
                 return 0F;
             }
             finally
@@ -369,7 +368,7 @@ namespace FabricObserver.Observers.Utilities
         {
             if (string.IsNullOrWhiteSpace(procName) || procId < 1)
             {
-                Logger.LogWarning($"GetProcessMemoryMbPerfCounter: Unsupported process information provided ({procName ?? "null"}, {procId})");
+                ProcessInfoLogger.LogWarning($"GetProcessMemoryMbPerfCounter: Unsupported process information provided ({procName ?? "null"}, {procId})");
                 return 0F;
             }
 
@@ -378,7 +377,7 @@ namespace FabricObserver.Observers.Utilities
                 // The related Observer will have logged any privilege related failure.
                 if (Marshal.GetLastWin32Error() != 5)
                 {
-                    Logger.LogWarning($"GetProcessMemoryMbPerfCounter: The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for. " +
+                    ProcessInfoLogger.LogWarning($"GetProcessMemoryMbPerfCounter: The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for. " +
                                       $"Error Code: {Marshal.GetLastWin32Error()}");
                 }
 
@@ -398,7 +397,7 @@ namespace FabricObserver.Observers.Utilities
                     {
                         if (!hasWarnedProcessNameLength)
                         {
-                            Logger.LogWarning(
+                            ProcessInfoLogger.LogWarning(
                                 $"Process name {procName} exceeds max length (64) for InstanceName (.NET Core 3.1). Supplying Full Working Set (Private + Shared) value instead (no PerformanceCounter usage). " +
                                 $"Will not log this again until FO restarts.");
 
@@ -429,27 +428,26 @@ namespace FabricObserver.Observers.Utilities
             {
                 // Most likely the process isn't the one we are looking for (current procId no longer maps to internal procName as contained in the same-named proc data cache).
 
-                Logger.LogWarning($"GetProcessMemoryMbPerfCounter (Returning 0): Handled Exception from GetInternalProcessName.{Environment.NewLine}" +
-                                  $"The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for: {e.Message}");
+                ProcessInfoLogger.LogWarning(
+                    $"GetProcessMemoryMbPerfCounter (Returning 0): Handled Exception from GetInternalProcessName.{Environment.NewLine}" +
+                    $"The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for: {e.Message}");
 #endif
                 return 0F;
             }
 
             try
             {
-                using (PerformanceCounter perfCounter = new("Process", perfCounterName, internalProcName, true))
-                {
-                    return perfCounter.NextValue() / 1024 / 1024;
-                }
+                using PerformanceCounter perfCounter = new("Process", perfCounterName, internalProcName, true);
+                return perfCounter.NextValue() / 1024 / 1024;
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is UnauthorizedAccessException || e is Win32Exception)
             {
-                Logger.LogWarning($"Handled exception in GetProcessMemoryMbPerfCounter: Returning 0.{Environment.NewLine}{e.Message}");
+                ProcessInfoLogger.LogWarning($"Handled exception in GetProcessMemoryMbPerfCounter: Returning 0.{Environment.NewLine}{e.Message}");
             }
             catch (Exception e)
             {
                 // Log the full error (including stack trace) for debugging purposes.
-                Logger.LogWarning($"Unhandled exception in GetProcessMemoryMbPerfCounter:{Environment.NewLine}{e}");
+                ProcessInfoLogger.LogWarning($"Unhandled exception in GetProcessMemoryMbPerfCounter:{Environment.NewLine}{e}");
                 throw;
             }
 
@@ -467,7 +465,7 @@ namespace FabricObserver.Observers.Utilities
                     // The related Observer will have logged any privilege related failure.
                     if (Marshal.GetLastWin32Error() != 5)
                     {
-                        Logger.LogWarning($"GetInternalProcessName: Process Name ({procName}) is no longer mapped to supplied ID ({pid}): {Marshal.GetLastWin32Error()}.");
+                        ProcessInfoLogger.LogWarning($"GetInternalProcessName: Process Name ({procName}) is no longer mapped to supplied ID ({pid}): {Marshal.GetLastWin32Error()}.");
                     }
 
                     return null;
@@ -493,14 +491,14 @@ namespace FabricObserver.Observers.Utilities
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
             {
 #if DEBUG
-                Logger.LogWarning($"GetInternalProcessName: Failure getting data from cache. Name: {procName}, Pid: {pid}");
+                ProcessInfoLogger.LogWarning($"GetInternalProcessName: Failure getting data from cache. Name: {procName}, Pid: {pid}");
 #endif
             }
             catch (Exception e) when (!(e is InvalidOperationException || e is OperationCanceledException || e is TaskCanceledException))
             {
                 // Log the full error (including stack trace) for debugging purposes. Note: Caller must handle InvalidOperationException as in this case it likely means
                 // the process no longer exists with the same id (or internal name). So, don't re-throw as Unhandled here.
-                Logger.LogError(
+                ProcessInfoLogger.LogError(
                     $"Unhandled exception in GetInternalProcessName: Unable to determine internal process name for {procName} with id {pid}{Environment.NewLine}{e}");
 
                 throw;
@@ -509,7 +507,7 @@ namespace FabricObserver.Observers.Utilities
             return procName;
         }
 
-        private string GetInternalProcNameFromId(string procName, int pid, CancellationToken token)
+        private static string GetInternalProcNameFromId(string procName, int pid, CancellationToken token)
         {
             token.ThrowIfCancellationRequested();
 
