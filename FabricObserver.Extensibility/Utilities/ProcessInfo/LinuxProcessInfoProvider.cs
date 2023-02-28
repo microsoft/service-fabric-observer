@@ -79,7 +79,7 @@ namespace FabricObserver.Observers.Utilities
 
                 if (process?.ExitCode != 0)
                 {
-                    Logger.LogWarning($"elevated_proc_fd exited with: {process.ExitCode}");
+                    ProcessInfoLogger.LogWarning($"elevated_proc_fd exited with: {process.ExitCode}");
                     
                     // Try and work around the unsetting of caps issues when SF runs a cluster upgrade.
                     if (error.ToLower().Contains("permission denied"))
@@ -186,7 +186,7 @@ namespace FabricObserver.Observers.Utilities
             return -1;
         }
 
-        private List<(string ProcName, int Pid)> TupleGetChildProcessInfo(int processId)
+        private static List<(string ProcName, int Pid)> TupleGetChildProcessInfo(int processId)
         {
             string pidCmdResult = $"ps -o pid= --ppid {processId}".Bash();
             string procNameCmdResult = $"ps -o comm= --ppid {processId}".Bash();

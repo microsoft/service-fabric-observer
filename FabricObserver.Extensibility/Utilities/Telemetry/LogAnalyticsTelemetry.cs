@@ -295,7 +295,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 string jsonPayload = JsonConvert.SerializeObject(
                         new
                         {
-                            ClusterId = eventData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId,
+                            ClusterId = ServiceFabricUpgradeEventData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId,
                             Timestamp = DateTime.UtcNow,
                             eventData.OS,
                             CurrentUpgradeDomain = eventData.FabricUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName,
@@ -328,7 +328,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 string jsonPayload = JsonConvert.SerializeObject(
                         new
                         {
-                            ClusterId = eventData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId,
+                            ClusterId = ServiceFabricUpgradeEventData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId,
                             Timestamp = DateTime.UtcNow,
                             eventData.OS,
                             ApplicationName = eventData.ApplicationUpgradeProgress.ApplicationName?.OriginalString,

@@ -697,21 +697,6 @@ namespace FabricObserver.Observers
                     duration = MonitorDuration;
                 }
 
-                /* CPU, Memory, File Handles/FDs (Linux)
-                 
-                   Note: Please make sure you understand the normal state of your nodes
-                   with respect to the machine resource use and/or abuse by your service(s).
-                   For example, if it is normal for your services to consume 90% of available CPU and memory
-                   as part of the work they perform under normal traffic flow, then it doesn't make sense to warn or
-                   error on these conditions. 
-                */
-
-                if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
-                {
-                    // Warm up counter.
-                    _ = CpuUtilizationProvider.Instance.GetProcessorTimePercentage();
-                }
-
                 // OS-level file handle monitoring only makes sense for Linux, where the Maximum system-wide number of handles the kernel will allocate is a user-configurable setting.
                 // Windows does not have a configurable setting for Max Handles as the number of handles available to the system is dynamic (even if the max per process is not). 
                 // As such, for Windows, GetMaximumConfiguredFileHandlesCount always return -1, by design. Also, GetTotalAllocatedFileHandlesCount is not implemented for Windows (just returns -1).
@@ -812,7 +797,7 @@ namespace FabricObserver.Observers
                         }
                     }
 
-                    await Task.Delay(1000, Token);
+                    await Task.Delay(250, Token);
                 }
 
                 timer.Stop();

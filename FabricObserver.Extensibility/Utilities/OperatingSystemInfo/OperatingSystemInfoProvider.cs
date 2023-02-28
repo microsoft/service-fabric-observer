@@ -12,9 +12,9 @@ namespace FabricObserver.Observers.Utilities
     public abstract class OSInfoProvider
     {
         private static OSInfoProvider instance;
-        private static readonly object _instanceLock = new();
-        private static readonly object _loggerLock = new();
-        private static Logger _logger = null;
+        private static readonly object instanceLock = new();
+        private static readonly object loggerLock = new();
+        private static Logger logger = null;
 
         public static OSInfoProvider Instance
         {
@@ -22,7 +22,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 if (instance == null)
                 {
-                    lock (_instanceLock)
+                    lock (instanceLock)
                     {
                         if (instance == null)
                         {
@@ -46,18 +46,15 @@ namespace FabricObserver.Observers.Utilities
         {
             get
             {
-                if (_logger == null)
+                if (logger == null)
                 {
-                    lock (_loggerLock)
+                    lock (loggerLock)
                     {
-                        if (_logger == null)
-                        {
-                            _logger = new Logger("OSInfo");
-                        }
+                        logger ??= new Logger("OSInfoProvider");
                     }
                 }
 
-                return _logger;
+                return logger;
             }
         }
 

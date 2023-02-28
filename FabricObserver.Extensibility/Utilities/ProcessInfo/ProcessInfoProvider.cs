@@ -13,7 +13,9 @@ namespace FabricObserver.Observers.Utilities
     public abstract class ProcessInfoProvider : IProcessInfoProvider
     {
         private static IProcessInfoProvider instance;
-        private static readonly object lockObj = new();
+        private static readonly object instanceLock = new();
+        private static readonly object loggerLock = new();
+        private static Logger logger;
 
         public static IProcessInfoProvider Instance
         {
@@ -21,7 +23,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 if (instance == null)
                 {
-                    lock (lockObj)
+                    lock (instanceLock)
                     {
                         if (instance == null)
                         {
@@ -45,10 +47,21 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        protected Logger Logger 
-        { 
-            get; 
-        } = new Logger("Utilities");
+        internal static Logger ProcessInfoLogger
+        {
+            get
+            {
+                if (logger == null)
+                {
+                    lock (loggerLock)
+                    {
+                        logger ??= new Logger("ProcessInfoProvider");
+                    }
+                }
+
+                return logger;
+            }
+        }
 
         public abstract float GetProcessWorkingSetMb(int processId, string procName, CancellationToken token, bool getPrivateWorkingSet = false);
 
@@ -69,11 +82,9 @@ namespace FabricObserver.Observers.Utilities
         {
             try
             {
-                using (Process p = Process.GetProcessById(processId))
-                {
-                    p.Refresh();
-                    return p.Threads.Count;
-                }
+                using Process p = Process.GetProcessById(processId);
+                p.Refresh();
+                return p.Threads.Count;
             }
             catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is SystemException)
             {

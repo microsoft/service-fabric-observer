@@ -39,7 +39,7 @@ namespace FabricObserver.Observers
             get; private set;
         }
 
-        public bool IsWindows => OperatingSystem.IsWindows();
+        public static bool IsWindows => OperatingSystem.IsWindows();
 
         // Process dump settings. Only AppObserver and Windows is supported. \\
         public string DumpsPath
@@ -504,6 +504,7 @@ namespace FabricObserver.Observers
         public void Dispose()
         {
             Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         // Windows process dmp creator.\\
@@ -556,10 +557,7 @@ namespace FabricObserver.Observers
                 return false;
             }
 
-            if (ServiceDumpCountDictionary == null)
-            {
-                ServiceDumpCountDictionary = new ConcurrentDictionary<string, (int DumpCount, DateTime LastDump)>();
-            }
+            ServiceDumpCountDictionary ??= new ConcurrentDictionary<string, (int DumpCount, DateTime LastDump)>();
 
             StringBuilder sb = new(metric);
             string metricName = sb.Replace("Total", string.Empty)
@@ -610,43 +608,31 @@ namespace FabricObserver.Observers
                 return false;
             }
 
-            NativeMethods.MINIDUMP_TYPE miniDumpType;
-
-            switch (DumpType)
+            var miniDumpType = DumpType switch
             {
-                case DumpType.Full:
+                DumpType.Full => NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemory |
+                                 NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs |
+                                 NativeMethods.MINIDUMP_TYPE.MiniDumpWithHandleData |
+                                 NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules |
+                                 NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemoryInfo |
+                                 NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo |
+                                 NativeMethods.MINIDUMP_TYPE.MiniDumpWithTokenInformation,
 
-                    miniDumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemory |
-                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs |
-                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithHandleData |
-                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules |
-                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemoryInfo |
-                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo |
-                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithTokenInformation;
-                    break;
+                DumpType.MiniPlus => NativeMethods.MINIDUMP_TYPE.MiniDumpWithPrivateReadWriteMemory |
+                                     NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs |
+                                     NativeMethods.MINIDUMP_TYPE.MiniDumpWithHandleData |
+                                     NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules |
+                                     NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemoryInfo |
+                                     NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo |
+                                     NativeMethods.MINIDUMP_TYPE.MiniDumpWithTokenInformation,
 
-                case DumpType.MiniPlus:
+                DumpType.Mini => NativeMethods.MINIDUMP_TYPE.MiniDumpNormal |
+                                 NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs |
+                                 NativeMethods.MINIDUMP_TYPE.MiniDumpWithHandleData |
+                                 NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo,
 
-                    miniDumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpWithPrivateReadWriteMemory |
-                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs |
-                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithHandleData |
-                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithUnloadedModules |
-                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithFullMemoryInfo |
-                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo |
-                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithTokenInformation;
-                    break;
-
-                case DumpType.Mini:
-
-                    miniDumpType = NativeMethods.MINIDUMP_TYPE.MiniDumpNormal |
-                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithDataSegs |
-                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithHandleData |
-                                   NativeMethods.MINIDUMP_TYPE.MiniDumpWithThreadInfo;
-                    break;
-
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(DumpType), DumpType, null);
-            }
+                _ => throw new NotSupportedException($"Unsupported dump type."),
+            };
 
             string dumpFilePath = null;
 
@@ -1453,7 +1439,7 @@ namespace FabricObserver.Observers
         /// <param name="procName">The process name.</param>
         /// <param name="procId">The process id.</param>
         /// <returns>True if the pid is mapped to the process of supplied name. False otherwise.</returns>
-        public bool EnsureProcess(string procName, int procId)
+        public static bool EnsureProcess(string procName, int procId)
         {
             if (string.IsNullOrWhiteSpace(procName) || procId < 1)
             {
@@ -1650,7 +1636,7 @@ namespace FabricObserver.Observers
             CsvFileLogger.BaseDataLogFolderPath = !string.IsNullOrWhiteSpace(dataLogPath) ? Path.Combine(dataLogPath, ObserverName) : Path.Combine(Environment.CurrentDirectory, "fabric_observer_csvdata", ObserverName);
         }
 
-        private bool IsObserverWebApiAppInstalled()
+        private static bool IsObserverWebApiAppInstalled()
         {
             try
             {

@@ -386,7 +386,7 @@ namespace ClusterObserver
             }
         }
 
-        private ClusterObserverOperationalEventData GetClusterObserverInternalTelemetryData()
+        private static ClusterObserverOperationalEventData GetClusterObserverInternalTelemetryData()
         {
             ClusterObserverOperationalEventData telemetryData = null;
 

@@ -7,9 +7,8 @@
 	<TargetFramework>net6.0</TargetFramework>
 	<Nullable>disable</Nullable>
 	<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
-	<ServerGarbageCollection>False</ServerGarbageCollection>
 	<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
-	<TargetLatestRuntimePatch>False</TargetLatestRuntimePatch>
+	<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
     <Copyright>Copyright © 2022</Copyright>
     <Product>FabricObserver</Product>
     <Version>3.2.5</Version>

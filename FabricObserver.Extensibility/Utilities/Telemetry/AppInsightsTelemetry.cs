@@ -594,7 +594,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 {
                     { "EventName", "ClusterUpgradeEvent" },
                     { "TaskName", eventData.TaskName },
-                    { "ClusterId", eventData.ClusterId },
+                    { "ClusterId", ServiceFabricUpgradeEventData.ClusterId },
                     { "Timestamp", DateTime.UtcNow.ToString("o") },
                     { "OS", eventData.OS },
                     { "UpgradeTargetCodeVersion", eventData.FabricUpgradeProgress.UpgradeDescription?.TargetCodeVersion },
@@ -639,7 +639,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 {
                     { "EventName", "ApplicationUpgradeEvent" },
                     { "TaskName", eventData.TaskName },
-                    { "ClusterId", eventData.ClusterId },
+                    { "ClusterId", ServiceFabricUpgradeEventData.ClusterId },
                     { "Timestamp", DateTime.UtcNow.ToString("o") },
                     { "OS", eventData.OS },
                     { "ApplicationName", eventData.ApplicationUpgradeProgress.ApplicationName?.OriginalString },

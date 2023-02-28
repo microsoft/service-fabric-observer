@@ -336,7 +336,7 @@ namespace FabricObserver.Observers.Utilities
             return -1;
         }
 
-        private async Task<(int ExitCode, List<string> Output)> ExecuteProcessAsync(string fileName, string arguments)
+        private static async Task<(int ExitCode, List<string> Output)> ExecuteProcessAsync(string fileName, string arguments)
         {
             var startInfo = new ProcessStartInfo
             {

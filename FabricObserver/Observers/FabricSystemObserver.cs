@@ -1046,9 +1046,13 @@ namespace FabricObserver.Observers
                         {
                             int cpu = (int)cpuUsage.GetCurrentCpuUsagePercentage(procId, IsWindows ? dotnetArg : null);
 
-                            if (allCpuData.ContainsKey(dotnetArg))
+                            // process is no longer mapped to process name.
+                            if (cpu > 0)
                             {
-                                allCpuData[dotnetArg].AddData(cpu);
+                                if (allCpuData.ContainsKey(dotnetArg))
+                                {
+                                    allCpuData[dotnetArg].AddData(cpu);
+                                }
                             }
                         }
 

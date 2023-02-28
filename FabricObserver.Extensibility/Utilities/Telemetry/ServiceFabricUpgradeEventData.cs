@@ -16,7 +16,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
     {
         private readonly string _os;
 
-        public string ClusterId => ClusterInformation.ClusterInfoTuple.ClusterId;
+        public static string ClusterId => ClusterInformation.ClusterInfoTuple.ClusterId;
 
         public string TaskName
         {
