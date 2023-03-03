@@ -867,43 +867,52 @@ namespace FabricObserver.Observers
 
                 var app = deployedApps[i];
 
-                // Make sure deployed app is not a containerized app.
-                var codepackages = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                            () => FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(
-                                                    NodeName,
-                                                    app.ApplicationName,
-                                                    null,
-                                                    null,
-                                                    ConfigurationSettings.AsyncTimeout,
-                                                    Token), Token);
-
-                if (codepackages.Count == 0)
+                try
                 {
-                    continue;
-                }
+                    // Make sure deployed app is not a containerized app.
+                    var codepackages = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                                () => FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(
+                                                        NodeName,
+                                                        app.ApplicationName,
+                                                        null,
+                                                        null,
+                                                        ConfigurationSettings.AsyncTimeout,
+                                                        Token), Token);
 
-                int containerHostCount = codepackages.Count(c => c.HostType == HostType.ContainerHost);
-
-                // Ignore containerized apps. ContainerObserver is designed for those types of services.
-                if (containerHostCount > 0)
-                {
-                    continue;
-                }
-
-                // AppObserver does not monitor SF system services.
-                if (app.ApplicationName.OriginalString == "fabric:/System")
-                {
-                    continue;
-                }
-
-                // Multiple code packages?
-                if (codepackages.Count > 1)
-                {
-                    foreach (var codepackage in codepackages)
+                    if (codepackages.Count == 0)
                     {
-                        int procId = (int)codepackage.EntryPoint.ProcessId;
-                        string procName = NativeMethods.GetProcessNameFromId(procId);
+                        continue;
                     }
+
+
+                    int containerHostCount = codepackages.Count(c => c.HostType == HostType.ContainerHost);
+
+                    // Ignore containerized apps. ContainerObserver is designed for those types of services.
+                    if (containerHostCount > 0)
+                    {
+                        continue;
+                    }
+
+                    // AppObserver does not monitor SF system services.
+                    if (app.ApplicationName.OriginalString == "fabric:/System")
+                    {
+                        continue;
+                    }
+
+                    // Multiple code packages?
+                    if (codepackages.Count > 1)
+                    {
+                        foreach (var codepackage in codepackages)
+                        {
+                            int procId = (int)codepackage.EntryPoint.ProcessId;
+                            string procName = NativeMethods.GetProcessNameFromId(procId);
+                        }
+                    }
+                }
+                catch (FabricException fe)
+                {
+                    ObserverLogger.LogWarning($"Handled FabricException from GetDeployedCodePackageListAsync call for app {app.ApplicationName.OriginalString}: {fe.Message}.");
+                    continue;
                 }
 
                 // App filtering: AppExcludeList, AppIncludeList. This is only useful when you are observing All/* applications for a range of thresholds.
