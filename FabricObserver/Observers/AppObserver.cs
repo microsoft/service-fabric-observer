@@ -352,92 +352,23 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                // CPU Time (Percent)
-                if (AllAppCpuData.ContainsKey(id))
+                try
                 {
-                    var parentFrud = AllAppCpuData[id];
-
-                    if (hasChildProcs)
+                    // CPU Time (Percent)
+                    if (AllAppCpuData.ContainsKey(id))
                     {
-                        ProcessChildProcs(AllAppCpuData, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
-                    }
+                        var parentFrud = AllAppCpuData[id];
 
-                    // Parent's and aggregated (summed) descendant process data (if any).
-                    ProcessResourceDataReportHealth(
-                        parentFrud,
-                        app.CpuErrorLimitPercent,
-                        app.CpuWarningLimitPercent,
-                        TTL,
-                        EntityType.Service,
-                        processName,
-                        repOrInst,
-                        app.DumpProcessOnError && EnableProcessDumps,
-                        app.DumpProcessOnWarning && EnableProcessDumps,
-                        processId);
-                }
+                        if (hasChildProcs)
+                        {
+                            ProcessChildProcs(AllAppCpuData, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                        }
 
-                // Working Set (MB)
-                if (AllAppMemDataMb.ContainsKey(id))
-                {
-                    var parentFrud = AllAppMemDataMb[id];
-
-                    if (hasChildProcs)
-                    {
-                        ProcessChildProcs(AllAppMemDataMb, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
-                    }
-
-                    ProcessResourceDataReportHealth(
-                        parentFrud,
-                        app.MemoryErrorLimitMb,
-                        app.MemoryWarningLimitMb,
-                        TTL,
-                        EntityType.Service,
-                        processName,
-                        repOrInst,
-                        app.DumpProcessOnError && EnableProcessDumps,
-                        app.DumpProcessOnWarning && EnableProcessDumps,
-                        processId);
-                }
-
-                // Working Set (Percent)
-                if (AllAppMemDataPercent.ContainsKey(id))
-                {
-                    var parentFrud = AllAppMemDataPercent[id];
-
-                    if (hasChildProcs)
-                    {
-                        ProcessChildProcs(AllAppMemDataPercent, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
-                    }
-
-                    ProcessResourceDataReportHealth(
-                        parentFrud,
-                        app.MemoryErrorLimitPercent,
-                        app.MemoryWarningLimitPercent,
-                        TTL,
-                        EntityType.Service,
-                        processName,
-                        repOrInst,
-                        app.DumpProcessOnError && EnableProcessDumps,
-                        app.DumpProcessOnWarning && EnableProcessDumps,
-                        processId);
-                }
-
-                // Private Bytes (MB)
-                if (AllAppPrivateBytesDataMb.ContainsKey(id))
-                {
-                    var parentFrud = AllAppPrivateBytesDataMb[id];
-
-                    if (hasChildProcs)
-                    {
-                        ProcessChildProcs(AllAppPrivateBytesDataMb, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
-                    }
-
-                    if (app.WarningPrivateBytesMb > 0 || app.ErrorPrivateBytesMb > 0)
-                    {
+                        // Parent's and aggregated (summed) descendant process data (if any).
                         ProcessResourceDataReportHealth(
                             parentFrud,
-                            app.ErrorPrivateBytesMb,
-                            app.WarningPrivateBytesMb,
+                            app.CpuErrorLimitPercent,
+                            app.CpuWarningLimitPercent,
                             TTL,
                             EntityType.Service,
                             processName,
@@ -446,24 +377,21 @@ namespace FabricObserver.Observers
                             app.DumpProcessOnWarning && EnableProcessDumps,
                             processId);
                     }
-                }
 
-                // Private Bytes (Percent)
-                if (AllAppPrivateBytesDataPercent.ContainsKey(id))
-                {
-                    var parentFrud = AllAppPrivateBytesDataPercent[id];
-
-                    if (hasChildProcs)
+                    // Working Set (MB)
+                    if (AllAppMemDataMb.ContainsKey(id))
                     {
-                        ProcessChildProcs(AllAppPrivateBytesDataPercent, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
-                    }
+                        var parentFrud = AllAppMemDataMb[id];
 
-                    if (app.WarningPrivateBytesPercent > 0 || app.ErrorPrivateBytesPercent > 0)
-                    {
+                        if (hasChildProcs)
+                        {
+                            ProcessChildProcs(AllAppMemDataMb, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                        }
+
                         ProcessResourceDataReportHealth(
                             parentFrud,
-                            app.ErrorPrivateBytesPercent,
-                            app.WarningPrivateBytesPercent,
+                            app.MemoryErrorLimitMb,
+                            app.MemoryWarningLimitMb,
                             TTL,
                             EntityType.Service,
                             processName,
@@ -472,182 +400,261 @@ namespace FabricObserver.Observers
                             app.DumpProcessOnWarning && EnableProcessDumps,
                             processId);
                     }
+
+                    // Working Set (Percent)
+                    if (AllAppMemDataPercent.ContainsKey(id))
+                    {
+                        var parentFrud = AllAppMemDataPercent[id];
+
+                        if (hasChildProcs)
+                        {
+                            ProcessChildProcs(AllAppMemDataPercent, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                        }
+
+                        ProcessResourceDataReportHealth(
+                            parentFrud,
+                            app.MemoryErrorLimitPercent,
+                            app.MemoryWarningLimitPercent,
+                            TTL,
+                            EntityType.Service,
+                            processName,
+                            repOrInst,
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            app.DumpProcessOnWarning && EnableProcessDumps,
+                            processId);
+                    }
+
+                    // Private Bytes (MB)
+                    if (AllAppPrivateBytesDataMb.ContainsKey(id))
+                    {
+                        var parentFrud = AllAppPrivateBytesDataMb[id];
+
+                        if (hasChildProcs)
+                        {
+                            ProcessChildProcs(AllAppPrivateBytesDataMb, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                        }
+
+                        if (app.WarningPrivateBytesMb > 0 || app.ErrorPrivateBytesMb > 0)
+                        {
+                            ProcessResourceDataReportHealth(
+                                parentFrud,
+                                app.ErrorPrivateBytesMb,
+                                app.WarningPrivateBytesMb,
+                                TTL,
+                                EntityType.Service,
+                                processName,
+                                repOrInst,
+                                app.DumpProcessOnError && EnableProcessDumps,
+                                app.DumpProcessOnWarning && EnableProcessDumps,
+                                processId);
+                        }
+                    }
+
+                    // Private Bytes (Percent)
+                    if (AllAppPrivateBytesDataPercent.ContainsKey(id))
+                    {
+                        var parentFrud = AllAppPrivateBytesDataPercent[id];
+
+                        if (hasChildProcs)
+                        {
+                            ProcessChildProcs(AllAppPrivateBytesDataPercent, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                        }
+
+                        if (app.WarningPrivateBytesPercent > 0 || app.ErrorPrivateBytesPercent > 0)
+                        {
+                            ProcessResourceDataReportHealth(
+                                parentFrud,
+                                app.ErrorPrivateBytesPercent,
+                                app.WarningPrivateBytesPercent,
+                                TTL,
+                                EntityType.Service,
+                                processName,
+                                repOrInst,
+                                app.DumpProcessOnError && EnableProcessDumps,
+                                app.DumpProcessOnWarning && EnableProcessDumps,
+                                processId);
+                        }
+                    }
+
+                    // RG Memory Monitoring (Private Bytes Percent)
+                    if (AllAppRGMemoryUsagePercent.ContainsKey(id))
+                    {
+                        var parentFrud = AllAppRGMemoryUsagePercent[id];
+
+                        if (hasChildProcs)
+                        {
+                            ProcessChildProcs(AllAppRGMemoryUsagePercent, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                        }
+
+                        ProcessResourceDataReportHealth(
+                            parentFrud,
+                            thresholdError: 0, // Only Warning Threshold is supported for RG reporting.
+                            thresholdWarning: app.WarningRGMemoryLimitPercent > 0 ? app.WarningRGMemoryLimitPercent : MaxRGMemoryInUsePercent, // Default: 90%
+                            TTL,
+                            EntityType.Service,
+                            processName,
+                            repOrInst,
+                            dumpOnError: false, // Not supported
+                            dumpOnWarning: false, // Not supported
+                            processId);
+                    }
+
+                    // TCP Ports - Active
+                    if (AllAppTotalActivePortsData.ContainsKey(id))
+                    {
+                        var parentFrud = AllAppTotalActivePortsData[id];
+
+                        if (hasChildProcs)
+                        {
+                            ProcessChildProcs(AllAppTotalActivePortsData, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                        }
+
+                        ProcessResourceDataReportHealth(
+                            parentFrud,
+                            app.NetworkErrorActivePorts,
+                            app.NetworkWarningActivePorts,
+                            TTL,
+                            EntityType.Service,
+                            processName,
+                            repOrInst,
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            app.DumpProcessOnWarning && EnableProcessDumps,
+                            processId);
+                    }
+
+                    // TCP Ports Total - Ephemeral (port numbers fall in the dynamic range)
+                    if (AllAppEphemeralPortsData.ContainsKey(id))
+                    {
+                        var parentFrud = AllAppEphemeralPortsData[id];
+
+                        if (hasChildProcs)
+                        {
+                            ProcessChildProcs(AllAppEphemeralPortsData, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                        }
+
+                        ProcessResourceDataReportHealth(
+                            parentFrud,
+                            app.NetworkErrorEphemeralPorts,
+                            app.NetworkWarningEphemeralPorts,
+                            TTL,
+                            EntityType.Service,
+                            processName,
+                            repOrInst,
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            app.DumpProcessOnWarning && EnableProcessDumps,
+                            processId);
+                    }
+
+                    // TCP Ports Percentage - Ephemeral (port numbers fall in the dynamic range)
+                    if (AllAppEphemeralPortsDataPercent.ContainsKey(id))
+                    {
+                        var parentFrud = AllAppEphemeralPortsDataPercent[id];
+
+                        if (hasChildProcs)
+                        {
+                            ProcessChildProcs(AllAppEphemeralPortsDataPercent, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                        }
+
+                        ProcessResourceDataReportHealth(
+                            parentFrud,
+                            app.NetworkErrorEphemeralPortsPercent,
+                            app.NetworkWarningEphemeralPortsPercent,
+                            TTL,
+                            EntityType.Service,
+                            processName,
+                            repOrInst,
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            app.DumpProcessOnWarning && EnableProcessDumps,
+                            processId);
+                    }
+
+                    // Handles
+                    if (AllAppHandlesData.ContainsKey(id))
+                    {
+                        var parentFrud = AllAppHandlesData[id];
+
+                        if (hasChildProcs)
+                        {
+                            ProcessChildProcs(AllAppHandlesData, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                        }
+
+                        ProcessResourceDataReportHealth(
+                            parentFrud,
+                            app.ErrorOpenFileHandles > 0 ? app.ErrorOpenFileHandles : app.ErrorHandleCount,
+                            app.WarningOpenFileHandles > 0 ? app.WarningOpenFileHandles : app.WarningHandleCount,
+                            TTL,
+                            EntityType.Service,
+                            processName,
+                            repOrInst,
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            app.DumpProcessOnWarning && EnableProcessDumps,
+                            processId);
+                    }
+
+                    // Threads
+                    if (AllAppThreadsData.ContainsKey(id))
+                    {
+                        var parentFrud = AllAppThreadsData[id];
+
+                        if (hasChildProcs)
+                        {
+                            ProcessChildProcs(AllAppThreadsData, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                        }
+
+                        ProcessResourceDataReportHealth(
+                            parentFrud,
+                            app.ErrorThreadCount,
+                            app.WarningThreadCount,
+                            TTL,
+                            EntityType.Service,
+                            processName,
+                            repOrInst,
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            app.DumpProcessOnWarning && EnableProcessDumps,
+                            processId);
+                    }
+
+                    // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
+                    if (EnableKvsLvidMonitoring && AllAppKvsLvidsData != null && AllAppKvsLvidsData.ContainsKey(id))
+                    {
+                        var parentFrud = AllAppKvsLvidsData[id];
+
+                        if (hasChildProcs)
+                        {
+                            ProcessChildProcs(AllAppKvsLvidsData, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                        }
+
+                        // FO will warn if the stateful (Actor, for example) service process has used 75% or greater of available LVIDs. This is not configurable (and a temporary feature).
+                        ProcessResourceDataReportHealth(
+                            parentFrud,
+                            0,
+                            KvsLvidsWarningPercentage,
+                            TTL,
+                            EntityType.Service,
+                            processName,
+                            repOrInst,
+                            app.DumpProcessOnError && EnableProcessDumps,
+                            app.DumpProcessOnWarning && EnableProcessDumps,
+                            processId);
+                    }
+
+                    // Child proc info telemetry.
+                    if (hasChildProcs && MaxChildProcTelemetryDataCount > 0 && childProcessTelemetryDataList.Count > 0)
+                    {
+                        if (IsEtwEnabled)
+                        {
+                            ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, childProcessTelemetryDataList.ToList());
+                        }
+
+                        if (IsTelemetryEnabled)
+                        {
+                            _ = TelemetryClient?.ReportMetricAsync(childProcessTelemetryDataList.ToList(), token);
+                        }
+                    }
                 }
-
-                // RG Memory Monitoring (Private Bytes Percent)
-                if (AllAppRGMemoryUsagePercent.ContainsKey(id))
+                catch (OperationCanceledException)
                 {
-                    var parentFrud = AllAppRGMemoryUsagePercent[id];
-
-                    if (hasChildProcs)
-                    {
-                        ProcessChildProcs(AllAppRGMemoryUsagePercent, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
-                    }
-
-                    ProcessResourceDataReportHealth(
-                        parentFrud,
-                        thresholdError: 0, // Only Warning Threshold is supported for RG reporting.
-                        thresholdWarning: app.WarningRGMemoryLimitPercent > 0 ? app.WarningRGMemoryLimitPercent : MaxRGMemoryInUsePercent, // Default: 90%
-                        TTL,
-                        EntityType.Service,
-                        processName,
-                        repOrInst,
-                        dumpOnError: false, // Not supported
-                        dumpOnWarning: false, // Not supported
-                        processId);
-                }
-
-                // TCP Ports - Active
-                if (AllAppTotalActivePortsData.ContainsKey(id))
-                {
-                    var parentFrud = AllAppTotalActivePortsData[id];
-
-                    if (hasChildProcs)
-                    {
-                        ProcessChildProcs(AllAppTotalActivePortsData, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
-                    }
-
-                    ProcessResourceDataReportHealth(
-                        parentFrud,
-                        app.NetworkErrorActivePorts,
-                        app.NetworkWarningActivePorts,
-                        TTL,
-                        EntityType.Service,
-                        processName,
-                        repOrInst,
-                        app.DumpProcessOnError && EnableProcessDumps,
-                        app.DumpProcessOnWarning && EnableProcessDumps,
-                        processId);
-                }
-
-                // TCP Ports Total - Ephemeral (port numbers fall in the dynamic range)
-                if (AllAppEphemeralPortsData.ContainsKey(id))
-                {
-                    var parentFrud = AllAppEphemeralPortsData[id];
-
-                    if (hasChildProcs)
-                    {
-                        ProcessChildProcs(AllAppEphemeralPortsData, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
-                    }
-
-                    ProcessResourceDataReportHealth(
-                        parentFrud,
-                        app.NetworkErrorEphemeralPorts,
-                        app.NetworkWarningEphemeralPorts,
-                        TTL,
-                        EntityType.Service,
-                        processName,
-                        repOrInst,
-                        app.DumpProcessOnError && EnableProcessDumps,
-                        app.DumpProcessOnWarning && EnableProcessDumps,
-                        processId);
-                }
-
-                // TCP Ports Percentage - Ephemeral (port numbers fall in the dynamic range)
-                if (AllAppEphemeralPortsDataPercent.ContainsKey(id))
-                {
-                    var parentFrud = AllAppEphemeralPortsDataPercent[id];
-
-                    if (hasChildProcs)
-                    {
-                        ProcessChildProcs(AllAppEphemeralPortsDataPercent, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
-                    }
-
-                    ProcessResourceDataReportHealth(
-                        parentFrud,
-                        app.NetworkErrorEphemeralPortsPercent,
-                        app.NetworkWarningEphemeralPortsPercent,
-                        TTL,
-                        EntityType.Service,
-                        processName,
-                        repOrInst,
-                        app.DumpProcessOnError && EnableProcessDumps,
-                        app.DumpProcessOnWarning && EnableProcessDumps,
-                        processId);
-                }
-
-                // Handles
-                if (AllAppHandlesData.ContainsKey(id))
-                {
-                    var parentFrud = AllAppHandlesData[id];
-
-                    if (hasChildProcs)
-                    {
-                        ProcessChildProcs(AllAppHandlesData, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
-                    }
-
-                    ProcessResourceDataReportHealth(
-                        parentFrud,
-                        app.ErrorOpenFileHandles > 0 ? app.ErrorOpenFileHandles : app.ErrorHandleCount,
-                        app.WarningOpenFileHandles > 0 ? app.WarningOpenFileHandles : app.WarningHandleCount,
-                        TTL,
-                        EntityType.Service,
-                        processName,
-                        repOrInst,
-                        app.DumpProcessOnError && EnableProcessDumps,
-                        app.DumpProcessOnWarning && EnableProcessDumps,
-                        processId);
-                }
-
-                // Threads
-                if (AllAppThreadsData.ContainsKey(id))
-                {
-                    var parentFrud = AllAppThreadsData[id];
-
-                    if (hasChildProcs)
-                    {
-                        ProcessChildProcs(AllAppThreadsData, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
-                    }
-
-                    ProcessResourceDataReportHealth(
-                        parentFrud,
-                        app.ErrorThreadCount,
-                        app.WarningThreadCount,
-                        TTL,
-                        EntityType.Service,
-                        processName,
-                        repOrInst,
-                        app.DumpProcessOnError && EnableProcessDumps,
-                        app.DumpProcessOnWarning && EnableProcessDumps,
-                        processId);
-                }
-
-                // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
-                if (EnableKvsLvidMonitoring && AllAppKvsLvidsData != null && AllAppKvsLvidsData.ContainsKey(id))
-                {
-                    var parentFrud = AllAppKvsLvidsData[id];
-
-                    if (hasChildProcs)
-                    {
-                        ProcessChildProcs(AllAppKvsLvidsData, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
-                    }
-
-                    // FO will warn if the stateful (Actor, for example) service process has used 75% or greater of available LVIDs. This is not configurable (and a temporary feature).
-                    ProcessResourceDataReportHealth(
-                        parentFrud,
-                        0,
-                        KvsLvidsWarningPercentage,
-                        TTL,
-                        EntityType.Service,
-                        processName,
-                        repOrInst,
-                        app.DumpProcessOnError && EnableProcessDumps,
-                        app.DumpProcessOnWarning && EnableProcessDumps,
-                        processId);
-                }
-
-                // Child proc info telemetry.
-                if (hasChildProcs && MaxChildProcTelemetryDataCount > 0 && childProcessTelemetryDataList.Count > 0)
-                {
-                    if (IsEtwEnabled)
-                    {
-                        ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, childProcessTelemetryDataList.ToList());
-                    }
-
-                    if (IsTelemetryEnabled)
-                    {
-                        _ = TelemetryClient?.ReportMetricAsync(childProcessTelemetryDataList.ToList(), token);
-                    }
+                    state.Stop();
                 }
             });
 
@@ -692,7 +699,10 @@ namespace FabricObserver.Observers
 
             for (int i = 0; i < userTargetList.Count; i++)
             {
-                Token.ThrowIfCancellationRequested();
+                if (Token.IsCancellationRequested)
+                {
+                    return false;
+                }
 
                 ApplicationInfo application = userTargetList[i];
                 Uri appUri = null;
@@ -810,13 +820,20 @@ namespace FabricObserver.Observers
 #if DEBUG
             for (int i = 0; i < deployedTargetList.Count; i++)
             {
-                Token.ThrowIfCancellationRequested();
+                if (Token.IsCancellationRequested)
+                {
+                    return false;
+                }
+
                 ObserverLogger.LogInfo($"AppObserver settings applied to {deployedTargetList[i].TargetApp}:{Environment.NewLine}{deployedTargetList[i]}");
             }
 #endif
             for (int i = 0; i < repCount; ++i)
             {
-                Token.ThrowIfCancellationRequested();
+                if (Token.IsCancellationRequested)
+                {
+                    return false;
+                }
 
                 var rep = ReplicaOrInstanceList[i];
                 ObserverLogger.LogInfo($"Will observe resource consumption by {rep.ServiceName?.OriginalString}({rep.HostProcessId}) on Node {NodeName}.");
@@ -1914,7 +1931,7 @@ namespace FabricObserver.Observers
                         {
                             if (token.IsCancellationRequested)
                             {
-                                state.Stop();
+                                break;
                             }
 
                             // Make sure the child process still exists. Descendant processes are often ephemeral.
@@ -1931,7 +1948,7 @@ namespace FabricObserver.Observers
                     {
                         if (token.IsCancellationRequested)
                         {
-                            state.Stop();
+                            break;
                         }
 
                         _ = processInfoDictionary.TryAdd(proc.Key, proc.Value);
@@ -2367,13 +2384,13 @@ namespace FabricObserver.Observers
                     else
                     {
                         _ = AllAppPrivateBytesDataMb.TryAdd(
-                               $"{id}:{procName}{procId}",
-                               new FabricResourceUsageData<float>(
-                                       ErrorWarningProperty.PrivateBytesMb,
-                                       $"{id}:{procName}{procId}",
-                                       capacity,
-                                       UseCircularBuffer,
-                                       EnableConcurrentMonitoring));
+                                $"{id}:{procName}{procId}",
+                                new FabricResourceUsageData<float>(
+                                        ErrorWarningProperty.PrivateBytesMb,
+                                        $"{id}:{procName}{procId}",
+                                        capacity,
+                                        UseCircularBuffer,
+                                        EnableConcurrentMonitoring));
 
                         AllAppPrivateBytesDataMb[$"{id}:{procName}{procId}"].AddData(memPb);
                     }
@@ -2524,7 +2541,7 @@ namespace FabricObserver.Observers
                 {
                     if (token.IsCancellationRequested)
                     {
-                        state.Stop();
+                        break;
                     }
 
                     // CPU (all cores) \\
@@ -2597,12 +2614,13 @@ namespace FabricObserver.Observers
             {
                 for (int i = 0; i < depApps.Count; i++)
                 {
-                    Token.ThrowIfCancellationRequested();
+                    if (Token.IsCancellationRequested)
+                    {
+                        return;
+                    }
 
                     try
                     {
-                        Token.ThrowIfCancellationRequested();
-
                         // TargetAppType supplied in user config, so set TargetApp on deployedApp instance by searching for it in the currently deployed application list.
                         if (userTarget.TargetAppType != null)
                         {
@@ -3037,6 +3055,11 @@ namespace FabricObserver.Observers
 
                 foreach (var codepackage in codepackages)
                 {
+                    if (Token.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
                     // If the code package does not belong to a deployed replica, then this is the droid we're looking for (a helper code package or guest executable).
                     if (codepackage.CodePackageName == deployedReplica.CodePackageName)
                     {
