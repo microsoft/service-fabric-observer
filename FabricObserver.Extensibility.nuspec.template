@@ -12,7 +12,7 @@
 		<icon>icon.png</icon>
 		<readme>foextlib.md</readme>
 		<language>en-US</language>
-		<description>This package contains the FabricObserver Extensibility library for use in building FabricObserver and ClusterObserver plugins. NOTE: This version targets .NET 6.</description>
+		<description>This package contains the FabricObserver Extensibility library (.NET 6) for use in building FabricObserver and ClusterObserver plugins. NOTE: This is no longer a .NET Standard 2.0 library.</description>
 		<contentFiles>
 			<files include="**" buildAction="None" copyToOutput="true" />
 		</contentFiles>
