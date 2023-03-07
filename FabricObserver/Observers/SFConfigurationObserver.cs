@@ -15,8 +15,10 @@ using FabricObserver.Observers.Utilities;
 
 namespace FabricObserver.Observers
 {
-    // This observer doesn't monitor or report health status. It is only useful if you employ the FabricObserverWebApi App.
-    // It provides information about the currently installed Service Fabric runtime environment, apps, and services.
+    /* NOTE: SFConfigurationObserver observer is Deprecated: it is only useful if you deploy the now-obsolete (and unsupported) FabricObserverWebApi application.
+       SFConfigurationObserver may change in the future to be more useful, so it has not been deleted for that reason - and for backwards-compatibility. */
+
+    // SFConfigurationObserver provides information about the currently installed Service Fabric runtime environment, apps, and services.
     // The output (a local file) is used by the FO API service to render an HTML page (http://localhost:5000/api/ObserverManager).
     public sealed class SFConfigurationObserver : ObserverBase
     {
