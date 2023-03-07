@@ -398,7 +398,8 @@ namespace FabricObserver.Observers.Utilities
                         if (!hasWarnedProcessNameLength)
                         {
                             ProcessInfoLogger.LogWarning(
-                                $"Process name {procName} exceeds max length (64) for InstanceName (.NET Core 3.1). Supplying Full Working Set (Private + Shared) value instead (no PerformanceCounter usage). " +
+                                $"Process name {procName} exceeds max length (64) for Performance Counter InstanceName (.NET Core) property. " +
+                                $"Supplying Full Working Set (Private + Shared, Win32 API) value instead. " +
                                 $"Will not log this again until FO restarts.");
 
                             hasWarnedProcessNameLength = true;
