@@ -384,10 +384,10 @@ namespace FabricObserver.Observers.Utilities
                 return 0F;
             }
 
-            // Handle the case where supplied process name exceeds the maximum length (64) supported by PerformanceCounter's InstanceName field (.NET Core 3.1).
+            // Handle the case where supplied process name exceeds the maximum length (64) supported by PerformanceCounter's InstanceName field (.NET Core).
             // This should be very rare given this is a Windows/.NET platform restriction and users should understand the limits of the platform they use. However,
             // the documentation (and source code comments) are confusing: One (doc) says 128 chars is max value. The other (source code comment) says 127. In reality, 
-            // it is 64 for .NET Core 3.1, based on my tests..
+            // it is 64 for .NET Core, based on my tests..
             if (procName.Length >= MaxInstanceNameLengthTruncated)
             {
                 // Only log this once to limit disk IO noise and log file size.
