@@ -54,13 +54,13 @@ The top section above is the list of Application Parameters that you can modify 
 
 | Observer | Description |
 | :--- | :--- |
-| [AppObserver](#appobserver) | Monitors CPU usage (Total CPU Time; percentage), Memory usage (Working Set; total or private, MB or percentage of total), and logical Disk space consumption for Service Fabric service processes and their descendants (aka child processes). Alerts when user-supplied thresholds are breached. |
+| [AppObserver](#appobserver) | Monitors service process CPU, Memory, TCP Port, Thread, and Handle usage. Alerts when user-supplied thresholds are breached. |
 | [AzureStorageUploadObserver](#azurestorageuploadobserver) | Runs periodically (do set its RunInterval setting) and will upload dmp files that AppObserver creates when you set dumpProcessOnError to true. It will clean up files after successful upload. |
 | [CertificateObserver](#certificateobserver) | Monitors the expiration date of the cluster certificate and any other certificates provided by the user. Warns when close to expiration. |
 | [ContainerObserver](#containerobserver) | Monitors container CPU and Memory use. Alerts when user-supplied thresholds are breached. |
 | [DiskObserver](#diskobserver) | Monitors logical disk space conusumption and IO queue wait time. Alerts when user-supplied thresholds are breached. |
-| [FabricSystemObserver](#fabricsystemobserver) | Monitors CPU usage, Memory use (Working Set, Mb only), and Disk space consumption for Service Fabric System service processes. Alerts when user-supplied thresholds are breached. |
-| [NetworkObserver](#networkobserver) | Monitors outbound connection state for user-supplied endpoints (hostname/port pairs). This observer checks that the node can reach specific endpoints (over both http (e.g., REST) and direct tcp socket). |
+| [FabricSystemObserver](#fabricsystemobserver) | Monitors CPU, Memory, TCP Port, Thread, and Handle usage for Service Fabric System service processes. Alerts when user-supplied thresholds are breached. |
+| [NetworkObserver](#networkobserver) | Monitors outbound connection state for user-supplied endpoints (hostname/port pairs). This observer checks that the node can reach specific endpoints (over both http (e.g., REST) and direct tcp socket connections). |
 | [NodeObserver](#nodeobserver) | Monitors VM level resource usage across CPU, Memory, firewall rules, static and dynamic ports (aka ephemeral ports), File Handles (Linux). |
 | [OSObserver](#osobserver) | Records basic OS properties across OS version, OS health status, physical/virtual memory use, number of running processes, number of active TCP ports (active/ephemeral), number of enabled firewall rules (Windows), list of recent patches/hotfixes (with hyper-links to related KB articles). |
 | [SFConfigurationObserver](#sfconfigurationobserver) | Records information about the currently installed Service Fabric runtime environment. This observer is currently only useful if the FO Web Api service is deployed. |
