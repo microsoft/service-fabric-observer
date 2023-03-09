@@ -79,7 +79,7 @@ For every other observer, it's XML as per usual.
 ```  
 
 ## AppObserver  
-Observer that monitors CPU usage, Memory use, and Port use for Service Fabric Application service processes and the child processes they spawn. If a service process creates child processes, then these processes will be monitored and their summed resource usage for some metric you are observing will be applied to the parent process (added) and a threshold breach will be determined based on the sum of children and parent resource usage.
+Observer that monitors CPU, Memory, TCP Port, Thread, and Handle usage for Service Fabric user service processes and the child processes they spawn, if enabled. If a service process creates child processes, then these processes will be monitored and their summed resource usage for some metric you are observing will be applied to the parent process (added) and a threshold breach will be determined based on the sum of children and parent resource usage.
 This observer will alert (SF Health event) when user-supplied thresholds are reached. **Please note that this observer should not be used to monitor docker container applications. It is not designed for this task. Instead, please use [ContainerObserver](#containerobserver), which is designed specifically for container monitoring**. 
 
 ***Important: By default, FabricObserver runs as an unprivileged user (NetworkUser on Windows and sfappsuser on Linux). If you want to monitor services that are running as System user (or Admin user) on Windows, you must run FabricObserver as System user.***  
