@@ -378,7 +378,7 @@ namespace FabricObserver.Observers.Utilities
                 if (Marshal.GetLastWin32Error() != 5)
                 {
                     ProcessInfoLogger.LogWarning($"GetProcessMemoryMbPerfCounter: The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for. " +
-                                      $"Error Code: {Marshal.GetLastWin32Error()}");
+                                                 $"Error Code: {Marshal.GetLastWin32Error()}");
                 }
 
                 return 0F;
@@ -398,7 +398,7 @@ namespace FabricObserver.Observers.Utilities
                         if (!hasWarnedProcessNameLength)
                         {
                             ProcessInfoLogger.LogWarning(
-                                $"Process name {procName} exceeds max length (64) for Performance Counter InstanceName (.NET Core) property. " +
+                                $"GetProcessMemoryMbPerfCounter: Process name {procName} exceeds max length (64) for Performance Counter InstanceName (.NET Core) property. " +
                                 $"Supplying Full Working Set (Private + Shared, Win32 API) value instead. " +
                                 $"Will not log this again until FO restarts.");
 

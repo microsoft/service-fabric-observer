@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using ClusterObserver;
+using FabricObserver.Interfaces;
 using FabricObserver.Observers;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
@@ -12,12 +13,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ServiceFabric.Mocks;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Description;
 using System.Fabric.Health;
+using System.Fabric.Query;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -1347,6 +1350,126 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
+        }
+
+        [TestMethod]
+        public async Task Ensure_ConcurrentCollection_HasData_CPU_Win32()
+        {
+            ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
+            FabricClientUtilities fabricClientUtilities = new(NodeName);
+            var services = await fabricClientUtilities.GetAllDeployedReplicasOrInstancesAsync(true, Token);
+            ConcurrentQueue<int> serviceProcs = new();
+
+            ParallelOptions parallelOptions = new()
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount,
+                CancellationToken = Token,
+                TaskScheduler = TaskScheduler.Default
+            };
+
+            _ = Parallel.For(0, services.Count, parallelOptions, (i, state) =>
+            {
+                var service = services.ElementAt(i);
+                string procName = NativeMethods.GetProcessNameFromId((int)service.HostProcessId);
+
+                _ = AllAppCpuData.TryAdd($"{procName}:{service.HostProcessId}", new FabricResourceUsageData<double>(
+                        ErrorWarningProperty.CpuTime,
+                        $"{procName}:{service.HostProcessId}",
+                        8,
+                        false,
+                        true));
+
+                serviceProcs.Enqueue((int)service.HostProcessId);
+            });
+
+            Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Count == AllAppCpuData.Count);
+
+            TimeSpan duration = TimeSpan.FromSeconds(3);
+
+            _ = Parallel.For(0, serviceProcs.Count, parallelOptions, (i, state) =>
+            {
+                Stopwatch sw = Stopwatch.StartNew();
+                int procId = serviceProcs.ElementAt(i);
+                CpuUsageWin32 cpuUsage = new();
+
+                while (sw.Elapsed <= duration)
+                {
+                    double cpu = 0;
+                    string procName = NativeMethods.GetProcessNameFromId(procId);
+                    cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, procName);
+
+                    // procId is no longer mapped to process. see CpuUsageProcess/CpuUsageWin32 impls.
+                    if (cpu < 0)
+                    {
+                        continue;
+                    }
+
+                    AllAppCpuData[$"{procName}:{procId}"].AddData(cpu);
+                    Thread.Sleep(150);
+                }
+            });
+
+            Assert.IsTrue(AllAppCpuData.All(d => d.Value.Data.Any()));
+        }
+
+        [TestMethod]
+        public async Task Ensure_ConcurrentCollection_HasData_CPU_NETProcess()
+        {
+            ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
+            FabricClientUtilities fabricClientUtilities = new(NodeName);
+            var services = await fabricClientUtilities.GetAllDeployedReplicasOrInstancesAsync(true, Token);
+            ConcurrentQueue<int> serviceProcs = new();
+
+            ParallelOptions parallelOptions = new()
+            {
+                MaxDegreeOfParallelism = Environment.ProcessorCount,
+                CancellationToken = Token,
+                TaskScheduler = TaskScheduler.Default
+            };
+
+            _ = Parallel.For(0, services.Count, parallelOptions, (i, state) =>
+            {
+                var service = services.ElementAt(i);
+                string procName = NativeMethods.GetProcessNameFromId((int)service.HostProcessId);
+
+                _ = AllAppCpuData.TryAdd($"{procName}:{service.HostProcessId}", new FabricResourceUsageData<double>(
+                        ErrorWarningProperty.CpuTime,
+                        $"{procName}:{service.HostProcessId}",
+                        8,
+                        false,
+                        true));
+
+                serviceProcs.Enqueue((int)service.HostProcessId);
+            });
+
+            Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Count == AllAppCpuData.Count);
+
+            TimeSpan duration = TimeSpan.FromSeconds(3);
+
+            _ = Parallel.For(0, serviceProcs.Count, parallelOptions, (i, state) =>
+            {
+                Stopwatch sw = Stopwatch.StartNew();
+                int procId = serviceProcs.ElementAt(i);
+                CpuUsageProcess cpuUsage = new();
+
+                while (sw.Elapsed <= duration)
+                {
+                    double cpu = 0;
+                    string procName = NativeMethods.GetProcessNameFromId(procId);
+                    cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, procName);
+
+                    // procId is no longer mapped to process. see CpuUsageProcess/CpuUsageWin32 impls.
+                    if (cpu < 0)
+                    {
+                        continue;
+                    }
+
+                    AllAppCpuData[$"{procName}:{procId}"].AddData(cpu);
+                    Thread.Sleep(150);
+                }
+            });
+
+            Assert.IsTrue(AllAppCpuData.All(d => d.Value.Data.Any()));
         }
 
         #region Dump Tests

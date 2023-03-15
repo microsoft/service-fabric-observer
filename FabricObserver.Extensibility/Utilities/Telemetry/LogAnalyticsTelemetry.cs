@@ -94,6 +94,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 #else
                 logger.LogWarning($"Exception sending telemetry to LogAnalytics service: {e.Message}");
 #endif
+                if (e is OutOfMemoryException) // Since this can be handled, don't handle it.
+                {
+                    throw;
+                }
             }
         }
 
@@ -312,7 +316,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             catch (Exception e)
             {
                 // Telemetry is non-critical and should not take down FH.
-                logger.LogWarning($"Failure in ReportClusterUpgradeStatus:{Environment.NewLine}{e}");
+                logger.LogWarning($"Failure in ReportClusterUpgradeStatus:{Environment.NewLine}{e.Message}");
+
+                if (e is OutOfMemoryException) // Since this can be handled, don't handle it.
+                {
+                    throw;
+                }
             }
         }
 
@@ -345,7 +354,12 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             catch (Exception e)
             {
                 // Telemetry is non-critical and should not take down FH.
-                logger.LogWarning($"Failure in ReportClusterUpgradeStatus:{Environment.NewLine}{e}");
+                logger.LogWarning($"Failure in ReportClusterUpgradeStatus:{Environment.NewLine}{e.Message}");
+
+                if (e is OutOfMemoryException) // Since this can be handled, don't handle it.
+                {
+                    throw;
+                }
             }
         }
 

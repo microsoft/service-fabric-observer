@@ -168,7 +168,7 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// <param name="nodeName">Optional. If specified, the Fabric node to get deployed replicas. By default, the local node where this code is running is the target.</param>
         /// <param name="token">CancellationToken instance.</param>
         /// <returns>A List of ReplicaOrInstanceMonitoringInfo objects representing all replicas in any status (consumer should filter Status per need) on the local (or specified) node.</returns>
-        public async Task<List<ReplicaOrInstanceMonitoringInfo>> GetAllDeployedReplicasOrInstances(bool includeChildProcesses, CancellationToken token, string nodeName = null)
+        public async Task<List<ReplicaOrInstanceMonitoringInfo>> GetAllDeployedReplicasOrInstancesAsync(bool includeChildProcesses, CancellationToken token, string nodeName = null)
         {
             List<ReplicaOrInstanceMonitoringInfo> repList = new();
             List<DeployedApplication> appList = await GetAllDeployedAppsAsync(token);

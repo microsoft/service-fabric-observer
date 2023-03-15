@@ -14,6 +14,8 @@ namespace FabricObserver.Observers.Utilities
     // which are all structs in .NET so it's really a partial constraint, but useful just the same.
     public class FabricResourceUsageData<T> where T : struct
     {
+        private readonly object lockObj = new();
+
         /// <summary>
         /// Initializes a new instance of the <see cref="FabricResourceUsageData{T}"/> class.
         /// </summary>
@@ -267,24 +269,21 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Clears numeric data of the current instance's Data property. Use this method versus calling Clear on Data as that
-        /// won't work for ConcurrentQueue.
+        /// Clears numeric data of the current instance's Data property.
         /// </summary>
         public void ClearData()
         {
-            if (Data is List<T> d)
+            if (Data is List<T> list)
             {
-                d.TrimExcess();
-                d.Clear();
+               list.Clear();
             }
-            else if (Data is CircularBufferCollection<T> c)
+            else if (Data is CircularBufferCollection<T> cBuffer)
             {
-                c.Clear();
+                cBuffer.Clear();
             }
-            else if (Data is ConcurrentQueue<T>)
+            else if (Data is ConcurrentQueue<T> conQ)
             {
-                // .NET Standard 2.0 does not have a Clear() (2.1 does).
-                Data = new ConcurrentQueue<T>();
+                conQ.Clear();
             }
         }
     }

@@ -18,6 +18,7 @@ using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 using FabricObserver.TelemetryLib;
 using System.Fabric.Description;
+using System.IO;
 
 namespace ClusterObserver
 {
@@ -70,12 +71,34 @@ namespace ClusterObserver
             get; set; 
         }
 
-        public ClusterObserver(StatelessServiceContext serviceContext, bool ignoreDefaultQueryTimeout = false) : base (null, serviceContext)
+        public ClusterObserver(StatelessServiceContext serviceContext, bool ignoreDefaultQueryTimeout = false) 
+            : base (null, serviceContext)
         {
             NodeStatusDictionary = new Dictionary<string, (NodeStatus NodeStatus, DateTime FirstDetectedTime, DateTime LastDetectedTime)>();
             ApplicationUpgradesCompletedStatus = new Dictionary<string, bool>();
-
+            
             this.ignoreDefaultQueryTimeout = ignoreDefaultQueryTimeout;
+
+            // Observer Logger setup. This will override the default setup in FabricObserver.Extensibility.dll.
+            string logFolderBasePath;
+            string observerLogPath = GetSettingParameterValue(
+                     ClusterObserverConstants.ObserverManagerConfigurationSectionName,
+                     ClusterObserverConstants.ObserverLogPathParameter);
+
+            if (!string.IsNullOrWhiteSpace(observerLogPath))
+            {
+                logFolderBasePath = observerLogPath;
+            }
+            else
+            {
+                string logFolderBase = Path.Combine(Environment.CurrentDirectory, "cluster_observer_logs");
+                logFolderBasePath = logFolderBase;
+            }
+
+            ObserverLogger = new Logger(GetType().Name, logFolderBasePath, 7)
+            {
+                EnableETWLogging = IsEtwProviderEnabled
+            };
         }
 
         public override async Task ObserveAsync(CancellationToken token)
