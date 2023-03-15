@@ -1,4 +1,4 @@
-## FabricObserver 3.2.5
+## FabricObserver 3.2.6
 #### This version requires SF Runtime >= 9.0 and targets .NET 6. .NET Core 3.1 is no longer supported.
 
 [**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer) is a complete implementation of a production-ready, generic resource usage watchdog service written as a stateless, singleton Service Fabric .NET 6 application that 

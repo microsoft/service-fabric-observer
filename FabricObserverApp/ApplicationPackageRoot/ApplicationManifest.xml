@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <!-- You can try the XML diff/merge tool XmlDiffPatchSF (located in this repo) to make upgrading your base configurations to the latest version much easier. -->
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.5" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.6" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- ObserverManager Configuration -->
     <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
@@ -31,8 +31,8 @@
     <!-- Note: You must run FO as System or Admin user on Windows in order to run ContainerObserver on Windows. -->
     <Parameter Name="ContainerObserverEnabled" DefaultValue="false" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
-    <Parameter Name="NetworkObserverEnabled" DefaultValue="false" />
+    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="true" />
+    <Parameter Name="NetworkObserverEnabled" DefaultValue="true" />
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
     <!-- Deprecated: SFConfigurationObserver is only useful if you deploy the now-obsolete (and unsupported) FabricObserverWebApi application. -->
@@ -83,14 +83,14 @@
          Set this to 1 second if AppObserver is monitoring several services AND FO is running on a VM/Machine with insufficient number of logical processors (< 4). -->
     <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:01" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:01" />
-    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:05" />
+    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:10" />
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00): How often an enabled observer should run. -->
     <Parameter Name="AppObserverRunInterval" DefaultValue="" />
     <Parameter Name="AzureStorageUploadObserverRunInterval" DefaultValue="00:05:00" />
     <Parameter Name="CertificateObserverRunInterval" DefaultValue="1.00:00:00" />
     <Parameter Name="ContainerObserverRunInterval" DefaultValue="" />
-    <Parameter Name="DiskObserverRunInterval" DefaultValue="00:15:00" />
-    <Parameter Name="FabricSystemObserverRunInterval" DefaultValue="00:15:00" />
+    <Parameter Name="DiskObserverRunInterval" DefaultValue="" />
+    <Parameter Name="FabricSystemObserverRunInterval" DefaultValue="" />
     <Parameter Name="NetworkObserverRunInterval" DefaultValue="" />
     <Parameter Name="NodeObserverRunInterval" DefaultValue="" />
     <Parameter Name="OSObserverRunInterval" DefaultValue="00:15:00" />
@@ -232,7 +232,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.2.5" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.2.6" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>

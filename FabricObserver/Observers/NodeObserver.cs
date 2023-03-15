@@ -165,6 +165,7 @@ namespace FabricObserver.Observers
                 ObserverLogger.LogInfo($"Run Duration: {RunDuration}");
             }
 
+            CleanUp();
             stopwatch.Reset();
             LastRunDateTime = DateTime.Now;
         }
@@ -883,6 +884,57 @@ namespace FabricObserver.Observers
             {
                 ObserverLogger.LogWarning($"Failed to generate node stats:{Environment.NewLine}{e.Message}");
                 // Retry or try again later..
+            }
+        }
+
+        private void CleanUp()
+        {
+            if (ActivePortsData != null && !ActivePortsData.ActiveErrorOrWarning)
+            {
+                ActivePortsData = null;
+            }
+
+            if (CpuTimeData != null && !CpuTimeData.ActiveErrorOrWarning)
+            {
+                CpuTimeData = null;
+            }
+
+            if (EphemeralPortsDataPercent != null && !EphemeralPortsDataPercent.ActiveErrorOrWarning)
+            {
+                EphemeralPortsDataPercent = null;
+            }
+
+            if (EphemeralPortsDataRaw != null && !EphemeralPortsDataRaw.ActiveErrorOrWarning)
+            {
+                EphemeralPortsDataRaw = null;
+            }
+
+            if (MemDataInUse != null && !MemDataInUse.ActiveErrorOrWarning)
+            {
+                MemDataInUse = null;
+            }
+
+            if (MemDataPercent != null && !MemDataPercent.ActiveErrorOrWarning)
+            {
+                MemDataPercent = null;
+            }
+
+            if (IsWindows && FirewallData != null && !FirewallData.ActiveErrorOrWarning)
+            {
+                FirewallData = null;
+            }
+
+            if (!IsWindows)
+            {
+                if (LinuxFileHandlesDataPercentAllocated != null && !LinuxFileHandlesDataPercentAllocated.ActiveErrorOrWarning)
+                {
+                    LinuxFileHandlesDataPercentAllocated = null;
+                }
+
+                if (LinuxFileHandlesDataTotalAllocated != null && !LinuxFileHandlesDataTotalAllocated.ActiveErrorOrWarning)
+                {
+                    LinuxFileHandlesDataTotalAllocated = null;
+                }
             }
         }
 

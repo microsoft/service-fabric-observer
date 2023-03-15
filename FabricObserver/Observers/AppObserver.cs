@@ -96,8 +96,7 @@ namespace FabricObserver.Observers
                     {
                         if (handleToProcSnapshot == null)
                         {
-                            handleToProcSnapshot =
-                                NativeMethods.CreateToolhelp32Snapshot((uint)NativeMethods.CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
+                            handleToProcSnapshot = NativeMethods.CreateProcessSnapshot();
 
                             if (handleToProcSnapshot.IsInvalid)
                             {
@@ -2560,16 +2559,19 @@ namespace FabricObserver.Observers
                         double cpu = 0;
                         cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, IsWindows ? procName : null);
 
+                        // procId is no longer mapped to process. see CpuUsageProcess/CpuUsageWin32 impls.
+                        if (cpu < 0)
+                        {
+                            continue;
+                        }
+
                         if (procId == parentPid)
                         {
-                            // process is no longer mapped to process name.
-                            if (cpu > 0)
-                            {
-                                AllAppCpuData[id].AddData(cpu);
-                            }
+                            AllAppCpuData[id].AddData(cpu);
                         }
                         else
                         {
+                            // Add new child proc entry if not already present in dictionary.
                             _ = AllAppCpuData.TryAdd(
                                     $"{id}:{procName}{procId}",
                                     new FabricResourceUsageData<double>(
@@ -2583,7 +2585,7 @@ namespace FabricObserver.Observers
                         }
                     }
 
-                    Thread.Sleep(50);
+                    Thread.Sleep(150);
                 }
 
                 timer.Stop();

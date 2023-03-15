@@ -215,6 +215,7 @@ namespace FabricObserver.Observers
                 ObserverLogger.LogInfo($"Run Duration: {RunDuration}");
             }
 
+            CleanUp();
             stopwatch.Reset();
             LastRunDateTime = DateTime.Now;
         }
@@ -238,7 +239,9 @@ namespace FabricObserver.Observers
             }
         }
 
+#pragma warning disable IDE0079 // Remove unnecessary suppression
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "Windows Event data code only ever gets reached on Windows...")]
+#pragma warning restore IDE0079 // Remove unnecessary suppression
         public override Task ReportAsync(CancellationToken token)
         {
             try
@@ -441,7 +444,9 @@ namespace FabricObserver.Observers
         /// <summary>
         /// ReadServiceFabricWindowsEventLog().
         /// </summary>
+#pragma warning disable IDE0079 // Remove unnecessary suppression
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "IsWindows check exits the function immediately if not Windows...")]
+#pragma warning restore IDE0079 // Remove unnecessary suppression
         private void ReadServiceFabricWindowsEventLog()
         {
             if (!IsWindows)
@@ -568,7 +573,9 @@ namespace FabricObserver.Observers
             return result.ToArray();
         }
 
+#pragma warning disable IDE0079 // Remove unnecessary suppression
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "<Pending>")]
+#pragma warning restore IDE0079 // Remove unnecessary suppression
         private void Initialize()
         {
             Token.ThrowIfCancellationRequested();
@@ -1244,6 +1251,51 @@ namespace FabricObserver.Observers
                 {
                     continue;
                 }
+            }
+        }
+
+        private void CleanUp()
+        {
+            if (allCpuData != null && !allCpuData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            {
+                allCpuData.Clear();
+                allCpuData = null;
+            }
+
+            if (allEphemeralTcpPortData != null && !allEphemeralTcpPortData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            {
+                allEphemeralTcpPortData.Clear();
+                allEphemeralTcpPortData = null;
+            }
+
+            if (IsWindows && allAppKvsLvidsData != null && !allAppKvsLvidsData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            {
+                allAppKvsLvidsData.Clear();
+                allAppKvsLvidsData = null;
+            }
+
+            if (allHandlesData != null && !allHandlesData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            {
+                allHandlesData.Clear();
+                allHandlesData = null;
+            }
+
+            if (allThreadsData != null && !allThreadsData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            {
+                allThreadsData.Clear();
+                allThreadsData = null;
+            }
+
+            if (allMemData != null && !allMemData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            {
+                allMemData.Clear();
+                allMemData = null;
+            }
+
+            if (allActiveTcpPortData != null && !allActiveTcpPortData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            {
+                allActiveTcpPortData.Clear();
+                allActiveTcpPortData = null;
             }
         }
     }

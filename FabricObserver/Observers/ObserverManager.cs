@@ -48,7 +48,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.2.5";
+        private const string InternalVersionNumber = "3.2.6";
 
         private bool RuntimeTokenCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;
@@ -243,7 +243,12 @@ namespace FabricObserver.Observers
                         catch (Exception ex)
                         {
                             // Telemetry is non-critical and should *not* take down FO.
-                            Logger.LogWarning($"Unable to send internal diagnostic telemetry:{Environment.NewLine}{ex}");
+                            Logger.LogWarning($"Unable to send internal diagnostic telemetry: {ex.Message}");
+                            
+                            if (ex is OutOfMemoryException) // Since this can be handled, don't handle it.
+                            {
+                                Environment.FailFast(string.Format("Out of Memory: {0}", ex.Message));
+                            }
                         }
                     }
 
@@ -284,7 +289,7 @@ namespace FabricObserver.Observers
                 var message =
                     $"{handled} in {ObserverConstants.ObserverManagerName} on node " +
                     $"{nodeName}. Taking down FO process. " +
-                    $"Error info:{Environment.NewLine}{e}";
+                    $"Error stack:{Environment.NewLine}{e}";
 
                 Logger.LogError(message);
                 await ShutDownAsync();
@@ -339,8 +344,13 @@ namespace FabricObserver.Observers
                     }
                     catch (Exception ex)
                     {
-                        Logger.LogWarning($"Unable to send internal diagnostic telemetry:{Environment.NewLine}{ex}");
-                        // Telemetry is non-critical and should not take down FO. Will not throw here.
+                        // Telemetry is non-critical and should not take down FO.
+                        Logger.LogWarning($"Unable to send internal diagnostic telemetry:{Environment.NewLine}{ex.Message}");
+
+                        if (ex is OutOfMemoryException) // Since this can be handled, don't handle it.
+                        {
+                            Environment.FailFast(string.Format("Out of Memory: {0}", ex.Message));
+                        }
                     }
                 }
 
@@ -398,7 +408,8 @@ namespace FabricObserver.Observers
                             {
                                 Uri appName = new(service);
                                 var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(appName);
-                                var fabricObserverAppHealthEvents = appHealth?.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
+                                var fabricObserverAppHealthEvents =
+                                        appHealth?.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
                                 if (fabricObserverAppHealthEvents != null && fabricObserverAppHealthEvents.Any())
                                 {
@@ -467,7 +478,8 @@ namespace FabricObserver.Observers
                     try
                     {
                         // System app reports.
-                        var sysAppHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(new Uri(ObserverConstants.SystemAppName));
+                        var sysAppHealth = 
+                                await FabricClientInstance.HealthManager.GetApplicationHealthAsync(new Uri(ObserverConstants.SystemAppName));
                         var sysAppHealthEvents = sysAppHealth?.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
                         if (sysAppHealthEvents != null && sysAppHealthEvents.Any())
@@ -668,11 +680,7 @@ namespace FabricObserver.Observers
             try
             {
                 ConfigurationSettings configSettings = null;
-                
-                if (sectionName == null)
-                {
-                    sectionName = ObserverConstants.ObserverManagerConfigurationSectionName;
-                }
+                sectionName ??= ObserverConstants.ObserverManagerConfigurationSectionName;
 
                 if (settings != null)
                 {
@@ -1271,9 +1279,16 @@ namespace FabricObserver.Observers
                     // Transient.
                     Logger.LogWarning($"Handled error from {observer.ObserverName}{Environment.NewLine}{e}");
                 }
-                catch (Exception e) when (!(e is LinuxPermissionException))
+                catch (Exception e) when (e is not LinuxPermissionException)
                 {
                     Logger.LogError($"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
+                    
+                    if (e is OutOfMemoryException)
+                    {
+                        // Terminate now.
+                        Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
+                    }
+
                     throw;
                 }
             }
@@ -1345,8 +1360,14 @@ namespace FabricObserver.Observers
             }
             catch (Exception e)
             {
-                // Don't take down FO due to error in version check...
+                // Don't take down FO due to error in version check.
                 Logger.LogWarning($"Failure checking Github for latest FO version: {e.Message}");
+
+                if (e is OutOfMemoryException)
+                {
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
+                }
             }
         }
 
@@ -1427,39 +1448,6 @@ namespace FabricObserver.Observers
             }
 
             return false;
-        }
-    }
-
-    // Custom comparer for ConfigurationProperty
-    class ConfigComparer : IEqualityComparer<ConfigurationProperty>
-    {
-        // ConfigurationProperty instances are equal if their Names and Values are equal.
-        public bool Equals(ConfigurationProperty x, ConfigurationProperty y)
-        {
-            if (ReferenceEquals(x, y))
-            {
-                return true;
-            }
-
-            if (x is null || ReferenceEquals(y, null))
-            {
-                return false;
-            }
-
-            return x.Name == y.Name && x.Value == y.Value;
-        }
-
-        public int GetHashCode(ConfigurationProperty config)
-        {
-            if (ReferenceEquals(config, null))
-            {
-                return 0;
-            }
-
-            int hashProductName = config.Name == null ? 0 : config.Name.GetHashCode();
-            int hashProductCode = config.Value.GetHashCode();
-
-            return hashProductName ^ hashProductCode;
         }
     }
 }

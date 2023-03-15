@@ -2,13 +2,9 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
 	<metadata minClientVersion="3.3.0">
 		<id>%PACKAGE_ID%</id>
-		<version>3.2.5</version>
+		<version>3.2.6</version>
 		<releaseNotes>
-- New telemetry data types: NodeTelemetryData, ServiceTelemetryData, DiskTelemetryData. These types hold only the relevant information for the target entity. For backwards compatibility, TelemetryData type still exists.
-- FabricObserver is now only shipped as a .NET 6 application. There is no longer support for .NET Core 3.1.
-- FabricObserver targets the Service Fabric 9.x runtime and SF SDK versions 6.0.1017 and later. *This version will not run on earlier versions of the SF runtime.* There are no longer multiple releases of FO that target different SF runtime/.NET versions.
-- NodeObserver can be configured to emit Node snapshots (only useful if you employ ApplicationInsights/LogAnalytics/ETW).
-- Bug fixes and several code improvements.
+
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
@@ -17,7 +13,7 @@
 		<icon>icon.png</icon>
 		<readme>fonuget.md</readme>
 		<language>en-US</language>
-		<description>This package contains the FabricObserver(FO) Application - built for .NET 6.0 and SF Runtime 9.x. FO a highly configurable and extensible resource usage watchdog service that is designed to be run in Azure Service Fabric Windows and Linux clusters. This package contains the entire application and can be used to build .NET Standard 2.0 observer plugins. NOTE: If you want to target .NET 6 for your plugins, then you must use Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.5 nuget package to build them.</description>
+		<description>This package contains the FabricObserver(FO) Application - built for .NET 6.0 and SF Runtime 9.x. FO a highly configurable and extensible resource usage watchdog service that is designed to be run in Azure Service Fabric Windows and Linux clusters. This package contains the entire application and can be used to build .NET Standard 2.0 observer plugins. NOTE: If you want to target .NET 6 for your plugins, then you must use Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.6 nuget package to build them.</description>
 		<contentFiles>
 			<files include="**" buildAction="None" copyToOutput="true" />
 		</contentFiles>

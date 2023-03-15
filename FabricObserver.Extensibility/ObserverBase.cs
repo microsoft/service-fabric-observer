@@ -1379,8 +1379,6 @@ namespace FabricObserver.Observers
                     HasActiveFabricErrorOrWarning = false;
                 }
             }
-
-            data.ClearData();
         }
 
         private (string AppType, string AppTypeVersion) TupleGetApplicationTypeInfo(Uri appName)

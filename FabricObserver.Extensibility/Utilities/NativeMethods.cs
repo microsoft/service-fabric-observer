@@ -7,6 +7,7 @@ using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
@@ -792,10 +793,32 @@ namespace FabricObserver.Observers.Utilities
             PSS_WALK_THREADS,
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        public struct IO_COUNTERS
+        {
+            /// <summary>The number of read operations performed.</summary>
+            public ulong ReadOperationCount;
+
+            /// <summary>The number of write operations performed.</summary>
+            public ulong WriteOperationCount;
+
+            /// <summary>The number of I/O operations performed, other than read and write operations.</summary>
+            public ulong OtherOperationCount;
+
+            /// <summary>The number of bytes read.</summary>
+            public ulong ReadTransferCount;
+
+            /// <summary>The number of bytes written.</summary>
+            public ulong WriteTransferCount;
+
+            /// <summary>The number of bytes transferred during operations other than read and write operations.</summary>
+            public ulong OtherTransferCount;
+        }
+
         // Method Imports \\
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
-        public static extern SafeObjectHandle CreateToolhelp32Snapshot([In] uint dwFlags, [In] uint th32ProcessID);
+        internal static extern SafeObjectHandle CreateToolhelp32Snapshot([In] uint dwFlags, [In] uint th32ProcessID);
 
         [DllImport("psapi.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -881,6 +904,10 @@ namespace FabricObserver.Observers.Utilities
 
         [DllImport("iphlpapi.dll", SetLastError = true)]
         private static extern uint GetExtendedTcpTable(IntPtr pTcpTable, ref uint pdwSize, [MarshalAs(UnmanagedType.Bool)] bool bOrder, uint ulAf, TCP_TABLE_CLASS TableClass, uint Reserved = 0);
+
+        [return: MarshalAs(UnmanagedType.Bool)]
+        [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        private static extern bool GetProcessIoCounters([In] SafeProcessHandle ProcessHandle, out IO_COUNTERS lpIoCounters);
 
         // Impls/Helpers \\
 
@@ -1002,6 +1029,15 @@ namespace FabricObserver.Observers.Utilities
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Creates a native snapshot of all processes currently running on the system.
+        /// </summary>
+        /// <returns>SafeObjectHandle to the snapshot.</returns>
+        public static SafeObjectHandle CreateProcessSnapshot()
+        {
+            return CreateToolhelp32Snapshot((uint)CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
         }
 
         /// <summary>
@@ -1294,6 +1330,122 @@ namespace FabricObserver.Observers.Utilities
         public static List<(ushort LocalPort, uint OwningProcessId, MIB_TCP_STATE State)> GetAllTcp6Connections()
         {
             return InternalGetTcp6Connections();
+        }
+
+        // Process disk IO \\
+
+        /// <summary>
+        /// Gets the number of read operations performed by the process with specified process ID.
+        /// </summary>
+        /// <param name="processId">The ID of the target process.</param>
+        /// <returns>The number of read operations performed by the process as a long value.</returns>
+        /// <exception cref="Win32Exception"></exception>
+        public static long GetProcessIOReadOperationCount(int processId)
+        {
+            long reads = 0;
+
+            using SafeProcessHandle safeProcessHandle = GetSafeProcessHandle((uint)processId) ?? throw new Win32Exception(Marshal.GetLastWin32Error());
+
+            if (!GetProcessIoCounters(safeProcessHandle, out IO_COUNTERS info))
+            {
+                int ret = Marshal.GetLastWin32Error();
+
+                if (ret != 0)
+                {
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                }
+            }
+            else
+            {
+                reads = (long)info.ReadOperationCount;
+            }
+
+            return reads;
+        }
+
+        /// <summary>
+        /// Gets the number of write operations performed by the process with specified process ID.
+        /// </summary>
+        /// <param name="processId">The ID of the target process.</param>
+        /// <returns>The number of write operations performed by the process as a long value.</returns>
+        /// <exception cref="Win32Exception"></exception>
+        public static long GetProcessIOWriteOperationCount(int processId)
+        {
+            long writes = 0;
+            using SafeProcessHandle safeProcessHandle = GetSafeProcessHandle((uint)processId) ?? throw new Win32Exception(Marshal.GetLastWin32Error());
+
+            if (!GetProcessIoCounters(safeProcessHandle, out IO_COUNTERS info))
+            {
+                int ret = Marshal.GetLastWin32Error();
+
+                if (ret != 0)
+                {
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                }
+            }
+            else
+            {
+                writes = (long)info.WriteOperationCount;
+            }
+
+            return writes;
+        }
+
+        /// <summary>
+        /// Gets the number of bytes read by the target process with specified process ID.
+        /// </summary>
+        /// <param name="processId">The ID of the target process.</param>
+        /// <returns>The number of bytes read as a long value.</returns>
+        /// <exception cref="Win32Exception"></exception>
+        public static long GetProcessIOReadTransferCount(int processId)
+        {
+            long reads = 0;
+
+            using SafeProcessHandle safeProcessHandle = GetSafeProcessHandle((uint)processId) ?? throw new Win32Exception(Marshal.GetLastWin32Error());
+
+            if (!GetProcessIoCounters(safeProcessHandle, out IO_COUNTERS info))
+            {
+                int ret = Marshal.GetLastWin32Error();
+
+                if (ret != 0)
+                {
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                }
+            }
+            else
+            {
+                reads = (long)info.ReadTransferCount;
+            }
+
+            return reads;
+        }
+
+        /// <summary>
+        /// Gets the number of bytes written by the target process with specified process ID.
+        /// </summary>
+        /// <param name="processId">The ID of the target process.</param>
+        /// <returns>The number of bytes written as a long value.</returns>
+        /// <exception cref="Win32Exception"></exception>
+        public static long GetProcessIOWriteTransferCount(int processId)
+        {
+            long writes = 0;
+            using SafeProcessHandle safeProcessHandle = GetSafeProcessHandle((uint)processId) ?? throw new Win32Exception(Marshal.GetLastWin32Error());
+
+            if (!GetProcessIoCounters(safeProcessHandle, out IO_COUNTERS info))
+            {
+                int ret = Marshal.GetLastWin32Error();
+
+                if (ret != 0)
+                {
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                }
+            }
+            else
+            {
+                writes = (long)info.WriteTransferCount;
+            }
+
+            return writes;
         }
 
         private static List<(ushort LocalPort, uint OwningProcessId, MIB_TCP_STATE State)> InternalGetTcpConnections()

@@ -11,8 +11,8 @@
 	<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
 	<Copyright>Copyright © 2022</Copyright>
 	<Product>ClusterObserver</Product>
-	<Version>2.2.2</Version>
-	<FileVersion>2.2.2</FileVersion>
+	<Version>2.2.3</Version>
+	<FileVersion>2.2.3</FileVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <StartupObject>ClusterObserver.Program</StartupObject>
