@@ -65,28 +65,28 @@ namespace FabricObserver.Observers.Utilities
                     standardDeviation = (T)Convert.ChangeType(Math.Sqrt(Convert.ToDouble(meanOfSquaredDifferences)), typeof(T));
                     break;
 
-                case ConcurrentQueue<long> value when value.Count > 0:
+                case ConcurrentQueue<long> value when !value.IsEmpty:
                     average = value.Average();
                     squaredMeanDifferences.AddRange(value.Select(n => (T)Convert.ChangeType((n - average) * (n - average), typeof(T))));
                     meanOfSquaredDifferences = (T)Convert.ChangeType((squaredMeanDifferences as List<long>)?.Average(), typeof(T));
                     standardDeviation = (T)Convert.ChangeType(Math.Sqrt(Convert.ToInt64(meanOfSquaredDifferences)), typeof(T));
                     break;
 
-                case ConcurrentQueue<int> value when value.Count > 0:
+                case ConcurrentQueue<int> value when !value.IsEmpty:
                     average = value.Average();
                     squaredMeanDifferences.AddRange(value.Select(n => (T)Convert.ChangeType((n - average) * (n - average), typeof(T))));
                     meanOfSquaredDifferences = (T)Convert.ChangeType((squaredMeanDifferences as List<int>)?.Average(), typeof(T));
                     standardDeviation = (T)Convert.ChangeType(Math.Sqrt(Convert.ToInt32(meanOfSquaredDifferences)), typeof(T));
                     break;
 
-                case ConcurrentQueue<float> value when value.Count > 0:
+                case ConcurrentQueue<float> value when !value.IsEmpty:
                     average = value.Average();
                     squaredMeanDifferences.AddRange(value.Select(n => (T)Convert.ChangeType((n - average) * (n - average), typeof(T))));
                     meanOfSquaredDifferences = (T)Convert.ChangeType((squaredMeanDifferences as List<float>)?.Average(), typeof(T));
                     standardDeviation = (T)Convert.ChangeType(Math.Sqrt(Convert.ToSingle(meanOfSquaredDifferences)), typeof(T));
                     break;
 
-                case ConcurrentQueue<double> value when value.Count > 0:
+                case ConcurrentQueue<double> value when !value.IsEmpty:
                     average = value.Average();
                     squaredMeanDifferences.AddRange(value.Select(n => (T)Convert.ChangeType((n - average) * (n - average), typeof(T))));
                     meanOfSquaredDifferences = (T)Convert.ChangeType((squaredMeanDifferences as List<double>)?.Average(), typeof(T));
@@ -109,7 +109,7 @@ namespace FabricObserver.Observers.Utilities
         /// <returns>List of sliding window sorted elements of numeric type T.</returns>
         public static IList<T> SlidingWindow<T>(IEnumerable<T> data, int windowWidth, WindowType windowType) where T : struct
         {
-            if (windowWidth < 1 || data.Count() == 0)
+            if (windowWidth < 1 || !data.Any())
             {
                 return null;
             }

@@ -80,8 +80,8 @@
          If you enable concurrent monitoring for AppObserver and you are running on capable hardware (>= 4 logical processors),
          then you should increase this value from 1 second to at most (1/2 the number of logical processors) seconds on the target machine.
          **However, if you monitor a *very* large number of services (> 200) AND you enable concurrent monitoring AND machines have capable CPU(s), then keep this value at 1 or 2.**
-         Set this to 1 second if AppObserver is monitoring several services AND FO is running on a VM/Machine with insufficient number of logical processors (< 4). -->
-    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:01" />
+         Set this to a small value if AppObserver is monitoring several services AND FO is running on a VM/Machine with insufficient number of logical processors (< 4). -->
+    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:05" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:01" />
     <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:10" />
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00): How often an enabled observer should run. -->

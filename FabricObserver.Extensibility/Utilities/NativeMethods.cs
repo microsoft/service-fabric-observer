@@ -818,7 +818,7 @@ namespace FabricObserver.Observers.Utilities
         // Method Imports \\
 
         [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
-        internal static extern SafeObjectHandle CreateToolhelp32Snapshot([In] uint dwFlags, [In] uint th32ProcessID);
+        private static extern SafeObjectHandle CreateToolhelp32Snapshot([In] uint dwFlags, [In] uint th32ProcessID);
 
         [DllImport("psapi.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]

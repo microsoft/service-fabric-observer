@@ -176,7 +176,7 @@ namespace FabricObserver.Utilities.ServiceFabric
 
             if (isWindows && includeChildProcesses)
             {
-                handleToSnapshot = NativeMethods.CreateToolhelp32Snapshot((uint)NativeMethods.CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
+                handleToSnapshot = NativeMethods.CreateProcessSnapshot();
             }
 
             try
@@ -214,6 +214,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                 if (isWindows && includeChildProcesses)
                 {
                     handleToSnapshot?.Dispose();
+                    GC.KeepAlive(handleToSnapshot);
                     handleToSnapshot = null;
                 }
             }

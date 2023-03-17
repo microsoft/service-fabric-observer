@@ -42,8 +42,7 @@ namespace FabricObserver.Observers.Utilities
 
             // Data can be a List<T>, a CircularBufferCollection<T>, or a ConcurrentQueue<T>. \\
 
-            // CircularBufferCollection is not thread safe for writes. 
-            if (useCircularBuffer && !isParallel)
+            if (useCircularBuffer)
             {
                 Data = new CircularBufferCollection<T>(dataCapacity > 0 ? dataCapacity : 3);
             }

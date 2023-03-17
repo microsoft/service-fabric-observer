@@ -783,7 +783,7 @@ namespace FabricObserver.Observers
                     serviceTypeName = replicaOrInstance.ServiceTypeName;
                     serviceTypeVersion = replicaOrInstance.ServiceTypeVersion;
                     procId = (int)replicaOrInstance.HostProcessId;
-
+                   
                     // This doesn't apply to ContainerObserver.
                     if (ObserverName != ObserverConstants.ContainerObserverName)
                     {
@@ -822,6 +822,70 @@ namespace FabricObserver.Observers
                             data.ClearData();
                             return;
                         }
+
+                        id = $"{NodeName}_{processName}_{data.Property.Replace(" ", string.Empty)}";
+
+                        // The health event description will be a serialized instance of telemetryData,
+                        // so it should be completely constructed (filled with data) regardless
+                        // of user telemetry settings.
+                        telemetryData = new ServiceTelemetryData()
+                        {
+                            ApplicationName = appName.OriginalString,
+                            ApplicationType = appType,
+                            ApplicationTypeVersion = appTypeVersion,
+                            ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
+                            EntityType = entityType,
+                            Metric = data.Property,
+                            NodeName = NodeName,
+                            NodeType = NodeType,
+                            ObserverName = ObserverName,
+                            PartitionId = replicaOrInstance.PartitionId.ToString(),
+                            ProcessId = procId,
+                            ProcessName = processName,
+                            ProcessStartTime = processStartTime,
+                            Property = id,
+                            ReplicaId = replicaOrInstance.ReplicaOrInstanceId,
+                            ReplicaRole = replicaOrInstance.ReplicaRole.ToString(),
+                            ReplicaStatus = replicaOrInstance.ReplicaStatus.ToString(),
+                            RGMemoryEnabled = replicaOrInstance.RGMemoryEnabled,
+                            RGAppliedMemoryLimitMb = replicaOrInstance.RGAppliedMemoryLimitMb,
+                            ServiceKind = replicaOrInstance.ServiceKind.ToString(),
+                            ServiceName = serviceName.OriginalString,
+                            ServiceTypeName = serviceTypeName,
+                            ServiceTypeVersion = serviceTypeVersion,
+                            ServicePackageActivationMode = replicaOrInstance.ServicePackageActivationMode.ToString(),
+                            Source = ObserverConstants.FabricObserverName,
+                            Value = data.AverageDataValue
+                        };
+                    }
+                    else
+                    {
+                        string name = replicaOrInstance.ServiceName.OriginalString;
+                        int index = name.LastIndexOf('/') + 1;
+                        string containerIdService = name[index..];
+                        id = $"{NodeName}_{containerIdService}_{data.Property.Replace(" ", string.Empty)}";
+
+                        telemetryData = new ContainerTelemetryData()
+                        {
+                            ApplicationName = appName.OriginalString,
+                            ContainerId = replicaOrInstance.ContainerId.ToString(),
+                            ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
+                            EntityType = entityType,
+                            Metric = data.Property,
+                            NodeName = NodeName,
+                            NodeType = NodeType,
+                            ObserverName = ObserverName,
+                            PartitionId = replicaOrInstance.PartitionId.ToString(),
+                            Property = id,
+                            ReplicaId = replicaOrInstance.ReplicaOrInstanceId,
+                            ReplicaRole = replicaOrInstance.ReplicaRole.ToString(),
+                            ReplicaStatus = replicaOrInstance.ReplicaStatus.ToString(),
+                            ServiceKind = replicaOrInstance.ServiceKind.ToString(),
+                            ServiceName = serviceName.OriginalString,
+                            ServicePackageActivationMode = replicaOrInstance.ServicePackageActivationMode.ToString(),
+                            Source = ObserverConstants.FabricObserverName,
+                            Value = data.AverageDataValue
+                        };
                     }
                 }
                 else // System service report from FabricSystemObserver.
@@ -863,46 +927,27 @@ namespace FabricObserver.Observers
                         data.ClearData();
                         return;
                     }
-                }
 
-                id = $"{NodeName}_{processName}_{data.Property.Replace(" ", string.Empty)}";
+                    id = $"{NodeName}_{processName}_{data.Property.Replace(" ", string.Empty)}";
 
-                // The health event description will be a serialized instance of telemetryData,
-                // so it should be completely constructed (filled with data) regardless
-                // of user telemetry settings.
-                telemetryData = new ServiceTelemetryData()
-                {
-                    ApplicationName = appName?.OriginalString ?? null,
-                    ApplicationType = appType,
-                    ApplicationTypeVersion = appTypeVersion,
-                    ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
-                    EntityType = entityType,
-                    Metric = data.Property,
-                    NodeName = NodeName,
-                    NodeType = NodeType,
-                    ObserverName = ObserverName,
-                    PartitionId = replicaOrInstance?.PartitionId.ToString(),
-                    ProcessId = procId,
-                    ProcessName = processName,
-                    ProcessStartTime = processStartTime,
-                    Property = id,
-                    ReplicaId = replicaOrInstance != null ? replicaOrInstance.ReplicaOrInstanceId : 0,
-                    ReplicaRole = replicaOrInstance?.ReplicaRole.ToString(),
-                    RGMemoryEnabled = replicaOrInstance != null && replicaOrInstance.RGMemoryEnabled,
-                    RGAppliedMemoryLimitMb = replicaOrInstance != null ? replicaOrInstance.RGAppliedMemoryLimitMb : 0,
-                    ServiceKind = replicaOrInstance?.ServiceKind.ToString(),
-                    ServiceName = serviceName?.OriginalString ?? null,
-                    ServiceTypeName = serviceTypeName,
-                    ServiceTypeVersion = serviceTypeVersion,
-                    ServicePackageActivationMode = replicaOrInstance?.ServicePackageActivationMode.ToString(),
-                    Source = ObserverConstants.FabricObserverName,
-                    Value = data.AverageDataValue
-                };
-
-                // Container
-                if (!string.IsNullOrWhiteSpace(replicaOrInstance?.ContainerId))
-                {
-                    (telemetryData as ServiceTelemetryData).ContainerId = replicaOrInstance.ContainerId;
+                    // The health event description will be a serialized instance of telemetryData,
+                    // so it should be completely constructed (filled with data) regardless
+                    // of user telemetry settings.
+                    telemetryData = new SystemServiceTelemetryData()
+                    {
+                        ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
+                        EntityType = entityType,
+                        Metric = data.Property,
+                        NodeName = NodeName,
+                        NodeType = NodeType,
+                        ObserverName = ObserverName,
+                        ProcessId = procId,
+                        ProcessName = processName,
+                        ProcessStartTime = processStartTime,
+                        Property = id,
+                        Source = ObserverConstants.FabricObserverName,
+                        Value = data.AverageDataValue
+                    };
                 }
 
                 // Telemetry - This is informational, per reading telemetry, healthstate is irrelevant here. If the process has children, then don't emit this raw data since it will already
@@ -925,8 +970,6 @@ namespace FabricObserver.Observers
             else
             {
                 id = data.Id;
-
-                // Report raw data.
 
                 if (ObserverName == ObserverConstants.NodeObserverName)
                 {
@@ -1252,12 +1295,6 @@ namespace FabricObserver.Observers
                 }
 
                 telemetryData.Code = errorWarningCode;
-
-                if (!string.IsNullOrWhiteSpace(replicaOrInstance?.ContainerId))
-                {
-                    (telemetryData as ServiceTelemetryData).ContainerId = replicaOrInstance.ContainerId;
-                }
-
                 telemetryData.HealthState = healthState;
                 telemetryData.Description = healthMessage.ToString();
                 telemetryData.Source = $"{ObserverName}({errorWarningCode})";
@@ -1322,12 +1359,6 @@ namespace FabricObserver.Observers
                 if (data.ActiveErrorOrWarning)
                 {
                     telemetryData.Code = FOErrorWarningCodes.Ok;
-
-                    if (!string.IsNullOrWhiteSpace(replicaOrInstance?.ContainerId))
-                    {
-                        (telemetryData as ServiceTelemetryData).ContainerId = replicaOrInstance.ContainerId;
-                    }
-
                     telemetryData.HealthState = HealthState.Ok;
                     telemetryData.Property = entityType == EntityType.Disk ? $"{id} {data.Property}" : id;
                     telemetryData.Description = $"{data.Property} is now within normal/expected range.";

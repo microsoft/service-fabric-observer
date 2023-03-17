@@ -638,7 +638,7 @@ namespace FabricObserver.Observers
                     }
 
                     // Child proc info telemetry.
-                    if (hasChildProcs && MaxChildProcTelemetryDataCount > 0 && childProcessTelemetryDataList.Count > 0)
+                    if (hasChildProcs && MaxChildProcTelemetryDataCount > 0 && !childProcessTelemetryDataList.IsEmpty)
                     {
                         if (IsEtwEnabled)
                         {

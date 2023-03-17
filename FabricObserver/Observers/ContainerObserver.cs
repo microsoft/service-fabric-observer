@@ -215,7 +215,10 @@ namespace FabricObserver.Observers
                 // If user configures MaxConcurrentTasks setting, then use that value instead.
                 if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasksParameter), out int maxTasks))
                 {
-                    maxDegreeOfParallelism = maxTasks;
+                    if (maxTasks == -1 || maxTasks > 0)
+                    {
+                        maxDegreeOfParallelism = maxTasks;
+                    }
                 }
             }
 
