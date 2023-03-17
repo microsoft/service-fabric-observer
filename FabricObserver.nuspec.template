@@ -4,7 +4,8 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.6</version>
 		<releaseNotes>
-
+Bug Fix: https://github.com/microsoft/service-fabric-observer/issues/266 
+Note: If you do not set AppObserverEnableConcurrentMonitoring to true, then you don't need to upgrade from 3.2.5. Else, you should.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
