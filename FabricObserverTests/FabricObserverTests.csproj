@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <RootNamespace>FabricObserverTests</RootNamespace>
@@ -13,7 +13,7 @@
   <ItemGroup>
 	<PacakgeReference Include="Microsoft.ServiceFabric.Services" Version="6.0.1017" />
 	<PacakgeReference Include="Microsoft.ServiceFabric.Diagnostics.Internal" Version="6.0.1017" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.4.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.5.0" />
     <PackageReference Include="MSTest.TestAdapter" Version="3.0.2" />
     <PackageReference Include="MSTest.TestFramework" Version="3.0.2" />
     <PackageReference Include="coverlet.collector" Version="3.2.0">
