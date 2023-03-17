@@ -22,6 +22,12 @@ namespace FabricObserverTests
         {
             get;
         }
+
+        internal List<ContainerTelemetryData> ContainerTelemetryData
+        {
+            get; private set;
+        }
+
         internal List<DiskTelemetryData> DiskTelemetryData
         {
             get; private set;
@@ -36,6 +42,12 @@ namespace FabricObserverTests
         {
             get; private set;
         }
+
+        internal List<SystemServiceTelemetryData> SystemServiceTelemetryData
+        {
+            get; private set;
+        }
+
 
         internal MachineTelemetryData MachineTelemetryData
         {
@@ -107,14 +119,22 @@ namespace FabricObserverTests
                     switch (telemetryData.ObserverName)
                     {
                         case ObserverConstants.AppObserverName:
-                        case ObserverConstants.ContainerObserverName:
-                        case ObserverConstants.FabricSystemObserverName:
 
                             if (JsonHelper.TryDeserializeObject(json, out ServiceTelemetryData serviceTelemetryData))
                             {
                                 ServiceTelemetryData ??= new List<ServiceTelemetryData>();
                                 ServiceTelemetryData.Add(serviceTelemetryData);
                             }
+                            break;
+                        // This is tricky to test given the Docker requirement. This has been tested, however..
+                        case ObserverConstants.ContainerObserverName:
+
+                            if (JsonHelper.TryDeserializeObject(json, out ContainerTelemetryData containerTelemetryData))
+                            {
+                                ContainerTelemetryData ??= new List<ContainerTelemetryData>();
+                                ContainerTelemetryData.Add(containerTelemetryData);
+                            }
+
                             break;
 
                         case ObserverConstants.DiskObserverName:
@@ -124,6 +144,15 @@ namespace FabricObserverTests
                             {
                                 DiskTelemetryData ??= new List<DiskTelemetryData>();
                                 DiskTelemetryData.Add(diskTelemetryData);
+                            }
+                            break;
+
+                        case ObserverConstants.FabricSystemObserverName:
+
+                            if (JsonHelper.TryDeserializeObject(json, out SystemServiceTelemetryData sysServiceTelemetryData))
+                            {
+                                SystemServiceTelemetryData ??= new List<SystemServiceTelemetryData>();
+                                SystemServiceTelemetryData.Add(sysServiceTelemetryData);
                             }
                             break;
 

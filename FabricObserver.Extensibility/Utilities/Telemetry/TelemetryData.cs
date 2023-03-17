@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using Newtonsoft.Json;
-using System;
 using System.Diagnostics.Tracing;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
@@ -20,42 +19,57 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         {
             get; set;
         }
+
         public string ApplicationType
         {
             get; set;
         }
+
         public string ApplicationTypeVersion
         {
             get; set;
         }
+
         public string ContainerId
         {
             get; set;
         }
+
         public string PartitionId
         {
             get; set;
         }
+
         public long ProcessId
         {
             get; set;
         }
+
         public string ProcessName
         {
             get; set;
         }
+
         public string ProcessStartTime
         {
             get; set;
         }
+
         public long ReplicaId
         {
             get; set;
         }
+
         public string ReplicaRole
         {
             get; set;
         }
+
+        public string ReplicaStatus
+        {
+            get; set;
+        }
+
         public bool RGMemoryEnabled
         {
             get; set;
@@ -68,23 +82,26 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
         */
-
         public double RGAppliedMemoryLimitMb
         {
             get; set;
         }
+
         public string ServiceKind
         {
             get; set;
         }
+
         public string ServiceName
         {
             get; set;
         }
+
         public string ServiceTypeName
         {
             get; set;
         }
+
         public string ServiceTypeVersion
         {
             get; set;

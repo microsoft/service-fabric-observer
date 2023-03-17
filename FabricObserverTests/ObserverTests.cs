@@ -20,7 +20,6 @@ using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Description;
 using System.Fabric.Health;
-using System.Fabric.Query;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -1222,12 +1221,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ObserveAsync_Successful_RGLimitWarningGenerated()
         {
-            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
-            {
-                await DeployVotingAppAsync();
-                await Task.Delay(TimeSpan.FromSeconds(10));
-            }
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -1255,12 +1248,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ObserveAsync_Successful_RGLimit_Validate_Multiple_Memory_Specification()
         {
-            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
-            {
-                await DeployVotingAppAsync();
-                await Task.Delay(TimeSpan.FromSeconds(10));
-            }
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -1352,37 +1339,43 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.IsUnhealthy);
         }
 
+        #region Concurrency Tests
+
         [TestMethod]
-        public async Task Ensure_ConcurrentCollection_HasData_CPU_Win32()
+        public async Task Ensure_ConcurrentQueue_Collection_Has_Data_CPU_Win32Impl()
         {
-            ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
             FabricClientUtilities fabricClientUtilities = new(NodeName);
             var services = await fabricClientUtilities.GetAllDeployedReplicasOrInstancesAsync(true, Token);
+
+            Assert.IsTrue(services.Any());
+
+            ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
             ConcurrentQueue<int> serviceProcs = new();
 
             ParallelOptions parallelOptions = new()
             {
-                MaxDegreeOfParallelism = Environment.ProcessorCount,
+                MaxDegreeOfParallelism = -1,
                 CancellationToken = Token,
                 TaskScheduler = TaskScheduler.Default
             };
 
             _ = Parallel.For(0, services.Count, parallelOptions, (i, state) =>
             {
-                var service = services.ElementAt(i);
+                var service = services[i];
                 string procName = NativeMethods.GetProcessNameFromId((int)service.HostProcessId);
 
                 _ = AllAppCpuData.TryAdd($"{procName}:{service.HostProcessId}", new FabricResourceUsageData<double>(
-                        ErrorWarningProperty.CpuTime,
-                        $"{procName}:{service.HostProcessId}",
-                        8,
-                        false,
-                        true));
+                        property: ErrorWarningProperty.CpuTime,
+                        id: $"{procName}:{service.HostProcessId}",
+                        dataCapacity: 8,
+                        useCircularBuffer: false,
+                        isParallel: true));
 
                 serviceProcs.Enqueue((int)service.HostProcessId);
             });
 
-            Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Count == AllAppCpuData.Count);
+            Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
+            Assert.IsTrue(serviceProcs.Count == AllAppCpuData.Count);
 
             TimeSpan duration = TimeSpan.FromSeconds(3);
 
@@ -1390,13 +1383,12 @@ namespace FabricObserverTests
             {
                 Stopwatch sw = Stopwatch.StartNew();
                 int procId = serviceProcs.ElementAt(i);
+                string procName = NativeMethods.GetProcessNameFromId(procId);
                 CpuUsageWin32 cpuUsage = new();
 
                 while (sw.Elapsed <= duration)
                 {
-                    double cpu = 0;
-                    string procName = NativeMethods.GetProcessNameFromId(procId);
-                    cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, procName);
+                    double cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, procName);
 
                     // procId is no longer mapped to process. see CpuUsageProcess/CpuUsageWin32 impls.
                     if (cpu < 0)
@@ -1413,36 +1405,40 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task Ensure_ConcurrentCollection_HasData_CPU_NETProcess()
+        public async Task Ensure_ConcurrentQueue_Collection_Has_Data_CPU_NET6ProcessImpl()
         {
-            ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
             FabricClientUtilities fabricClientUtilities = new(NodeName);
             var services = await fabricClientUtilities.GetAllDeployedReplicasOrInstancesAsync(true, Token);
+
+            Assert.IsTrue(services.Any());
+
+            ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
             ConcurrentQueue<int> serviceProcs = new();
 
             ParallelOptions parallelOptions = new()
             {
-                MaxDegreeOfParallelism = Environment.ProcessorCount,
+                MaxDegreeOfParallelism = -1,
                 CancellationToken = Token,
                 TaskScheduler = TaskScheduler.Default
             };
 
             _ = Parallel.For(0, services.Count, parallelOptions, (i, state) =>
             {
-                var service = services.ElementAt(i);
+                var service = services[i];
                 string procName = NativeMethods.GetProcessNameFromId((int)service.HostProcessId);
 
                 _ = AllAppCpuData.TryAdd($"{procName}:{service.HostProcessId}", new FabricResourceUsageData<double>(
-                        ErrorWarningProperty.CpuTime,
-                        $"{procName}:{service.HostProcessId}",
-                        8,
-                        false,
-                        true));
+                        property: ErrorWarningProperty.CpuTime,
+                        id: $"{procName}:{service.HostProcessId}",
+                        dataCapacity: 8,
+                        useCircularBuffer: false,
+                        isParallel: true));
 
                 serviceProcs.Enqueue((int)service.HostProcessId);
             });
 
-            Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Count == AllAppCpuData.Count);
+            Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
+            Assert.IsTrue(serviceProcs.Count == AllAppCpuData.Count);
 
             TimeSpan duration = TimeSpan.FromSeconds(3);
 
@@ -1450,13 +1446,12 @@ namespace FabricObserverTests
             {
                 Stopwatch sw = Stopwatch.StartNew();
                 int procId = serviceProcs.ElementAt(i);
+                string procName = NativeMethods.GetProcessNameFromId(procId);
                 CpuUsageProcess cpuUsage = new();
 
                 while (sw.Elapsed <= duration)
                 {
-                    double cpu = 0;
-                    string procName = NativeMethods.GetProcessNameFromId(procId);
-                    cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, procName);
+                    double cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, procName);
 
                     // procId is no longer mapped to process. see CpuUsageProcess/CpuUsageWin32 impls.
                     if (cpu < 0)
@@ -1471,18 +1466,140 @@ namespace FabricObserverTests
 
             Assert.IsTrue(AllAppCpuData.All(d => d.Value.Data.Any()));
         }
+
+        [TestMethod]
+        public async Task Ensure_CircularBuffer_Collection_Has_Data_CPU_Win32Impl()
+        {
+            FabricClientUtilities fabricClientUtilities = new(NodeName);
+            var services = await fabricClientUtilities.GetAllDeployedReplicasOrInstancesAsync(true, Token);
+
+            Assert.IsTrue(services.Any());
+
+            ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
+            ConcurrentQueue<int> serviceProcs = new();
+
+            ParallelOptions parallelOptions = new()
+            {
+                MaxDegreeOfParallelism = -1,
+                CancellationToken = Token,
+                TaskScheduler = TaskScheduler.Default
+            };
+
+            _ = Parallel.For(0, services.Count, parallelOptions, (i, state) =>
+            {
+                var service = services[i];
+                string procName = NativeMethods.GetProcessNameFromId((int)service.HostProcessId);
+
+                _ = AllAppCpuData.TryAdd($"{procName}:{service.HostProcessId}", new FabricResourceUsageData<double>(
+                        property: ErrorWarningProperty.CpuTime,
+                        id: $"{procName}:{service.HostProcessId}",
+                        dataCapacity: 10,
+                        useCircularBuffer: true,
+                        isParallel: true));
+
+                serviceProcs.Enqueue((int)service.HostProcessId);
+            });
+
+            Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
+            Assert.IsTrue(serviceProcs.Count == AllAppCpuData.Count);
+
+            TimeSpan duration = TimeSpan.FromSeconds(3);
+
+            _ = Parallel.For(0, serviceProcs.Count, parallelOptions, (i, state) =>
+            {
+                Stopwatch sw = Stopwatch.StartNew();
+                int procId = serviceProcs.ElementAt(i);
+                string procName = NativeMethods.GetProcessNameFromId(procId);
+                CpuUsageWin32 cpuUsage = new();
+
+                while (sw.Elapsed <= duration)
+                {
+                    double cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, procName);
+
+                    // procId is no longer mapped to process. see CpuUsageProcess/CpuUsageWin32 impls.
+                    if (cpu < 0)
+                    {
+                        continue;
+                    }
+
+                    AllAppCpuData[$"{procName}:{procId}"].AddData(cpu);
+                    Thread.Sleep(150);
+                }
+            });
+
+            Assert.IsTrue(AllAppCpuData.All(d => d.Value.Data.Any()));
+        }
+
+        [TestMethod]
+        public async Task Ensure_CircularBuffer_Collection_Has_Data_CPU_NET6ProcessImpl()
+        {
+            FabricClientUtilities fabricClientUtilities = new(NodeName);
+            var services = await fabricClientUtilities.GetAllDeployedReplicasOrInstancesAsync(true, Token);
+
+            Assert.IsTrue(services.Any());
+
+            ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
+            ConcurrentQueue<int> serviceProcs = new();
+
+            ParallelOptions parallelOptions = new()
+            {
+                MaxDegreeOfParallelism = -1,
+                CancellationToken = Token,
+                TaskScheduler = TaskScheduler.Default
+            };
+
+            _ = Parallel.For(0, services.Count, parallelOptions, (i, state) =>
+            {
+                var service = services[i];
+                string procName = NativeMethods.GetProcessNameFromId((int)service.HostProcessId);
+
+                _ = AllAppCpuData.TryAdd($"{procName}:{service.HostProcessId}", new FabricResourceUsageData<double>(
+                        property: ErrorWarningProperty.CpuTime,
+                        id: $"{procName}:{service.HostProcessId}",
+                        dataCapacity: 10,
+                        useCircularBuffer: true,
+                        isParallel: true));
+
+                serviceProcs.Enqueue((int)service.HostProcessId);
+            });
+
+            Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
+            Assert.IsTrue(serviceProcs.Count == AllAppCpuData.Count);
+
+            TimeSpan duration = TimeSpan.FromSeconds(3);
+
+            _ = Parallel.For(0, serviceProcs.Count, parallelOptions, (i, state) =>
+            {
+                Stopwatch sw = Stopwatch.StartNew();
+                int procId = serviceProcs.ElementAt(i);
+                string procName = NativeMethods.GetProcessNameFromId(procId);
+                CpuUsageProcess cpuUsage = new();
+
+                while (sw.Elapsed <= duration)
+                {
+                    double cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, procName);
+
+                    // procId is no longer mapped to process. see CpuUsageProcess/CpuUsageWin32 impls.
+                    if (cpu < 0)
+                    {
+                        continue;
+                    }
+
+                    AllAppCpuData[$"{procName}:{procId}"].AddData(cpu);
+                    Thread.Sleep(150);
+                }
+            });
+
+            Assert.IsTrue(AllAppCpuData.All(d => d.Value.Data.Any()));
+        }
+
+        #endregion
 
         #region Dump Tests
 
         [TestMethod]
         public async Task AppObserver_DumpProcessOnWarning_SuccessfulDumpCreation()
         {
-            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
-            {
-                await DeployVotingAppAsync();
-                await Task.Delay(TimeSpan.FromSeconds(10));
-            }
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -1525,12 +1642,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_DumpProcessOnError_SuccessfulDumpCreation()
         {
-            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
-            {
-                await DeployVotingAppAsync();
-                await Task.Delay(TimeSpan.FromSeconds(10));
-            }
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -2591,15 +2702,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ETW_EventData_IsChildProcessTelemetryData()
         {
-            if (!await EnsureTestServicesExistAsync("fabric:/TestApp42"))
-            {
-                await DeployTestApp42Async();
-
-                // Ensure enough time for child process creation by the test service parent process.
-                await Task.Delay(TimeSpan.FromSeconds(10));
-            }
-
-            await Task.Delay(TimeSpan.FromSeconds(10));
             using var foEtwListener = new FabricObserverEtwListener(_logger);
             await AppObserver_ObserveAsync_Successful_IsHealthy();
             List<List<ChildProcessTelemetryData>> childProcessTelemetryData = foEtwListener.foEtwConverter.ChildProcessTelemetry;
@@ -2643,12 +2745,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ETW_EventData_IsTelemetryData()
         {
-            if (!await EnsureTestServicesExistAsync("fabric:/TestApp42"))
-            {
-                await DeployTestApp42Async();
-                await Task.Delay(TimeSpan.FromSeconds(10));
-            }
-
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
             await AppObserver_ObserveAsync_Successful_IsHealthy();
@@ -2691,12 +2787,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ETW_EventData_IsTelemetryData_HealthWarnings()
         {
-            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
-            {
-                await DeployHealthMetricsAppAsync();
-                await Task.Delay(TimeSpan.FromSeconds(10));
-            }
-
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
             await AppObserver_ObserveAsync_Successful_WarningsGenerated();
@@ -2744,12 +2834,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ETW_EventData_RGEnabled_MemoryInMB_Or_MemoryInMBLimit_ValuesAreNonZero()
         {
-            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
-            {
-                await DeployVotingAppAsync();
-                await Task.Delay(TimeSpan.FromSeconds(10));
-            }
-
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
             await AppObserver_ObserveAsync_Successful_IsHealthy();
@@ -2802,12 +2886,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ETW_PrivateBytes_Multiple_CodePackages_ValuesAreNonZero_Warnings_MB_Percent()
         {
-            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
-            {
-                await DeployVotingAppAsync();
-                await Task.Delay(TimeSpan.FromSeconds(10));
-            }
-
             using var foEtwListener = new FabricObserverEtwListener(_logger);
             await AppObserver_ObserveAsync_PrivateBytes_Successful_WarningsGenerated();
             List<ServiceTelemetryData> telemData = foEtwListener.foEtwConverter.ServiceTelemetryData;
@@ -2826,13 +2904,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ETW_PrivateBytes_Warning_ChildProcesses()
         {
-            if (!await EnsureTestServicesExistAsync("fabric:/TestApp42"))
-            {
-                await DeployTestApp42Async();
-                await Task.Delay(TimeSpan.FromSeconds(10));
-            }
-
-            await Task.Delay(TimeSpan.FromSeconds(10));
             using var foEtwListener = new FabricObserverEtwListener(_logger);
             await AppObserver_ObserveAsync_PrivateBytes_Successful_WarningsGenerated();
             List<ServiceTelemetryData> telemData = foEtwListener.foEtwConverter.ServiceTelemetryData;
@@ -2867,12 +2938,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_ETW_RGMemoryLimitPercent_Warning()
         {
-            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
-            {
-                await DeployVotingAppAsync();
-                await Task.Delay(TimeSpan.FromSeconds(10));
-            }
-
             using var foEtwListener = new FabricObserverEtwListener(_logger);
             await AppObserver_ObserveAsync_Successful_RGLimitWarningGenerated();
             List<ServiceTelemetryData> telemData = foEtwListener.foEtwConverter.ServiceTelemetryData;
@@ -2966,13 +3031,13 @@ namespace FabricObserverTests
         // FabricSystemObserver: TelemetryData \\
 
         [TestMethod]
-        public async Task FabricSystemObserver_ETW_EventData_IsTelemetryData()
+        public async Task FabricSystemObserver_ETW_EventData_Is_SystemServiceTelemetryData()
         {
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
             await FabricSystemObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors();
 
-            List<ServiceTelemetryData> telemData = foEtwListener.foEtwConverter.ServiceTelemetryData;
+            List<SystemServiceTelemetryData> telemData = foEtwListener.foEtwConverter.SystemServiceTelemetryData;
             
             Assert.IsNotNull(telemData);
             Assert.IsTrue(telemData.Count > 0);
@@ -3004,13 +3069,13 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task FabricSystemObserver_ETW_EventData_IsTelemetryData_Warnings()
+        public async Task FabricSystemObserver_ETW_EventData_Is_SystemServiceTelemetryData_Warnings()
         {
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
             await FabricSystemObserver_ObserveAsync_Successful_IsHealthy_MemoryWarningsOrErrorsDetected();
 
-            List<ServiceTelemetryData> telemData = foEtwListener.foEtwConverter.ServiceTelemetryData;
+            List<SystemServiceTelemetryData> telemData = foEtwListener.foEtwConverter.SystemServiceTelemetryData;
             
             Assert.IsNotNull(telemData);
             Assert.IsTrue(telemData.Count > 0);
@@ -3208,12 +3273,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_Detects_Monitors_Multiple_Helper_CodePackages()
         {
-            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
-            {
-                await DeployVotingAppAsync();
-                await Task.Delay(TimeSpan.FromSeconds(10));
-            }
-
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;

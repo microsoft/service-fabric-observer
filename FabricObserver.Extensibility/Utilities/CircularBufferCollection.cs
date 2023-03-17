@@ -11,10 +11,7 @@ namespace FabricObserver.Observers.Utilities
 {
     /// <summary>
     /// Generic Circular buffer implementation for IList of numeric type T.
-    /// CircularBufferCollection class based on public (non-license-protected) sample: http://www.geekswithblogs.net/blackrob/archive/2014/09/01/circular-buffer-in-c.aspx
-    /// All observers that produce numeric data as part of their resource usage monitoring
-    /// use this class to store their data (held within instances of FabricResourceUsageData,
-    /// see FRUD's Data member). Constraint on struct is partial, but useful.
+    /// CircularBufferCollection class based on http://www.geekswithblogs.net/blackrob/archive/2014/09/01/circular-buffer-in-c.aspx
     /// </summary>
     /// <typeparam name="T">Numeric type.</typeparam>
     public class CircularBufferCollection<T> : IList<T>
@@ -23,6 +20,8 @@ namespace FabricObserver.Observers.Utilities
         private IList<T> buffer;
         private int head;
         private int tail;
+        private readonly object lockInsert = new();
+        private readonly object lockDelete = new();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CircularBufferCollection{T}"/> class.
@@ -63,29 +62,32 @@ namespace FabricObserver.Observers.Utilities
             get => buffer.Count;
             set
             {
-                if (value <= 0)
+                lock (lockInsert)
                 {
-                    throw new ArgumentOutOfRangeException(
-                        nameof(value), $"value must be greater than 0 ({value}).");
+                    if (value <= 0)
+                    {
+                        throw new ArgumentOutOfRangeException(
+                            nameof(value), $"value must be greater than 0 ({value}).");
+                    }
+
+                    if (value == buffer.Count)
+                    {
+                        return;
+                    }
+
+                    var buffer1 = new T[value];
+                    var count = 0;
+
+                    while (Count > 0 && count < value)
+                    {
+                        buffer1[count++] = Dequeue();
+                    }
+
+                    buffer = buffer1;
+                    Count = count;
+                    head = count - 1;
+                    tail = 0;
                 }
-
-                if (value == buffer.Count)
-                {
-                    return;
-                }
-
-                var buffer1 = new T[value];
-                var count = 0;
-
-                while (Count > 0 && count < value)
-                {
-                    buffer1[count++] = Dequeue();
-                }
-
-                buffer = buffer1;
-                Count = count;
-                head = count - 1;
-                tail = 0;
             }
         }
 
@@ -108,12 +110,15 @@ namespace FabricObserver.Observers.Utilities
 
             set
             {
-                if (index < 0 || index >= Count)
+                lock (lockInsert)
                 {
-                    throw new ArgumentOutOfRangeException(nameof(index));
-                }
+                    if (index < 0 || index >= Count)
+                    {
+                        throw new ArgumentOutOfRangeException(nameof(index));
+                    }
 
-                buffer[(tail + index) % Capacity] = value;
+                    buffer[(tail + index) % Capacity] = value;
+                }
             }
         }
 
@@ -124,15 +129,18 @@ namespace FabricObserver.Observers.Utilities
         /// <returns>Boolean representing success or failure of operation.</returns>
         public bool Remove(T item)
         {
-            if (!Contains(item))
+            lock (lockDelete)
             {
-                return false;
+                if (!Contains(item))
+                {
+                    return false;
+                }
+
+                RemoveAt(IndexOf(item));
+                Dequeue();
+
+                return true;
             }
-
-            RemoveAt(IndexOf(item));
-            Dequeue();
-
-            return true;
         }
 
         /// <summary>
@@ -142,20 +150,23 @@ namespace FabricObserver.Observers.Utilities
         /// <returns>Item that was enqueued.</returns>
         public T Enqueue(T item)
         {
-            head = (head + 1) % Capacity;
-            var overwritten = buffer[head];
-            buffer[head] = item;
-
-            if (Count == Capacity)
+            lock (lockInsert)
             {
-                tail = (tail + 1) % Capacity;
-            }
-            else
-            {
-                ++Count;
-            }
+                head = (head + 1) % Capacity;
+                var overwritten = buffer[head];
+                buffer[head] = item;
 
-            return overwritten;
+                if (Count == Capacity)
+                {
+                    tail = (tail + 1) % Capacity;
+                }
+                else
+                {
+                    ++Count;
+                }
+
+                return overwritten;
+            }
         }
 
         /// <summary>
@@ -164,17 +175,20 @@ namespace FabricObserver.Observers.Utilities
         /// <returns>Item that was dequeued.</returns>
         public T Dequeue()
         {
-            if (Count == 0)
+            lock (lockDelete)
             {
-                throw new InvalidOperationException("queue exhausted");
+                if (Count == 0)
+                {
+                    throw new InvalidOperationException("queue exhausted");
+                }
+
+                var dequeued = buffer[tail];
+                buffer[tail] = default;
+                tail = (tail + 1) % Capacity;
+                --Count;
+
+                return dequeued;
             }
-
-            var dequeued = buffer[tail];
-            buffer[tail] = default;
-            tail = (tail + 1) % Capacity;
-            --Count;
-
-            return dequeued;
         }
 
         /// <summary>
@@ -192,10 +206,13 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         public void Clear()
         {
-            head = Capacity - 1;
-            tail = 0;
-            Count = 0;
-            buffer = new List<T>(new T[Capacity]);
+            lock (lockDelete)
+            {
+                head = Capacity - 1;
+                tail = 0;
+                Count = 0;
+                buffer = new List<T>(new T[Capacity]);
+            }
         }
 
         /// <summary>
@@ -215,7 +232,10 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="index">The index of the target array to start copying to.</param>
         public void CopyTo(T[] array, int index)
         {
-            buffer.CopyTo(array, index);
+            lock (lockInsert)
+            {
+                buffer.CopyTo(array, index);
+            }
         }
 
         /// <summary>
@@ -243,29 +263,32 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="item">Element to insert into list.</param>
         public void Insert(int index, T item)
         {
-            if (index < 0 || index > Count)
+            lock (lockInsert)
             {
-                throw new ArgumentOutOfRangeException(
-                    nameof(index),
-                    $"invalid index supplied: {index}");
-            }
-
-            if (Count == index)
-            {
-                Enqueue(item);
-            }
-            else
-            {
-                var last = this[Count - 1];
-
-                for (var i = index; i < Count - 2; ++i)
+                if (index < 0 || index > Count)
                 {
-                    this[i + 1] = this[i];
+                    throw new ArgumentOutOfRangeException(
+                        nameof(index),
+                        $"invalid index supplied: {index}");
                 }
 
-                this[index] = item;
+                if (Count == index)
+                {
+                    Enqueue(item);
+                }
+                else
+                {
+                    var last = this[Count - 1];
 
-                Enqueue(last);
+                    for (var i = index; i < Count - 2; ++i)
+                    {
+                        this[i + 1] = this[i];
+                    }
+
+                    this[index] = item;
+
+                    Enqueue(last);
+                }
             }
         }
 
@@ -275,17 +298,20 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="index">Index of the element in the List to remove.</param>
         public void RemoveAt(int index)
         {
-            if (index < 0 || index >= Count)
+            lock (lockDelete)
             {
-                throw new ArgumentOutOfRangeException(nameof(index), $"invalid index supplied: {index}");
-            }
+                if (index < 0 || index >= Count)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(index), $"invalid index supplied: {index}");
+                }
 
-            for (var i = index; i > 0; --i)
-            {
-                this[i] = this[i - 1];
-            }
+                for (var i = index; i > 0; --i)
+                {
+                    this[i] = this[i - 1];
+                }
 
-            Dequeue();
+                Dequeue();
+            }
         }
 
         /// <summary>
