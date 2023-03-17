@@ -103,7 +103,7 @@ namespace ClusterObserver
 
         public override async Task ObserveAsync(CancellationToken token)
         {
-            if (!IsEnabled || (!IsTelemetryEnabled && !IsEtwEnabled)
+            if (!IsEnabled /*|| (!IsTelemetryEnabled && !IsEtwEnabled)*/
                 || (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval))
             {
                 return;
@@ -1251,12 +1251,28 @@ namespace ClusterObserver
                 switch (telemData.ObserverName)
                 {
                     case ObserverConstants.AppObserverName:
-                    case ObserverConstants.ContainerObserverName:
-                    case ObserverConstants.FabricSystemObserverName:
-
+                        
                         if (JsonHelper.TryDeserializeObject(healthEvent.HealthInformation.Description, out ServiceTelemetryData serviceTelemetryData))
                         {
                             telemetryData = serviceTelemetryData;
+                            return true;
+                        }
+                        break;
+
+                    case ObserverConstants.ContainerObserverName:
+
+                        if (JsonHelper.TryDeserializeObject(healthEvent.HealthInformation.Description, out ContainerTelemetryData containerTelemetryData))
+                        {
+                            telemetryData = containerTelemetryData;
+                            return true;
+                        }
+                        break;
+
+                    case ObserverConstants.FabricSystemObserverName:
+
+                        if (JsonHelper.TryDeserializeObject(healthEvent.HealthInformation.Description, out SystemServiceTelemetryData systemServiceTelemetryData))
+                        {
+                            telemetryData = systemServiceTelemetryData;
                             return true;
                         }
                         break;
