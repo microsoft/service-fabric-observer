@@ -10,6 +10,7 @@ using FabricObserver;
 using FabricObserver.Observers;
 using System.Reflection;
 using System.Linq;
+using FabricObserver.Utilities;
 
 namespace ClusterObserver
 {
@@ -101,12 +102,12 @@ namespace ClusterObserver
                         }
                         else
                         {
-                            // This will bring down FO, which it should: This means your plugin is not supported. Fix your bug.
-                            throw new InvalidOperationException($"{startupAttributes[j].StartupType.FullName} must implement IFabricObserverStartup.");
+                            // This will bring down CO, which it should: This means your plugin is not supported. Fix your bug.
+                            throw new InvalidPluginException($"{startupAttributes[j].StartupType.FullName} must implement IFabricObserverStartup.");
                         }
                     }
                 }
-                catch (Exception e) when (e is ArgumentException || e is BadImageFormatException || e is IOException)
+                catch (Exception e) when (e is ArgumentException or BadImageFormatException or IOException)
                 {
                     continue;
                 }

@@ -83,11 +83,11 @@ namespace FabricObserver.Observers
 
                 await ReportAsync(token);
             }
-            catch (Exception e) when (e is ArgumentException || e is IOException)
+            catch (Exception e) when (e is ArgumentException or IOException)
             {
                 
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
                 ObserverLogger.LogWarning($"Unhandled Exception in ObserveAsync:{Environment.NewLine}{e}");
 
@@ -187,7 +187,7 @@ namespace FabricObserver.Observers
                     clusterManifestXml = await FabricClientInstance.ClusterManager.GetClusterManifestAsync(AsyncClusterOperationTimeoutSeconds, Token);
                 }
             }
-            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or TimeoutException)
             {
             
             }

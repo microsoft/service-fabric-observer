@@ -155,7 +155,7 @@ namespace FabricObserver.Observers.Utilities
 
         public override double GetProcessKvsLvidsUsagePercentage(string procName, CancellationToken token, int procId = -1)
         {
-            if (string.IsNullOrWhiteSpace(procName))
+            if (string.IsNullOrWhiteSpace(procName) || token.IsCancellationRequested)
             {
                 return -1;
             }
@@ -202,8 +202,10 @@ namespace FabricObserver.Observers.Utilities
                     }
                     catch (InvalidOperationException e)
                     {
-                        ProcessInfoLogger.LogWarning($"GetProcessKvsLvidsUsagePercentage (Returning -1): Handled Exception from GetInternalProcessName.{Environment.NewLine}" +
-                                          $"The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for: {e.Message}");
+                        ProcessInfoLogger.LogWarning(
+                            $"GetProcessKvsLvidsUsagePercentage (Returning -1): Handled Exception from GetInternalProcessName.{Environment.NewLine}" +
+                            $"The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for: {e.Message}");
+
                         return -1;
                     }
                 }
@@ -236,12 +238,12 @@ namespace FabricObserver.Observers.Utilities
             catch (InvalidOperationException ioe)
             {
                 // The Counter layout for the Category specified is invalid? This can happen if a user messes around with Reg key values. Not likely.
-                ProcessInfoLogger.LogWarning($"GetProcessKvsLvidsUsagePercentage: Handled Win32Exception:{Environment.NewLine}{ioe.Message}");
+                ProcessInfoLogger.LogWarning($"GetProcessKvsLvidsUsagePercentage: Handled InvalidOperationException: {ioe.Message}");
             }
             catch (Win32Exception we)
             {
                 // Internal exception querying counter (Win32 code). There is nothing to do here. Log the details. Most likely transient.
-                ProcessInfoLogger.LogWarning($"GetProcessKvsLvidsUsagePercentage: Handled Win32Exception:{Environment.NewLine}{we.Message}");
+                ProcessInfoLogger.LogWarning($"GetProcessKvsLvidsUsagePercentage: Handled Win32Exception: {we.Message}");
             }
             finally
             {
@@ -300,7 +302,7 @@ namespace FabricObserver.Observers.Utilities
 
                 return (int)handles;
             }
-            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+            catch (Exception e) when (e is ArgumentException or InvalidOperationException or Win32Exception)
             {
                 // Access denied (FO is running as a less privileged user than the target process).
                 if (e is Win32Exception && (e as Win32Exception).NativeErrorCode != 5)
@@ -352,7 +354,7 @@ namespace FabricObserver.Observers.Utilities
 
                 return memoryCounters.WorkingSetSize.ToUInt64() / 1024 / 1024;
             }
-            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+            catch (Exception e) when (e is ArgumentException or InvalidOperationException or Win32Exception)
             {
                 ProcessInfoLogger.LogWarning($"GetProcessMemoryMbWin32: Exception getting working set for process {processId}: {e.Message}");
                 return 0F;
@@ -441,7 +443,7 @@ namespace FabricObserver.Observers.Utilities
                 using PerformanceCounter perfCounter = new("Process", perfCounterName, internalProcName, true);
                 return perfCounter.NextValue() / 1024 / 1024;
             }
-            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is UnauthorizedAccessException || e is Win32Exception)
+            catch (Exception e) when (e is ArgumentException or InvalidOperationException or UnauthorizedAccessException or Win32Exception)
             {
                 ProcessInfoLogger.LogWarning($"Handled exception in GetProcessMemoryMbPerfCounter: Returning 0.{Environment.NewLine}{e.Message}");
             }
@@ -457,7 +459,10 @@ namespace FabricObserver.Observers.Utilities
 
         private string GetInternalProcessName(string procName, int pid, CancellationToken token)
         {
-            token.ThrowIfCancellationRequested();
+            if (token.IsCancellationRequested)
+            {
+                return null;
+            }
 
             try
             {
@@ -489,16 +494,15 @@ namespace FabricObserver.Observers.Utilities
                     return _procCache[procName].First(inst => inst.Pid == pid).InternalName;
                 }
             }
-            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+            catch (Exception e) when (e is ArgumentException or InvalidOperationException or Win32Exception)
             {
 #if DEBUG
                 ProcessInfoLogger.LogWarning($"GetInternalProcessName: Failure getting data from cache. Name: {procName}, Pid: {pid}");
 #endif
             }
-            catch (Exception e) when (!(e is InvalidOperationException || e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
-                // Log the full error (including stack trace) for debugging purposes. Note: Caller must handle InvalidOperationException as in this case it likely means
-                // the process no longer exists with the same id (or internal name). So, don't re-throw as Unhandled here.
+                // Log the full error (including stack trace) for debugging purposes. 
                 ProcessInfoLogger.LogError(
                     $"Unhandled exception in GetInternalProcessName: Unable to determine internal process name for {procName} with id {pid}{Environment.NewLine}{e}");
 
@@ -510,7 +514,10 @@ namespace FabricObserver.Observers.Utilities
 
         private static string GetInternalProcNameFromId(string procName, int pid, CancellationToken token)
         {
-            token.ThrowIfCancellationRequested();
+            if (token.IsCancellationRequested)
+            {
+                return null;
+            }
 
             PerformanceCounter cnt = null;
 
@@ -536,13 +543,13 @@ namespace FabricObserver.Observers.Utilities
 
                         return instance;
                     }
-                    catch (Exception e) when (e is InvalidOperationException || e is UnauthorizedAccessException || e is Win32Exception)
+                    catch (Exception e) when (e is InvalidOperationException or UnauthorizedAccessException or Win32Exception)
                     {
 
                     }
                 }
             }
-            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is UnauthorizedAccessException || e is Win32Exception)
+            catch (Exception e) when (e is ArgumentException or InvalidOperationException or UnauthorizedAccessException or Win32Exception)
             {
 
             }
@@ -557,7 +564,10 @@ namespace FabricObserver.Observers.Utilities
 
         private void RefreshSameNamedProcCache(string procName, CancellationToken token)
         {
-            token.ThrowIfCancellationRequested();
+            if (token.IsCancellationRequested)
+            {
+                return;
+            }
 
             PerformanceCounter cnt = null;
 
@@ -570,7 +580,10 @@ namespace FabricObserver.Observers.Utilities
 
                 foreach (string instance in instances)
                 {
-                    token.ThrowIfCancellationRequested();
+                    if (token.IsCancellationRequested)
+                    {
+                        return;
+                    }
 
                     try
                     {
@@ -586,7 +599,7 @@ namespace FabricObserver.Observers.Utilities
                             _procCache[procName].Add((instance, (int)sample.RawValue));
                         }
                     }
-                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception || e is UnauthorizedAccessException)
+                    catch (Exception e) when (e is ArgumentException or InvalidOperationException or Win32Exception or UnauthorizedAccessException)
                     {
 
                     }
@@ -594,7 +607,7 @@ namespace FabricObserver.Observers.Utilities
 
                 sameNamedProcCacheLastUpdated = DateTime.UtcNow;
             }
-            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception || e is UnauthorizedAccessException)
+            catch (Exception e) when (e is ArgumentException or InvalidOperationException or Win32Exception or UnauthorizedAccessException)
             {
 
             }

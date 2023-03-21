@@ -1405,7 +1405,7 @@ namespace FabricObserver.Observers
                 // If user configures MaxConcurrentTasks setting, then use that value instead.
                 if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasksParameter), out int maxTasks))
                 {
-                    if (maxTasks == -1 || maxTasks > 0)
+                    if (maxTasks is (-1) or > 0)
                     {
                         maxDegreeOfParallelism = maxTasks;
                     }
@@ -1465,7 +1465,7 @@ namespace FabricObserver.Observers
                 parentFrud.ClearData();
                 parentFrud.AddData((T)Convert.ChangeType(sumAllValues, typeof(T)));
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
                 ObserverLogger.LogWarning($"ProcessChildProcs - Failure processing descendants:{Environment.NewLine}{e}");
             }
@@ -1496,7 +1496,7 @@ namespace FabricObserver.Observers
                 {
                     procStartTime = NativeMethods.GetProcessStartTime((int)repOrInst.HostProcessId).ToString("o");
                 }
-                catch (Exception e) when (e is ArgumentException || e is FormatException || e is Win32Exception)
+                catch (Exception e) when (e is ArgumentException or FormatException or Win32Exception)
                 {
                     ObserverLogger.LogInfo($"Can't get process start time for {repOrInst.HostProcessId}: {e.Message}");
                     // Just don't set the ChildProcessTelemetryData.ProcessStartTime field. Don't exit the function.
@@ -1511,7 +1511,7 @@ namespace FabricObserver.Observers
                         procStartTime = proc.StartTime.ToString("o");
                     }
                 }
-                catch (Exception e) when (e is ArgumentException || e is FormatException || e is InvalidOperationException || e is NotSupportedException || e is Win32Exception)
+                catch (Exception e) when (e is ArgumentException or FormatException or InvalidOperationException or NotSupportedException or Win32Exception)
                 {
                     ObserverLogger.LogInfo($"Can't get process start time for {repOrInst.HostProcessId}: {e.Message}");
                     // Just don't set the ChildProcessTelemetryData.ProcessStartTime field. Don't exit the function.
@@ -1696,7 +1696,7 @@ namespace FabricObserver.Observers
                         childFruds = null;
                     }
                 }
-                catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+                catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
                 {
                     ObserverLogger.LogWarning($"Failure processing descendant information: {e.Message}");
                     continue;
@@ -1739,7 +1739,7 @@ namespace FabricObserver.Observers
                 DumpsPath = Path.Combine(ObserverLogger.LogFolderBasePath, ObserverName, ObserverConstants.ProcessDumpFolderNameParameter);
                 Directory.CreateDirectory(DumpsPath);
             }
-            catch (Exception e) when (e is ArgumentException || e is IOException || e is NotSupportedException || e is UnauthorizedAccessException)
+            catch (Exception e) when (e is ArgumentException or IOException or NotSupportedException or UnauthorizedAccessException)
             {
                 ObserverLogger.LogWarning($"Unable to create dump directory {DumpsPath}.");
                 return;
@@ -1849,12 +1849,12 @@ namespace FabricObserver.Observers
 
                         // For hosted container apps, the host service is Fabric. AppObserver can't monitor these types of services.
                         // Please use ContainerObserver for SF container app service monitoring.
-                        if (parentProcName == null || parentProcName == "Fabric")
+                        if (parentProcName is null or "Fabric")
                         {
                             return;
                         }
                     }
-                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is NotSupportedException || e is Win32Exception)
+                    catch (Exception e) when (e is ArgumentException or InvalidOperationException or NotSupportedException or Win32Exception)
                     {
                         if (!IsWindows || ObserverManager.ObserverFailureHealthStateLevel == HealthState.Unknown)
                         {
@@ -1863,7 +1863,7 @@ namespace FabricObserver.Observers
 
                         if (e is Win32Exception exception)
                         {
-                            if (exception.NativeErrorCode == 5 || exception.NativeErrorCode == 6)
+                            if (exception.NativeErrorCode is 5 or 6)
                             {
                                 string serviceName = repOrInst.ServiceName.OriginalString;
                                 string message = $"{serviceName} is running as Admin or System user on Windows and can't be monitored by FabricObserver, which is running as Network Service. " +
@@ -2691,7 +2691,7 @@ namespace FabricObserver.Observers
 
                         replicasOrInstances = null;
                     }
-                    catch (Exception e) when (e is ArgumentException || e is FabricException || e is Win32Exception)
+                    catch (Exception e) when (e is ArgumentException or FabricException or Win32Exception)
                     {
                         ObserverLogger.LogWarning(
                             $"SetDeployedReplicaOrInstanceListAsync: Unable to process replica information for {userTarget}{Environment.NewLine}{e}");
@@ -2738,7 +2738,7 @@ namespace FabricObserver.Observers
                         appType = deployedApps.First(app => app.ApplicationName == appName).ApplicationTypeName;
                     }
                 }
-                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                catch (Exception e) when (e is ArgumentException or InvalidOperationException)
                 {
 
                 }
@@ -2783,7 +2783,7 @@ namespace FabricObserver.Observers
 
                 switch (deployedReplica)
                 {
-                    case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole == ReplicaRole.Primary || statefulReplica.ReplicaRole == ReplicaRole.ActiveSecondary:
+                    case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole is ReplicaRole.Primary or ReplicaRole.ActiveSecondary:
                     {
                         if (filterList != null && filterType != ServiceFilterType.None)
                         {
@@ -2919,7 +2919,7 @@ namespace FabricObserver.Observers
                                 replicaInfo.HostProcessName = p.ProcessName;
                             }
                         }
-                        catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is NotSupportedException)
+                        catch (Exception e) when (e is ArgumentException or InvalidOperationException or NotSupportedException)
                         {
 
                         }
@@ -2971,7 +2971,7 @@ namespace FabricObserver.Observers
                             replicaInfo.ApplicationTypeVersion = appTypeVersion;
                         }
                     }
-                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                    catch (Exception e) when (e is ArgumentException or InvalidOperationException)
                     {
 
                     }
@@ -3018,7 +3018,7 @@ namespace FabricObserver.Observers
                                     replicaInfo.ServiceTypeVersion = serviceList.First(s => s.ServiceName == serviceName).ServiceManifestVersion;
                                 }
                             }
-                            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                            catch (Exception e) when (e is ArgumentException or InvalidOperationException)
                             {
 
                             }
@@ -3026,7 +3026,7 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is TimeoutException || e is XmlException)
+            catch (Exception e) when (e is FabricException or TaskCanceledException or TimeoutException or XmlException)
             {
                 ObserverLogger.LogWarning($"Handled: Failed to process Service configuration for {replicaInfo.ServiceName.OriginalString} with exception '{e.Message}'");
                 // move along
@@ -3093,7 +3093,7 @@ namespace FabricObserver.Observers
                             {
                                 procName = proc.ProcessName;
                             }
-                            catch (Exception e) when (e is InvalidOperationException || e is NotSupportedException || e is ArgumentException)
+                            catch (Exception e) when (e is InvalidOperationException or NotSupportedException or ArgumentException)
                             {
                                 ObserverLogger.LogInfo($"ProcessMultipleHelperCodePackages::GetProcessById(Linux): Handled Exception: {e.Message}");
                             }
@@ -3164,7 +3164,7 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (e is ArgumentException || e is FabricException || e is TaskCanceledException || e is TimeoutException)
+            catch (Exception e) when (e is ArgumentException or FabricException or TaskCanceledException or TimeoutException)
             {
                 ObserverLogger.LogInfo($"ProcessMultipleHelperCodePackages: Handled Exception: {e.Message}");
             }
@@ -3321,7 +3321,7 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+            catch (Exception e) when (e is ArgumentException or InvalidOperationException)
             {
                 ObserverLogger.LogWarning($"Failure generating CSV data: {e.Message}");
             }

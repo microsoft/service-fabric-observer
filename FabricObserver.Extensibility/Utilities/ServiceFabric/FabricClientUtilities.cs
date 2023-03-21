@@ -62,13 +62,13 @@ namespace FabricObserver.Utilities.ServiceFabric
                     try
                     {
                         // This call with throw an ObjectDisposedException if fabricClient was disposed by, say, a plugin or if the runtime
-                        // disposed of it for some random (unlikely..) reason. This is just a test to ensure it is not in a disposed state.
+                        // disposed of it for some reason (FO replica restart, for example). This is just a test to ensure it is not in a disposed state.
                         if (fabricClient.Settings.HealthReportSendInterval > TimeSpan.MinValue)
                         {
                             return fabricClient;
                         }
                     }
-                    catch (Exception e) when (e is ObjectDisposedException || e is InvalidComObjectException)
+                    catch (Exception e) when (e is ObjectDisposedException or InvalidComObjectException)
                     {
                         lock (lockObj)
                         {
@@ -99,7 +99,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                 TaskScheduler = TaskScheduler.Default
             };
 
-            if (string.IsNullOrEmpty(nodeName))
+            if (string.IsNullOrWhiteSpace(nodeName))
             {
                 this.nodeName = FabricRuntime.GetNodeContext().NodeName;
             }
@@ -121,7 +121,7 @@ namespace FabricObserver.Utilities.ServiceFabric
         public async Task<List<DeployedApplication>> GetAllDeployedAppsAsync(CancellationToken token, string nodeName = null, Uri appNameFilter = null)
         {
             // Get info for 50 apps at a time that are deployed to the same node this FO instance is running on.
-            var deployedAppQueryDesc = new PagedDeployedApplicationQueryDescription(!string.IsNullOrEmpty(nodeName) ? nodeName : this.nodeName)
+            var deployedAppQueryDesc = new PagedDeployedApplicationQueryDescription(!string.IsNullOrWhiteSpace(nodeName) ? nodeName : this.nodeName)
             {
                 IncludeHealthState = false,
                 MaxResults = 50,
@@ -201,7 +201,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                                     handleToSnapshot,
                                     token));   
                     }
-                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                    catch (Exception e) when (e is ArgumentException or InvalidOperationException)
                     {
 
                     }
@@ -242,14 +242,17 @@ namespace FabricObserver.Utilities.ServiceFabric
 
             _ = Parallel.For(0, deployedReplicaList.Count, parallelOptions, (i, state) =>
             {
-                token.ThrowIfCancellationRequested();
+                if (token.IsCancellationRequested)
+                {
+                    state.Stop();
+                }
 
                 var deployedReplica = deployedReplicaList[i];
                 ReplicaOrInstanceMonitoringInfo replicaInfo = null;
 
                 switch (deployedReplica)
                 {
-                    case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole == ReplicaRole.Primary || statefulReplica.ReplicaRole == ReplicaRole.ActiveSecondary:
+                    case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole is ReplicaRole.Primary or ReplicaRole.ActiveSecondary:
                     {
                         replicaInfo = new ReplicaOrInstanceMonitoringInfo
                         {
@@ -328,7 +331,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                                 replicaInfo.HostProcessName = p.ProcessName;
                             }
                         }
-                        catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is NotSupportedException)
+                        catch (Exception e) when (e is ArgumentException or InvalidOperationException or NotSupportedException)
                         {
 
                         }
@@ -376,7 +379,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                         }
                     }
                 }
-                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+                catch (Exception e) when (e is ArgumentException or InvalidOperationException or Win32Exception)
                 {
                     // process with supplied pid may not be running..
                     continue;
@@ -443,7 +446,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                     }
                 }
             }
-            catch (Exception e) when (e is ArgumentException || e is XmlException)
+            catch (Exception e) when (e is ArgumentException or XmlException)
             {
                 logger.LogWarning($"Failure in TupleGetResourceGovernanceInfo: {e.Message}");
             }
@@ -546,7 +549,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                             logger.LogInfo("Completed TupleGetResourceGovernanceInfoFromAppManifest: Memory RG enabled.");
                             return (true, double.TryParse(memAttr.Value, out double mem) ? mem : 0);
                         }
-                        catch (Exception e) when (e is ArgumentException || e is XPathException)
+                        catch (Exception e) when (e is ArgumentException or XPathException)
                         {
                             logger.LogWarning($"Failure getting RG memory limit value for code package '{codepackageName}': {e.Message}");
                             return (false, 0);

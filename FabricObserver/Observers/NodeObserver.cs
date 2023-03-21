@@ -405,7 +405,7 @@ namespace FabricObserver.Observers
                     await EmitNodeSnapshotDetailsAsync();
                 }
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
                 ObserverLogger.LogWarning($"Unhandled exception re-thrown:{Environment.NewLine}{e}");
 
@@ -502,7 +502,7 @@ namespace FabricObserver.Observers
 
             if (!string.IsNullOrEmpty(cpuError) && float.TryParse(cpuError, out float cpuErrorUsageThresholdPct))
             {
-                if (cpuErrorUsageThresholdPct > 0 && cpuErrorUsageThresholdPct <= 100)
+                if (cpuErrorUsageThresholdPct is > 0 and <= 100)
                 {
                     CpuErrorUsageThresholdPct = cpuErrorUsageThresholdPct;
                 }
@@ -547,7 +547,7 @@ namespace FabricObserver.Observers
 
             if (!string.IsNullOrEmpty(errMemPercentUsed) && double.TryParse(errMemPercentUsed, out double memoryPercentUsedErrorThreshold))
             {
-                if (memoryPercentUsedErrorThreshold > 0 && memoryPercentUsedErrorThreshold <= 100)
+                if (memoryPercentUsedErrorThreshold is > 0 and <= 100)
                 {
                     MemoryErrorLimitPercent = memoryPercentUsedErrorThreshold;
                 }
@@ -560,7 +560,7 @@ namespace FabricObserver.Observers
 
                 if (!string.IsNullOrEmpty(errFileHandlesPercentUsed) && double.TryParse(errFileHandlesPercentUsed, out double fdsPercentUsedErrorThreshold))
                 {
-                    if (fdsPercentUsedErrorThreshold > 0 && fdsPercentUsedErrorThreshold <= 100)
+                    if (fdsPercentUsedErrorThreshold is > 0 and <= 100)
                     {
                         LinuxFileHandlesErrorPercent = fdsPercentUsedErrorThreshold;
                     }
@@ -585,7 +585,7 @@ namespace FabricObserver.Observers
 
             if (!string.IsNullOrEmpty(cpuWarn) && int.TryParse(cpuWarn, out int cpuWarningUsageThresholdPct))
             {
-                if (cpuWarningUsageThresholdPct > 0 && cpuWarningUsageThresholdPct <= 100)
+                if (cpuWarningUsageThresholdPct is > 0 and <= 100)
                 {
                     CpuWarningUsageThresholdPct = cpuWarningUsageThresholdPct;
                 }
@@ -630,7 +630,7 @@ namespace FabricObserver.Observers
 
             if (!string.IsNullOrEmpty(warnMemPercentUsed) && double.TryParse(warnMemPercentUsed, out double memoryPercentUsedWarningThreshold))
             {
-                if (memoryPercentUsedWarningThreshold > 0 && memoryPercentUsedWarningThreshold <= 100)
+                if (memoryPercentUsedWarningThreshold is > 0 and <= 100)
                 {
                     MemoryWarningLimitPercent = memoryPercentUsedWarningThreshold;
                 }
@@ -657,7 +657,7 @@ namespace FabricObserver.Observers
 
             if (!string.IsNullOrEmpty(warnFileHandlesPercentUsed) && double.TryParse(warnFileHandlesPercentUsed, out double fdsPercentUsedWarningThreshold))
             {
-                if (fdsPercentUsedWarningThreshold > 0 && fdsPercentUsedWarningThreshold <= 100)
+                if (fdsPercentUsedWarningThreshold is > 0 and <= 100)
                 {
                     LinuxFileHandlesWarningPercent = fdsPercentUsedWarningThreshold;
                 }
@@ -804,7 +804,7 @@ namespace FabricObserver.Observers
                 timer.Stop();
                 timer.Reset();
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
                 ObserverLogger.LogWarning($"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}");
 
@@ -880,7 +880,7 @@ namespace FabricObserver.Observers
                     ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, nodeSnapshotTelem);
                 }
             }
-            catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or TaskCanceledException or TimeoutException)
             {
                 ObserverLogger.LogWarning($"Failed to generate node stats:{Environment.NewLine}{e.Message}");
                 // Retry or try again later..

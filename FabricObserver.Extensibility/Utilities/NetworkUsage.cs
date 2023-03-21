@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using System.Management;
+using System.Runtime.InteropServices;
 using System.Xml;
 
 namespace FabricObserver.Observers.Utilities
@@ -51,7 +52,7 @@ namespace FabricObserver.Observers.Utilities
                     }
                 }
             }
-            catch (Exception e) when (e is ArgumentException || e is NullReferenceException || e is XmlException)
+            catch (Exception e) when (e is ArgumentException or NullReferenceException or XmlException)
             {
                 // continue
             }
@@ -64,29 +65,20 @@ namespace FabricObserver.Observers.Utilities
             int count = -1;
 
             // This method is not implemented for Linux yet.
-            if (Environment.OSVersion.Platform != PlatformID.Win32NT)
+            if (OperatingSystem.IsLinux())
             {
                 return count;
             }
 
             try
             {
-#pragma warning disable CA1416 // Validate platform compatibility
                 var scope = new ManagementScope("\\\\.\\ROOT\\StandardCimv2");
-#pragma warning restore CA1416 // Validate platform compatibility
-#pragma warning disable CA1416 // Validate platform compatibility
                 var q = new ObjectQuery("SELECT * FROM MSFT_NetFirewallRule WHERE Enabled=1");
-#pragma warning restore CA1416 // Validate platform compatibility
-
-#pragma warning disable CA1416 // Validate platform compatibility
                 using (var searcher = new ManagementObjectSearcher(scope, q))
                 {
-#pragma warning disable CA1416 // Validate platform compatibility
                     using (var results = searcher.Get())
                     {
-#pragma warning disable CA1416 // Validate platform compatibility
                         count = results.Count;
-#pragma warning restore CA1416 // Validate platform compatibility
                     }
                 }
             }

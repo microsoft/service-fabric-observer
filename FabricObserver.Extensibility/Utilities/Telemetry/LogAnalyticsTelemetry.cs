@@ -81,7 +81,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                         $"Unexpected response from server in LogAnalyticsTelemetry.SendTelemetryAsync:{Environment.NewLine}{response.StatusCode}: {response.ReasonPhrase}");
                 }
             }
-            catch (Exception e) when (e is HttpRequestException || e is InvalidOperationException)
+            catch (Exception e) when (e is HttpRequestException or InvalidOperationException)
             {
                 logger.LogInfo($"Exception sending telemetry to LogAnalytics service:{Environment.NewLine}{e.Message}");
             }
@@ -158,40 +158,77 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 return;
             }
 
-            if (telemetryData is ServiceTelemetryData serviceTelemData)
+            switch (telemetryData)
             {
-                if (JsonHelper.TrySerializeObject(serviceTelemData, out string jsonPayload))
-                {
-                    await SendTelemetryAsync(jsonPayload, cancellationToken);
-                }
-            }
-            else if (telemetryData is NodeTelemetryData nodeTelemData)
-            {
-                if (JsonHelper.TrySerializeObject(nodeTelemData, out string jsonPayload))
-                {
-                    await SendTelemetryAsync(jsonPayload, cancellationToken);
-                }
-            }
-            else if (telemetryData is DiskTelemetryData diskTelemData)
-            {
-                if (JsonHelper.TrySerializeObject(diskTelemData, out string jsonPayload))
-                {
-                    await SendTelemetryAsync(jsonPayload, cancellationToken);
-                }
-            }
-            else if (telemetryData is ClusterTelemetryData clusterTelemData)
-            {
-                if (JsonHelper.TrySerializeObject(clusterTelemData, out string jsonPayload))
-                {
-                    await SendTelemetryAsync(jsonPayload, cancellationToken);
-                }
-            }
-            else
-            {
-                if (JsonHelper.TrySerializeObject(telemetryData, out string jsonPayload))
-                {
-                    await SendTelemetryAsync(jsonPayload, cancellationToken);
-                }
+                case ServiceTelemetryData serviceTelemData:
+                    {
+                        if (JsonHelper.TrySerializeObject(serviceTelemData, out string jsonPayload))
+                        {
+                            await SendTelemetryAsync(jsonPayload, cancellationToken);
+                        }
+
+                        break;
+                    }
+
+                case NodeTelemetryData nodeTelemData:
+                    {
+                        if (JsonHelper.TrySerializeObject(nodeTelemData, out string jsonPayload))
+                        {
+                            await SendTelemetryAsync(jsonPayload, cancellationToken);
+                        }
+
+                        break;
+                    }
+
+                case DiskTelemetryData diskTelemData:
+                    {
+                        if (JsonHelper.TrySerializeObject(diskTelemData, out string jsonPayload))
+                        {
+                            await SendTelemetryAsync(jsonPayload, cancellationToken);
+                        }
+
+                        break;
+                    }
+
+                case ClusterTelemetryData clusterTelemData:
+                    {
+                        if (JsonHelper.TrySerializeObject(clusterTelemData, out string jsonPayload))
+                        {
+                            await SendTelemetryAsync(jsonPayload, cancellationToken);
+                        }
+
+                        break;
+                    }
+
+                case SystemServiceTelemetryData systemServiceTelemData:
+                    {
+                        if (JsonHelper.TrySerializeObject(systemServiceTelemData, out string jsonPayload))
+                        {
+                            await SendTelemetryAsync(jsonPayload, cancellationToken);
+                        }
+
+                        break;
+                    }
+
+                case ContainerTelemetryData containerTelemData:
+                    {
+                        if (JsonHelper.TrySerializeObject(containerTelemData, out string jsonPayload))
+                        {
+                            await SendTelemetryAsync(jsonPayload, cancellationToken);
+                        }
+
+                        break;
+                    }
+
+                default:
+                    {
+                        if (JsonHelper.TrySerializeObject(telemetryData, out string jsonPayload))
+                        {
+                            await SendTelemetryAsync(jsonPayload, cancellationToken);
+                        }
+
+                        break;
+                    }
             }
         }
 
@@ -202,39 +239,76 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 return;
             }
 
-            if (telemetryData is ServiceTelemetryData serviceTelemData)
+            switch (telemetryData)
             {
-                if (JsonHelper.TrySerializeObject(serviceTelemData, out string jsonPayload))
+                case ServiceTelemetryData serviceTelemData:
                 {
-                    await SendTelemetryAsync(jsonPayload, cancellationToken);
+                    if (JsonHelper.TrySerializeObject(serviceTelemData, out string jsonPayload))
+                    {
+                        await SendTelemetryAsync(jsonPayload, cancellationToken);
+                    }
+
+                    break;
                 }
-            }
-            else if (telemetryData is NodeTelemetryData nodeTelemData)
-            {
-                if (JsonHelper.TrySerializeObject(nodeTelemData, out string jsonPayload))
+
+                case NodeTelemetryData nodeTelemData:
                 {
-                    await SendTelemetryAsync(jsonPayload, cancellationToken);
+                    if (JsonHelper.TrySerializeObject(nodeTelemData, out string jsonPayload))
+                    {
+                        await SendTelemetryAsync(jsonPayload, cancellationToken);
+                    }
+
+                    break;
                 }
-            }
-            else if (telemetryData is DiskTelemetryData diskTelemData)
-            {
-                if (JsonHelper.TrySerializeObject(diskTelemData, out string jsonPayload))
+
+                case DiskTelemetryData diskTelemData:
                 {
-                    await SendTelemetryAsync(jsonPayload, cancellationToken);
+                    if (JsonHelper.TrySerializeObject(diskTelemData, out string jsonPayload))
+                    {
+                        await SendTelemetryAsync(jsonPayload, cancellationToken);
+                    }
+
+                    break;
                 }
-            }
-            else if (telemetryData is ClusterTelemetryData clusterTelemData)
-            {
-                if (JsonHelper.TrySerializeObject(clusterTelemData, out string jsonPayload))
+
+                case ClusterTelemetryData clusterTelemData:
                 {
-                    await SendTelemetryAsync(jsonPayload, cancellationToken);
+                    if (JsonHelper.TrySerializeObject(clusterTelemData, out string jsonPayload))
+                    {
+                        await SendTelemetryAsync(jsonPayload, cancellationToken);
+                    }
+
+                    break;
                 }
-            }
-            else
-            {
-                if (JsonHelper.TrySerializeObject(telemetryData, out string jsonPayload))
+
+                case SystemServiceTelemetryData systemServiceTelemData:
                 {
-                    await SendTelemetryAsync(jsonPayload, cancellationToken);
+                    if (JsonHelper.TrySerializeObject(systemServiceTelemData, out string jsonPayload))
+                    {
+                        await SendTelemetryAsync(jsonPayload, cancellationToken);
+                    }
+
+                    break;
+                }
+
+                case ContainerTelemetryData containerTelemData:
+                {
+                    if (JsonHelper.TrySerializeObject(containerTelemData, out string jsonPayload))
+                    {
+                        await SendTelemetryAsync(jsonPayload, cancellationToken);
+                    }
+
+                    break;
+                }
+
+                default:
+                {
+                    if (JsonHelper.TrySerializeObject(telemetryData, out string jsonPayload))
+                    {
+                        await SendTelemetryAsync(jsonPayload, cancellationToken);
+                    }
+
+                    break;
                 }
             }
         }

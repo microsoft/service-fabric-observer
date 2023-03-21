@@ -191,7 +191,7 @@ namespace FabricObserver.Observers
             {
                 await ComputeResourceUsageAsync(token);
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
                 ObserverLogger.LogError($"Unhandled exception in ObserveAsync:{Environment.NewLine}{e}");
 
@@ -240,7 +240,6 @@ namespace FabricObserver.Observers
         }
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "Windows Event data code only ever gets reached on Windows...")]
 #pragma warning restore IDE0079 // Remove unnecessary suppression
         public override Task ReportAsync(CancellationToken token)
         {
@@ -371,7 +370,7 @@ namespace FabricObserver.Observers
                         {
                             File.Delete(logPath);
                         }
-                        catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+                        catch (Exception e) when (e is ArgumentException or IOException or UnauthorizedAccessException)
                         {
 
                         }
@@ -430,7 +429,7 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
                 ObserverLogger.LogError($"Unhandled exception in ReportAsync:{Environment.NewLine}{e}");
 
@@ -445,7 +444,6 @@ namespace FabricObserver.Observers
         /// ReadServiceFabricWindowsEventLog().
         /// </summary>
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "IsWindows check exits the function immediately if not Windows...")]
 #pragma warning restore IDE0079 // Remove unnecessary suppression
         private void ReadServiceFabricWindowsEventLog()
         {
@@ -574,7 +572,6 @@ namespace FabricObserver.Observers
         }
 
 #pragma warning disable IDE0079 // Remove unnecessary suppression
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "<Pending>")]
 #pragma warning restore IDE0079 // Remove unnecessary suppression
         private void Initialize()
         {
@@ -672,7 +669,7 @@ namespace FabricObserver.Observers
                 {
                     Token.ThrowIfCancellationRequested();
 
-                    if (proc != "Fabric" && proc != "FabricRM")
+                    if (proc is not "Fabric" and not "FabricRM")
                     {
                         continue;
                     }
@@ -700,7 +697,7 @@ namespace FabricObserver.Observers
             {
                 _ = int.TryParse(cpuError, out int threshold);
 
-                if (threshold > 100 || threshold < 0)
+                if (threshold is > 100 or < 0)
                 {
                     throw new ArgumentException($"{threshold}% is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverCpuErrorLimitPct}.");
                 }
@@ -778,7 +775,7 @@ namespace FabricObserver.Observers
             {
                 _ = int.TryParse(cpuWarn, out int threshold);
 
-                if (threshold > 100 || threshold < 0)
+                if (threshold is > 100 or < 0)
                 {
                     throw new ArgumentException($"{threshold}% is not a meaningful threshold value for {ObserverConstants.FabricSystemObserverCpuWarningLimitPct}.");
                 }
@@ -889,7 +886,7 @@ namespace FabricObserver.Observers
                     {
                         process = Process.GetProcessesByName(dotnetArg).First();
                     }
-                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                    catch (Exception e) when (e is ArgumentException or InvalidOperationException)
                     {
                         return;
                     }
@@ -1065,7 +1062,7 @@ namespace FabricObserver.Observers
 
                         await Task.Delay(150, Token);
                     }
-                    catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+                    catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
                     {
                         ObserverLogger.LogWarning($"Unhandled Exception thrown in GetProcessInfoAsync:{Environment.NewLine}{e}");
 
@@ -1076,11 +1073,11 @@ namespace FabricObserver.Observers
 
                 timer.Stop();
             }
-            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+            catch (Exception e) when (e is ArgumentException or InvalidOperationException)
             {
 
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
                 ObserverLogger.LogError($"Unhandled exception in GetProcessInfoAsync:{Environment.NewLine}{e}");
 
@@ -1139,7 +1136,7 @@ namespace FabricObserver.Observers
                     _ = allAppKvsLvidsData.Remove(dotnetArg);
                 }
             }
-            catch (Exception e) when (e is ArgumentException || e is KeyNotFoundException)
+            catch (Exception e) when (e is ArgumentException or KeyNotFoundException)
             {
 
             }
@@ -1247,7 +1244,7 @@ namespace FabricObserver.Observers
                         false,
                         procId);
                 }
-                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+                catch (Exception e) when (e is ArgumentException or InvalidOperationException or Win32Exception)
                 {
                     continue;
                 }

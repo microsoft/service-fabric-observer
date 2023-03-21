@@ -251,7 +251,7 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
                 ObserverLogger.LogError($"Unhandled exception processing OS information:{Environment.NewLine}{e}");
 
@@ -294,14 +294,13 @@ namespace FabricObserver.Observers
                                             ObserverConstants.InfrastructureServiceType,
                                             StringComparison.InvariantCultureIgnoreCase)) > 0;
             }
-            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or TimeoutException)
             {
                 ObserverLogger.LogWarning($"Unable to determine IS deployment status:{Environment.NewLine}{e}");
                 return false;
             }
         }
 
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "IsWindows check exits the function immediately if not Windows...")]
         private string GetWindowsHotFixes(bool generateKbUrl, CancellationToken token)
         {
             if (!IsWindows)
@@ -361,11 +360,11 @@ namespace FabricObserver.Observers
 
             }
             catch (Exception e) when (
-                    e is ArgumentException ||
-                    e is FormatException ||
-                    e is InvalidCastException ||
-                    e is ManagementException ||
-                    e is NullReferenceException)
+                    e is ArgumentException or
+                    FormatException or
+                    InvalidCastException or
+                    ManagementException or
+                    NullReferenceException)
             {
 
             }
@@ -394,10 +393,10 @@ namespace FabricObserver.Observers
                     wuLibAutoUpdates.Settings.NotificationLevel == AutomaticUpdatesNotificationLevel.aunlScheduledInstallation;
             }
             catch (Exception e) when (
-                    e is System.Runtime.InteropServices.COMException ||
-                    e is InvalidOperationException ||
-                    e is SecurityException ||
-                    e is Win32Exception)
+                    e is System.Runtime.InteropServices.COMException or
+                    InvalidOperationException or
+                    SecurityException or
+                    Win32Exception)
             {
                 ObserverLogger.LogWarning($"{AuStateUnknownMessage}{Environment.NewLine}{e}");
                 auStateUnknown = true;
@@ -611,7 +610,7 @@ namespace FabricObserver.Observers
                 _ = sb.Clear();
                 sb = null;
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
                 ObserverLogger.LogError($"Unhandled Exception processing OS information:{Environment.NewLine}{e}");
             }

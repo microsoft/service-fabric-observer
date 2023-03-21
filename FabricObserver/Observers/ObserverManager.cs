@@ -48,7 +48,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.2.6";
+        private const string InternalVersionNumber = "3.2.7";
 
         private bool RuntimeTokenCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;
@@ -184,7 +184,7 @@ namespace FabricObserver.Observers
                 var config = ServiceFabricConfiguration.Instance;
                 return config.FabricVersion;
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
                 Logger.LogWarning($"GetServiceFabricRuntimeVersion failure:{Environment.NewLine}{e.Message}");
             }
@@ -275,7 +275,7 @@ namespace FabricObserver.Observers
                     await Task.Delay(TimeSpan.FromSeconds(5), token);
                 }
             }
-            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
+            catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
             {
                 if (!isConfigurationUpdateInProgress && (shutdownSignaled || token.IsCancellationRequested))
                 {
@@ -465,7 +465,7 @@ namespace FabricObserver.Observers
                                 }
                             }
                         }
-                        catch (Exception e) when (e is FabricException || e is TimeoutException)
+                        catch (Exception e) when (e is FabricException or TimeoutException)
                         {
 
                         }
@@ -505,7 +505,7 @@ namespace FabricObserver.Observers
                             }
                         }
                     }
-                    catch (Exception e) when (e is FabricException || e is TimeoutException)
+                    catch (Exception e) when (e is FabricException or TimeoutException)
                     {
 
                     }
@@ -541,7 +541,7 @@ namespace FabricObserver.Observers
                         }
                     }
                 }
-                catch (Exception e) when (e is FabricException || e is TimeoutException)
+                catch (Exception e) when (e is FabricException or TimeoutException)
                 {
 
                 }
@@ -648,7 +648,7 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or TimeoutException)
             {
 
             }
@@ -667,7 +667,7 @@ namespace FabricObserver.Observers
 
                 return deployedObsWebApps?.Count > 0;
             }
-            catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or TaskCanceledException or TimeoutException)
             {
 
             }
@@ -696,7 +696,7 @@ namespace FabricObserver.Observers
 
                 return parameter?.Value;
             }
-            catch (Exception e) when (e is KeyNotFoundException || e is FabricElementNotFoundException)
+            catch (Exception e) when (e is KeyNotFoundException or FabricElementNotFoundException)
             {
 
             }
@@ -747,7 +747,7 @@ namespace FabricObserver.Observers
                         string[] pluginDlls = Directory.GetFiles(pluginsDir, "*.dll", SearchOption.AllDirectories);
                         hasPlugins = pluginDlls.Length > 0;
                     }
-                    catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException || e is PathTooLongException)
+                    catch (Exception e) when (e is ArgumentException or IOException or UnauthorizedAccessException or PathTooLongException)
                     {
 
                     }
@@ -799,10 +799,10 @@ namespace FabricObserver.Observers
                 }
 
                 // These built-in (non-plugin) observers monitor apps and/or services.
-                if (obs.ObserverName == ObserverConstants.AppObserverName ||
-                    obs.ObserverName == ObserverConstants.ContainerObserverName ||
-                    obs.ObserverName == ObserverConstants.NetworkObserverName ||
-                    obs.ObserverName == ObserverConstants.FabricSystemObserverName)
+                if (obs.ObserverName is ObserverConstants.AppObserverName or
+                    ObserverConstants.ContainerObserverName or
+                    ObserverConstants.NetworkObserverName or
+                    ObserverConstants.FabricSystemObserverName)
                 {
                     if (!observerData.ContainsKey(obs.ObserverName))
                     {
@@ -1240,7 +1240,7 @@ namespace FabricObserver.Observers
 
                             throw e;
                         }
-                        else if (e is OperationCanceledException || e is TaskCanceledException)
+                        else if (e is OperationCanceledException or TaskCanceledException)
                         {
                             if (isConfigurationUpdateInProgress)
                             {
@@ -1250,7 +1250,7 @@ namespace FabricObserver.Observers
 
                             // FO will fail. Gracefully.
                         }
-                        else if (e is FabricException || e is TimeoutException || e is Win32Exception)
+                        else if (e is FabricException or TimeoutException or Win32Exception)
                         {
                             // These are transient and will have been logged by related observer when they happened.
                             Logger.LogWarning($"Handled error from {observer.ObserverName}{Environment.NewLine}{e}");
@@ -1266,7 +1266,7 @@ namespace FabricObserver.Observers
 
                     throw;
                 }
-                catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
+                catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
                 {
                     if (isConfigurationUpdateInProgress)
                     {
@@ -1274,7 +1274,7 @@ namespace FabricObserver.Observers
                         return;
                     }
                 }
-                catch (Exception e) when (e is FabricException || e is TimeoutException || e is Win32Exception)
+                catch (Exception e) when (e is FabricException or TimeoutException or Win32Exception)
                 {
                     // Transient.
                     Logger.LogWarning($"Handled error from {observer.ObserverName}{Environment.NewLine}{e}");
@@ -1442,7 +1442,7 @@ namespace FabricObserver.Observers
                 
                 return PerformanceCounterCategory.CounterExists(counterName, categoryName);
             }
-            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is UnauthorizedAccessException || e is Win32Exception)
+            catch (Exception e) when (e is ArgumentException or InvalidOperationException or UnauthorizedAccessException or Win32Exception)
             {
                 Logger.LogWarning($"IsLVIDPerfCounterEnabled: Failed to determine LVID perf counter state:{Environment.NewLine}{e.Message}");
             }

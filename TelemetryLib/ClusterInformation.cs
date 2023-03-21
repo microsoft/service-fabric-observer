@@ -104,7 +104,7 @@ namespace FabricObserver.TelemetryLib
                     }
                 }
             }
-            catch (Exception ex) when (ex is FabricException || ex is TimeoutException)
+            catch (Exception ex) when (ex is FabricException or TimeoutException)
             {
                 
             }
@@ -193,14 +193,10 @@ namespace FabricObserver.TelemetryLib
 
             try
             {
-#pragma warning disable CA1416 // Validate platform compatibility
                 string tenantIdKeyName = string.Format(CultureInfo.InvariantCulture, "{0}\\{1}", Registry.LocalMachine.Name, FabricRegistryKeyPath);
-#pragma warning restore CA1416 // Validate platform compatibility
-#pragma warning disable CA1416 // Validate platform compatibility
                 return (string)Registry.GetValue(tenantIdKeyName, TenantIdValueName, null);
-#pragma warning restore CA1416 // Validate platform compatibility
             }
-            catch (Exception e) when (e is ArgumentException || e is FormatException || e is IOException || e is System.Security.SecurityException)
+            catch (Exception e) when (e is ArgumentException or FormatException or IOException or System.Security.SecurityException)
             {
                 return null;
             }

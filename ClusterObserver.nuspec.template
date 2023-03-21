@@ -2,9 +2,9 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
 	<metadata minClientVersion="3.3.0">
 		<id>%PACKAGE_ID%</id>
-		<version>2.2.3</version>
+		<version>2.2.4</version>
 		<releaseNotes>
-- Added support for FabricObserver's new TelemetryDataBase types.
+
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
@@ -13,14 +13,14 @@
 		<icon>icon.png</icon>
 		<readme>conuget.md</readme>
 		<language>en-US</language>
-		<description>This package contains the Service Fabric ClusterObserver(CO) Application - built for .NET 6.0 and SF Runtime 9.x. CO is a highly configurable and extensible Service Fabric stateless service that monitors aggregated cluster health and emits SF entity-specific telemetry. It is designed to be run in Service Fabric Windows and Linux clusters. This package contains the entire application and can be used to build .NET Standard 2.0 observer plugins. NOTE: If you want to target .NET 6 for your plugins, then you must use Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.6 nuget package to build them.</description>
+		<description>This package contains the Service Fabric ClusterObserver(CO) Application - built for .NET 6.0 and SF Runtime 9.x. CO is a highly configurable and extensible Service Fabric stateless service that monitors aggregated cluster health and emits SF entity-specific telemetry. It is designed to be run in Service Fabric Windows and Linux clusters. This package contains the entire application and can be used to build .NET Standard 2.0 observer plugins. NOTE: If you want to target .NET 6 for your plugins, then you must use Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.7 nuget package to build them.</description>
 		<contentFiles>
 			<files include="**" buildAction="None" copyToOutput="true" />
 		</contentFiles>
 		<dependencies>
 			<group targetFramework="net6.0">
 				<dependency id="Microsoft.ServiceFabric.Services" version="6.0.1017" />
-				<dependency id="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" version="3.2.6" />
+				<dependency id="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" version="3.2.7" />
 			</group>
 		</dependencies>
 		<projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>

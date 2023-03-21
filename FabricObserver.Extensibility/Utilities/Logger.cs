@@ -72,7 +72,7 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Utilities.Logger"/> class.
+        /// Initializes a new instance of the <see cref="Logger"/> class.
         /// </summary>
         /// <param name="observerName">Name of observer.</param>
         /// <param name="logFolderBasePath">Base folder path.</param>
@@ -149,7 +149,7 @@ namespace FabricObserver.Observers.Utilities
 
             if (eventData is TelemetryDataBase telemData)
             {
-                if (telemData.HealthState == HealthState.Error || telemData.HealthState == HealthState.Warning)
+                if (telemData.HealthState is HealthState.Error or HealthState.Warning)
                 {
                     keywords = ServiceEventSource.Keywords.ErrorOrWarning;
                 }
@@ -182,7 +182,7 @@ namespace FabricObserver.Observers.Utilities
                     File.WriteAllText(path, content);
                     return true;
                 }
-                catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+                catch (Exception e) when (e is ArgumentException or IOException or UnauthorizedAccessException)
                 {
 
                 }
@@ -267,10 +267,7 @@ namespace FabricObserver.Observers.Utilities
 
             var targetName = loggerName + "LogFile";
 
-            if (LogManager.Configuration == null)
-            {
-                LogManager.Configuration = new LoggingConfiguration();
-            }
+            LogManager.Configuration ??= new LoggingConfiguration();
 
             if ((FileTarget)LogManager.Configuration?.FindTargetByName(targetName) == null)
             {
@@ -325,7 +322,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 files = Directory.GetFiles(folderPath, searchPattern, SearchOption.AllDirectories);
             }
-            catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+            catch (Exception e) when (e is ArgumentException or IOException or UnauthorizedAccessException)
             {
                 return;
             }
@@ -339,7 +336,7 @@ namespace FabricObserver.Observers.Utilities
                         Retry.Do(() => File.Delete(file), TimeSpan.FromSeconds(1), CancellationToken.None);
                     }
                 }
-                catch (Exception e) when (e is ArgumentException || e is AggregateException)
+                catch (Exception e) when (e is ArgumentException or AggregateException)
                 {
                     LogWarning($"Unable to delete file {file}:{Environment.NewLine}{e.Message}");
                 }

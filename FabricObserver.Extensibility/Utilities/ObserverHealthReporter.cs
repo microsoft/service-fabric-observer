@@ -23,18 +23,9 @@ namespace FabricObserver.Observers.Utilities
         /// Initializes a new instance of the <see cref="ObserverHealthReporter"/> class.
         /// </summary>
         /// <param name="logger">File logger instance. Will throw ArgumentException if null.</param>
-        /// <param name="fabricClient">Optional: FabricClient instance.</param>
-        public ObserverHealthReporter(Logger logger, FabricClient fabricClient)
-        {
-            this.logger = logger ?? throw new ArgumentException("logger can't be null.");
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ObserverHealthReporter"/> class.
-        /// </summary>
-        /// <param name="logger">File logger instance. Will throw ArgumentException if null.</param>
-        /// <param name="fabricClient">Optional: FabricClient instance.</param>
-        public ObserverHealthReporter(Logger logger)
+        /// <param name="fabricClient">Unused. Exists for compatibility reasons for older plugin impls. Update your plugins to not pass a FabricClient instance
+        /// to this constructor as the instance is not used anywhere in this type.</param>
+        public ObserverHealthReporter(Logger logger, FabricClient fabricClient = null)
         {
             this.logger = logger ?? throw new ArgumentException("logger can't be null.");
         }
@@ -72,7 +63,7 @@ namespace FabricObserver.Observers.Utilities
             var healthData = healthReport.HealthData;
             string errWarnPreamble = string.Empty;
 
-            if (healthReport.State == HealthState.Error || healthReport.State == HealthState.Warning)
+            if (healthReport.State is HealthState.Error or HealthState.Warning)
             {
                 // OSObserver does not monitor resources and therefore does not support related usage threshold configuration.
                 if (healthReport.Observer == ObserverConstants.OSObserverName && healthReport.Property == "OSConfiguration")

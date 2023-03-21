@@ -186,7 +186,7 @@ namespace FabricObserver.Observers
                     }
                     else
                     {
-                        if (conn.Health != HealthState.Warning || conn.Health != HealthState.Error)
+                        if (conn.HealthState == HealthState.Ok)
                         {
                             continue;
                         }
@@ -431,11 +431,11 @@ namespace FabricObserver.Observers
                                 }
                             }
                         }
-                        catch (Exception e) when (e is HttpRequestException || e is InvalidOperationException)
+                        catch (Exception e) when (e is HttpRequestException or InvalidOperationException)
                         {
                             ObserverLogger.LogWarning($"Handled NetworkObserver Failure:{Environment.NewLine}{e.Message}");
                         }
-                        catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
+                        catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
                         {
                             return;
                         }
@@ -491,7 +491,7 @@ namespace FabricObserver.Observers
             {
                 if (ie.InnerException is SocketException se)
                 {
-                    if (se.SocketErrorCode == SocketError.ConnectionRefused || se.SocketErrorCode == SocketError.ConnectionReset)
+                    if (se.SocketErrorCode is SocketError.ConnectionRefused or SocketError.ConnectionReset)
                     {
                         if (tcpConnTestRetried <= MaxTcpConnTestRetries)
                         {
@@ -508,7 +508,7 @@ namespace FabricObserver.Observers
             }
             catch (SocketException se)
             {
-                if (se.SocketErrorCode != SocketError.ConnectionRefused && se.SocketErrorCode != SocketError.ConnectionReset)
+                if (se.SocketErrorCode is not SocketError.ConnectionRefused and not SocketError.ConnectionReset)
                 {
                     return false;
                 }
@@ -538,7 +538,7 @@ namespace FabricObserver.Observers
         {
             if (passed)
             {
-                if (healthState == HealthState.Warning && connectionStatus.Any(conn => conn.HostName == endpoint.HostName && conn.Health == HealthState.Warning))
+                if (healthState == HealthState.Warning && connectionStatus.Any(conn => conn.HostName == endpoint.HostName && conn.HealthState == HealthState.Warning))
                 {
                     _ = connectionStatus.RemoveAll(conn => conn.HostName == endpoint.HostName);
 
@@ -547,7 +547,7 @@ namespace FabricObserver.Observers
                         {
                             HostName = endpoint.HostName,
                             Connected = true,
-                            Health = HealthState.Warning,
+                            HealthState = HealthState.Warning,
                             TargetApp = targetApp
                         });
                 }
@@ -558,7 +558,7 @@ namespace FabricObserver.Observers
                         {
                             HostName = endpoint.HostName,
                             Connected = true,
-                            Health = HealthState.Ok,
+                            HealthState = HealthState.Ok,
                             TargetApp = targetApp
                         });
                 }
@@ -568,7 +568,7 @@ namespace FabricObserver.Observers
                 if (connectionStatus.Any(
                     conn =>
                         conn.HostName == endpoint.HostName && conn.TargetApp == targetApp &&
-                        conn.Health == HealthState.Warning))
+                        conn.HealthState == HealthState.Warning))
                 {
                     return;
                 }
@@ -578,7 +578,7 @@ namespace FabricObserver.Observers
                     {
                         HostName = endpoint.HostName,
                         Connected = false,
-                        Health = HealthState.Warning,
+                        HealthState = HealthState.Warning,
                         TargetApp = targetApp
                     });
 

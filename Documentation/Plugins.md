@@ -72,5 +72,5 @@ cd C:\Users\me\source\repos\service-fabric-observer
 ./Build-FabricObserver
 ./Build-NugetPackages
 ```
-The output from the above commands contains FabricObserver platform-specific nupkgs and a nupkg you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.6.nupkg. Nuget packages will be located in 
+The output from the above commands contains FabricObserver platform-specific nupkgs and a nupkg you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.7.nupkg. Nuget packages will be located in 
 C:\Users\me\source\repos\service-fabric-observer\bin\release\FabricObserver\Nugets.

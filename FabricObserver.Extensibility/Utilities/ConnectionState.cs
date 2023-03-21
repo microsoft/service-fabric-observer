@@ -14,7 +14,7 @@ namespace FabricObserver.Observers.Utilities
             get; set;
         }
 
-        public HealthState Health
+        public HealthState HealthState
         {
             get; set;
         }

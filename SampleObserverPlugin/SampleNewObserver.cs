@@ -125,7 +125,7 @@ namespace FabricObserver.Observers
             }
 
             var totalNumberOfDeployedSFApps = apps.Count;
-            var appsInWarningError = apps.Count(a => a.HealthState == HealthState.Warning || a.HealthState == HealthState.Error);
+            var appsInWarningError = apps.Count(a => a.HealthState is HealthState.Warning or HealthState.Error);
 
             foreach (var app in apps)
             {
@@ -138,7 +138,7 @@ namespace FabricObserver.Observers
                                     token));
 
                 totalNumberOfDeployedServices += services.Count;
-                servicesInWarningError += services.Count(s => s.HealthState == HealthState.Warning || s.HealthState == HealthState.Error);
+                servicesInWarningError += services.Count(s => s.HealthState is HealthState.Warning or HealthState.Error);
 
                 foreach (var service in services)
                 {
@@ -151,7 +151,7 @@ namespace FabricObserver.Observers
                                         token));
 
                     totalNumberOfPartitions += partitions.Count;
-                    partitionsInWarningError += partitions.Count(p => p.HealthState == HealthState.Warning || p.HealthState == HealthState.Error);
+                    partitionsInWarningError += partitions.Count(p => p.HealthState is HealthState.Warning or HealthState.Error);
 
                     foreach (var partition in partitions)
                     {
@@ -164,7 +164,7 @@ namespace FabricObserver.Observers
                                             token));
 
                         totalNumberOfReplicas += replicas.Count;
-                        replicasInWarningError += replicas.Count(r => r.HealthState == HealthState.Warning || r.HealthState == HealthState.Error);
+                        replicasInWarningError += replicas.Count(r => r.HealthState is HealthState.Warning or HealthState.Error);
                     }
                 }
             }
@@ -247,7 +247,7 @@ namespace FabricObserver.Observers
                         IsSeedNode
                     });
             }
-            catch (Exception e) when (e is FabricException || e is TaskCanceledException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or TaskCanceledException or TimeoutException)
             {
                 ObserverLogger.LogWarning($"Failed to generate node stats:{Environment.NewLine}{e.Message}");
                 // Retry or try again later..

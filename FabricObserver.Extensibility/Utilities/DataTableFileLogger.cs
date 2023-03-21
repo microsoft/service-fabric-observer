@@ -99,10 +99,7 @@ namespace FabricObserver.Observers.Utilities
                 TryCleanLogFolder(logFullPath, TimeSpan.FromDays(MaxArchiveCsvFileLifetimeDays));
             }
 
-            if (DataLogger == null)
-            {
-                DataLogger = LogManager.GetLogger("FabricObserver.Utilities.DataTableFileLogger");
-            }
+            DataLogger ??= LogManager.GetLogger("FabricObserver.Utilities.DataTableFileLogger");
 
             TimeSource.Current = new AccurateUtcTimeSource();
             FileTarget dataLog = (FileTarget)LogManager.Configuration.FindTargetByName("AvgTargetDataStore");
@@ -177,7 +174,7 @@ namespace FabricObserver.Observers.Utilities
                         File.Delete(file);
                     }
                 }
-                catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+                catch (Exception e) when (e is ArgumentException or IOException or UnauthorizedAccessException)
                 {
 
                 }

@@ -194,8 +194,8 @@ namespace FabricObserver.Observers.Utilities
 
             if (!string.IsNullOrWhiteSpace(pidCmdResult) && !string.IsNullOrWhiteSpace(procNameCmdResult))
             {
-                var sPids = pidCmdResult.Trim().Split(new char[] { '\n' }, System.StringSplitOptions.RemoveEmptyEntries);
-                var sProcNames = procNameCmdResult.Trim().Split(new char[] { '\n' }, System.StringSplitOptions.RemoveEmptyEntries);
+                var sPids = pidCmdResult.Trim().Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                var sProcNames = procNameCmdResult.Trim().Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
 
                 if (sPids?.Length > 0 && sProcNames?.Length > 0)
                 {
@@ -203,7 +203,7 @@ namespace FabricObserver.Observers.Utilities
 
                     for (int i = 0; i < sPids.Length; ++i)
                     {
-                        if (sProcNames[i] == "ps" || sProcNames[i] == "bash")
+                        if (sProcNames[i] is "ps" or "bash")
                         {
                             continue;
                         }

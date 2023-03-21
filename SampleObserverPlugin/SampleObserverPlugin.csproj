@@ -19,16 +19,16 @@
 		<!-- <Exec Command="copy &quot;$(OutDir)*.dll&quot; &quot;$(OutDir)FabricObserverPkg\Data\Plugins&quot;&#xD;&#xA;copy &quot;$(OutDir)*.pdb&quot; &quot;$(OutDir)FabricObserverPkg\Data\Plugins&quot;" /> -->
 	</Target>
     <ItemGroup>
-		<!-- To build with the full 3.2.6 FO nupkg. The output dir will contain a FabricObserverPkg folder with Code/Config/Data. 
+		<!-- To build with the full 3.2.7 FO nupkg. The output dir will contain a FabricObserverPkg folder with Code/Config/Data. 
              So, you can deploy FO directly from there. -->
 		
-		<!-- <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" Version="3.2.6" />
+		<!-- <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" Version="3.2.7" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" /> -->
 		
 		<!-- OR -->
 		
 		<!-- Build with *just* the FabricObserver.Extensibility library. There will be no FabricObserverPkg folder in outdir.. -->
-		<PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" Version="3.2.6" />
+		<PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" Version="3.2.7" />
 		
 		<!-- This is an external nupkg that this plugin sample requires. This is unrelated to the above FO-related reference choices. -->
 		<PackageReference Include="Polly" Version="7.2.3" />

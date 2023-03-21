@@ -107,7 +107,7 @@ namespace FabricObserver.TelemetryLib
                     string key;
 
                     // These observers monitor app services/containers and therefore the ServiceData property will not be null.
-                    if (obData.Key == appobs || obData.Key == fsobs || obData.Key == netobs || obData.Key == contobs)
+                    if (obData.Key is appobs or fsobs or netobs or contobs)
                     {
                         var serviceData = obData.Value.ServiceData;
 
@@ -178,7 +178,7 @@ namespace FabricObserver.TelemetryLib
                     }
 
                     // Concurrency
-                    if (obData.Key == appobs || obData.Key == contobs)
+                    if (obData.Key is appobs or contobs)
                     {
                         data = obData.Value.ServiceData.ConcurrencyEnabled ? 1 : 0;
                         key = $"{obData.Key}{parallel}";
@@ -186,7 +186,7 @@ namespace FabricObserver.TelemetryLib
                     }
 
                     // AzureStorage and SFConfig observers do not generate health events.
-                    if (obData.Key == azobs || obData.Key == sfobs)
+                    if (obData.Key is azobs or sfobs)
                     {
                         key = $"{obData.Key}Enabled";
                         data = 1; // Enabled.
@@ -413,7 +413,7 @@ namespace FabricObserver.TelemetryLib
                 result = Sb.ToString();
                 return true;
             }
-            catch (Exception e) when (e is ArgumentException || e is EncoderFallbackException || e is FormatException || e is ObjectDisposedException)
+            catch (Exception e) when (e is ArgumentException or EncoderFallbackException or FormatException or ObjectDisposedException)
             {
                 result = null;
                 return false;

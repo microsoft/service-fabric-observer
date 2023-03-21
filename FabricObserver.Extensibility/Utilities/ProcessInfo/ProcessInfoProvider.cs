@@ -86,7 +86,7 @@ namespace FabricObserver.Observers.Utilities
                 p.Refresh();
                 return p.Threads.Count;
             }
-            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is SystemException)
+            catch (Exception e) when (e is ArgumentException or InvalidOperationException or SystemException)
             {
                 return 0;
             }

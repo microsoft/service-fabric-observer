@@ -204,7 +204,7 @@ namespace FabricObserver.Observers
                 using ZipArchive zip = new(fs, ZipArchiveMode.Create);
                 zip.CreateEntryFromFile(file, Path.GetFileName(file), ZipCompressionLevel);
             }
-            catch (Exception e) when (e is ArgumentException || e is IOException || e is NotSupportedException || e is UnauthorizedAccessException)
+            catch (Exception e) when (e is ArgumentException or IOException or NotSupportedException or UnauthorizedAccessException)
             {
                 ObserverLogger.LogWarning($"Unable to compress file for uploading:{Environment.NewLine}{e.Message}");
                 return false;
@@ -256,7 +256,7 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+            catch (Exception e) when (e is ArgumentException or IOException or UnauthorizedAccessException)
             {
                 ObserverLogger.LogWarning("Initialize(): Unable to determine existence of dmp files in observer log directories. Aborting..");
                 return false;
@@ -499,7 +499,7 @@ namespace FabricObserver.Observers
                 ptr = SecureStringMarshal.SecureStringToGlobalAllocUnicode(secureString);
                 Marshal.Copy(ptr, charArray, 0, secureString.Length);
             }
-            catch (Exception e) when (e is ArgumentException || e is NotSupportedException)
+            catch (Exception e) when (e is ArgumentException or NotSupportedException)
             {
                 ObserverLogger.LogWarning($"Can't convert SecureString instance to string:{Environment.NewLine}{e}");
                 charArray = null;

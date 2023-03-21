@@ -295,7 +295,7 @@ namespace ClusterObserver
                     {
                         await ProcessNodeHealthAsync(clusterHealth.NodeHealthStates, Token);
                     }
-                    catch (Exception e) when (e is FabricException || e is TimeoutException)
+                    catch (Exception e) when (e is FabricException or TimeoutException)
                     {
 #if DEBUG
                         ObserverLogger.LogInfo($"Handled Exception in ReportClusterHealthAsync::Node:{Environment.NewLine}{e.Message}");
@@ -340,7 +340,7 @@ namespace ClusterObserver
                                 await ProcessApplicationHealthAsync(app, Token);
                             }
                         }
-                        catch (Exception e) when (e is FabricException || e is TimeoutException)
+                        catch (Exception e) when (e is FabricException or TimeoutException)
                         {
 #if DEBUG
                             ObserverLogger.LogInfo($"Handled Exception in ReportClusterHealthAsync::Application:{Environment.NewLine}{e.Message}");
@@ -352,14 +352,14 @@ namespace ClusterObserver
                 // Track current aggregated health state for use in next run.
                 LastKnownClusterHealthState = clusterHealth.AggregatedHealthState;
             }
-            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or TimeoutException)
             {
                 string msg = $"Handled transient exception in ReportClusterHealthAsync:{Environment.NewLine}{e}";
 
                 // Log it locally.
                 ObserverLogger.LogWarning(msg);
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
                 string msg = $"Unhandled exception in ReportClusterHealthAsync:{Environment.NewLine}{e}";
 
@@ -413,8 +413,8 @@ namespace ClusterObserver
                 return;
             }
 
-            if (appUpgradeInfo.ApplicationUpgradeProgress.UpgradeState == ApplicationUpgradeState.RollingForwardCompleted
-                || appUpgradeInfo.ApplicationUpgradeProgress.UpgradeState == ApplicationUpgradeState.RollingBackCompleted)
+            if (appUpgradeInfo.ApplicationUpgradeProgress.UpgradeState is ApplicationUpgradeState.RollingForwardCompleted
+                or ApplicationUpgradeState.RollingBackCompleted)
             {
                 if (ApplicationUpgradesCompletedStatus.ContainsKey(appName.OriginalString))
                 {
@@ -475,8 +475,8 @@ namespace ClusterObserver
                 return;
             }
 
-            if (eventData.FabricUpgradeProgress.UpgradeState == FabricUpgradeState.RollingForwardCompleted
-                || eventData.FabricUpgradeProgress.UpgradeState == FabricUpgradeState.RollingBackCompleted)
+            if (eventData.FabricUpgradeProgress.UpgradeState is FabricUpgradeState.RollingForwardCompleted
+                or FabricUpgradeState.RollingBackCompleted)
             {
                 if (HasClusterUpgradeCompleted)
                 {
@@ -531,7 +531,7 @@ namespace ClusterObserver
 
             var appHealthEvents =
                 appHealth.HealthEvents.Where(
-                    e => e.HealthInformation.HealthState == HealthState.Error || e.HealthInformation.HealthState == HealthState.Warning).ToList();
+                    e => e.HealthInformation.HealthState is HealthState.Error or HealthState.Warning).ToList();
 
             if (!appHealthEvents.Any())
             {
@@ -540,7 +540,7 @@ namespace ClusterObserver
 
             foreach (HealthEvent healthEvent in appHealthEvents.OrderByDescending(f => f.SourceUtcTimestamp))
             {
-                if (healthEvent.HealthInformation.HealthState != HealthState.Error && healthEvent.HealthInformation.HealthState != HealthState.Warning)
+                if (healthEvent.HealthInformation.HealthState is not HealthState.Error and not HealthState.Warning)
                 {
                     continue;
                 }
@@ -591,11 +591,11 @@ namespace ClusterObserver
             IList<HealthEvent> healthEvents = serviceHealth.HealthEvents;
 
             if (serviceHealth.PartitionHealthStates.Any(
-                    p => p.AggregatedHealthState == HealthState.Error || p.AggregatedHealthState == HealthState.Warning))
+                    p => p.AggregatedHealthState is HealthState.Error or HealthState.Warning))
             {
                 var partitionHealthStates =
                     serviceHealth.PartitionHealthStates.Where(
-                        p => p.AggregatedHealthState == HealthState.Warning || p.AggregatedHealthState == HealthState.Error);
+                        p => p.AggregatedHealthState is HealthState.Warning or HealthState.Error);
 
                 foreach (var partitionHealthState in partitionHealthStates)
                 {
@@ -609,7 +609,7 @@ namespace ClusterObserver
 
                     var replicaHealthStates =
                         partitionHealth.ReplicaHealthStates.Where(
-                            p => p.AggregatedHealthState == HealthState.Warning || p.AggregatedHealthState == HealthState.Error);
+                            p => p.AggregatedHealthState is HealthState.Warning or HealthState.Error);
 
                     if (replicaHealthStates != null && replicaHealthStates.Any())
                     {
@@ -626,8 +626,8 @@ namespace ClusterObserver
                             {
                                 var replicaEvents =
                                     replicaHealth.HealthEvents.Where(
-                                        h => h.HealthInformation.HealthState == HealthState.Warning
-                                          || h.HealthInformation.HealthState == HealthState.Error).ToList();
+                                        h => h.HealthInformation.HealthState is HealthState.Warning
+                                          or HealthState.Error).ToList();
 
                                 if (!replicaEvents.Any(h => JsonHelper.TryDeserializeObject<TelemetryDataBase>(h.HealthInformation.Description, out _)))
                                 {
@@ -642,7 +642,7 @@ namespace ClusterObserver
             // From FO/FHProxy or some other service/component created an SF health event.
             foreach (HealthEvent healthEvent in healthEvents.OrderByDescending(f => f.SourceUtcTimestamp))
             {
-                if (healthEvent.HealthInformation.HealthState != HealthState.Error && healthEvent.HealthInformation.HealthState != HealthState.Warning)
+                if (healthEvent.HealthInformation.HealthState is not HealthState.Error and not HealthState.Warning)
                 {
                     continue;
                 }
@@ -684,7 +684,7 @@ namespace ClusterObserver
                             UpgradeChecker.GetClusterUpgradeDetailsAsync(FabricClientInstance, Token),
                          Token);
 
-            var supportedNodeHealthStates = nodeHealthStates.Where( a => a.AggregatedHealthState == HealthState.Warning || a.AggregatedHealthState == HealthState.Error);
+            var supportedNodeHealthStates = nodeHealthStates.Where( a => a.AggregatedHealthState is HealthState.Warning or HealthState.Error);
 
             foreach (var node in supportedNodeHealthStates)
             {
@@ -803,7 +803,7 @@ namespace ClusterObserver
                     }
 
                     foreach (var healthEvent in appHealth.HealthEvents.Where(
-                                e => e.HealthInformation.HealthState == HealthState.Error || e.HealthInformation.HealthState == HealthState.Warning))
+                                e => e.HealthInformation.HealthState is HealthState.Error or HealthState.Warning))
                     {
                         var telemetryData = new ServiceTelemetryData
                         {
@@ -841,7 +841,7 @@ namespace ClusterObserver
                     }
 
                     foreach (var healthEvent in deployedAppHealth.HealthEvents.Where(
-                                e => e.HealthInformation.HealthState == HealthState.Error || e.HealthInformation.HealthState == HealthState.Warning))
+                                e => e.HealthInformation.HealthState is HealthState.Error or HealthState.Warning))
                     {
                         var telemetryData = new ServiceTelemetryData
                         {
@@ -893,7 +893,7 @@ namespace ClusterObserver
                     }
 
                     foreach (var healthEvent in depServicePackageHealth.HealthEvents.Where(
-                                e => e.HealthInformation.HealthState == HealthState.Error || e.HealthInformation.HealthState == HealthState.Warning))
+                                e => e.HealthInformation.HealthState is HealthState.Error or HealthState.Warning))
                     {
                         var telemetryData = new ServiceTelemetryData
                         {
@@ -932,7 +932,7 @@ namespace ClusterObserver
                     }
 
                     foreach (var healthEvent in nodeHealth.HealthEvents.Where(
-                                e => e.HealthInformation.HealthState == HealthState.Error || e.HealthInformation.HealthState == HealthState.Warning))
+                                e => e.HealthInformation.HealthState is HealthState.Error or HealthState.Warning))
                     {
                         var telemetryData = new NodeTelemetryData
                         {
@@ -970,7 +970,7 @@ namespace ClusterObserver
                     }
 
                     foreach (var healthEvent in partitionHealth.HealthEvents.Where(
-                                e => e.HealthInformation.HealthState == HealthState.Error || e.HealthInformation.HealthState == HealthState.Warning))
+                                e => e.HealthInformation.HealthState is HealthState.Error or HealthState.Warning))
                     {
                         var telemetryData = new ServiceTelemetryData
                         {
@@ -1023,7 +1023,7 @@ namespace ClusterObserver
                     string nodeName = replicaList[0].NodeName;
 
                     foreach (var healthEvent in replicaHealth.HealthEvents.Where(
-                                e => e.HealthInformation.HealthState == HealthState.Error || e.HealthInformation.HealthState == HealthState.Warning))
+                                e => e.HealthInformation.HealthState is HealthState.Error or HealthState.Warning))
                     {
                         var telemetryData = new ServiceTelemetryData
                         {
@@ -1080,7 +1080,7 @@ namespace ClusterObserver
                     }
 
                     foreach (var healthEvent in serviceHealth.HealthEvents.Where(
-                                e => e.HealthInformation.HealthState == HealthState.Error || e.HealthInformation.HealthState == HealthState.Warning))
+                                e => e.HealthInformation.HealthState is HealthState.Error or HealthState.Warning))
                     {
 
                         var telemetryData = new ServiceTelemetryData
@@ -1180,9 +1180,9 @@ namespace ClusterObserver
             if (nodeList.Any(n => n.NodeStatus != NodeStatus.Up))
             {
                 var filteredList = nodeList.Where(
-                         node => node.NodeStatus == NodeStatus.Disabled
-                              || node.NodeStatus == NodeStatus.Disabling
-                              || node.NodeStatus == NodeStatus.Down);
+                         node => node.NodeStatus is NodeStatus.Disabled
+                              or NodeStatus.Disabling
+                              or NodeStatus.Down);
 
                 foreach (var node in filteredList)
                 {
@@ -1321,7 +1321,7 @@ namespace ClusterObserver
 
                 return serviceList?.Count > 0;
             }
-            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or TimeoutException)
             {
                 return false;
             }
@@ -1349,11 +1349,11 @@ namespace ClusterObserver
 
                 return repairTasks;
             }
-            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or TimeoutException)
             {
 
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
                 ObserverLogger.LogWarning(e.ToString());
             }

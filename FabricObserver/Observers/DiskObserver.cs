@@ -220,7 +220,7 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
                 ObserverLogger.LogError($"Unhandled exception in ObserveAsync:{Environment.NewLine}{e}"); 
                 
@@ -494,7 +494,7 @@ namespace FabricObserver.Observers
                 // MB.
                 return folderSizeInBytes / 1024 / 1024;
             }
-            catch (Exception e) when (e is ArgumentException || e is IOException || e is SecurityException)
+            catch (Exception e) when (e is ArgumentException or IOException or SecurityException)
             {
                 ObserverLogger.LogWarning($"Failure computing folder size for {path}:{Environment.NewLine}{e}");
                 return 0.0;
@@ -598,7 +598,7 @@ namespace FabricObserver.Observers
                 _ = ObserverLogger.TryWriteLogFile(diskInfoPath, diskInfo.ToString());
                 _ = diskInfo.Clear();
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
                 ObserverLogger.LogWarning($"Unhandled exception in ReportAsync:{Environment.NewLine}{e}");
 
@@ -662,7 +662,7 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
                 ObserverLogger.LogWarning($"Unhandled exception in SetErrorWarningThresholds:{Environment.NewLine}{e}");
                 

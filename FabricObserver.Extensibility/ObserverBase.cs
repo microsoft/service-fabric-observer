@@ -543,7 +543,7 @@ namespace FabricObserver.Observers
                 {
                     _ = Directory.CreateDirectory(DumpsPath);
                 }
-                catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+                catch (Exception e) when (e is ArgumentException or IOException or UnauthorizedAccessException)
                 {
                     ObserverLogger.LogWarning($"Can't create dump directory for path {DumpsPath}. Will not generate dmp file for {procName}. " +
                                               $"Error info:{Environment.NewLine}{e}");
@@ -588,7 +588,7 @@ namespace FabricObserver.Observers
                     return false;
                 }
             }
-            catch (Exception e) when (e is ArgumentException || e is IOException || e is UnauthorizedAccessException)
+            catch (Exception e) when (e is ArgumentException or IOException or UnauthorizedAccessException)
             {
 
             }
@@ -703,12 +703,12 @@ namespace FabricObserver.Observers
                 return true;
             }
             catch (Exception e) when (
-                    e is ArgumentException ||
-                    e is InvalidOperationException ||
-                    e is IOException ||
-                    e is PlatformNotSupportedException ||
-                    e is UnauthorizedAccessException ||
-                    e is Win32Exception)
+                    e is ArgumentException or
+                    InvalidOperationException or
+                    IOException or
+                    PlatformNotSupportedException or
+                    UnauthorizedAccessException or
+                    Win32Exception)
             {
                 ObserverLogger.LogWarning(
                     $"Failure generating Windows process dump file {dumpFileName} with error:{Environment.NewLine}{e}");
@@ -772,7 +772,7 @@ namespace FabricObserver.Observers
             Uri serviceName = null;
             TelemetryDataBase telemetryData = null;
 
-            if (entityType == EntityType.Application || entityType == EntityType.Service)
+            if (entityType is EntityType.Application or EntityType.Service)
             {
                 if (replicaOrInstance != null)
                 {
@@ -816,7 +816,7 @@ namespace FabricObserver.Observers
                                 }
                             }
                         }
-                        catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is PlatformNotSupportedException || e is Win32Exception)
+                        catch (Exception e) when (e is ArgumentException or InvalidOperationException or PlatformNotSupportedException or Win32Exception)
                         {
                             // Process may no longer be alive. It makes no sense to report on it.
                             data.ClearData();
@@ -920,7 +920,7 @@ namespace FabricObserver.Observers
                             }
                         }
                     }
-                    catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is PlatformNotSupportedException || e is Win32Exception)
+                    catch (Exception e) when (e is ArgumentException or InvalidOperationException or PlatformNotSupportedException or Win32Exception)
                     {
                         // Process may no longer be alive or we can't access privileged information (FO running as user with lesser privilege than target process).
                         // It makes no sense to report on it.
@@ -1042,7 +1042,7 @@ namespace FabricObserver.Observers
                                 }
                             }
                         }
-                        catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+                        catch (Exception e) when (e is ArgumentException or InvalidOperationException or Win32Exception)
                         {
                             ObserverLogger.LogWarning($"Unable to generate dmp file:{Environment.NewLine}{e}");
                         }
@@ -1082,7 +1082,7 @@ namespace FabricObserver.Observers
                                 }
                             }
                         }
-                        catch (Exception e) when (e is ArgumentException || e is InvalidOperationException || e is Win32Exception)
+                        catch (Exception e) when (e is ArgumentException or InvalidOperationException or Win32Exception)
                         {
                             ObserverLogger.LogWarning($"Unable to generate dmp file:{Environment.NewLine}{e}");
                         }
@@ -1123,12 +1123,12 @@ namespace FabricObserver.Observers
 
                 switch (data.Property)
                 {
-                    case ErrorWarningProperty.CpuTime when entityType == EntityType.Application || entityType == EntityType.Service:
+                    case ErrorWarningProperty.CpuTime when entityType is EntityType.Application or EntityType.Service:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorCpuPercent : FOErrorWarningCodes.AppWarningCpuPercent;
                         break;
 
-                    case ErrorWarningProperty.CpuTime when entityType == EntityType.Machine || entityType == EntityType.Node:
+                    case ErrorWarningProperty.CpuTime when entityType is EntityType.Machine or EntityType.Node:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorCpuPercent : FOErrorWarningCodes.NodeWarningCpuPercent;
                         break;
@@ -1153,112 +1153,112 @@ namespace FabricObserver.Observers
                             FOErrorWarningCodes.NodeErrorDiskAverageQueueLength : FOErrorWarningCodes.NodeWarningDiskAverageQueueLength;
                         break;
 
-                    case ErrorWarningProperty.MemoryConsumptionMb when entityType == EntityType.Application || entityType == EntityType.Service:
+                    case ErrorWarningProperty.MemoryConsumptionMb when entityType is EntityType.Application or EntityType.Service:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorMemoryMB : FOErrorWarningCodes.AppWarningMemoryMB;
                         break;
 
-                    case ErrorWarningProperty.MemoryConsumptionMb when entityType == EntityType.Machine || entityType == EntityType.Node:
+                    case ErrorWarningProperty.MemoryConsumptionMb when entityType is EntityType.Machine or EntityType.Node:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorMemoryMB : FOErrorWarningCodes.NodeWarningMemoryMB;
                         break;
 
-                    case ErrorWarningProperty.MemoryConsumptionPercentage when entityType == EntityType.Application || entityType == EntityType.Service:
+                    case ErrorWarningProperty.MemoryConsumptionPercentage when entityType is EntityType.Application or EntityType.Service:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorMemoryPercent : FOErrorWarningCodes.AppWarningMemoryPercent;
                         break;
 
-                    case ErrorWarningProperty.MemoryConsumptionPercentage when entityType == EntityType.Machine || entityType == EntityType.Node:
+                    case ErrorWarningProperty.MemoryConsumptionPercentage when entityType is EntityType.Machine or EntityType.Node:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorMemoryPercent : FOErrorWarningCodes.NodeWarningMemoryPercent;
                         break;
 
-                    case ErrorWarningProperty.ActiveFirewallRules when entityType == EntityType.Machine || entityType == EntityType.Node:
+                    case ErrorWarningProperty.ActiveFirewallRules when entityType is EntityType.Machine or EntityType.Node:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.ErrorTooManyFirewallRules : FOErrorWarningCodes.WarningTooManyFirewallRules;
                         break;
 
-                    case ErrorWarningProperty.ActiveTcpPorts when entityType == EntityType.Application || entityType == EntityType.Service:
+                    case ErrorWarningProperty.ActiveTcpPorts when entityType is EntityType.Application or EntityType.Service:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorTooManyActiveTcpPorts : FOErrorWarningCodes.AppWarningTooManyActiveTcpPorts;
                         break;
 
-                    case ErrorWarningProperty.ActiveTcpPorts when entityType == EntityType.Machine || entityType == EntityType.Node:
+                    case ErrorWarningProperty.ActiveTcpPorts when entityType is EntityType.Machine or EntityType.Node:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorTooManyActiveTcpPorts : FOErrorWarningCodes.NodeWarningTooManyActiveTcpPorts;
                         break;
 
-                    case ErrorWarningProperty.ActiveEphemeralPorts when entityType == EntityType.Application || entityType == EntityType.Service:
+                    case ErrorWarningProperty.ActiveEphemeralPorts when entityType is EntityType.Application or EntityType.Service:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorTooManyActiveEphemeralPorts : FOErrorWarningCodes.AppWarningTooManyActiveEphemeralPorts;
                         break;
 
-                    case ErrorWarningProperty.ActiveEphemeralPorts when entityType == EntityType.Machine || entityType == EntityType.Node:
+                    case ErrorWarningProperty.ActiveEphemeralPorts when entityType is EntityType.Machine or EntityType.Node:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorTooManyActiveEphemeralPorts : FOErrorWarningCodes.NodeWarningTooManyActiveEphemeralPorts;
                         break;
 
-                    case ErrorWarningProperty.ActiveEphemeralPortsPercentage when entityType == EntityType.Application || entityType == EntityType.Service:
+                    case ErrorWarningProperty.ActiveEphemeralPortsPercentage when entityType is EntityType.Application or EntityType.Service:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorActiveEphemeralPortsPercent : FOErrorWarningCodes.AppWarningActiveEphemeralPortsPercent;
                         break;
 
-                    case ErrorWarningProperty.ActiveEphemeralPortsPercentage when entityType == EntityType.Machine || entityType == EntityType.Node:
+                    case ErrorWarningProperty.ActiveEphemeralPortsPercentage when entityType is EntityType.Machine or EntityType.Node:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorActiveEphemeralPortsPercent : FOErrorWarningCodes.NodeWarningActiveEphemeralPortsPercent;
                         break;
                         
                     // Support for legacy Handles property name.
-                    case ErrorWarningProperty.AllocatedFileHandles when entityType == EntityType.Application || entityType == EntityType.Service:
+                    case ErrorWarningProperty.AllocatedFileHandles when entityType is EntityType.Application or EntityType.Service:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorTooManyOpenHandles : FOErrorWarningCodes.AppWarningTooManyOpenHandles;
                         break;
 
-                    case ErrorWarningProperty.HandleCount when entityType == EntityType.Application || entityType == EntityType.Service:
+                    case ErrorWarningProperty.HandleCount when entityType is EntityType.Application or EntityType.Service:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorTooManyOpenHandles : FOErrorWarningCodes.AppWarningTooManyOpenHandles;
                         break;
 
-                    case ErrorWarningProperty.ThreadCount when entityType == EntityType.Application || entityType == EntityType.Service:
+                    case ErrorWarningProperty.ThreadCount when entityType is EntityType.Application or EntityType.Service:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorTooManyThreads : FOErrorWarningCodes.AppWarningTooManyThreads;
                         break;
 
                     // Internal monitor for Windows KVS LVID consumption. Only Warning state is supported. This is a non-configurable monitor.
-                    case ErrorWarningProperty.KvsLvidsPercent when entityType == EntityType.Application || entityType == EntityType.Service:
+                    case ErrorWarningProperty.KvsLvidsPercent when entityType is EntityType.Application or EntityType.Service:
                         errorWarningCode = FOErrorWarningCodes.AppWarningKvsLvidsPercentUsed;
                         break;
 
-                    case ErrorWarningProperty.AllocatedFileHandles when entityType == EntityType.Machine || entityType == EntityType.Node:
+                    case ErrorWarningProperty.AllocatedFileHandles when entityType is EntityType.Machine or EntityType.Node:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorTooManyOpenHandles : FOErrorWarningCodes.NodeWarningTooManyOpenHandles;
                         break;
 
                     // Support for legacy Handles (Percent) property name.
-                    case ErrorWarningProperty.AllocatedFileHandlesPct when entityType == EntityType.Machine || entityType == EntityType.Node:
+                    case ErrorWarningProperty.AllocatedFileHandlesPct when entityType is EntityType.Machine or EntityType.Node:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorTotalOpenHandlesPercent : FOErrorWarningCodes.NodeWarningTotalOpenHandlesPercent;
                         break;
 
-                    case ErrorWarningProperty.HandleCountPercentage when entityType == EntityType.Machine || entityType == EntityType.Node:
+                    case ErrorWarningProperty.HandleCountPercentage when entityType is EntityType.Machine or EntityType.Node:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorTotalOpenHandlesPercent : FOErrorWarningCodes.NodeWarningTotalOpenHandlesPercent;
                         break;
 
                     // Process Private Bytes (MB).
-                    case ErrorWarningProperty.PrivateBytesMb when entityType == EntityType.Application || entityType == EntityType.Service:
+                    case ErrorWarningProperty.PrivateBytesMb when entityType is EntityType.Application or EntityType.Service:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorPrivateBytesMb : FOErrorWarningCodes.AppWarningPrivateBytesMb;
                         break;
 
                     // Process Private Bytes (Persent).
-                    case ErrorWarningProperty.PrivateBytesPercent when entityType == EntityType.Application || entityType == EntityType.Service:
+                    case ErrorWarningProperty.PrivateBytesPercent when entityType is EntityType.Application or EntityType.Service:
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.AppErrorPrivateBytesPercent : FOErrorWarningCodes.AppWarningPrivateBytesPercent;
                         break;
 
                     // RG Memory Limit Percent. Only Warning is supported.
-                    case ErrorWarningProperty.RGMemoryUsagePercent when entityType == EntityType.Application || entityType == EntityType.Service:
+                    case ErrorWarningProperty.RGMemoryUsagePercent when entityType is EntityType.Application or EntityType.Service:
                         errorWarningCode = FOErrorWarningCodes.AppWarningRGMemoryLimitPercent;
                         break;
                 }
@@ -1484,7 +1484,7 @@ namespace FabricObserver.Observers
                         return proc.ProcessName == procName;
                     }
                 }
-                catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+                catch (Exception e) when (e is ArgumentException or InvalidOperationException)
                 {
                     return false;
                 }
@@ -1674,7 +1674,7 @@ namespace FabricObserver.Observers
 
                 return deployedObsWebApps?.Count > 0;
             }
-            catch (Exception e) when (e is FabricException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or TimeoutException)
             {
 
             }

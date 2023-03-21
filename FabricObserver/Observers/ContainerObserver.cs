@@ -215,7 +215,7 @@ namespace FabricObserver.Observers
                 // If user configures MaxConcurrentTasks setting, then use that value instead.
                 if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasksParameter), out int maxTasks))
                 {
-                    if (maxTasks == -1 || maxTasks > 0)
+                    if (maxTasks is (-1) or > 0)
                     {
                         maxDegreeOfParallelism = maxTasks;
                     }
@@ -415,7 +415,7 @@ namespace FabricObserver.Observers
                     deployedTargetList.Enqueue(application);
                     await SetInstanceOrReplicaMonitoringList(new Uri(application.TargetApp), filteredServiceList, filterType, null);
                 }
-                catch (Exception e) when (e is FabricException || e is TimeoutException)
+                catch (Exception e) when (e is FabricException or TimeoutException)
                 {
                     ObserverLogger.LogInfo($"Handled Exception in function InitializeAsync:{e.GetType().Name}.");
                 }
@@ -505,7 +505,7 @@ namespace FabricObserver.Observers
                     {
                         process?.Kill(true);
                     }
-                    catch (Exception e) when (e is AggregateException || e is InvalidOperationException || e is NotSupportedException || e is Win32Exception)
+                    catch (Exception e) when (e is AggregateException or InvalidOperationException or NotSupportedException or Win32Exception)
                     {
 
                     }
@@ -674,14 +674,14 @@ namespace FabricObserver.Observers
             {
                 foreach (Exception e in ae.Flatten().InnerExceptions)
                 {
-                    if (e is OperationCanceledException || e is TaskCanceledException)
+                    if (e is OperationCanceledException or TaskCanceledException)
                     {
                         // Time to die. Do not run ReportAsync.
                         return false;
                     }
                 }
             }
-            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException || e is SystemException)
+            catch (Exception e) when (e is OperationCanceledException or TaskCanceledException or SystemException)
             {
                 // SystemException would come from WaitForExit.
                 return false;
@@ -747,7 +747,7 @@ namespace FabricObserver.Observers
 
                 switch (deployedReplica)
                 {
-                    case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole == ReplicaRole.Primary || statefulReplica.ReplicaRole == ReplicaRole.ActiveSecondary:
+                    case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole is ReplicaRole.Primary or ReplicaRole.ActiveSecondary:
                     {
                         if (filterList != null && filterType != ServiceFilterType.None)
                         {

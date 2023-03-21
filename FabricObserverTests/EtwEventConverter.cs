@@ -174,7 +174,7 @@ namespace FabricObserverTests
                     Logger.LogInfo($"Not the droid we're looking for.{Environment.NewLine}{json}");
                 }
             }
-            catch (Exception e) when (e is ArgumentException || e is JsonReaderException || e is JsonSerializationException || e is InvalidOperationException)
+            catch (Exception e) when (e is ArgumentException or JsonReaderException or JsonSerializationException or InvalidOperationException)
             {
                 Logger.LogError($"Unable to deserialize ETW event data to supported type:{Environment.NewLine}{e}");
 

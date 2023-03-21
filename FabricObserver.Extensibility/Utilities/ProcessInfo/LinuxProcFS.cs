@@ -160,7 +160,7 @@ namespace FabricObserver.Observers.Utilities
 
                 int d = c - '0';
 
-                if (d >= 0 && d <= 9)
+                if (d is >= 0 and <= 9)
                 {
                     result = checked((result * 10ul) + (ulong)d);
                     ++startIndex;
@@ -191,7 +191,7 @@ namespace FabricObserver.Observers.Utilities
 
                 int d = c - '0';
 
-                if (d >= 0 && d <= 9)
+                if (d is >= 0 and <= 9)
                 {
                     result = checked((result * 10L) + d);
                     ++startIndex;

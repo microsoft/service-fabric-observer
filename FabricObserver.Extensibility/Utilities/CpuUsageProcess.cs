@@ -49,7 +49,7 @@ namespace FabricObserver.Observers.Utilities
                     return cpuUsage * 100.0;
                 }
             }
-            catch (Exception e) when (e is ArgumentException || e is Win32Exception || e is InvalidOperationException || e is NotSupportedException)
+            catch (Exception e) when (e is ArgumentException or Win32Exception or InvalidOperationException or NotSupportedException)
             {
                 // Caller should ignore this result. Don't want to use an Exception here.
                 return -1;

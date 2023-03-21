@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers;
+using FabricObserver.Utilities;
 using McMaster.NETCore.Plugins;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ServiceFabric.Services.Runtime;
@@ -123,11 +124,11 @@ namespace FabricObserver
                         else
                         {
                             // This will bring down FO, which it should: This means your plugin is not supported. Fix your bug.
-                            throw new InvalidOperationException($"{startupAttributes[j].StartupType.FullName} must implement IFabricObserverStartup.");
+                            throw new InvalidPluginException($"{startupAttributes[j].StartupType.FullName} must implement IFabricObserverStartup.");
                         }
                     }
                 }
-                catch (Exception e) when (e is ArgumentException || e is BadImageFormatException || e is IOException)
+                catch (Exception e) when (e is ArgumentException or BadImageFormatException or IOException)
                 {
                     continue;
                 }

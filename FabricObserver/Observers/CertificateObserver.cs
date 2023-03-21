@@ -393,7 +393,7 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (!(e is TaskCanceledException || e is OperationCanceledException))
+            catch (Exception e) when (e is not (TaskCanceledException or OperationCanceledException))
             {
                 ObserverLogger.LogError($"There was an issue parsing the cluster manifest. Observer cannot run. Error Details:{Environment.NewLine}{e}");
                 throw;

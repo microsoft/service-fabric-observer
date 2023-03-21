@@ -437,7 +437,7 @@ namespace FabricObserverTests
                     var serviceHealth = await fabricClient.HealthManager.GetServiceHealthAsync(replica.ServiceName);
                     var fabricObserverServiceHealthEvents =
                         serviceHealth.HealthEvents?.Where(
-                           s => s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning);
+                           s => s.HealthInformation.HealthState is HealthState.Error or HealthState.Warning);
 
                     foreach (var evt in fabricObserverServiceHealthEvents)
                     {
@@ -1034,8 +1034,8 @@ namespace FabricObserverTests
             // You can't supply multiple Exclude lists for the same target app/type. None of the target services will be excluded..
             Assert.IsTrue(
                 serviceReplicas.Count(
-                    s => s.ServiceName.OriginalString == "fabric:/HealthMetrics/BandActorService"
-                      || s.ServiceName.OriginalString == "fabric:/HealthMetrics/DoctorActorService") == 2);
+                    s => s.ServiceName.OriginalString is "fabric:/HealthMetrics/BandActorService"
+                      or "fabric:/HealthMetrics/DoctorActorService") == 2);
         }
 
         [TestMethod]
@@ -1064,8 +1064,8 @@ namespace FabricObserverTests
             // You can't supply multiple Exclude lists for the same target app/type. None of the target services will be excluded..
             Assert.IsTrue(
                 serviceReplicas.Count(
-                    s => s.ServiceName.OriginalString == "fabric:/HealthMetrics/BandActorService"
-                      || s.ServiceName.OriginalString == "fabric:/HealthMetrics/DoctorActorService") == 2);
+                    s => s.ServiceName.OriginalString is "fabric:/HealthMetrics/BandActorService"
+                      or "fabric:/HealthMetrics/DoctorActorService") == 2);
         }
 
         [TestMethod]
@@ -2771,9 +2771,9 @@ namespace FabricObserverTests
                     && DateTime.TryParse(data.ProcessStartTime, out DateTime startDate)
                     && startDate > DateTime.MinValue);
 
-                Assert.IsTrue(data.EntityType == EntityType.Service || data.EntityType == EntityType.Process);
-                Assert.IsTrue(data.ServicePackageActivationMode == "ExclusiveProcess"
-                              || data.ServicePackageActivationMode == "SharedProcess");
+                Assert.IsTrue(data.EntityType is EntityType.Service or EntityType.Process);
+                Assert.IsTrue(data.ServicePackageActivationMode is "ExclusiveProcess"
+                              or "SharedProcess");
                 Assert.IsTrue(data.HealthState == HealthState.Invalid);
                 Assert.IsTrue(data.ProcessId > 0);
                 Assert.IsTrue(data.ObserverName == ObserverConstants.AppObserverName);
@@ -2819,9 +2819,9 @@ namespace FabricObserverTests
                     && DateTime.TryParse(data.ProcessStartTime, out DateTime startDate)
                     && startDate > DateTime.MinValue);
 
-                Assert.IsTrue(data.EntityType == EntityType.Service || data.EntityType == EntityType.Process);
-                Assert.IsTrue(data.ServicePackageActivationMode == "ExclusiveProcess"
-                              || data.ServicePackageActivationMode == "SharedProcess");
+                Assert.IsTrue(data.EntityType is EntityType.Service or EntityType.Process);
+                Assert.IsTrue(data.ServicePackageActivationMode is "ExclusiveProcess"
+                              or "SharedProcess");
                 Assert.IsTrue(data.HealthState == HealthState.Warning);
                 Assert.IsTrue(data.ProcessId > 0);
                 Assert.IsTrue(data.Value > 0.0);
@@ -2862,9 +2862,9 @@ namespace FabricObserverTests
                     && DateTime.TryParse(data.ProcessStartTime, out DateTime startDate)
                     && startDate > DateTime.MinValue);
 
-                Assert.IsTrue(data.EntityType == EntityType.Service || data.EntityType == EntityType.Process);
-                Assert.IsTrue(data.ServicePackageActivationMode == "ExclusiveProcess"
-                              || data.ServicePackageActivationMode == "SharedProcess");
+                Assert.IsTrue(data.EntityType is EntityType.Service or EntityType.Process);
+                Assert.IsTrue(data.ServicePackageActivationMode is "ExclusiveProcess"
+                              or "SharedProcess");
                 Assert.IsTrue(data.HealthState == HealthState.Invalid);
                 Assert.IsTrue(data.ProcessId > 0);
                 Assert.IsTrue(data.ObserverName == ObserverConstants.AppObserverName);
@@ -2873,7 +2873,7 @@ namespace FabricObserverTests
                 Assert.IsTrue(data.Source == ObserverConstants.FabricObserverName);
                 
                 // RG
-                if (data.ProcessName == "VotingData" || data.ProcessName == "VotingWeb" || data.ProcessName == "ConsoleApp6" || data.ProcessName == "ConsoleApp7")
+                if (data.ProcessName is "VotingData" or "VotingWeb" or "ConsoleApp6" or "ConsoleApp7")
                 {
                     Assert.IsTrue(data.RGMemoryEnabled && data.RGAppliedMemoryLimitMb > 0);     
                 }

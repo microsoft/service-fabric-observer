@@ -165,7 +165,7 @@ namespace FabricObserver.Observers.Utilities
         {
             try
             {
-                NativeMethods.MEMORYSTATUSEX memoryInfo = NativeMethods.GetSystemMemoryInfo();
+                MEMORYSTATUSEX memoryInfo = GetSystemMemoryInfo();
                 ulong totalMemoryBytes = memoryInfo.ullTotalPhys;
                 ulong availableMemoryBytes = memoryInfo.ullAvailPhys;
                 ulong inUse = totalMemoryBytes - availableMemoryBytes;
@@ -185,9 +185,9 @@ namespace FabricObserver.Observers.Utilities
         {
             try
             {
-                NativeMethods.PerformanceInformation pi = new();
+                PerformanceInformation pi = new();
                 
-                if (!NativeMethods.GetSytemPerformanceInfo(ref pi))
+                if (!GetSytemPerformanceInfo(ref pi))
                 {
                     OSInfoLogger.LogWarning($"NativeMethods.GetPerformanceInfo failure: {Marshal.GetLastWin32Error()}");
                     return (0, 0);
@@ -293,12 +293,12 @@ namespace FabricObserver.Observers.Utilities
                                 }
                             }
                             catch (Exception e) when (
-                                             e is ArgumentException ||
-                                             e is IOException ||
-                                             e is InvalidOperationException ||
-                                             e is RegexMatchTimeoutException ||
-                                             e is Win32Exception ||
-                                             e is SystemException)
+                                             e is ArgumentException or
+                                             IOException or
+                                             InvalidOperationException or
+                                             RegexMatchTimeoutException or
+                                             Win32Exception or
+                                             SystemException)
                             {
                                 OSInfoLogger.LogWarning($"Handled Exception in TupleGetDynamicPortRange (will return (-1, -1, 0)): {e.Message}");
                             }
@@ -606,7 +606,7 @@ namespace FabricObserver.Observers.Utilities
                     process.Kill();
                 }
             }
-            catch (Exception ex) when (ex is Win32Exception || ex is InvalidOperationException || ex is NotSupportedException || ex is SystemException)
+            catch (Exception ex) when (ex is Win32Exception or InvalidOperationException or NotSupportedException or SystemException)
             {
                 OSInfoLogger.LogWarning($"Unable to get netstat information: {ex.Message}");
             }
@@ -641,7 +641,7 @@ namespace FabricObserver.Observers.Utilities
                 var tcpPortInfo = new TcpPortInfo(netstatOutputLine);
                 return (tcpPortInfo.LocalPort, tcpPortInfo.OwningProcessId);
             }
-            catch (Exception e) when (e is ArgumentException || e is FormatException)
+            catch (Exception e) when (e is ArgumentException or FormatException)
             {
                 OSInfoLogger.LogWarning($"Failed to parse supplied netstat output row ({netstatOutputLine}): {e.Message}");
                 return (-1, -1);

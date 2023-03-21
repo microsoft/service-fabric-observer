@@ -25,6 +25,11 @@ namespace ClusterObserver.Utilities
         /// <returns>An instance of ServiceFabricUpgradeEventData containing ApplicationUpgradeProgress instance.</returns>
         internal static async Task<ServiceFabricUpgradeEventData> GetApplicationUpgradeDetailsAsync(FabricClient fabricClient, CancellationToken token, Uri app)
         {
+            if (token.IsCancellationRequested)
+            {
+                return null;
+            }
+
             try
             {
                 if (app == null)
@@ -59,7 +64,7 @@ namespace ClusterObserver.Utilities
 
                 return appUgradeEventData;
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
                 Logger.LogWarning($"Error determining application upgrade state:{Environment.NewLine}{e}");
                 return null;
@@ -74,6 +79,11 @@ namespace ClusterObserver.Utilities
         /// <returns>An instance of ServiceFabricUpgradeEventData containing FabricUpgradeProgress instance.</returns>
         internal static async Task<ServiceFabricUpgradeEventData> GetClusterUpgradeDetailsAsync(FabricClient fabricClient, CancellationToken token)
         {
+            if (token.IsCancellationRequested)
+            {
+                return null;
+            }
+
             try
             {
                 var clusterUpgradeProgress =
@@ -102,7 +112,7 @@ namespace ClusterObserver.Utilities
 
                 return serviceFabricUpgradeEventData;
             }
-            catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
                 Logger.LogWarning($"Error determining cluster upgrade state:{Environment.NewLine}{e}");
                 return null;

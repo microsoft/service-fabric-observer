@@ -39,7 +39,7 @@ namespace ClusterObserver
         private bool appParamsUpdating;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "2.2.3";
+        private const string InternalVersionNumber = "2.2.4";
 
         public bool EnableOperationalTelemetry
         {
@@ -141,10 +141,7 @@ namespace ClusterObserver
             {
                 ConfigurationSettings configSettings = null;
 
-                if (sectionName == null)
-                {
-                    sectionName = ClusterObserverConstants.ObserverManagerConfigurationSectionName;
-                }
+                sectionName ??= ClusterObserverConstants.ObserverManagerConfigurationSectionName;
 
                 if (settings != null)
                 {
@@ -156,12 +153,11 @@ namespace ClusterObserver
                 }
 
                 var section = configSettings?.Sections[sectionName];
-
                 var parameter = section?.Parameters[parameterName];
 
                 return parameter?.Value;
             }
-            catch (Exception e) when (e is KeyNotFoundException || e is FabricElementNotFoundException)
+            catch (Exception e) when (e is KeyNotFoundException or FabricElementNotFoundException)
             {
 
             }
@@ -319,7 +315,7 @@ namespace ClusterObserver
                     await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds > 0 ? ObserverExecutionLoopSleepSeconds : 15), token);
                 }
             }
-            catch (Exception e) when (e is OperationCanceledException || e is TaskCanceledException)
+            catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
             {
                 if (!appParamsUpdating && (shutdownSignaled || token.IsCancellationRequested))
                 {
@@ -424,7 +420,7 @@ namespace ClusterObserver
                 cts?.Cancel();
                 IsObserverRunning = false;
             }
-            catch (Exception e) when (e is AggregateException || e is ObjectDisposedException)
+            catch (Exception e) when (e is AggregateException or ObjectDisposedException)
             {
                 // This shouldn't happen, but if it does this info will be useful in identifying the bug..
                 // Telemetry.
@@ -510,7 +506,7 @@ namespace ClusterObserver
                 {
                     foreach (var e in ae.Flatten().InnerExceptions)
                     {
-                        if (e is OperationCanceledException || e is TaskCanceledException)
+                        if (e is OperationCanceledException or TaskCanceledException)
                         {
                             if (appParamsUpdating)
                             {
@@ -520,13 +516,13 @@ namespace ClusterObserver
 
                             // CO will fail. Gracefully.
                         }
-                        else if (e is FabricException || e is TimeoutException)
+                        else if (e is FabricException or TimeoutException)
                         {
                             // These are transient and will have already been logged.
                         }
                     }
                 }
-                catch (Exception e) when (!(e is OperationCanceledException || e is TaskCanceledException))
+                catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
                 {
                     string msg = $"Unhandled exception in ClusterObserverManager.RunObserverAync(). Taking down process. Error info:{Environment.NewLine}{e}";
                     Logger.LogError(msg);

@@ -197,7 +197,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     {
                         { "ClusterId", serviceTelemData.ClusterId },
                         { "EntityType", serviceTelemData.EntityType.ToString() },
-                        { "HealthState", Enum.GetName(typeof(HealthState), serviceTelemData.HealthState) },
+                        { "HealthState", serviceTelemData.HealthState.ToString() },
                         { "ApplicationName", serviceTelemData.ApplicationName },
                         { "ApplicationTypeName", serviceTelemData.ApplicationType },
                         { "ServiceName", serviceTelemData.ServiceName },
@@ -224,7 +224,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     {
                         { "ClusterId", nodeTelemData.ClusterId },
                         { "EntityType", nodeTelemData.EntityType.ToString() },
-                        { "HealthState", Enum.GetName(typeof(HealthState), nodeTelemData.HealthState) },
+                        { "HealthState", nodeTelemData.HealthState.ToString() },
                         { "ErrorCode", nodeTelemData.Code },
                         { "Description", nodeTelemData.Description },
                         { "ObserverName", nodeTelemData.ObserverName },
@@ -239,7 +239,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     {
                         { "ClusterId", diskTelemData.ClusterId },
                         { "EntityType", diskTelemData.EntityType.ToString() },
-                        { "HealthState", Enum.GetName(typeof(HealthState), diskTelemData.HealthState) },
+                        { "HealthState", diskTelemData.HealthState.ToString() },
                         { "ErrorCode", diskTelemData.Code },
                         { "Description", diskTelemData.Description },
                         { "ObserverName", diskTelemData.ObserverName },
@@ -255,11 +255,48 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     {
                         { "ClusterId", clusterTelemData.ClusterId },
                         { "EntityType", EntityType.Cluster.ToString() },
-                        { "HealthState", Enum.GetName(typeof(HealthState), clusterTelemData.HealthState) },
+                        { "HealthState", clusterTelemData.HealthState.ToString() },
                         { "Metric", clusterTelemData.Metric },
                         { "Description", clusterTelemData.Description },
+                        { "NodeName", clusterTelemData.NodeName },
                         { "ObserverName", clusterTelemData.ObserverName },
                         { "OS", clusterTelemData.OS }
+                    };
+                }
+                else if (telemetryData is SystemServiceTelemetryData systemServiceTelemData)
+                {
+                    properties = new Dictionary<string, string>
+                    {
+                        { "ApplicationName", systemServiceTelemData.ApplicationName },
+                        { "ClusterId", systemServiceTelemData.ClusterId },
+                        { "EntityType", EntityType.Cluster.ToString() },
+                        { "HealthState", systemServiceTelemData.HealthState.ToString() },
+                        { "Description", systemServiceTelemData.Description },
+                        { "NodeName", systemServiceTelemData.NodeName },
+                        { "ObserverName", systemServiceTelemData.ObserverName },
+                        { "ProcessId", systemServiceTelemData.ProcessId.ToString() },
+                        { "ProcessName", systemServiceTelemData.ProcessName },
+                        { "ProcessStartTime", systemServiceTelemData.ProcessStartTime },
+                        { "OS", systemServiceTelemData.OS }
+                    };
+                }
+                else if (telemetryData is ContainerTelemetryData containerTelemData)
+                {
+                    properties = new Dictionary<string, string>
+                    {
+                        { "ApplicationName", containerTelemData.ApplicationName },
+                        { "ServiceName", containerTelemData.ServiceName },
+                        { "ReplicaId", containerTelemData.ReplicaId.ToString() },
+                        { "ReplicaRole", containerTelemData.ReplicaRole.ToString() },
+                        { "PartitionId", containerTelemData.PartitionId.ToString() },
+                        { "ClusterId", containerTelemData.ClusterId },
+                        { "ContainerId", containerTelemData.ContainerId },
+                        { "EntityType", EntityType.Cluster.ToString() },
+                        { "HealthState", containerTelemData.HealthState.ToString() },
+                        { "NodeName", containerTelemData.NodeName },
+                        { "Description", containerTelemData.Description },
+                        { "ObserverName", containerTelemData.ObserverName },
+                        { "OS", containerTelemData.OS }
                     };
                 }
                 else
@@ -268,8 +305,9 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     {
                         { "ClusterId", telemetryData.ClusterId },
                         { "EntityType", telemetryData.EntityType.ToString() },
-                        { "HealthState", Enum.GetName(typeof(HealthState), telemetryData.HealthState) },
+                        { "HealthState", telemetryData.HealthState.ToString() },
                         { "Description", telemetryData.Description },
+                        { "NodeName", telemetryData.NodeName },
                         { "ObserverName", telemetryData.ObserverName },
                         { "OS", telemetryData.OS }
                     };
@@ -352,7 +390,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     {
                         { "ClusterId", serviceTelemData.ClusterId },
                         { "EntityType", serviceTelemData.EntityType.ToString() },
-                        { "HealthState", Enum.GetName(typeof(HealthState), serviceTelemData.HealthState) },
+                        { "HealthState", serviceTelemData.HealthState.ToString() },
                         { "ApplicationName", serviceTelemData.ApplicationName },
                         { "ApplicationTypeName", serviceTelemData.ApplicationType },
                         { "ServiceName", serviceTelemData.ServiceName },
@@ -379,7 +417,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     {
                         { "ClusterId", nodeTelemData.ClusterId },
                         { "EntityType", nodeTelemData.EntityType.ToString() },
-                        { "HealthState", Enum.GetName(typeof(HealthState), nodeTelemData.HealthState) },
+                        { "HealthState", nodeTelemData.HealthState.ToString() },
                         { "ErrorCode", nodeTelemData.Code },
                         { "Description", nodeTelemData.Description },
                         { "ObserverName", nodeTelemData.ObserverName },
@@ -410,11 +448,47 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     {
                         { "ClusterId", clusterTelemData.ClusterId },
                         { "EntityType", EntityType.Cluster.ToString() },
-                        { "HealthState", Enum.GetName(typeof(HealthState), clusterTelemData.HealthState) },
+                        { "HealthState", clusterTelemData.HealthState.ToString() },
                         { "Metric", clusterTelemData.Metric },
                         { "Description", clusterTelemData.Description },
                         { "ObserverName", clusterTelemData.ObserverName },
                         { "OS", clusterTelemData.OS }
+                    };
+                }
+                else if (telemetryData is SystemServiceTelemetryData systemServiceTelemData)
+                {
+                    properties = new Dictionary<string, string>
+                    {
+                        { "ApplicationName", systemServiceTelemData.ApplicationName },
+                        { "ClusterId", systemServiceTelemData.ClusterId },
+                        { "EntityType", EntityType.Cluster.ToString() },
+                        { "HealthState", systemServiceTelemData.HealthState.ToString() },
+                        { "Description", systemServiceTelemData.Description },
+                        { "NodeName", systemServiceTelemData.NodeName },
+                        { "ObserverName", systemServiceTelemData.ObserverName },
+                        { "ProcessId", systemServiceTelemData.ProcessId.ToString() },
+                        { "ProcessName", systemServiceTelemData.ProcessName },
+                        { "ProcessStartTime", systemServiceTelemData.ProcessStartTime },
+                        { "OS", systemServiceTelemData.OS }
+                    };
+                }
+                else if (telemetryData is ContainerTelemetryData containerTelemData)
+                {
+                    properties = new Dictionary<string, string>
+                    {
+                        { "ApplicationName", containerTelemData.ApplicationName },
+                        { "ServiceName", containerTelemData.ServiceName },
+                        { "ReplicaId", containerTelemData.ReplicaId.ToString() },
+                        { "ReplicaRole", containerTelemData.ReplicaRole.ToString() },
+                        { "PartitionId", containerTelemData.PartitionId.ToString() },
+                        { "ClusterId", containerTelemData.ClusterId },
+                        { "ContainerId", containerTelemData.ContainerId },
+                        { "EntityType", EntityType.Cluster.ToString() },
+                        { "HealthState", containerTelemData.HealthState.ToString() },
+                        { "NodeName", containerTelemData.NodeName },
+                        { "Description", containerTelemData.Description },
+                        { "ObserverName", containerTelemData.ObserverName },
+                        { "OS", containerTelemData.OS }
                     };
                 }
                 else

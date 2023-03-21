@@ -22,10 +22,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 {
                     lock (_lock)
                     {
-                        if (_current == null)
-                        {
-                            _current = new ServiceEventSource();
-                        }
+                        _current ??= new ServiceEventSource();
                     }
                 }
                 return _current;
@@ -49,7 +46,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
                 return !string.IsNullOrWhiteSpace(providerName) ? providerName : ObserverConstants.DefaultEventSourceProviderName;
             }
-            catch (Exception e) when (e is FabricException || e is InvalidOperationException || e is TimeoutException)
+            catch (Exception e) when (e is FabricException or InvalidOperationException or TimeoutException)
             {
                 // The handled exception types are expected and benign.
                 // InvalidOperationException will always happen when this code is run from a unit test, for example,

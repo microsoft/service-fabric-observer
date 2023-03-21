@@ -1022,7 +1022,7 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (Win32Exception e)
             {
-                if (e.NativeErrorCode == 5 || e.NativeErrorCode == 6)
+                if (e.NativeErrorCode is 5 or 6)
                 {
                     throw;
                 }

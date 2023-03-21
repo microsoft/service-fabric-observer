@@ -22,11 +22,9 @@ namespace FabricObserver.Observers.Utilities
         {
             try
             {
-#pragma warning disable CA1416 // Validate platform compatibility
                 return (string)Registry.GetValue(ServiceFabricWindowsRegistryPath, name, null);
-#pragma warning restore CA1416 // Validate platform compatibility
             }
-            catch (Exception e) when (e is ArgumentException || e is IOException || e is SecurityException)
+            catch (Exception e) when (e is ArgumentException or IOException or SecurityException)
             {
                 return "Unknown";
             }
@@ -35,12 +33,10 @@ namespace FabricObserver.Observers.Utilities
         public override int GetInt32(string name)
         {
             try
-            { 
-#pragma warning disable CA1416 // Validate platform compatibility
+            {
                 return (int)Registry.GetValue(ServiceFabricWindowsRegistryPath, name, 0);
-#pragma warning restore CA1416 // Validate platform compatibility
             }
-            catch (Exception e) when (e is ArgumentException || e is IOException || e is SecurityException)
+            catch (Exception e) when (e is ArgumentException or IOException or SecurityException)
             {
                 return 0;
             }

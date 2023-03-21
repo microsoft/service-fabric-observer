@@ -20,15 +20,12 @@ namespace FabricObserver.Observers.Utilities
         {
             get
             {
-                if (_performanceCounter == null)
+                _performanceCounter ??= new PerformanceCounter
                 {
-                    _performanceCounter = new PerformanceCounter
-                    {
-                        CategoryName = "LogicalDisk",
-                        CounterName = "Avg. Disk Queue Length",
-                        ReadOnly = true
-                    };
-                }
+                    CategoryName = "LogicalDisk",
+                    CounterName = "Avg. Disk Queue Length",
+                    ReadOnly = true
+                };
 
                 return _performanceCounter;
             }
@@ -52,7 +49,7 @@ namespace FabricObserver.Observers.Utilities
             }
 
             // CDRom and Network drives do not have Avg queue length perf counter
-            if (driveInfo.DriveType == DriveType.CDRom || driveInfo.DriveType == DriveType.Network)
+            if (driveInfo.DriveType is DriveType.CDRom or DriveType.Network)
             {
                 return false;
             }
@@ -135,7 +132,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 Logger logger = new("Utilities");
 
-                if (e is ArgumentNullException || e is PlatformNotSupportedException || e is Win32Exception || e is UnauthorizedAccessException)
+                if (e is ArgumentNullException or PlatformNotSupportedException or Win32Exception or UnauthorizedAccessException)
                 {
                     logger.LogWarning($"{QueueLengthCounter.CategoryName} {QueueLengthCounter.CounterName} PerfCounter handled exception: " + e);
 
