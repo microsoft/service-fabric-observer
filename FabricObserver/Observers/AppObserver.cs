@@ -313,7 +313,7 @@ namespace FabricObserver.Observers
                         return;
                     }
                 }
-                catch (Exception e) when (e is ArgumentException)
+                catch (ArgumentException)
                 {
                     return;
                 }
