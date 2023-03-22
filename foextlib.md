@@ -1,9 +1,8 @@
 ## FabricObserver Extensibility Library 3.2.7
-#### This library requires SF Runtime >= 9.0 (SDK 6.0.1017 at least) and targets .NET 6.
 
-This .NET 6 library is for building FabricObserver plugins, which are custom observers that extend FabricObserver's capabilities to match your needs. Each plugin is managed like a first class observer.
+FabricObserver.Extensibility is a .NET 6 library for building custom observers that extend FabricObserver's capabilities to match your needs. A custom observer is managed just like a built-in observer.
 
-### How to implement an observer plugin using FO's extensibility model
+### How to implement an observer using FO's extensibility model
 
 1. Create a new .NET core library project. You should target net6.0 in your csproj because that is the target net SDK version that FabricObserver is built for.
 
