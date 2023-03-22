@@ -1,20 +1,20 @@
 Your Observer plugins must live in this folder. 
 
--- How to implement an observer plugin with our extensibility model --
+-- How to implement an observer with our extensibility model --
 
 Note that the observer API lives in its own library, FabricObserver.Extensibility.dll. FO also uses this library for its internal observer impls.
 
-1. Create a new .NET core library project. You should target net6.0 in your csproj because that is the .NET SDK version that both FabricObserver and FabricObserver.Extensibility target.
+1. Create a new .NET 6 Library project.
 
 2. Install the same version of the Microsoft.ServiceFabricApps.FabricObserver.Extensibility nupkg from https://www.nuget.org/profiles/ServiceFabricApps as the version of FabricObserver you are deploying. 
    E.g., 3.2.7 if you are going to deploy FO 3.2.7.
    NOTE: You can also consume the entire FabricObserver 3.2.7 nupkg to build your plugin. Please see the SampleObserverPlugin project's csproj file for more information.
 
-3. Write an observer plugin!
+3. Write an observer!
 
     E.g., create a new class file, MyObserver.cs.
 
-    This is the required signature for your plugin's constructor:
+    This is the required signature for your observer's constructor:
    
     // FO will provide (and manage) both the FabricClient instance and StatelessServiceContext instance during startup.
     public MyObserver(FabricClient fabricClient, StatelessServiceContext context) : base(fabricClient, context)
@@ -31,7 +31,7 @@ Note that the observer API lives in its own library, FabricObserver.Extensibilit
     {
     }
 
-4. Create a [PluginTypeName]Startup.cs file with this format (e.g., MyObserver is the name of your plugin class.):
+4. Create a [ObserverTypeName]Startup.cs file with this format (e.g., MyObserver is the name of your plugin class.):
     
     using System.Fabric;
     using FabricObserver;
