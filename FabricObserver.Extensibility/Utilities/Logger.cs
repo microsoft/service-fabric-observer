@@ -215,11 +215,10 @@ namespace FabricObserver.Observers.Utilities
 
         private void InitializeLoggers()
         {
-            // default log directory.
             string logFolderBase;
 
-            // Log directory supplied in Settings.xml.
-            if (!string.IsNullOrEmpty(LogFolderBasePath))
+            // Log directory supplied in ApplicationManifest.xml.
+            if (!string.IsNullOrWhiteSpace(LogFolderBasePath))
             {
                 logFolderBase = LogFolderBasePath;
 
@@ -228,7 +227,7 @@ namespace FabricObserver.Observers.Utilities
                     // Add current drive letter if not supplied for Windows path target.
                     if (!LogFolderBasePath[..3].Contains(":\\"))
                     {
-                        string windrive = Environment.SystemDirectory.Substring(0, 3);
+                        string windrive = Environment.SystemDirectory[..3];
                         logFolderBase = windrive + LogFolderBasePath;
                     }
                 }
@@ -245,7 +244,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 if (OperatingSystem.IsWindows())
                 {
-                    string windrive = Environment.SystemDirectory.Substring(0, 3);
+                    string windrive = Environment.SystemDirectory[..3];
                     logFolderBase = windrive + "fabric_observer_logs";
                 }
                 else
