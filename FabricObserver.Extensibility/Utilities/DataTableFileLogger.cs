@@ -49,40 +49,46 @@ namespace FabricObserver.Observers.Utilities
             // default log directory.
             string logBasePath;
 
-            if (OperatingSystem.IsWindows())
-            {
-                string windrive = Environment.SystemDirectory.Substring(0, 3);
-                logBasePath = windrive + "\\fabric_observer_csvdata";
-            }
-            else
-            {
-                logBasePath = "/tmp/fabric_observer_csvdata";
-            }
-
             // log directory supplied in config. Set in ObserverManager.
             if (!string.IsNullOrWhiteSpace(BaseDataLogFolderPath))
             {
+                logBasePath = BaseDataLogFolderPath;
+
                 if (OperatingSystem.IsWindows())
                 {
                     // Add current drive letter if not supplied for Windows path target.
-                    if (!BaseDataLogFolderPath.Substring(0, 3).Contains(":\\"))
+                    if (!BaseDataLogFolderPath[..3].Contains(":\\"))
                     {
-                        string windrive = Environment.SystemDirectory.Substring(0, 3);
+                        string windrive = Environment.SystemDirectory[..3];
                         logBasePath = windrive + BaseDataLogFolderPath;
+                    }
+                    else
+                    {
+                        logBasePath = BaseDataLogFolderPath;
                     }
                 }
                 else
                 {
                     // Remove supplied drive letter if Linux is the runtime target.
-                    if (BaseDataLogFolderPath.Substring(0, 3).Contains(":\\"))
+                    if (BaseDataLogFolderPath[..3].Contains(":\\"))
                     {
-                        BaseDataLogFolderPath = BaseDataLogFolderPath.Remove(0, 3);
+                        logBasePath = BaseDataLogFolderPath.Remove(0, 3).Replace("\\", "/");
                     }
-
-                    logBasePath = BaseDataLogFolderPath;
                 }
             }
-
+            else 
+            {
+                if (OperatingSystem.IsWindows())
+                {
+                    string windrive = Environment.SystemDirectory[..3];
+                    logBasePath = windrive + "\\fabric_observer_csvdata";
+                }
+                else
+                {
+                    logBasePath = "/tmp/fabric_observer_csvdata";
+                }
+            }
+            
             string logFullPath = logBasePath;
 
             // This means a log path was supplied by an observer. See AppObserver for an example.
@@ -138,12 +144,19 @@ namespace FabricObserver.Observers.Utilities
         {
             ConfigureLogger(fileName);
 
-            DataLogger.Info(
-                "{target}{metric}{stat}{value}",
-                target,
-                metric,
-                stat,
-                value);
+            try
+            {
+                DataLogger.Info(
+                    "{target}{metric}{stat}{value}",
+                    target,
+                    metric,
+                    stat,
+                    Math.Round(value, 2));
+            }
+            catch (ArgumentException)
+            {
+
+            }
         }
 
         public static void ShutDown()

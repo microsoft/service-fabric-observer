@@ -3188,14 +3188,14 @@ namespace FabricObserver.Observers
                         appName,
                         ErrorWarningProperty.CpuTime,
                         "Average",
-                        Math.Round(AllAppCpuData.First(x => x.Key == appName).Value.AverageDataValue));
+                        AllAppCpuData.First(x => x.Key == appName).Value.AverageDataValue);
 
                     CsvFileLogger.LogData(
                         fileName,
                         appName,
                         ErrorWarningProperty.CpuTime,
                         "Peak",
-                        Math.Round(AllAppCpuData.First(x => x.Key == appName).Value.MaxDataValue));
+                        AllAppCpuData.First(x => x.Key == appName).Value.MaxDataValue);
                 }
 
                 // Memory - Working set \\
@@ -3207,14 +3207,14 @@ namespace FabricObserver.Observers
                         appName,
                         ErrorWarningProperty.MemoryConsumptionMb,
                         "Average",
-                        Math.Round(AllAppMemDataMb.First(x => x.Key == appName).Value.AverageDataValue));
+                        AllAppMemDataMb.First(x => x.Key == appName).Value.AverageDataValue);
 
                     CsvFileLogger.LogData(
                         fileName,
                         appName,
                         ErrorWarningProperty.MemoryConsumptionMb,
                         "Peak",
-                        Math.Round(Convert.ToDouble(AllAppMemDataMb.First(x => x.Key == appName).Value.MaxDataValue)));
+                        AllAppMemDataMb.First(x => x.Key == appName).Value.MaxDataValue);
                 }
 
                 if (AllAppMemDataPercent != null && AllAppMemDataPercent.ContainsKey(appName))
@@ -3224,14 +3224,14 @@ namespace FabricObserver.Observers
                        appName,
                        ErrorWarningProperty.MemoryConsumptionPercentage,
                        "Average",
-                       Math.Round(AllAppMemDataPercent.First(x => x.Key == appName).Value.AverageDataValue));
+                       AllAppMemDataPercent.First(x => x.Key == appName).Value.AverageDataValue);
 
                     CsvFileLogger.LogData(
                         fileName,
                         appName,
                         ErrorWarningProperty.MemoryConsumptionPercentage,
                         "Peak",
-                        Math.Round(Convert.ToDouble(AllAppMemDataPercent.FirstOrDefault(x => x.Key == appName).Value.MaxDataValue)));
+                        AllAppMemDataPercent.FirstOrDefault(x => x.Key == appName).Value.MaxDataValue);
                 }
 
                 // Memory - Private Bytes \\
@@ -3247,14 +3247,14 @@ namespace FabricObserver.Observers
                                 appName,
                                 ErrorWarningProperty.PrivateBytesMb,
                                 "Average",
-                                Math.Round(AllAppPrivateBytesDataMb.First(x => x.Key == appName).Value.AverageDataValue));
+                                AllAppPrivateBytesDataMb.First(x => x.Key == appName).Value.AverageDataValue);
 
                             CsvFileLogger.LogData(
                                 fileName,
                                 appName,
                                 ErrorWarningProperty.PrivateBytesMb,
                                 "Peak",
-                                Math.Round(Convert.ToDouble(AllAppPrivateBytesDataMb.First(x => x.Key == appName).Value.MaxDataValue)));
+                                AllAppPrivateBytesDataMb.First(x => x.Key == appName).Value.MaxDataValue);
                         }
                     }
 
@@ -3267,14 +3267,14 @@ namespace FabricObserver.Observers
                                appName,
                                ErrorWarningProperty.PrivateBytesPercent,
                                "Average",
-                               Math.Round(AllAppPrivateBytesDataPercent.First(x => x.Key == appName).Value.AverageDataValue));
+                               AllAppPrivateBytesDataPercent.First(x => x.Key == appName).Value.AverageDataValue);
 
                             CsvFileLogger.LogData(
                                 fileName,
                                 appName,
                                 ErrorWarningProperty.PrivateBytesPercent,
                                 "Peak",
-                                Math.Round(Convert.ToDouble(AllAppPrivateBytesDataPercent.FirstOrDefault(x => x.Key == appName).Value.MaxDataValue)));
+                                AllAppPrivateBytesDataPercent.FirstOrDefault(x => x.Key == appName).Value.MaxDataValue);
                         }
                     }
                 }
@@ -3290,7 +3290,7 @@ namespace FabricObserver.Observers
                             appName,
                             ErrorWarningProperty.ActiveTcpPorts,
                             "Total",
-                            Math.Round(Convert.ToDouble(AllAppTotalActivePortsData.First(x => x.Key == appName).Value.MaxDataValue)));
+                            AllAppTotalActivePortsData.First(x => x.Key == appName).Value.MaxDataValue);
                     }
                 }
 
@@ -3303,7 +3303,7 @@ namespace FabricObserver.Observers
                             appName,
                             ErrorWarningProperty.ActiveEphemeralPorts,
                             "Total",
-                            Math.Round(Convert.ToDouble(AllAppEphemeralPortsData.First(x => x.Key == appName).Value.MaxDataValue)));
+                            AllAppEphemeralPortsData.First(x => x.Key == appName).Value.MaxDataValue);
                     }
                 }
 

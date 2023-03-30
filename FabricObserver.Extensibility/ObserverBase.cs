@@ -1317,38 +1317,41 @@ namespace FabricObserver.Observers
                     ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, telemetryData);
                 }
 
-                var healthReport = new HealthReport
-                {
-                    AppName = appName,
-                    Code = errorWarningCode,
-                    EmitLogEvent = EnableVerboseLogging || IsObserverWebApiAppDeployed,
-                    HealthData = telemetryData,
-                    HealthMessage = healthMessage.ToString(),
-                    HealthReportTimeToLive = healthReportTtl,
-                    EntityType = entityType,
-                    ServiceName = serviceName,
-                    State = healthState,
-                    NodeName = NodeName,
-                    Observer = ObserverName,
-                    Property = telemetryData.Property,
-                    ResourceUsageDataProperty = data.Property,
-                    SourceId = $"{ObserverName}({errorWarningCode})"
-                };
-
                 if (serviceName != null && !ServiceNames.Any(a => a == serviceName.OriginalString))
                 {
                     ServiceNames.Enqueue(serviceName.OriginalString);
                 }
 
-                // Generate a Service Fabric Health Report.
-                HealthReporter.ReportHealthToServiceFabric(healthReport);
+                if (!data.ActiveErrorOrWarning || data.ActiveErrorOrWarningCode != errorWarningCode)
+                {
+                    var healthReport = new HealthReport
+                    {
+                        AppName = appName,
+                        Code = errorWarningCode,
+                        EmitLogEvent = EnableVerboseLogging || IsObserverWebApiAppDeployed,
+                        HealthData = telemetryData,
+                        HealthMessage = healthMessage.ToString(),
+                        HealthReportTimeToLive = TimeSpan.MaxValue,
+                        EntityType = entityType,
+                        ServiceName = serviceName,
+                        State = healthState,
+                        NodeName = NodeName,
+                        Observer = ObserverName,
+                        Property = telemetryData.Property,
+                        ResourceUsageDataProperty = data.Property,
+                        SourceId = $"{ObserverName}({errorWarningCode})"
+                    };
 
-                // Set internal health state info on data instance.
-                data.ActiveErrorOrWarning = true;
-                data.ActiveErrorOrWarningCode = errorWarningCode;
+                    // Generate a Service Fabric Health Report.
+                    HealthReporter.ReportHealthToServiceFabric(healthReport);
 
-                // This means this observer created a Warning or Error SF Health Report
-                HasActiveFabricErrorOrWarning = true;
+                    // Set internal health state info on data instance.
+                    data.ActiveErrorOrWarning = true;
+                    data.ActiveErrorOrWarningCode = errorWarningCode;
+
+                    // This means this observer created a Warning or Error SF Health Report
+                    HasActiveFabricErrorOrWarning = true;
+                }
 
                 // Clean up sb.
                 _ = healthMessage.Clear();

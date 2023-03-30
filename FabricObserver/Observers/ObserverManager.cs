@@ -198,6 +198,10 @@ namespace FabricObserver.Observers
 
             try
             {
+                // If FO crashed (like process killed or out of memory or some other unhandled exception that can't be caught before rethrowing it)
+                // then clean up orphaned health reports.
+                await ClearHealthReportsAsync(configUpdateLinux: string.Empty);
+
                 // Nothing to do here.
                 if (observers.Count == 0)
                 {
@@ -386,12 +390,25 @@ namespace FabricObserver.Observers
             }
 
             // If the node goes down, for example, or the app is gracefully closed, then clear all existing error or health reports supplied by FO.
+            await ClearHealthReportsAsync(configUpdateLinux);
+
+            shutdownSignaled = isShutdownSignaled;
+
+            if (!isConfigurationUpdateInProgress)
+            {
+                // Clear any ObserverManager warnings/errors.
+                await RemoveObserverManagerHealthReportsAsync();
+            }
+        }
+
+        private async Task ClearHealthReportsAsync(string configUpdateLinux)
+        {
             foreach (var obs in observers)
             {
                 var healthReport = new HealthReport
                 {
                     Code = FOErrorWarningCodes.Ok,
-                    HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping or updating.{configUpdateLinux}.",
+                    HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping, restarting, or updating.{configUpdateLinux}.",
                     State = HealthState.Ok,
                     NodeName = obs.NodeName
                 };
@@ -471,14 +488,14 @@ namespace FabricObserver.Observers
                         }
                     }
                 }
-                
+
                 // FSO Health Reports.
                 if (obs.ObserverName == ObserverConstants.FabricSystemObserverName)
                 {
                     try
                     {
                         // System app reports.
-                        var sysAppHealth = 
+                        var sysAppHealth =
                                 await FabricClientInstance.HealthManager.GetApplicationHealthAsync(new Uri(ObserverConstants.SystemAppName));
                         var sysAppHealthEvents = sysAppHealth?.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
 
@@ -510,7 +527,7 @@ namespace FabricObserver.Observers
 
                     }
                 }
-                
+
                 // Node health reports. This will remove FSO's and OSO's informational reports.
                 try
                 {
@@ -547,14 +564,6 @@ namespace FabricObserver.Observers
                 }
 
                 obs.HasActiveFabricErrorOrWarning = false;
-            }
-
-            shutdownSignaled = isShutdownSignaled;
-
-            if (!isConfigurationUpdateInProgress)
-            {
-                // Clear any ObserverManager warnings/errors.
-                await RemoveObserverManagerHealthReportsAsync();
             }
         }
 
