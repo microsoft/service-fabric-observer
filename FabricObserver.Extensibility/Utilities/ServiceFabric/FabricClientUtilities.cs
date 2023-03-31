@@ -390,6 +390,76 @@ namespace FabricObserver.Utilities.ServiceFabric
         }
 
         /// <summary>
+        /// Provides ApplicationType and ApplicationType version for specifed Application name.
+        /// </summary>
+        /// <param name="appName">Application name.</param>
+        /// <param name="cancellationToken">CancellationToken instance.</param>
+        /// <returns>Tuple: (string AppType, string AppTypeVersion)</returns>
+        public static async Task<(string AppType, string AppTypeVersion)> TupleGetApplicationTypeInfo(Uri appName, CancellationToken cancellationToken)
+        {
+            try
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return (null, null);
+                }
+
+                var appList = 
+                    await FabricClientSingleton.QueryManager.GetApplicationListAsync(appName, TimeSpan.FromSeconds(90), cancellationToken);
+
+                if (appList?.Count > 0)
+                {
+                    string appType = appList[0].ApplicationTypeName;
+                    string appTypeVersion = appList[0].ApplicationTypeVersion;
+
+                    return (appType, appTypeVersion);
+                }
+            }
+            catch (Exception e) when (e is FabricException or TaskCanceledException or OperationCanceledException)
+            {
+
+            }
+
+            return (null, null);
+        }
+
+        /// <summary>
+        /// Provides ServiceType name and Service Manifest version given an Application name and Service name.
+        /// </summary>
+        /// <param name="appName">Application name.</param>
+        /// <param name="serviceName">Service name.</param>
+        /// <param name="cancellationToken">CancellationToken instance.</param>
+        /// <returns>Tuple: (string ServiceType, string ServiceManifestVersion, ServiceMetadata ServiceMetaData)</returns>
+        public static async Task<(string ServiceType, string ServiceManifestVersion, ServiceMetadata ServiceMetaData)> TupleGetServiceTypeInfoAsync(Uri appName, Uri serviceName, CancellationToken cancellationToken)
+        {
+            try
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return (null, null, null);
+                }
+
+                var serviceList = 
+                    await FabricClientSingleton.QueryManager.GetServiceListAsync(appName, serviceName, TimeSpan.FromSeconds(90), cancellationToken);
+
+                if (serviceList?.Count > 0)
+                {
+                    string serviceType = serviceList[0].ServiceTypeName;
+                    string serviceManifestVersion = serviceList[0].ServiceManifestVersion;
+                    ServiceMetadata serviceMetadata = serviceList[0].ServiceMetadata;
+
+                    return (serviceType, serviceManifestVersion, serviceMetadata);
+                }
+            }
+            catch (Exception e) when (e is FabricException or TaskCanceledException or OperationCanceledException)
+            {
+                
+            }
+
+            return (null, null, null);
+        }
+
+        /// <summary>
         /// Windows-only. Gets RG Memory limit information for a code package.
         /// </summary>
         /// <param name="appManifestXml">Application Manifest</param>
@@ -541,7 +611,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                             if (memAttr.Value.StartsWith("["))
                             {
                                 XmlNode parametersNode = xDoc.DocumentElement?.SelectSingleNode($"//*[local-name()='{ObserverConstants.Parameters}']");
-                                XmlNode parameterNode = parametersNode?.SelectSingleNode($"//*[local-name()='{ObserverConstants.Parameter}' and @Name='{memAttr.Value.Substring(1, memAttr.Value.Length - 2)}']");
+                                XmlNode parameterNode = parametersNode?.SelectSingleNode($"//*[local-name()='{ObserverConstants.Parameter}' and @Name='{memAttr.Value[1..^1]}']");
                                 XmlAttribute attr = parameterNode?.Attributes?[ObserverConstants.DefaultValue];
                                 memAttr.Value = attr.Value;
                             }

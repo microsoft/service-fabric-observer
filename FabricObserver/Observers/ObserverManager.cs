@@ -34,10 +34,14 @@ namespace FabricObserver.Observers
             get; set;
         }
 
+        private List<ObserverBase> Observers
+        {
+            get; set;
+        }
+
         private readonly string nodeName;
         private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
         private readonly CancellationToken token;
-        private readonly List<ObserverBase> observers;
         private readonly string sfVersion;
         private readonly bool isWindows;
         private volatile bool shutdownSignaled;
@@ -173,7 +177,7 @@ namespace FabricObserver.Observers
 
             Logger = new Logger("ObserverManager", logFolderBasePath, MaxArchivedLogFileLifetimeDays);
             SetPropertiesFromConfigurationParameters();
-            observers = serviceProvider.GetServices<ObserverBase>().ToList();
+            Observers = serviceProvider.GetServices<ObserverBase>().ToList();
             HealthReporter = new ObserverHealthReporter(Logger);
         }
 
@@ -200,16 +204,17 @@ namespace FabricObserver.Observers
             {
                 // If FO crashed (like process killed or out of memory or some other unhandled exception that can't be caught before rethrowing it)
                 // then clean up orphaned health reports.
+                Logger.LogInfo("StartObserversAsync: Clearing orphaned health reports.");
                 await ClearHealthReportsAsync(configUpdateLinux: string.Empty);
 
                 // Nothing to do here.
-                if (observers.Count == 0)
+                if (Observers.Count == 0)
                 {
                     return;
                 }
 
                 // Continue running until a shutdown signal is sent
-                Logger.LogInfo("Starting Observers loop.");
+                Logger.LogInfo("StartObserversAsync: Starting Observers loop.");
 
                 // Observers run sequentially. See RunObservers impl.
                 while (true)
@@ -267,7 +272,7 @@ namespace FabricObserver.Observers
                     {
                         await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds), token);
                     }
-                    else if (observers.Count == 1)
+                    else if (Observers.Count == 1)
                     {
                         // This protects against loop spinning when you run FO with one observer enabled and no sleep time set.
                         await Task.Delay(TimeSpan.FromSeconds(15), token);
@@ -367,7 +372,7 @@ namespace FabricObserver.Observers
         private void ResetInternalErrorWarningDataCounters()
         {
             // These props are only set for telemetry purposes. This does not remove err/warn state on an observer.
-            foreach (var obs in observers)
+            foreach (var obs in Observers)
             {
                 obs.CurrentErrorCount = 0;
                 obs.CurrentWarningCount = 0;
@@ -403,7 +408,7 @@ namespace FabricObserver.Observers
 
         private async Task ClearHealthReportsAsync(string configUpdateLinux)
         {
-            foreach (var obs in observers)
+            foreach (var obs in Observers)
             {
                 var healthReport = new HealthReport
                 {
@@ -766,7 +771,7 @@ namespace FabricObserver.Observers
                 {
                     UpTime = DateTime.UtcNow.Subtract(StartDateTime).ToString(),
                     Version = InternalVersionNumber,
-                    EnabledObserverCount = observers.Count(obs => obs.IsEnabled),
+                    EnabledObserverCount = Observers.Count(obs => obs.IsEnabled),
                     HasPlugins = hasPlugins,
                     ParallelExecutionCapable = Environment.ProcessorCount >= 4,
                     SFRuntimeVersion = sfVersion,
@@ -784,7 +789,7 @@ namespace FabricObserver.Observers
         private Dictionary<string, ObserverData> GetObserverData()
         {
             var observerData = new Dictionary<string, ObserverData>();
-            var enabledObs = observers.Where(o => o.IsEnabled);
+            var enabledObs = Observers.Where(o => o.IsEnabled);
             string[] builtInObservers = new string[]
             {
                 ObserverConstants.AppObserverName,
@@ -1106,7 +1111,7 @@ namespace FabricObserver.Observers
         /// <returns>A boolean value indicating success of a complete observer loop run.</returns>
         private async Task RunObserversAsync()
         {
-            foreach (var observer in observers)
+            foreach (var observer in Observers)
             {
                 if (!observer.IsEnabled)
                 {

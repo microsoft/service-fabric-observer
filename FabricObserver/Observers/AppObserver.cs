@@ -286,12 +286,14 @@ namespace FabricObserver.Observers
                     // Ensure the service is the one we are looking for.
                     if (deployedTargetList.Any(
                             a => a.ServiceIncludeList != null &&
-                                    a.ServiceIncludeList.Contains(repOrInst.ServiceName.OriginalString.Remove(0, repOrInst.ApplicationName.OriginalString.Length + 1))))
+                                    a.ServiceIncludeList.Contains(
+                                        repOrInst.ServiceName.OriginalString.Remove(0, repOrInst.ApplicationName.OriginalString.Length + 1))))
                     {
                         // It could be the case that user config specifies multiple inclusion lists for a single app/type in user configuration. We want the correct service here.
                         app = deployedTargetList.First(
                                 a => a.ServiceIncludeList != null &&
-                                a.ServiceIncludeList.Contains(repOrInst.ServiceName.OriginalString.Remove(0, repOrInst.ApplicationName.OriginalString.Length + 1)));
+                                a.ServiceIncludeList.Contains(
+                                    repOrInst.ServiceName.OriginalString.Remove(0, repOrInst.ApplicationName.OriginalString.Length + 1)));
                     }
                 }
 

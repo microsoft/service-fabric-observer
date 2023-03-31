@@ -27,12 +27,15 @@ using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
 {
-    public abstract class ObserverBase : IObserver
+    public abstract class ObserverBase : IDisposable
     {
         private const int TtlAddMinutes = 5;
         private bool disposed;
         private ConcurrentDictionary<string, (int DumpCount, DateTime LastDumpDate)> ServiceDumpCountDictionary;
         private readonly object lockObj = new();
+        public volatile bool HasActiveFabricErrorOrWarning;
+        public volatile int CurrentErrorCount;
+        public volatile int CurrentWarningCount;
 
         public static StatelessServiceContext FabricServiceContext
         {
@@ -253,12 +256,6 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        // Each derived Observer can set this to maintain health status across iterations.
-        public bool HasActiveFabricErrorOrWarning
-        {
-            get; set;
-        }
-
         public ConcurrentQueue<string> ServiceNames
         {
             get; set;
@@ -270,16 +267,6 @@ namespace FabricObserver.Observers
         }
 
         public int MonitoredAppCount
-        {
-            get; set;
-        }
-
-        public int CurrentErrorCount
-        {
-            get; set;
-        }
-
-        public int CurrentWarningCount
         {
             get; set;
         }
@@ -1048,13 +1035,6 @@ namespace FabricObserver.Observers
                         }
                     }
                 }
- 
-                // FO emits a health report each time it detects an Error threshold breach for some metric for some supported entity (target).
-                // Don't increment this internal counter if the target is already in error for the same metric.
-                if (!data.ActiveErrorOrWarning)
-                {
-                    CurrentErrorCount++;
-                }
             }
 
             // Health Warning
@@ -1087,13 +1067,6 @@ namespace FabricObserver.Observers
                             ObserverLogger.LogWarning($"Unable to generate dmp file:{Environment.NewLine}{e}");
                         }
                     }
-                }
-
-                // FO emits a health report each time it detects a Warning threshold breach for some metric for some supported entity (target).
-                // Don't increment this internal counter if the target is already in warning for the same metric.
-                if (!data.ActiveErrorOrWarning)
-                {
-                    CurrentWarningCount++;
                 }
             }
 
@@ -1351,6 +1324,16 @@ namespace FabricObserver.Observers
 
                     // This means this observer created a Warning or Error SF Health Report
                     HasActiveFabricErrorOrWarning = true;
+
+                    // Update internal counters.
+                    if (healthState == HealthState.Warning)
+                    {
+                        CurrentWarningCount++;
+                    }
+                    else if (healthState == HealthState.Error)
+                    {
+                        CurrentErrorCount++;
+                    }
                 }
 
                 // Clean up sb.
@@ -1407,7 +1390,7 @@ namespace FabricObserver.Observers
                     // Emit an Ok Health Report to clear Fabric Health warning.
                     HealthReporter.ReportHealthToServiceFabric(healthReport);
 
-                    // Reset health states.
+                    // Reset health FRUD/obs health data.
                     data.ActiveErrorOrWarning = false;
                     data.ActiveErrorOrWarningCode = FOErrorWarningCodes.Ok;
                     HasActiveFabricErrorOrWarning = false;
@@ -1415,54 +1398,34 @@ namespace FabricObserver.Observers
             }
         }
 
-        private (string AppType, string AppTypeVersion) TupleGetApplicationTypeInfo(Uri appName)
+        private static HealthState GetHealthStateFromErrorCode(string activeErrorOrWarningCode)
         {
-            try
+            if (string.IsNullOrWhiteSpace(activeErrorOrWarningCode))
             {
-                var appList = FabricClientInstance.QueryManager.GetApplicationListAsync(appName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
-
-                if (appList?.Count > 0)
-                {
-                    string appType = appList[0].ApplicationTypeName;
-                    string appTypeVersion = appList[0].ApplicationTypeVersion;
-                    return (appType, appTypeVersion);
-                }
-            }
-            catch (AggregateException)
-            {
-
-            }
-            catch (FabricException)
-            {
-
+                return HealthState.Unknown;
             }
 
-            return (null, null);
-        }
-
-        private (string ServiceType, string ServiceManifestVersion) TupleGetServiceTypeInfo(Uri appName, Uri serviceName)
-        {
-            try
+            if (activeErrorOrWarningCode == FOErrorWarningCodes.Ok)
             {
-                var serviceList = FabricClientInstance.QueryManager.GetServiceListAsync(appName, serviceName, ConfigurationSettings.AsyncTimeout, Token)?.Result;
-
-                if (serviceList?.Count > 0)
-                {
-                    string serviceType = serviceList[0].ServiceTypeName;
-                    string serviceManifestVersion = serviceList[0].ServiceManifestVersion;
-                    return (serviceType, serviceManifestVersion);
-                }
-            }
-            catch (AggregateException)
-            {
-
-            }
-            catch (FabricException)
-            {
-
+                return HealthState.Ok;
             }
 
-            return (null, null);
+            if (FOErrorWarningCodes.GetCodeNameFromErrorCode(activeErrorOrWarningCode) == null)
+            {
+                return HealthState.Unknown;
+            }
+
+            if (FOErrorWarningCodes.GetCodeNameFromErrorCode(activeErrorOrWarningCode).Contains("warning", StringComparison.OrdinalIgnoreCase)) 
+            {
+                return HealthState.Warning;
+            }
+
+            if (FOErrorWarningCodes.GetCodeNameFromErrorCode(activeErrorOrWarningCode).Contains("error", StringComparison.OrdinalIgnoreCase))
+            {
+                return HealthState.Error;
+            }
+
+            return HealthState.Unknown;
         }
 
         /// <summary>
