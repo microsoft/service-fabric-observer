@@ -310,7 +310,7 @@ namespace FabricObserver.Observers.Utilities
         /// <returns>The name of the error or warning code.</returns>
         public static string GetCodeNameFromErrorCode(string code)
         {
-            if (string.IsNullOrEmpty(code))
+            if (string.IsNullOrWhiteSpace(code))
             {
                 return null;
             }

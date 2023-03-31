@@ -11,8 +11,11 @@ using FabricObserver.Observers.Utilities;
 namespace FabricObserver.Observers.Interfaces
 {
     /// <summary>
-    /// Base Observer interface implemented by ObserverBase, the base type of all Observers.
+    /// OBSOLETE: Base Observer interface implemented by ObserverBase, the base type of all Observers.
+    /// This is only still here because at one time it was used. This is no longer relevant and you should
+    /// just derive from ObserverBase. There is no need for an interface for ObserverBase types.
     /// </summary>
+    [Obsolete("This Interface is no longer used. It exists only in case there are still external usages.")]
     public interface IObserver : IDisposable
     {
         string ObserverName
