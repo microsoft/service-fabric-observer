@@ -3,8 +3,11 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System;
+
 namespace FabricObserver.Observers.Interfaces
 {
+    [Obsolete("No longer used.")]
     public interface IObserverLogger<TLogger>
     {
         bool EnableVerboseLogging

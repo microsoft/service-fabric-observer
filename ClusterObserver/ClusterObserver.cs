@@ -684,7 +684,7 @@ namespace ClusterObserver
                             UpgradeChecker.GetClusterUpgradeDetailsAsync(FabricClientInstance, Token),
                          Token);
 
-            var supportedNodeHealthStates = nodeHealthStates.Where( a => a.AggregatedHealthState is HealthState.Warning or HealthState.Error);
+            var supportedNodeHealthStates = nodeHealthStates.Where(a => a.AggregatedHealthState is HealthState.Warning or HealthState.Error);
 
             foreach (var node in supportedNodeHealthStates)
             {

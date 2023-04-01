@@ -8,7 +8,6 @@ using System.Diagnostics.Tracing;
 using System.Fabric.Health;
 using System.IO;
 using System.Threading;
-using FabricObserver.Observers.Interfaces;
 using FabricObserver.Observers.Utilities.Telemetry;
 using NLog;
 using NLog.Config;
@@ -20,12 +19,11 @@ namespace FabricObserver.Observers.Utilities
     /// <summary>
     /// Local file logger.
     /// </summary>
-    public sealed class Logger : IObserverLogger<ILogger>
+    public sealed class Logger
     {
         private const int Retries = 5;
         private readonly string loggerName;
 
-        // Text file logger for observers - info/warn/error.
         private ILogger OLogger
         {
             get; set;
@@ -158,61 +156,6 @@ namespace FabricObserver.Observers.Utilities
             ServiceEventSource.Current.Write(new { data }, eventName, keywords);
         }
 
-        public bool TryWriteLogFile(string path, string content)
-        {
-            if (string.IsNullOrEmpty(content))
-            {
-                return false;
-            }
-
-            for (var i = 0; i < Retries; i++)
-            {
-                try
-                {
-                    string directory = Path.GetDirectoryName(path);
-
-                    if (!Directory.Exists(directory))
-                    {
-                        if (directory != null)
-                        {
-                            _ = Directory.CreateDirectory(directory);
-                        }
-                    }
-
-                    File.WriteAllText(path, content);
-                    return true;
-                }
-                catch (Exception e) when (e is ArgumentException or IOException or UnauthorizedAccessException)
-                {
-
-                }
-
-                Thread.Sleep(1000);
-            }
-
-            return false;
-        }
-
-        public bool TryDeleteInstanceLogFile()
-        {
-            if (string.IsNullOrWhiteSpace(FilePath) || !File.Exists(FilePath))
-            {
-                return false;
-            }
-
-            try
-            {
-                Retry.Do(() => File.Delete(FilePath), TimeSpan.FromSeconds(1), CancellationToken.None);
-                return true;
-            }
-            catch (AggregateException)
-            {
-
-            }
- 
-            return false;
-        }
-
         private void InitializeLoggers()
         {
             string logFolderBase;
@@ -308,7 +251,72 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        public void TryCleanFolder(string folderPath, string searchPattern, TimeSpan maxAge)
+        public bool TryWriteLogFile(string path, string content, bool append = false)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(content))
+            {
+                return false;
+            }
+
+            for (var i = 0; i < Retries; i++)
+            {
+                try
+                {
+                    string directory = Path.GetDirectoryName(path);
+
+                    if (!Directory.Exists(directory))
+                    {
+                        _ = Directory.CreateDirectory(directory);
+                    }
+
+                    if (!append)
+                    {
+                        File.WriteAllText(path, content);
+                    }
+                    else
+                    {
+                        File.AppendAllText(path, content);
+                    }
+
+                    return true;
+                }
+                catch (Exception e) when (e is ArgumentException or IOException or SystemException)
+                {
+
+                }
+
+                Thread.Sleep(500);
+            }
+
+            return false;
+        }
+
+        public bool TryDeleteInstanceLogFile()
+        {
+            if (string.IsNullOrWhiteSpace(FilePath) || !File.Exists(FilePath))
+            {
+                return false;
+            }
+
+            try
+            {
+                Retry.Do(() => File.Delete(FilePath), TimeSpan.FromSeconds(1), CancellationToken.None);
+                return true;
+            }
+            catch (AggregateException)
+            {
+
+            }
+
+            return false;
+        }
+
+        public static void TryCleanFolder(string folderPath, string searchPattern, TimeSpan maxAge)
         {
             if (!Directory.Exists(folderPath))
             {
@@ -321,7 +329,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 files = Directory.GetFiles(folderPath, searchPattern, SearchOption.AllDirectories);
             }
-            catch (Exception e) when (e is ArgumentException or IOException or UnauthorizedAccessException)
+            catch (Exception e) when (e is ArgumentException or IOException or SystemException)
             {
                 return;
             }
@@ -335,9 +343,9 @@ namespace FabricObserver.Observers.Utilities
                         Retry.Do(() => File.Delete(file), TimeSpan.FromSeconds(1), CancellationToken.None);
                     }
                 }
-                catch (Exception e) when (e is ArgumentException or AggregateException)
+                catch (Exception e) when (e is ArgumentException or AggregateException or SystemException)
                 {
-                    LogWarning($"Unable to delete file {file}:{Environment.NewLine}{e.Message}");
+
                 }
             }
         }

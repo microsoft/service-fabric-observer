@@ -261,6 +261,11 @@ namespace FabricObserver.Observers
             get; set;
         } = new ConcurrentQueue<string>();
 
+        public string ServiceNamesLogPath
+        {
+            get; set;
+        }
+
         public int MonitoredServiceProcessCount
         {
             get; set;
@@ -407,15 +412,13 @@ namespace FabricObserver.Observers
             ConfigurationSettings = new ConfigSettings(ConfigPackage.Settings, ConfigurationSectionName);
             ObserverLogger.EnableVerboseLogging = ConfigurationSettings.EnableVerboseLogging;
             HealthReporter = new ObserverHealthReporter(ObserverLogger);
-
-            // This is so EnableVerboseLogging can (and should) be set to false and the ObserverWebApi service will still function.
-            // If you renamed the application, then you must set the ObserverWebApiEnabled parameter to true in ObserverManagerConfiguration section 
-            // in Settings.xml. Note the || in the conditional check below.
             IsObserverWebApiAppDeployed = 
                 bool.TryParse(
                     GetSettingParameterValue(
                         ObserverConstants.ObserverManagerConfigurationSectionName,
                         ObserverConstants.ObserverWebApiEnabled), out bool obsWeb) && obsWeb && IsObserverWebApiAppInstalled();
+
+            ServiceNamesLogPath = Path.Combine(ObserverLogger.LogFolderBasePath, ObserverName, "ServiceNames", "Services.txt");
         }
 
         private void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
@@ -571,7 +574,7 @@ namespace FabricObserver.Observers
 
                     // Clean out old dmp files, if any. Generally, there will only be some dmp files remaining on disk if customer has not configured
                     // AzureStorageObserver correctly or some error occurred during some stage of the upload process.
-                    ObserverLogger.TryCleanFolder(DumpsPath, $"{dumpKey}*.dmp", TimeSpan.FromDays(1));
+                    Logger.TryCleanFolder(DumpsPath, $"{dumpKey}*.dmp", TimeSpan.FromDays(1));
                     return false;
                 }
             }
@@ -1290,8 +1293,10 @@ namespace FabricObserver.Observers
                     ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, telemetryData);
                 }
 
+                // This is used for managing health reports (clearing reports on start and on graceful close).
                 if (serviceName != null && !ServiceNames.Any(a => a == serviceName.OriginalString))
                 {
+                    // Volatile state. This is used to clear health reports during a config upgrade or graceful close.
                     ServiceNames.Enqueue(serviceName.OriginalString);
                 }
 
@@ -1466,7 +1471,7 @@ namespace FabricObserver.Observers
         /// Note that if you set a RunInterval on an observer, that will be reflected here and the Warning will last for that amount of time at least.
         /// </summary>
         /// <returns>TimeSpan that contains the TTL value.</returns>
-        public TimeSpan GetHealthReportTimeToLive()
+        public TimeSpan GetHealthReportTTL()
         {
             _ = int.TryParse(
                     GetSettingParameterValue(

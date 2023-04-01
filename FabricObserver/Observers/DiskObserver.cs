@@ -376,7 +376,7 @@ namespace FabricObserver.Observers
                 {
                     EmitLogEvent = true,
                     HealthMessage = message,
-                    HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                    HealthReportTimeToLive = GetHealthReportTTL(),
                     Property = $"InvalidConfigFormat({folderSizeConfig})",
                     EntityType = EntityType.Node,
                     State = ObserverManager.ObserverFailureHealthStateLevel,
@@ -505,7 +505,7 @@ namespace FabricObserver.Observers
         {
             try
             {
-                var timeToLiveWarning = GetHealthReportTimeToLive();
+                var timeToLiveWarning = GetHealthReportTTL();
 
                 // User-supplied Disk Space Usage % thresholds from ApplicationManifest.xml.
                 for (int i = 0; i < DiskSpaceUsagePercentageData.Count; ++i)
