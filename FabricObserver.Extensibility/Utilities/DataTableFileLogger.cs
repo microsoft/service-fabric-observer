@@ -13,7 +13,7 @@ using NLog.Time;
 namespace FabricObserver.Observers.Utilities
 {
     // CSV file logger for long-running monitoring data (memory/cpu/disk/network usage data).
-    public class DataTableFileLogger : IDataTableFileLogger<ILogger>
+    public class DataTableFileLogger
     {
         private static ILogger DataLogger
         {

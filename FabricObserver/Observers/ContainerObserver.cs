@@ -100,7 +100,7 @@ namespace FabricObserver.Observers
                 return Task.CompletedTask;
             }
 
-            TimeSpan timeToLive = GetHealthReportTimeToLive();
+            TimeSpan timeToLive = GetHealthReportTTL();
 
             _ = Parallel.ForEach(ReplicaOrInstanceList, ParallelOptions, (repOrInst, state) =>
             {
@@ -544,7 +544,7 @@ namespace FabricObserver.Observers
                         AppName = new Uri($"fabric:/{ObserverConstants.FabricObserverName}"),
                         EmitLogEvent = EnableVerboseLogging,
                         HealthMessage = msg,
-                        HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                        HealthReportTimeToLive = GetHealthReportTTL(),
                         Property = $"docker_stats_failure({NodeName})",
                         EntityType = EntityType.Service,
                         ServiceName = FabricServiceContext.ServiceName,

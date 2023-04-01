@@ -101,7 +101,7 @@ namespace FabricObserver.Observers
                         Property = "OS Health",
                         HealthMessage = healthMessage,
                         State = HealthState.Error,
-                        HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                        HealthReportTimeToLive = GetHealthReportTTL(),
                         EntityType = EntityType.Node
                     };
 
@@ -169,7 +169,7 @@ namespace FabricObserver.Observers
                         Property = "OS Health",
                         HealthMessage = healthMessage,
                         State = HealthState.Ok,
-                        HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                        HealthReportTimeToLive = GetHealthReportTTL(),
                         EntityType = EntityType.Node
                     };
 
@@ -196,7 +196,7 @@ namespace FabricObserver.Observers
                     HealthMessage = osReport,
                     State = HealthState.Ok,
                     NodeName = NodeName,
-                    HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                    HealthReportTimeToLive = GetHealthReportTTL(),
                     EntityType = EntityType.Node
                 };
 
@@ -223,7 +223,7 @@ namespace FabricObserver.Observers
                         HealthMessage = auServiceEnabledMessage,
                         State = HealthState.Warning,
                         NodeName = NodeName,
-                        HealthReportTimeToLive = GetHealthReportTimeToLive(),
+                        HealthReportTimeToLive = GetHealthReportTTL(),
                         EntityType = EntityType.Node
                     };
 

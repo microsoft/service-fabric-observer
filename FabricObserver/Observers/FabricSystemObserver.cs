@@ -280,7 +280,7 @@ namespace FabricObserver.Observers
                 }
 
                 // Informational report.
-                TimeSpan timeToLiveWarning = GetHealthReportTimeToLive();
+                TimeSpan timeToLiveWarning = GetHealthReportTTL();
                 var informationReport = new HealthReport
                 {
                     Observer = ObserverName,
@@ -1149,7 +1149,7 @@ namespace FabricObserver.Observers
                                 where T : struct
         {
             string fileName = null;
-            TimeSpan TTL = GetHealthReportTimeToLive();
+            TimeSpan TTL = GetHealthReportTTL();
 
             if (EnableCsvLogging)
             {

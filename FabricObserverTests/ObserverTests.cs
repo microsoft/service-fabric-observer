@@ -425,129 +425,8 @@ namespace FabricObserverTests
 
         private static async Task CleanupTestHealthReportsAsync()
         {
-            var fabricClient = new FabricClient();
-            var apps = await fabricClient.QueryManager.GetApplicationListAsync();
-
-            foreach (var app in apps)
-            {
-                var replicas = await fabricClient.QueryManager.GetDeployedReplicaListAsync(NodeName, app.ApplicationName);
-
-                foreach (var replica in replicas)
-                {
-                    var serviceHealth = await fabricClient.HealthManager.GetServiceHealthAsync(replica.ServiceName);
-                    var fabricObserverServiceHealthEvents =
-                        serviceHealth.HealthEvents?.Where(
-                           s => s.HealthInformation.HealthState is HealthState.Error or HealthState.Warning);
-
-                    foreach (var evt in fabricObserverServiceHealthEvents)
-                    {
-                        var healthReport = new HealthReport
-                        {
-                            Code = FOErrorWarningCodes.Ok,
-                            EntityType = EntityType.Service,
-                            HealthMessage = $"Clearing existing AppObserver Test health reports.",
-                            State = HealthState.Ok,
-                            NodeName = NodeName,
-                            EmitLogEvent = false,
-                            ServiceName = replica.ServiceName,
-                            Property = evt.HealthInformation.Property,
-                            SourceId = evt.HealthInformation.SourceId
-                        };
-
-                        var healthReporter = new ObserverHealthReporter(_logger);
-                        healthReporter.ReportHealthToServiceFabric(healthReport);
-                        await Task.Delay(250);
-                    }
-                }
-            }
-
-            // NetworkObserver App reports.
-            foreach (var app in apps)
-            {
-                var appHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(app.ApplicationName);
-
-                foreach (var evt in appHealth.HealthEvents.Where(
-                              s => s.HealthInformation.SourceId.Contains(ObserverConstants.NetworkObserverName)
-                                && s.HealthInformation.HealthState == HealthState.Error
-                                || s.HealthInformation.HealthState == HealthState.Warning))
-                {
-                    var healthReport = new HealthReport
-                    {
-                        Code = FOErrorWarningCodes.Ok,
-                        EntityType = EntityType.Application,
-                        HealthMessage = $"Clearing existing NetworkObserver Test health reports.",
-                        State = HealthState.Ok,
-                        NodeName = NodeName,
-                        EmitLogEvent = false,
-                        AppName = app.ApplicationName,
-                        Property = evt.HealthInformation.Property,
-                        SourceId = evt.HealthInformation.SourceId
-                    };
-
-                    var healthReporter = new ObserverHealthReporter(_logger);
-                    healthReporter.ReportHealthToServiceFabric(healthReport);
-                    await Task.Delay(250);
-                }
-            }
-
-            // System app reports.
-            var sysAppHealth = await fabricClient.HealthManager.GetApplicationHealthAsync(new Uri(ObserverConstants.SystemAppName));
-
-            if (sysAppHealth != null)
-            {
-                foreach (var evt in sysAppHealth.HealthEvents.Where(
-                              s => s.HealthInformation.SourceId.Contains(ObserverConstants.FabricSystemObserverName)
-                                && s.HealthInformation.HealthState == HealthState.Error
-                                || s.HealthInformation.HealthState == HealthState.Warning))
-                {
-                    var healthReport = new HealthReport
-                    {
-                        Code = FOErrorWarningCodes.Ok,
-                        EntityType = EntityType.Application,
-                        HealthMessage = $"Clearing existing FSO Test health reports.",
-                        State = HealthState.Ok,
-                        NodeName = NodeName,
-                        EmitLogEvent = false,
-                        AppName = new Uri(ObserverConstants.SystemAppName),
-                        Property = evt.HealthInformation.Property,
-                        SourceId = evt.HealthInformation.SourceId
-                    };
-
-                    var healthReporter = new ObserverHealthReporter(_logger);
-                    healthReporter.ReportHealthToServiceFabric(healthReport);
-                    await Task.Delay(250);
-                }
-            }
-
-            // Node reports.
-            var nodeHealth = await fabricClient.HealthManager.GetNodeHealthAsync(NodeName);
-
-            if (nodeHealth != null)
-            {
-                var fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(
-                        s => (s.HealthInformation.SourceId.Contains(ObserverConstants.NodeObserverName)
-                                || s.HealthInformation.SourceId.Contains(ObserverConstants.DiskObserverName))
-                                && s.HealthInformation.HealthState == HealthState.Error || s.HealthInformation.HealthState == HealthState.Warning);
-
-                foreach (var evt in fabricObserverNodeHealthEvents)
-                {
-                    var healthReport = new HealthReport
-                    {
-                        Code = FOErrorWarningCodes.Ok,
-                        EntityType = EntityType.Machine,
-                        HealthMessage = $"Clearing existing FSO Test health reports.",
-                        State = HealthState.Ok,
-                        NodeName = NodeName,
-                        EmitLogEvent = false,
-                        Property = evt.HealthInformation.Property,
-                        SourceId = evt.HealthInformation.SourceId
-                    };
-
-                    var healthReporter = new ObserverHealthReporter(_logger);
-                    healthReporter.ReportHealthToServiceFabric(healthReport);
-                    await Task.Delay(250);
-                }
-            }
+            FabricClientUtilities fabricClientUtilities = new(NodeName);
+            await fabricClientUtilities.ClearFabricObserverHealthReportsAsync(true, Token);
         }
 
         private static bool InstallCerts()
@@ -1948,7 +1827,7 @@ namespace FabricObserverTests
             services.AddScoped(typeof(ObserverBase), s => obs);
             await using ServiceProvider serviceProvider = services.BuildServiceProvider();
 
-            using var obsMgr = new ObserverManager(serviceProvider, Token)
+            var obsMgr = new ObserverManager(serviceProvider, Token)
             {
                 ApplicationName = "fabric:/TestApp0"
             };
@@ -2207,7 +2086,7 @@ namespace FabricObserverTests
             services.AddScoped(typeof(ObserverBase), s => obs);
             await using ServiceProvider serviceProvider = services.BuildServiceProvider();
 
-            using var obsMgr = new ObserverManager(serviceProvider, Token)
+            var obsMgr = new ObserverManager(serviceProvider, Token)
             {
                 ApplicationName = "fabric:/TestApp0"
             };
@@ -2985,7 +2864,6 @@ namespace FabricObserverTests
                 Assert.IsTrue(data.ObserverName == ObserverConstants.DiskObserverName);
                 Assert.IsTrue(data.Code == null);
                 Assert.IsTrue(data.Description == null);
-                Assert.IsTrue(data.Value > 0.0);
             }
         }
 

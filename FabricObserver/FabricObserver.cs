@@ -23,6 +23,8 @@ namespace FabricObserver
     /// </summary>
     internal sealed class FabricObserverService : StatelessService
     {
+        private ObserverManager observerManager;
+
         /// <summary>
         /// Initializes a new instance of the type.
         /// </summary>
@@ -43,7 +45,7 @@ namespace FabricObserver
             ConfigureServices(services);
 
             await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-            using var observerManager = new ObserverManager(serviceProvider, cancellationToken);
+            observerManager = new ObserverManager(serviceProvider, cancellationToken);
             await observerManager.StartObserversAsync();
         }
 
@@ -66,6 +68,22 @@ namespace FabricObserver
             _ = services.AddSingleton(typeof(StatelessServiceContext), Context);
 
             LoadObserversFromPlugins(services);
+        }
+
+        // When deleting a stateless instance (like the FabricObserver instance), the SF runtime will call this override. 
+        // This ensures that any health report that FO created will be cleared.
+        protected override void OnAbort()
+        {
+            try
+            {
+                observerManager.ShutDownAsync().Wait();
+            }
+            catch (Exception e) when (e is AggregateException or ObjectDisposedException)
+            {
+
+            }
+
+            base.OnAbort();
         }
 
         /// <summary>

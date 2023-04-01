@@ -283,7 +283,7 @@ namespace FabricObserver.Observers
             // Clean out old dmp files, if any. Generally, there will only be some dmp files remaining on disk if customer has not configured
             // uploads correctly or some error during some stage of the upload process. Under normal circumstances, there will be no dmp (or zip) files remaining on
             // disk after successful uploads to configured blob storage container.
-            ObserverLogger.TryCleanFolder(appObsDumpFolderPath, "*.dmp", TimeSpan.FromDays(3));
+            Logger.TryCleanFolder(appObsDumpFolderPath, "*.dmp", TimeSpan.FromDays(3));
 
             // Compression setting.
             string compressionLevel = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ZipFileCompressionLevelParameter);
