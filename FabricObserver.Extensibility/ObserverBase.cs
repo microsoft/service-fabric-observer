@@ -1300,6 +1300,7 @@ namespace FabricObserver.Observers
                     ServiceNames.Enqueue(serviceName.OriginalString);
                 }
 
+                // TOTHINK: Add a check to see if the entity is already in Warning for errorWarningCode.
                 if (!data.ActiveErrorOrWarning || data.ActiveErrorOrWarningCode != errorWarningCode)
                 {
                     var healthReport = new HealthReport

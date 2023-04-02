@@ -105,7 +105,7 @@ namespace FabricObserver.Observers.Utilities
             get; set;
         }
 
-        private bool isInWarningState;
+        private volatile bool isInWarningState;
 
         /// <summary>
         /// Gets count of total warnings for the lifetime of this instance.
@@ -199,11 +199,14 @@ namespace FabricObserver.Observers.Utilities
 
             set
             {
-                isInWarningState = value;
-
-                if (value)
+                lock (lockObj)
                 {
-                    LifetimeWarningCount++;
+                    isInWarningState = value;
+
+                    if (value)
+                    {
+                        LifetimeWarningCount++;
+                    }
                 }
             }
         }
