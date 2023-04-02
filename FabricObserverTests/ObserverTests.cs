@@ -1151,7 +1151,7 @@ namespace FabricObserverTests
 
             // VotingWeb has both MemoryInMB and MemoryInMBLimit specified in a code package rg policy node. Ensure that only the value
             // of MemoryInMBLimit is used (this is known to be 2048, whereas MemoryInMB is known to be 1024, per the application's App manifest).
-            var (RGEnabled, RGMemoryLimit) = clientUtilities.TupleGetMemoryResourceGovernanceInfo(appManifest, "VotingWebPkg", "Code");
+            var (RGEnabled, RGMemoryLimit) = clientUtilities.TupleGetMemoryResourceGovernanceInfo(appManifest, "VotingWebPkg", "Code", null);
             Assert.IsTrue(RGEnabled);
             Assert.IsTrue(RGMemoryLimit == 2048);
 

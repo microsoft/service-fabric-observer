@@ -3,14 +3,9 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using FabricObserver.Observers.Interfaces;
-using FabricObserver.Observers;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
-using FabricObserver.TelemetryLib;
-using Microsoft.ApplicationInsights;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -473,8 +468,9 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// <param name="appManifestXml">Application Manifest</param>
         /// <param name="servicePkgName">Service Package name</param>
         /// <param name="codepackageName">Code Package name</param>
+        /// <param name="appParameters">Application parameter list</param>
         /// <returns>A Tuple containing a boolean value (whether or not RG is enabled) and a double value (the absolute limit in megabytes)</returns>
-        public (bool IsMemoryRGEnabled, double MemoryLimitMb) TupleGetMemoryResourceGovernanceInfo(string appManifestXml, string servicePkgName, string codepackageName)
+        public (bool IsMemoryRGEnabled, double MemoryLimitMb) TupleGetMemoryResourceGovernanceInfo(string appManifestXml, string servicePkgName, string codepackageName, ApplicationParameterList appParameters)
         {
             logger.LogInfo("Starting TupleGetResourceGovernanceInfo.");
 
@@ -520,7 +516,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                         appManifestXdoc?.Load(xreader);
 
                         logger.LogInfo("Completed TupleGetResourceGovernanceInfo.");
-                        return TupleGetRGPolicyInfoFromAppManifest(ref appManifestXdoc, servicePkgName, codepackageName);
+                        return TupleGetRGPolicyInfoFromAppManifest(ref appManifestXdoc, servicePkgName, codepackageName, appParameters);
                     }
                 }
             }
@@ -535,23 +531,24 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// <summary>
         /// TODO. Do not call. Gets CPU RG info.
         /// </summary>
-        /// <param name="appManifestXml"></param>
-        /// <param name="servicePkgName"></param>
-        /// <param name="codepackageName"></param>
+        /// <param name="appManifestXml">Application Manifest</param>
+        /// <param name="servicePkgName">Service Package name</param>
+        /// <param name="codepackageName">Code Package name</param>
+        /// <param name="appParameters">Application parameter list</param>
         /// <returns>Calling this throws NotImplementedException.</returns>
         /// <exception cref="NotImplementedException"></exception>
-        public (bool IsMemoryRGEnabled, double MemoryLimitMb) TupleGetCpuResourceGovernanceInfo(string appManifestXml, string servicePkgName, string codepackageName)
+        public (bool IsMemoryRGEnabled, double MemoryLimitMb) TupleGetCpuResourceGovernanceInfo(string appManifestXml, string servicePkgName, string codepackageName, ApplicationParameterList appParameters)
         {
             throw new NotImplementedException();
         }
 
-        private (bool IsRGMemoryEnabled, double MemoryLimitMb) TupleGetRGPolicyInfoFromAppManifest(ref XmlDocument xDoc, string servicePkgName, string codepackageName)
+        private (bool IsRGMemoryEnabled, double MemoryLimitMb) TupleGetRGPolicyInfoFromAppManifest(ref XmlDocument xDoc, string servicePkgName, string codepackageName, ApplicationParameterList appParameters)
         {
             logger.LogInfo("Starting TupleGetResourceGovernanceInfoFromAppManifest.");
 
-            if (xDoc == null)
+            if (xDoc == null || xDoc.DocumentElement == null)
             {
-                logger.LogInfo("Completed TupleGetResourceGovernanceInfoFromAppManifest: xDoc == null.");
+                logger.LogInfo("Completed TupleGetResourceGovernanceInfoFromAppManifest: xDoc/DocumentElement == null.");
                 return (false, 0);
             }
 
@@ -560,7 +557,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                 // Find the correct manifest import for specified service package name (servicePkgName arg).
                 // There will generally be multiple RG limits set per application (so, per service settings).
                 var sNode =
-                    xDoc.DocumentElement?.SelectSingleNode(
+                    xDoc.DocumentElement.SelectSingleNode(
                         $"//*[local-name()='{ObserverConstants.ServiceManifestImport}'][*[local-name()='{ObserverConstants.ServiceManifestRef}' and @*[local-name()='{ObserverConstants.ServiceManifestName}' and . ='{servicePkgName}']]]");
 
                 if (sNode == null)
@@ -615,13 +612,20 @@ namespace FabricObserver.Utilities.ServiceFabric
                                 continue;
                             }
 
-                            // App Parameter support: This means user has specified the absolute memory value in an Application Parameter.
+                            // Application Parameter support: This means user has specified the absolute memory value in an Application Parameter.
                             if (memAttr.Value.StartsWith("["))
                             {
-                                XmlNode parametersNode = xDoc.DocumentElement?.SelectSingleNode($"//*[local-name()='{ObserverConstants.Parameters}']");
-                                XmlNode parameterNode = parametersNode?.SelectSingleNode($"//*[local-name()='{ObserverConstants.Parameter}' and @Name='{memAttr.Value[1..^1]}']");
-                                XmlAttribute attr = parameterNode?.Attributes?[ObserverConstants.DefaultValue];
+                                XmlNode parametersNode = xDoc.DocumentElement.SelectSingleNode($"//*[local-name()='{ObserverConstants.Parameters}']");
+                                XmlNode parameterNode =
+                                    parametersNode.SelectSingleNode($"//*[local-name()='{ObserverConstants.Parameter}' and @Name='{memAttr.Value[1..^1]}']");
+                                XmlAttribute attr = parameterNode.Attributes[ObserverConstants.DefaultValue];
                                 memAttr.Value = attr.Value;
+
+                                // Get the latest value from a parameter-only, version-less application upgrade, for example.
+                                if (appParameters != null && appParameters.Any(a => a.Name == parameterNode.Attributes["Name"].Value)) 
+                                { 
+                                    memAttr.Value = appParameters.First(a => a.Name == parameterNode.Attributes["Name"].Value).Value;
+                                }
                             }
 
                             logger.LogInfo("Completed TupleGetResourceGovernanceInfoFromAppManifest: Memory RG enabled.");
@@ -767,9 +771,21 @@ namespace FabricObserver.Utilities.ServiceFabric
 
         private async Task RemoveServiceHealthReportsAsync(ServiceHealthState service, bool ignoreDefaultQueryTimeout, CancellationToken cancellationToken)
         {
+            ServiceHealthQueryDescription serviceHealthQueryDescription = new (service.ServiceName)
+            {
+                EventsFilter = new HealthEventsFilter
+                {
+                    HealthStateFilterValue = HealthStateFilter.Error | HealthStateFilter.Warning
+                },
+                HealthPolicy = new ApplicationHealthPolicy(),
+                HealthStatisticsFilter = new ServiceHealthStatisticsFilter
+                {
+                    ExcludeHealthStatistics = false
+                }
+            };
             var serviceHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                                     () => FabricClientSingleton.HealthManager.GetServiceHealthAsync(
-                                            service.ServiceName,
+                                            serviceHealthQueryDescription,
                                             ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(90),
                                             cancellationToken),
                                     cancellationToken);
@@ -781,9 +797,8 @@ namespace FabricObserver.Utilities.ServiceFabric
 
             var serviceHealthEvents =
                 serviceHealth.HealthEvents.Where(
-                    e => e.HealthInformation.HealthState is HealthState.Error or HealthState.Warning
-                      && (e.HealthInformation.SourceId.StartsWith(ObserverConstants.AppObserverName)
-                          || e.HealthInformation.SourceId.StartsWith(ObserverConstants.ContainerObserverName))).ToList();
+                    e => e.HealthInformation.SourceId.StartsWith(ObserverConstants.AppObserverName)
+                      || e.HealthInformation.SourceId.StartsWith(ObserverConstants.ContainerObserverName)).ToList();
 
             if (!serviceHealthEvents.Any())
             {
@@ -795,24 +810,18 @@ namespace FabricObserver.Utilities.ServiceFabric
                 Code = FOErrorWarningCodes.Ok,
                 HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping or restarting.",
                 State = HealthState.Ok,
-                NodeName = nodeName
+                NodeName = nodeName,
+                ServiceName = service.ServiceName,
+                EntityType = EntityType.Service
             };
+            ObserverHealthReporter healthReporter = new(logger);
 
             foreach (HealthEvent healthEvent in serviceHealthEvents.OrderByDescending(f => f.SourceUtcTimestamp))
             {
-                if (healthEvent.HealthInformation.HealthState is not HealthState.Error and not HealthState.Warning)
-                {
-                    continue;
-                }
-
                 try
                 {
-                    healthReport.ServiceName = service.ServiceName;
-                    healthReport.EntityType = EntityType.Service;
                     healthReport.Property = healthEvent.HealthInformation.Property;
                     healthReport.SourceId = healthEvent.HealthInformation.SourceId;
-
-                    var healthReporter = new ObserverHealthReporter(logger);
                     healthReporter.ReportHealthToServiceFabric(healthReport);
 
                     await Task.Delay(150);
@@ -827,8 +836,9 @@ namespace FabricObserver.Utilities.ServiceFabric
         private async Task RemoveApplicationHealthReportsAsync(ApplicationHealthState app, bool ignoreDefaultQueryTimeout, CancellationToken cancellationToken)
         {
             var appHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricClientSingleton.HealthManager.GetApplicationHealthAsync(
+                                    () => FabricClientSingleton.HealthManager.GetDeployedApplicationHealthAsync(
                                             app.ApplicationName,
+                                            this.nodeName,
                                             ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(90),
                                             cancellationToken),
                                     cancellationToken);
@@ -840,9 +850,8 @@ namespace FabricObserver.Utilities.ServiceFabric
 
             var appHealthEvents =
                 appHealth.HealthEvents.Where(
-                    e => e.HealthInformation.HealthState is HealthState.Error or HealthState.Warning 
-                      && (e.HealthInformation.SourceId.StartsWith(ObserverConstants.FabricSystemObserverName)
-                          || e.HealthInformation.SourceId.StartsWith(ObserverConstants.NetworkObserverName))).ToList();
+                    e => e.HealthInformation.SourceId.StartsWith(ObserverConstants.FabricSystemObserverName)
+                      || e.HealthInformation.SourceId.StartsWith(ObserverConstants.NetworkObserverName)).ToList();
 
             if (!appHealthEvents.Any())
             {
@@ -854,24 +863,18 @@ namespace FabricObserver.Utilities.ServiceFabric
                 Code = FOErrorWarningCodes.Ok,
                 HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping or restarting.",
                 State = HealthState.Ok,
-                NodeName = nodeName
+                NodeName = nodeName,
+                AppName = app.ApplicationName,
+                EntityType = EntityType.Application
             };
+            ObserverHealthReporter healthReporter = new(logger);
 
             foreach (HealthEvent healthEvent in appHealthEvents.OrderByDescending(f => f.SourceUtcTimestamp))
             {
-                if (healthEvent.HealthInformation.HealthState is not HealthState.Error and not HealthState.Warning)
-                {
-                    continue;
-                }
-
                 try
                 {
-                    healthReport.AppName = app.ApplicationName;
-                    healthReport.EntityType = EntityType.Application;
                     healthReport.Property = healthEvent.HealthInformation.Property;
                     healthReport.SourceId = healthEvent.HealthInformation.SourceId;
-
-                    var healthReporter = new ObserverHealthReporter(logger);
                     healthReporter.ReportHealthToServiceFabric(healthReport);
 
                     await Task.Delay(150);
@@ -883,8 +886,11 @@ namespace FabricObserver.Utilities.ServiceFabric
             }
         }
 
-        private async Task RemoveNodeHealthReportsAsync(IList<NodeHealthState> nodeHealthStates, bool ignoreDefaultQueryTimeout, CancellationToken cancellationToken)
+        private async Task RemoveNodeHealthReportsAsync(IEnumerable<NodeHealthState> nodeHealthStates, bool ignoreDefaultQueryTimeout, CancellationToken cancellationToken)
         {
+            // Scope to node where this FO instance is running.
+            nodeHealthStates = nodeHealthStates.Where(n => n.NodeName == this.nodeName);
+
             foreach (var nodeHealthState in nodeHealthStates)
             {
                 var nodeHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
@@ -901,12 +907,11 @@ namespace FabricObserver.Utilities.ServiceFabric
 
                 var nodeHealthEvents =
                     nodeHealth.HealthEvents.Where(
-                        e => e.HealthInformation.HealthState is HealthState.Error or HealthState.Warning
-                          && (e.HealthInformation.SourceId.StartsWith(ObserverConstants.CertificateObserverName)
-                              || e.HealthInformation.SourceId.StartsWith(ObserverConstants.DiskObserverName)
-                              || e.HealthInformation.SourceId.StartsWith(ObserverConstants.FabricSystemObserverName)
-                              || e.HealthInformation.SourceId.StartsWith(ObserverConstants.NodeObserverName)
-                              || e.HealthInformation.SourceId.StartsWith(ObserverConstants.OSObserverName))).ToList();
+                        e => e.HealthInformation.SourceId.StartsWith(ObserverConstants.CertificateObserverName)
+                          || e.HealthInformation.SourceId.StartsWith(ObserverConstants.DiskObserverName)
+                          || e.HealthInformation.SourceId.StartsWith(ObserverConstants.FabricSystemObserverName)
+                          || e.HealthInformation.SourceId.StartsWith(ObserverConstants.NodeObserverName)
+                          || e.HealthInformation.SourceId.StartsWith(ObserverConstants.OSObserverName)).ToList();
 
                 if (!nodeHealthEvents.Any())
                 {
@@ -918,24 +923,17 @@ namespace FabricObserver.Utilities.ServiceFabric
                     Code = FOErrorWarningCodes.Ok,
                     HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping or restarting.",
                     State = HealthState.Ok,
-                    NodeName = nodeName
+                    NodeName = this.nodeName,
+                    EntityType = EntityType.Machine
                 };
+                ObserverHealthReporter healthReporter = new(logger);
 
-                foreach (HealthEvent healthEvent in nodeHealthEvents.OrderByDescending(f => f.SourceUtcTimestamp))
+                foreach (HealthEvent healthEvent in nodeHealthEvents)
                 {
-                    if (healthEvent.HealthInformation.HealthState is not HealthState.Error and not HealthState.Warning)
-                    {
-                        continue;
-                    }
-
                     try
-                    {
-                        healthReport.NodeName = nodeHealthState.NodeName;                       
-                        healthReport.EntityType = EntityType.Machine;
+                    {                     
                         healthReport.Property = healthEvent.HealthInformation.Property;
                         healthReport.SourceId = healthEvent.HealthInformation.SourceId;
-
-                        var healthReporter = new ObserverHealthReporter(logger);
                         healthReporter.ReportHealthToServiceFabric(healthReport);
 
                         await Task.Delay(150);

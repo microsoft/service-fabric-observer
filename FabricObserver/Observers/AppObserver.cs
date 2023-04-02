@@ -2954,7 +2954,7 @@ namespace FabricObserver.Observers
             try
             {
                 string appTypeVersion = null;
-
+                ApplicationParameterList appParameters = null;
                 ApplicationList appList =
                     FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                         async () => 
@@ -2970,6 +2970,7 @@ namespace FabricObserver.Observers
                         if (appList.Any(app => app.ApplicationTypeName == appTypeName))
                         {
                             appTypeVersion = appList.First(app => app.ApplicationTypeName == appTypeName).ApplicationTypeVersion;
+                            appParameters = appList.First(app => app.ApplicationTypeName == appTypeName).ApplicationParameters;
                             replicaInfo.ApplicationTypeVersion = appTypeVersion;
                         }
                     }
@@ -2995,7 +2996,7 @@ namespace FabricObserver.Observers
                             if (!string.IsNullOrWhiteSpace(appManifest) && appManifest.Contains($"<{ObserverConstants.RGPolicyNodeName} "))
                             {
                                 (replicaInfo.RGMemoryEnabled, replicaInfo.RGAppliedMemoryLimitMb) =
-                                    fabricClientUtilities.TupleGetMemoryResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName);
+                                    fabricClientUtilities.TupleGetMemoryResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName, appParameters);
                             }
                         }
 
