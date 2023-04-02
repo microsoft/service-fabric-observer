@@ -836,9 +836,8 @@ namespace FabricObserver.Utilities.ServiceFabric
         private async Task RemoveApplicationHealthReportsAsync(ApplicationHealthState app, bool ignoreDefaultQueryTimeout, CancellationToken cancellationToken)
         {
             var appHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricClientSingleton.HealthManager.GetDeployedApplicationHealthAsync(
+                                    () => FabricClientSingleton.HealthManager.GetApplicationHealthAsync(
                                             app.ApplicationName,
-                                            this.nodeName,
                                             ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(90),
                                             cancellationToken),
                                     cancellationToken);
