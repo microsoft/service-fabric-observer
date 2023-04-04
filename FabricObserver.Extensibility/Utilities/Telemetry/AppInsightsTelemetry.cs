@@ -213,6 +213,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                         { "ReplicaId", serviceTelemData.ReplicaId > 0 ? serviceTelemData.ReplicaId.ToString() : null },
                         { "RGMemoryEnabled", serviceTelemData.ServiceName != null ? serviceTelemData.RGMemoryEnabled.ToString() : null },
                         { "RGMemoryLimitMb", serviceTelemData.RGMemoryEnabled ? serviceTelemData.RGAppliedMemoryLimitMb.ToString() : null },
+                        { "RGCpuEnabled", serviceTelemData.ServiceName != null ? serviceTelemData.RGCpuEnabled.ToString() : null },
+                        { "RGCpuLimitCores", serviceTelemData.RGCpuEnabled ? serviceTelemData.RGAppliedCpuLimitCores.ToString() : null },
                         { "ObserverName", serviceTelemData.ObserverName },
                         { "NodeName", serviceTelemData.NodeName },
                         { "OS", serviceTelemData.OS }
@@ -368,6 +370,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                         { "ReplicaId", serviceTelemData.ReplicaId > 0 ? serviceTelemData.ReplicaId.ToString() : null },
                         { "RGMemoryEnabled", serviceTelemData.ServiceName != null ? serviceTelemData.RGMemoryEnabled.ToString() : null },
                         { "RGMemoryLimitMb", serviceTelemData.RGMemoryEnabled ? serviceTelemData.RGAppliedMemoryLimitMb.ToString() : null },
+                        { "RGCpuEnabled", serviceTelemData.ServiceName != null ? serviceTelemData.RGCpuEnabled.ToString() : null },
+                        { "RGCpuLimitCores", serviceTelemData.RGCpuEnabled ? serviceTelemData.RGAppliedCpuLimitCores.ToString() : null },
                         { "ObserverName", serviceTelemData.ObserverName },
                         { "NodeName", serviceTelemData.NodeName },
                         { "OS", serviceTelemData.OS }

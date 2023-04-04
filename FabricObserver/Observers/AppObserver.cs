@@ -2372,12 +2372,6 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                // No need to proceed further if no cpu/mem thresholds are specified in configuration.
-                if (!checkCpu && !checkMemMb && !checkMemPct)
-                {
-                    state.Stop();
-                }
-
                 // Memory \\
 
                 // Private Bytes (MB) - Windows only.
@@ -2952,12 +2946,22 @@ namespace FabricObserver.Observers
             try
             {
                 string appTypeVersion = null;
+                ApplicationParameterList appParameters = null;
+                ApplicationParameterList defaultParameters = null;
 
                 ApplicationList appList =
                     FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
                         async () => 
                                 await FabricClientInstance.QueryManager.GetApplicationListAsync(
                                         replicaInfo.ApplicationName,
+                                        ConfigurationSettings.AsyncTimeout,
+                                        Token), Token).Result;
+
+                ApplicationTypeList applicationTypeList =
+                    FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                        async () =>
+                                await FabricClientInstance.QueryManager.GetApplicationTypeListAsync(
+                                        appTypeName,
                                         ConfigurationSettings.AsyncTimeout,
                                         Token), Token).Result;
 
@@ -2968,7 +2972,13 @@ namespace FabricObserver.Observers
                         if (appList.Any(app => app.ApplicationTypeName == appTypeName))
                         {
                             appTypeVersion = appList.First(app => app.ApplicationTypeName == appTypeName).ApplicationTypeVersion;
+                            appParameters = appList.First(app => app.ApplicationTypeName == appTypeName).ApplicationParameters;
                             replicaInfo.ApplicationTypeVersion = appTypeVersion;
+                        }
+
+                        if (applicationTypeList.Any(app => app.ApplicationTypeVersion == appTypeVersion))
+                        {
+                            defaultParameters = applicationTypeList.First(app => app.ApplicationTypeVersion == appTypeVersion).DefaultParameters;
                         }
                     }
                     catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
@@ -2982,18 +2992,26 @@ namespace FabricObserver.Observers
                         if (IsWindows)
                         {
                             string appManifest =
-                                 FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    async () =>
-                                            await FabricClientInstance.ApplicationManager.GetApplicationManifestAsync(
-                                                    appTypeName,
-                                                    appTypeVersion,
-                                                    ConfigurationSettings.AsyncTimeout,
-                                                    Token), Token).Result;
+                                  FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                     async () =>
+                                             await FabricClientInstance.ApplicationManager.GetApplicationManifestAsync(
+                                                     appTypeName,
+                                                     appTypeVersion,
+                                                     ConfigurationSettings.AsyncTimeout,
+                                                     Token), Token).Result;
 
                             if (!string.IsNullOrWhiteSpace(appManifest) && appManifest.Contains($"<{ObserverConstants.RGPolicyNodeName} "))
                             {
+                                ApplicationParameterList parameters = new ApplicationParameterList();
+
+                                fabricClientUtilities.AddParametersIfNotExists(parameters, appParameters);
+                                fabricClientUtilities.AddParametersIfNotExists(parameters, defaultParameters);
+
                                 (replicaInfo.RGMemoryEnabled, replicaInfo.RGAppliedMemoryLimitMb) =
-                                    fabricClientUtilities.TupleGetMemoryResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName);
+                                    fabricClientUtilities.TupleGetMemoryResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName, parameters);
+
+                                (replicaInfo.RGCpuEnabled, replicaInfo.RGAppliedCpuLimitCores) =
+                                    fabricClientUtilities.TupleGetCpuResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName, parameters);
                             }
                         }
 

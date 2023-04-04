@@ -849,6 +849,8 @@ namespace FabricObserver.Observers
                             ReplicaStatus = replicaOrInstance.ReplicaStatus.ToString(),
                             RGMemoryEnabled = replicaOrInstance.RGMemoryEnabled,
                             RGAppliedMemoryLimitMb = replicaOrInstance.RGAppliedMemoryLimitMb,
+                            RGCpuEnabled = replicaOrInstance.RGCpuEnabled,
+                            RGAppliedCpuLimitCores = replicaOrInstance.RGAppliedCpuLimitCores,
                             ServiceKind = replicaOrInstance.ServiceKind.ToString(),
                             ServiceName = serviceName.OriginalString,
                             ServiceTypeName = serviceTypeName,
@@ -1261,6 +1263,11 @@ namespace FabricObserver.Observers
                     case ErrorWarningProperty.RGMemoryUsagePercent when entityType == EntityType.Application || entityType == EntityType.Service:
                         errorWarningCode = FOErrorWarningCodes.AppWarningRGMemoryLimitPercent;
                         break;
+
+                    // RG CPU Limit Percent. Only Warning is supported.
+                    case ErrorWarningProperty.RGCpuUsagePercent when entityType == EntityType.Application || entityType == EntityType.Service:
+                        errorWarningCode = FOErrorWarningCodes.AppWarningRGCpuLimitPercent;
+                        break;
                 }
 
                 var healthMessage = new StringBuilder();
@@ -1277,6 +1284,11 @@ namespace FabricObserver.Observers
                 if (replicaOrInstance != null && data.Property == ErrorWarningProperty.RGMemoryUsagePercent)
                 {
                     rgInfo = $" of {replicaOrInstance.RGAppliedMemoryLimitMb}MB";
+                }
+
+                if (replicaOrInstance != null && data.Property == ErrorWarningProperty.RGCpuUsagePercent)
+                {
+                    rgInfo = $" of {replicaOrInstance.RGAppliedCpuLimitCores} cores";
                 }
 
                 string metric = data.Property;

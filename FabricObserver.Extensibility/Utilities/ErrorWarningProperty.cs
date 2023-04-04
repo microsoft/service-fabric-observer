@@ -130,5 +130,10 @@ namespace FabricObserver.Observers.Utilities
         /// Process RG Memory (Percent)
         /// </summary>
         public const string RGMemoryUsagePercent = "RG Memory Usage (Percent)";
+
+        /// <summary>
+        /// Process RG Cpu (Percent)
+        /// </summary>
+        public const string RGCpuUsagePercent = "RG Cpu Usage (Percent)";
     }
 }
