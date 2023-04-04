@@ -150,38 +150,38 @@ namespace FabricObserver.Observers.Utilities
                     // Thread safe for reads only: List<T>, CircularBufferCollection<T> \\
 
                     case IList<long> v:
-                        average = Math.Round(v.Average(), 2);
+                        average = Math.Round(v.Average(), 5);
                         break;
 
                     case IList<int> x:
-                        average = Math.Round(x.Average(), 2);
+                        average = Math.Round(x.Average(), 5);
                         break;
 
                     case IList<float> y:
-                        average = Math.Round(y.Average(), 2);
+                        average = Math.Round(y.Average(), 5);
                         break;
 
                     case IList<double> z:
-                        average = Math.Round(z.Average(), 2);
+                        average = Math.Round(z.Average(), 5);
                         break;
 
 
                     // Thread safe for reads and writes: ConcurrentQueue<T> \\
 
                     case IProducerConsumerCollection<long> v:
-                        average = Math.Round(v.Average(), 2);
+                        average = Math.Round(v.Average(), 5);
                         break;
 
                     case IProducerConsumerCollection<int> x:
-                        average = Math.Round(x.Average(), 2);
+                        average = Math.Round(x.Average(), 5);
                         break;
 
                     case IProducerConsumerCollection<float> y:
-                        average = Math.Round(y.Average(), 2);
+                        average = Math.Round(y.Average(), 5);
                         break;
 
                     case IProducerConsumerCollection<double> z:
-                        average = Math.Round(z.Average(), 2);
+                        average = Math.Round(z.Average(), 5);
                         break;
                 }
                 

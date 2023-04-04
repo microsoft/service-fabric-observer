@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using FabricObserver.Observers.Utilities.Telemetry;
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections.Concurrent;
@@ -342,9 +343,14 @@ namespace FabricObserver.Observers.Utilities
                 memoryCounters.cb = (uint)Marshal.SizeOf(typeof(NativeMethods.PROCESS_MEMORY_COUNTERS_EX));
                 handle = NativeMethods.GetSafeProcessHandle((uint)processId);
 
-                if (handle.IsInvalid || !NativeMethods.GetProcessMemoryInfo(handle, out memoryCounters, memoryCounters.cb))
+                if (handle.IsInvalid)
                 {
-                    throw new Win32Exception($"GetProcessMemoryInfo failed with Win32 error {Marshal.GetLastWin32Error()}");
+                    throw new Win32Exception($"NativeMethods.GetSafeProcessHandle returned invalid handle: error {Marshal.GetLastWin32Error()}");
+                }
+
+                if (!NativeMethods.GetProcessMemoryInfo(handle, out memoryCounters, memoryCounters.cb))
+                {
+                    throw new Win32Exception($"NativeMethods.GetProcessMemoryInfo failed with Win32 error {Marshal.GetLastWin32Error()}");
                 }
 
                 if (getPrivateBytes)
@@ -356,7 +362,19 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or Win32Exception)
             {
-                ProcessInfoLogger.LogWarning($"GetProcessMemoryMbWin32: Exception getting working set for process {processId}: {e.Message}");
+                string message = $"GetProcessMemoryMbWin32({processId}) failure: {e.Message}";
+                ProcessInfoLogger.LogWarning(message);
+                ProcessInfoLogger.LogEtw(
+                    ObserverConstants.FabricObserverETWEventName,
+                    new
+                    {
+                        Error = message,
+                        EntityType = EntityType.Service.ToString(),
+                        ProcessId = processId.ToString(),
+                        GetPrivateBytes = getPrivateBytes,
+                        Level = "Warning"
+                    });
+
                 return 0F;
             }
             finally
@@ -370,7 +388,19 @@ namespace FabricObserver.Observers.Utilities
         {
             if (string.IsNullOrWhiteSpace(procName) || procId < 1)
             {
-                ProcessInfoLogger.LogWarning($"GetProcessMemoryMbPerfCounter: Unsupported process information provided ({procName ?? "null"}, {procId})");
+                string message = $"GetProcessMemoryMbPerfCounter: Unsupported process information provided ({procName ?? "null"}, {procId})";
+                ProcessInfoLogger.LogWarning(message);
+                ProcessInfoLogger.LogEtw(
+                    ObserverConstants.FabricObserverETWEventName,
+                    new
+                    {
+                        Level = "Warning",
+                        Message = message,
+                        EntityType = EntityType.Service.ToString(),
+                        ProcessName = procName ?? "null",
+                        ProcessId = procId.ToString()
+                    });
+
                 return 0F;
             }
 
@@ -379,8 +409,19 @@ namespace FabricObserver.Observers.Utilities
                 // The related Observer will have logged any privilege related failure.
                 if (Marshal.GetLastWin32Error() != 5)
                 {
-                    ProcessInfoLogger.LogWarning($"GetProcessMemoryMbPerfCounter: The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for. " +
-                                                 $"Error Code: {Marshal.GetLastWin32Error()}");
+                    string message = $"GetProcessMemoryMbPerfCounter: The specified process (name: {procName}, pid: {procId}) isn't the droid we're looking for. " +
+                                     $"Win32 error: {Marshal.GetLastWin32Error()}";
+                    ProcessInfoLogger.LogWarning(message);
+                    ProcessInfoLogger.LogEtw(
+                        ObserverConstants.FabricObserverETWEventName,
+                        new
+                        {
+                            Level = "Warning",
+                            Message = message,
+                            EntityType = EntityType.Service.ToString(),
+                            ProcessName = procName,
+                            ProcessId = procId.ToString()
+                        });
                 }
 
                 return 0F;
@@ -445,12 +486,23 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or UnauthorizedAccessException or Win32Exception)
             {
-                ProcessInfoLogger.LogWarning($"Handled exception in GetProcessMemoryMbPerfCounter: Returning 0.{Environment.NewLine}{e.Message}");
+                string message = $"Handled exception in GetProcessMemoryMbPerfCounter. Returning 0. Exception message: {e.Message}";
+                ProcessInfoLogger.LogWarning(message);
+                ProcessInfoLogger.LogEtw(
+                    ObserverConstants.FabricObserverETWEventName,
+                    new
+                    {
+                        Level = "Warning",
+                        Message = message,
+                        EntityType = EntityType.Service.ToString(),
+                        ProcessName = procName,
+                        ProcessId = procId.ToString()
+                    });
             }
             catch (Exception e)
             {
                 // Log the full error (including stack trace) for debugging purposes.
-                ProcessInfoLogger.LogWarning($"Unhandled exception in GetProcessMemoryMbPerfCounter:{Environment.NewLine}{e}");
+                ProcessInfoLogger.LogWarning($"Unhandled exception in GetProcessMemoryMbPerfCounter. Exception:{Environment.NewLine}{e}");
                 throw;
             }
 

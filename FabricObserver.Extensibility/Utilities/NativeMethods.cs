@@ -1212,8 +1212,13 @@ namespace FabricObserver.Observers.Utilities
         internal static bool GetSytemPerformanceInfo(ref PerformanceInformation pi)
         {
             pi.cb = (uint)Marshal.SizeOf(typeof(PerformanceInformation));
-            var ret = GetPerformanceInfo(ref pi, pi.cb);
-            return ret;
+            
+            if (!GetPerformanceInfo(ref pi, pi.cb))
+            {
+                throw new Win32Exception($"GetPerformanceInfo failed with {Marshal.GetLastWin32Error()}");
+            }
+
+            return true;
         }
 
         /// <summary>

@@ -2173,7 +2173,7 @@ namespace FabricObserver.Observers
                         bool checkMemMb,
                         bool checkMemPct,
                         bool checkMemPrivateBytesPct,
-                        bool checkMemPrivateBytes,
+                        bool checkMemPrivateBytesMb,
                         bool checkAllPorts,
                         bool checkEphemeralPorts,
                         bool checkPercentageEphemeralPorts,
@@ -2188,10 +2188,16 @@ namespace FabricObserver.Observers
                         CancellationToken token)
         {
             _ = Parallel.For(0, processDictionary.Count, parallelOptions, (i, state) =>
-            {
-                if (token.IsCancellationRequested)
+            {    if (token.IsCancellationRequested)
                 {
-                    state.Stop();
+                    if (parallelOptions.MaxDegreeOfParallelism == -1 || parallelOptions.MaxDegreeOfParallelism > 1)
+                    {
+                        state.Stop();
+                    }
+                    else
+                    {
+                        token.ThrowIfCancellationRequested();
+                    }
                 }
 
                 var index = processDictionary.ElementAt(i);
@@ -2374,35 +2380,65 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                // No need to proceed further if no cpu/mem thresholds are specified in configuration.
-                if (!checkCpu && !checkMemMb && !checkMemPct)
-                {
-                    state.Stop();
-                }
-
                 // Memory \\
 
                 // Private Bytes (MB) - Windows only.
-                if (IsWindows && checkMemPrivateBytes)
+                if (IsWindows && checkMemPrivateBytesMb)
                 {
                     float memPb = ProcessInfoProvider.Instance.GetProcessPrivateBytesMb(procId);
 
-                    if (procId == parentPid)
+                    // If this is not the case, then there is a systemic issue. The related function will have already locally logged/emitted etw with the error info.
+                    if (memPb > 0)
                     {
-                        AllAppPrivateBytesDataMb[id].AddData(memPb);
+                        if (procId == parentPid)
+                        {
+                            AllAppPrivateBytesDataMb[id].AddData(memPb);
+                        }
+                        else
+                        {
+                            _ = AllAppPrivateBytesDataMb.TryAdd(
+                                    $"{id}:{procName}{procId}",
+                                    new FabricResourceUsageData<float>(
+                                            ErrorWarningProperty.PrivateBytesMb,
+                                            $"{id}:{procName}{procId}",
+                                            capacity,
+                                            UseCircularBuffer,
+                                            EnableConcurrentMonitoring));
+
+                            AllAppPrivateBytesDataMb[$"{id}:{procName}{procId}"].AddData(memPb);
+                        }
                     }
-                    else
+                }
+
+                // Private Bytes (Percent) - Windows only.
+                if (IsWindows && checkMemPrivateBytesPct)
+                {
+                    float processPrivateBytesMb = ProcessInfoProvider.Instance.GetProcessPrivateBytesMb(procId);
+                    var (CommitLimitGb, _) = OSInfoProvider.Instance.TupleGetSystemCommittedMemoryInfo();
+
+                    // If this is not the case, then there is a systemic issue. The related function will have already locally logged/emitted etw with the error info.
+                    if (CommitLimitGb > 0 && processPrivateBytesMb > 0)
                     {
-                        _ = AllAppPrivateBytesDataMb.TryAdd(
-                                $"{id}:{procName}{procId}",
-                                new FabricResourceUsageData<float>(
-                                        ErrorWarningProperty.PrivateBytesMb,
+                        double usedPct = (double)(processPrivateBytesMb * 100) / (CommitLimitGb * 1024);
+
+                        // parent process
+                        if (procId == parentPid)
+                        {
+                            AllAppPrivateBytesDataPercent[id].AddData(Math.Round(usedPct, 4));
+                        }
+                        else // child process
+                        {
+                            _ = AllAppPrivateBytesDataPercent.TryAdd(
+                                    $"{id}:{procName}{procId}",
+                                    new FabricResourceUsageData<double>(
+                                        ErrorWarningProperty.PrivateBytesPercent,
                                         $"{id}:{procName}{procId}",
                                         capacity,
                                         UseCircularBuffer,
                                         EnableConcurrentMonitoring));
 
-                        AllAppPrivateBytesDataMb[$"{id}:{procName}{procId}"].AddData(memPb);
+                            AllAppPrivateBytesDataPercent[$"{id}:{procName}{procId}"].AddData(Math.Round(usedPct, 4));
+                        }
                     }
                 }
 
@@ -2411,29 +2447,33 @@ namespace FabricObserver.Observers
                 {
                     float memPb = ProcessInfoProvider.Instance.GetProcessPrivateBytesMb(procId);
 
-                    if (procId == parentPid)
+                    // If this is not the case, then there is a systemic issue. The related function will have already locally logged/emitted etw with the error info.
+                    if (memPb > 0)
                     {
-                        if (repOrInst.RGAppliedMemoryLimitMb > 0)
+                        if (procId == parentPid)
                         {
-                            double pct = ((double)memPb / repOrInst.RGAppliedMemoryLimitMb) * 100;
-                            AllAppRGMemoryUsagePercent[id].AddData(pct);
+                            if (repOrInst.RGAppliedMemoryLimitMb > 0)
+                            {
+                                double pct = ((double)memPb / repOrInst.RGAppliedMemoryLimitMb) * 100;
+                                AllAppRGMemoryUsagePercent[id].AddData(pct);
+                            }
                         }
-                    }
-                    else
-                    {
-                        if (repOrInst.RGAppliedMemoryLimitMb > 0)
+                        else
                         {
-                            _ = AllAppRGMemoryUsagePercent.TryAdd(
-                                    $"{id}:{procName}{procId}",
-                                    new FabricResourceUsageData<double>(
-                                            ErrorWarningProperty.RGMemoryUsagePercent,
-                                            $"{id}:{procName}{procId}",
-                                            capacity,
-                                            UseCircularBuffer,
-                                            EnableConcurrentMonitoring));
+                            if (repOrInst.RGAppliedMemoryLimitMb > 0)
+                            {
+                                _ = AllAppRGMemoryUsagePercent.TryAdd(
+                                        $"{id}:{procName}{procId}",
+                                        new FabricResourceUsageData<double>(
+                                                ErrorWarningProperty.RGMemoryUsagePercent,
+                                                $"{id}:{procName}{procId}",
+                                                capacity,
+                                                UseCircularBuffer,
+                                                EnableConcurrentMonitoring));
 
-                            double pct = ((double)memPb / repOrInst.RGAppliedMemoryLimitMb) * 100;
-                            AllAppRGMemoryUsagePercent[$"{id}:{procName}{procId}"].AddData(pct);
+                                double pct = ((double)memPb / repOrInst.RGAppliedMemoryLimitMb) * 100;
+                                AllAppRGMemoryUsagePercent[$"{id}:{procName}{procId}"].AddData(pct);
+                            }
                         }
                     }
                 }
@@ -2475,10 +2515,17 @@ namespace FabricObserver.Observers
                 // Working Set (Percent).
                 if (checkMemPct)
                 {
+                    if (usePerfCounter)
+                    {
+                        // Warm up counter.
+                        _ = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, usePerfCounter);
+                        Thread.Sleep(100);
+                    }
+
                     float processMemMb = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, usePerfCounter);
                     var (TotalMemoryGb, _, _) = OSInfoProvider.Instance.TupleGetSystemPhysicalMemoryInfo();
 
-                    if (TotalMemoryGb > 0)
+                    if (TotalMemoryGb > 0 && processMemMb > 0)
                     {
                         double usedPct = (float)(processMemMb * 100) / (TotalMemoryGb * 1024);
 
@@ -2497,37 +2544,7 @@ namespace FabricObserver.Observers
                                         UseCircularBuffer,
                                         EnableConcurrentMonitoring));
 
-                            AllAppMemDataPercent[$"{id}:{procName}{procId}"].AddData(Math.Round(usedPct, 2));
-                        }
-                    }
-                }
-
-                // Private Bytes (Percent) - Windows only.
-                if (IsWindows && checkMemPrivateBytesPct)
-                {
-                    float processPrivateBytesMb = ProcessInfoProvider.Instance.GetProcessPrivateBytesMb(procId);
-                    var (CommitLimitGb, _) = OSInfoProvider.Instance.TupleGetSystemCommittedMemoryInfo();
-
-                    if (CommitLimitGb > 0)
-                    {
-                        double usedPct = (float)(processPrivateBytesMb * 100) / (CommitLimitGb * 1024);
-
-                        if (procId == parentPid)
-                        {
-                            AllAppPrivateBytesDataPercent[id].AddData(Math.Round(usedPct, 2));
-                        }
-                        else
-                        {
-                            _ = AllAppPrivateBytesDataPercent.TryAdd(
-                                    $"{id}:{procName}{procId}",
-                                    new FabricResourceUsageData<double>(
-                                        ErrorWarningProperty.PrivateBytesPercent,
-                                        $"{id}:{procName}{procId}",
-                                        capacity,
-                                        UseCircularBuffer,
-                                        EnableConcurrentMonitoring));
-
-                            AllAppPrivateBytesDataPercent[$"{id}:{procName}{procId}"].AddData(Math.Round(usedPct, 2));
+                            AllAppMemDataPercent[$"{id}:{procName}{procId}"].AddData(Math.Round(usedPct, 4));
                         }
                     }
                 }

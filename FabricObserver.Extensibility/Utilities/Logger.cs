@@ -152,6 +152,10 @@ namespace FabricObserver.Observers.Utilities
                     keywords = ServiceEventSource.Keywords.ErrorOrWarning;
                 }
             }
+            else if (data.Contains("Warning") || data.Contains("Error")) 
+            {
+                keywords = ServiceEventSource.Keywords.ErrorOrWarning;
+            }
 
             ServiceEventSource.Current.Write(new { data }, eventName, keywords);
         }
