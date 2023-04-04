@@ -105,7 +105,7 @@
     <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
     <!-- Process family tree monitoring: AppObserver monitors the resource usage by child processes of target services.
          NOTE: If you already know that your target services do *not* spawn child processes, then you should not enable this feature. -->
-    <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="false" />
+    <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="true" />
     <!-- The maximum number of child process data items to include in a sorted list of top n consumers for some metric, where n is the value of this setting. -->
     <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
     <!-- Service process dumps (dumpProcessOnError/dumpProcessOnWarning setting).
@@ -127,7 +127,7 @@
          You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
          eating some additional CPU and Memory to complete the parallelized monitoring on a node with lots of services (>= 100). The impact of parallelization on nodes with less than 100 services is minimal.
          Please test and choose a value that suits your needs or simply leave this unset and go with the default. Please see Observers.md for more information. -->
-    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
+    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="-1" />
     <!-- KVS LVID Usage Monitoring - Windows-only.
          NOTE: If you monitor stateful Actor services, then you should set this to true.
          This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
@@ -139,7 +139,7 @@
     <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
     <!-- Windows-only. AppObserver can monitor services with resource governance limits set and put related services into Warning if they reach 90% of the specified limit (only Memory limit is supported in this release). 
          If you set RG Memory limits for your service code packages, then you should consider enabling this feature. Else, don't. -->
-    <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="false" />
+    <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="true" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />

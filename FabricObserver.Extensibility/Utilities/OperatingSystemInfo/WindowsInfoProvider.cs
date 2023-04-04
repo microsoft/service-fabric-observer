@@ -3,6 +3,8 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using FabricObserver.Observers.Interfaces;
+using FabricObserver.Observers.Utilities.Telemetry;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -186,16 +188,10 @@ namespace FabricObserver.Observers.Utilities
             try
             {
                 PerformanceInformation pi = new();
-                
-                if (!GetSytemPerformanceInfo(ref pi))
-                {
-                    OSInfoLogger.LogWarning($"NativeMethods.GetPerformanceInfo failure: {Marshal.GetLastWin32Error()}");
-                    return (0, 0);
-                }
+                GetSytemPerformanceInfo(ref pi);
 
+                // Compute virtual memory, committed.
                 long pageSize = pi.PageSize.ToInt64();
-                
-                // virtual memory, committed
                 long commitLimit = pi.CommitLimit.ToInt64() * pageSize;
                 long availableCommit = commitLimit - pi.CommitTotal.ToInt64() * pageSize;
                 long committed = commitLimit - availableCommit;
@@ -204,7 +200,16 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (Win32Exception we)
             {
-                OSInfoLogger.LogWarning($"TupleGetSystemVirtualMemoryInfo: Failure (native) computing memory data:{Environment.NewLine}{we.Message}");
+                string message = $"TupleGetSystemCommittedMemoryInfo failed with Win32 error {we.Message}";
+                OSInfoLogger.LogWarning(message);
+                OSInfoLogger.LogEtw(
+                    ObserverConstants.FabricObserverETWEventName,
+                    new
+                    {
+                        Error = message,
+                        EntityType = EntityType.Machine.ToString(),
+                        Level = "Warning"
+                    });
             }
 
             return (0, 0);

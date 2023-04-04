@@ -649,7 +649,6 @@ namespace FabricObserver.Utilities.ServiceFabric
             return (false, 0);
         }
 
-
         public async Task ClearFabricObserverHealthReportsAsync(bool ignoreDefaultQueryTimeout, CancellationToken cancellationToken)
         {
             try

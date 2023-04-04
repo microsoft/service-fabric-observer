@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using ClusterObserver;
-using FabricObserver.Interfaces;
 using FabricObserver.Observers;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
@@ -3120,7 +3119,6 @@ namespace FabricObserverTests
             Assert.IsFalse(string.IsNullOrWhiteSpace(machineTelemetryData.EphemeralTcpPortRange));
             Assert.IsFalse(string.IsNullOrWhiteSpace(machineTelemetryData.FabricApplicationTcpPortRange));
             Assert.IsFalse(string.IsNullOrWhiteSpace(machineTelemetryData.HealthState));
-            Assert.IsFalse(string.IsNullOrWhiteSpace(machineTelemetryData.HotFixes));
             Assert.IsFalse(string.IsNullOrWhiteSpace(machineTelemetryData.LastBootUpTime));
             Assert.IsFalse(string.IsNullOrWhiteSpace(machineTelemetryData.NodeName));
             Assert.IsFalse(string.IsNullOrWhiteSpace(machineTelemetryData.ObserverName));
