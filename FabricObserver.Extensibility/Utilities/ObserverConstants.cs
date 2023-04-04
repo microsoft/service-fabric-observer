@@ -178,7 +178,12 @@ namespace FabricObserver.Observers.Utilities
         public const string PoliciesNodeName = "Policies";
         public const string RGMemoryInMB = "MemoryInMB";
         public const string RGMemoryInMBLimit = "MemoryInMBLimit";
+        public const string RGCpuCores = "CpuCores";
+        public const string RGCpuCoresLimit = "CpuCoresLimit";
+        public const string RGCpuShares = "CpuShares";
         public const string RGPolicyNodeName = "ResourceGovernancePolicy";
+        public const string RGPolicyNodeTypeName = "ResourceGovernancePolicyType";
+        public const string RGSvcPkgPolicyNodeTypeName = "ServicePackageResourceGovernancePolicyType";
         public const string CodePackageRef = "CodePackageRef";
         public const string ServiceManifestImport = "ServiceManifestImport";
         public const string ServiceManifestName = "ServiceManifestName";

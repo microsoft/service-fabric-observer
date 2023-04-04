@@ -185,6 +185,11 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
+        public double WarningRGCpuLimitPercent
+        {
+            get; set;
+        }
+
         public override string ToString() => $"ApplicationName: {TargetApp ?? string.Empty}{Environment.NewLine}" +
                                              $"ApplicationTypeName: {TargetAppType ?? string.Empty}{Environment.NewLine}" +
                                              $"AppExcludeList: {AppExcludeList ?? string.Empty}{Environment.NewLine}" +
@@ -213,6 +218,7 @@ namespace FabricObserver.Observers.MachineInfoModel
                                              $"WarningPrivateBytesMb: {WarningPrivateBytesMb}{Environment.NewLine}" +
                                              $"ErrorPrivateBytesPercent: {ErrorPrivateBytesPercent}{Environment.NewLine}" +
                                              $"WarningPrivateBytesPercent: {WarningPrivateBytesPercent}{Environment.NewLine}" +
-                                             $"WarningRGMemoryLimitPercent: {WarningRGMemoryLimitPercent}{Environment.NewLine}";
+                                             $"WarningRGMemoryLimitPercent: {WarningRGMemoryLimitPercent}{Environment.NewLine}" +
+                                             $"WarningRGCpuLimitPercent: {WarningRGCpuLimitPercent}{Environment.NewLine}";
     }
 }

@@ -1,4 +1,4 @@
-﻿// ------------------------------------------------------------
+// ------------------------------------------------------------
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
@@ -227,6 +227,10 @@ namespace FabricObserver.Observers.Utilities
         /// FO052  At or exceeding configured percentage of Memory Resource Governance limit for a service code package.
         /// </summary>
         public const string AppWarningRGMemoryLimitPercent = "FO052";
+        /// <summary>
+        /// FO053  At or exceeding configured percentage of CPU Resource Governance limit for a service code package.
+        /// </summary>
+        public const string AppWarningRGCpuLimitPercent = "FO053";
 
         /// <summary>
         /// AppErrorCodesDictionary dictionary.
@@ -260,7 +264,8 @@ namespace FabricObserver.Observers.Utilities
                 { AppWarningPrivateBytesMb, "AppWarningPrivateBytesMb"},
                 { AppErrorPrivateBytesPercent, "AppErrorPrivateBytesPercent" },
                 { AppWarningPrivateBytesPercent, "AppWarningPrivateBytesPercent" },
-                { AppWarningRGMemoryLimitPercent, "AppWarningRGMemoryLimitPercent" }
+                { AppWarningRGMemoryLimitPercent, "AppWarningRGMemoryLimitPercent" },
+                { AppWarningRGCpuLimitPercent, "AppWarningRGCpuLimitPercent" }
             };
 
         /// <summary>
