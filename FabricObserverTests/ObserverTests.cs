@@ -19,6 +19,7 @@ using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Description;
 using System.Fabric.Health;
+using System.Fabric.Query;
 using System.IO;
 using System.Linq;
 using System.Security.Cryptography;
@@ -387,6 +388,22 @@ namespace FabricObserverTests
 
                 // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
                 // You may need to increase this value depending upon your dev machine? You'll find out..
+                await Task.Delay(TimeSpan.FromSeconds(15));
+
+                ApplicationUpgradeDescription appUpgradeDescription = new ApplicationUpgradeDescription()
+                {
+                    ApplicationName = new Uri("fabric:/Voting"),
+                    TargetApplicationTypeVersion = "1.0.0",
+                    UpgradePolicyDescription = new RollingUpgradePolicyDescription() { UpgradeMode = RollingUpgradeMode.UnmonitoredAuto }
+                };
+
+                appUpgradeDescription.ApplicationParameters.Add("VotingWeb_RGMemoryInMbLimit", "2400");
+
+                await FabricClient.ApplicationManager.UpgradeApplicationAsync(
+                    appUpgradeDescription,
+                    TimeSpan.FromSeconds(60),
+                    Token);
+
                 await Task.Delay(TimeSpan.FromSeconds(15));
             }
             catch (FabricException fe)
@@ -1124,7 +1141,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task AppObserver_ObserveAsync_Successful_RGLimit_Validate_Multiple_Memory_Specification()
+        public async Task AppObserver_ObserveAsync_Successful_RGLimit_Validate_Multiple_Memory_Cpu_Specification()
         {
             var startDateTime = DateTime.Now;
 
@@ -1148,11 +1165,30 @@ namespace FabricObserverTests
                         TimeSpan.FromSeconds(60),
                         Token);
 
+            ApplicationList appList = await FabricClient.QueryManager.GetApplicationListAsync();
+
+            ApplicationTypeList applicationTypeList =
+                await FabricClient.QueryManager.GetApplicationTypeListAsync("VotingType", TimeSpan.FromSeconds(60), Token);
+
+            var appParameters = appList.First(app => app.ApplicationTypeName == "VotingType").ApplicationParameters;
+            var defaultParameters = applicationTypeList.First(a => a.ApplicationTypeVersion == "1.0.0").DefaultParameters;
+
+            ApplicationParameterList parameters = new ApplicationParameterList();
+
+            clientUtilities.AddParametersIfNotExists(parameters, appParameters);
+            clientUtilities.AddParametersIfNotExists(parameters, defaultParameters);
+
             // VotingWeb has both MemoryInMB and MemoryInMBLimit specified in a code package rg policy node. Ensure that only the value
-            // of MemoryInMBLimit is used (this is known to be 2048, whereas MemoryInMB is known to be 1024, per the application's App manifest).
-            var (RGEnabled, RGMemoryLimit) = clientUtilities.TupleGetMemoryResourceGovernanceInfo(appManifest, "VotingWebPkg", "Code", null);
-            Assert.IsTrue(RGEnabled);
-            Assert.IsTrue(RGMemoryLimit == 2048);
+            // of MemoryInMBLimit is used (this is known to be 2400, whereas MemoryInMB is known to be 1024).
+            // This also test application parameter upgrades, because the default parameter for MemoryInMbLimit is 2048 (per the application manifest).
+            var (RGMemoryEnabled, RGMemoryLimit) = clientUtilities.TupleGetMemoryResourceGovernanceInfo(appManifest, "VotingWebPkg", "Code", parameters);
+            Assert.IsTrue(RGMemoryEnabled);
+            Assert.IsTrue(RGMemoryLimit == 2400);
+
+            // A similar thing is tested here, without upgraded app parameters.
+            var (RGCpuEnabled, RGCpuLimit) = clientUtilities.TupleGetCpuResourceGovernanceInfo(appManifest, "VotingWebPkg", "Code", parameters);
+            Assert.IsTrue(RGCpuEnabled);
+            Assert.IsTrue(RGCpuLimit == 3.5);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -2710,7 +2746,7 @@ namespace FabricObserverTests
 
         // RG
         [TestMethod]
-        public async Task AppObserver_ETW_EventData_RGEnabled_MemoryInMB_Or_MemoryInMBLimit_ValuesAreNonZero()
+        public async Task AppObserver_ETW_EventData_RG_ValuesAreNonZero()
         {
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
@@ -2754,6 +2790,11 @@ namespace FabricObserverTests
                 if (data.ProcessName is "VotingData" or "VotingWeb" or "ConsoleApp6" or "ConsoleApp7")
                 {
                     Assert.IsTrue(data.RGMemoryEnabled && data.RGAppliedMemoryLimitMb > 0);     
+                }
+
+                if (data.ProcessName == "VotingData" || data.ProcessName == "VotingWeb")
+                {
+                    Assert.IsTrue(data.RGCpuEnabled && data.RGAppliedCpuLimitCores > 0);
                 }
 
                 Assert.IsTrue(data.Value >= 0.0);
