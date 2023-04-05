@@ -575,7 +575,6 @@ namespace FabricObserver.Utilities.ServiceFabric
 
                             if (policy is ResourceGovernancePolicyType resourceGovernancePolicy)
                             {
-                                // Specified as Application parameter variable (e.g., [foo]).
                                 resourceGovernancePolicy.MemoryInMBLimit = ParseAppParameterValue(resourceGovernancePolicy.MemoryInMBLimit, parameters);
                                 resourceGovernancePolicy.MemoryInMB = ParseAppParameterValue(resourceGovernancePolicy.MemoryInMB, parameters);
                                 
