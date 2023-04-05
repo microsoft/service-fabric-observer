@@ -3030,8 +3030,8 @@ namespace FabricObserver.Observers
                             {
                                 ApplicationParameterList parameters = new ApplicationParameterList();
 
-                                fabricClientUtilities.AddParametersIfNotExists(parameters, appParameters);
-                                fabricClientUtilities.AddParametersIfNotExists(parameters, defaultParameters);
+                                FabricClientUtilities.AddParametersIfNotExists(parameters, appParameters);
+                                FabricClientUtilities.AddParametersIfNotExists(parameters, defaultParameters);
 
                                 (replicaInfo.RGMemoryEnabled, replicaInfo.RGAppliedMemoryLimitMb) =
                                     fabricClientUtilities.TupleGetMemoryResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName, parameters);
