@@ -468,24 +468,25 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// </summary>
         /// <param name="obj">Object to be populated</param>
         /// <param name="parameters">Application Parameter List</param>
-        public static void ReplaceObjectParametersByValues(object obj, ApplicationParameterList parameters)
+        public static string ReplaceParameterByValues(string parameterName, ApplicationParameterList parameters)
         {
-            var allProps = obj.GetType().GetProperties();
-
-            for (int pIndex = 0; pIndex < allProps.Length; pIndex++)
+            if (parameterName != null)
             {
-                var parameterName = (string)allProps[pIndex].GetValue(obj);
-
-                if (parameterName != null)
+                if (parameterName.StartsWith("["))
                 {
-                    if (parameterName.StartsWith("["))
+                    parameterName = parameterName.Replace("[", string.Empty).Replace("]", string.Empty);
+
+                    if (parameters.Any(p => p.Name == parameterName))
                     {
-                        parameterName = parameterName.Replace("[", string.Empty).Replace("]", string.Empty);
-                        var parameterValue = parameters.Where(p => p.Name == parameterName).FirstOrDefault().Value;
-                        allProps[pIndex].SetValue(obj, parameterValue);
+                        parameterName = parameters.Where(p => p.Name == parameterName).FirstOrDefault().Value;
+                    }
+                    else
+                    {
+                        parameterName = "0";
                     }
                 }
             }
+            return parameterName;
         }
 
         /// <summary>
@@ -493,7 +494,7 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// </summary>
         /// <param name="toParameters">ApplicationParameterList to be populated</param>
         /// <param name="fromParameters">ApplicationParameterList to be used</param>
-        public static void AddParametersIfNotExists(ApplicationParameterList toParameters, ApplicationParameterList fromParameters)
+        public void AddParametersIfNotExists(ApplicationParameterList toParameters, ApplicationParameterList fromParameters)
         {
             if (fromParameters != null)
             {
@@ -568,25 +569,25 @@ namespace FabricObserver.Utilities.ServiceFabric
                         {
                             var policy = import.Policies[policyIndex];
 
-                            if (policy is ResourceGovernancePolicyType resourceGovernancePolicy)
+                            if (policy.GetType().Name == ObserverConstants.RGPolicyNodeTypeName)
                             {
-                                ReplaceObjectParametersByValues(resourceGovernancePolicy, parameters);
+                                var resourceGovernancePolicy = (ResourceGovernancePolicyType)policy;
+
+                                resourceGovernancePolicy.MemoryInMBLimit = ReplaceParameterByValues(resourceGovernancePolicy.MemoryInMBLimit, parameters);
+                                resourceGovernancePolicy.MemoryInMB = ReplaceParameterByValues(resourceGovernancePolicy.MemoryInMB, parameters);
 
                                 if (resourceGovernancePolicy.CodePackageRef == codepackageName)
                                 {
-                                    double RGMemoryLimitMb = 0;
-
-                                    if (double.TryParse(resourceGovernancePolicy.MemoryInMBLimit, out double memInMbLimit) && memInMbLimit > 0)
+                                    String RGMemoryLimitMb = "0";
+                                    if (resourceGovernancePolicy.MemoryInMBLimit != "0")
                                     {
-                                        RGMemoryLimitMb = memInMbLimit;
+                                        RGMemoryLimitMb = resourceGovernancePolicy.MemoryInMBLimit;
                                     }
-                                    else if (double.TryParse(resourceGovernancePolicy.MemoryInMB, out double memInMb) && memInMb > 0)
+                                    else if (resourceGovernancePolicy.MemoryInMB != "0")
                                     {
-                                        RGMemoryLimitMb = memInMb;
+                                        RGMemoryLimitMb = resourceGovernancePolicy.MemoryInMB;
                                     }
-
-                                    // if RGMemoryLimitMb is 0 at this point, why return true?
-                                    return (RGMemoryLimitMb > 0, RGMemoryLimitMb);
+                                    return (true, Convert.ToDouble(RGMemoryLimitMb));
                                 }
                             }
                         }
@@ -639,6 +640,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                 return (false, 0);
             }
 
+
             // Parse XML to find the necessary policies
             var applicationManifestSerializer = new XmlSerializer(typeof(ApplicationManifestType));
             ApplicationManifestType applicationManifest = null;
@@ -654,63 +656,64 @@ namespace FabricObserver.Utilities.ServiceFabric
                 {
                     if (import.Policies != null)
                     {
-                        double TotalCpuCores = 0;
-                        double CpuShares = 0;
+                        string TotalCpuCores = string.Empty;
+                        string CpuShares = string.Empty;
                         double CpuSharesSum = 0;
 
                         for (int policyIndex = 0; policyIndex < import.Policies.Length; policyIndex++)
                         {
                             var policy = import.Policies[policyIndex];
 
-                            if (policy is ResourceGovernancePolicyType resourceGovernancePolicy)
+                            if (policy.GetType().Name == ObserverConstants.RGPolicyNodeTypeName)
                             {
-                                ReplaceObjectParametersByValues(resourceGovernancePolicy, parameters);
+                                var resourceGovernancePolicy = (ResourceGovernancePolicyType)policy;
 
-                                if (double.TryParse(resourceGovernancePolicy.CpuShares, out double cpuShares) && cpuShares == 0)
+                                resourceGovernancePolicy.CpuShares = ReplaceParameterByValues(resourceGovernancePolicy.CpuShares, parameters);
+
+                                if (resourceGovernancePolicy.CpuShares == "0")
                                 {
                                     CpuSharesSum += 1;
-
-                                    if (resourceGovernancePolicy.CodePackageRef == codepackageName)
+                                    if(resourceGovernancePolicy.CodePackageRef == codepackageName)
                                     {
-                                        CpuShares = 1;
+                                        CpuShares = "1";
                                     }
                                 }
                                 else
                                 {
-                                    if (double.TryParse(resourceGovernancePolicy.CpuShares, out double cpuShares1))
+                                    CpuSharesSum += Convert.ToDouble(resourceGovernancePolicy.CpuShares);
+                                    if (resourceGovernancePolicy.CodePackageRef == codepackageName)
                                     {
-                                        CpuSharesSum += cpuShares1;
-
-                                        if (resourceGovernancePolicy.CodePackageRef == codepackageName)
-                                        {
-                                            CpuShares = cpuShares1;
-                                        }
+                                        CpuShares = resourceGovernancePolicy.CpuShares;
                                     }
                                 }
                             }
-                            
-                            if (policy is ServicePackageResourceGovernancePolicyType servicePackageResourceGovernancePolicy)
+                            if (policy.GetType().Name == ObserverConstants.RGSvcPkgPolicyNodeTypeName)
                             {
-                                ReplaceObjectParametersByValues(servicePackageResourceGovernancePolicy, parameters);
+                                var servicePackagePolicy = (ServicePackageResourceGovernancePolicyType)policy;
 
-                                if (double.TryParse(servicePackageResourceGovernancePolicy.CpuCoresLimit, out double totalCpuCoresLimit) && totalCpuCoresLimit > 0)
+                                servicePackagePolicy.CpuCoresLimit = ReplaceParameterByValues(servicePackagePolicy.CpuCoresLimit, parameters);
+                                servicePackagePolicy.CpuCores = ReplaceParameterByValues(servicePackagePolicy.CpuCores, parameters);
+
+                                if (servicePackagePolicy.CpuCoresLimit != "0")
                                 {
-                                    TotalCpuCores = totalCpuCoresLimit;
+                                    TotalCpuCores = servicePackagePolicy.CpuCoresLimit;
                                 }
-                                else if (double.TryParse(servicePackageResourceGovernancePolicy.CpuCores, out double cpuCores) && cpuCores > 0)
+                                else if (servicePackagePolicy.CpuCores != "0")
                                 {
-                                    TotalCpuCores = cpuCores;
+                                    TotalCpuCores = servicePackagePolicy.CpuCores;
                                 }
                             }
                         }
 
-                        if (TotalCpuCores == 0)
+                        if (TotalCpuCores == string.Empty)
                         {
                             return (false, 0);
                         }
-
-                        double CpuLimitCores = TotalCpuCores * CpuShares / CpuSharesSum;
-                        return (true, CpuLimitCores);
+                        else
+                        {
+                            double CpuLimitCores = Convert.ToDouble(TotalCpuCores) * Convert.ToDouble(CpuShares) / CpuSharesSum;
+                            return (true, CpuLimitCores);
+                        }
                     }
                 }
             }
