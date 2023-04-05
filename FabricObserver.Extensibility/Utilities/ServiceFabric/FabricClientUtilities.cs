@@ -468,24 +468,25 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// </summary>
         /// <param name="obj">Object to be populated</param>
         /// <param name="parameters">Application Parameter List</param>
-        public static void ReplaceObjectParametersByValues(object obj, ApplicationParameterList parameters)
+        public static string ReplaceParameterByValues(string parameterName, ApplicationParameterList parameters)
         {
-            var allProps = obj.GetType().GetProperties();
-
-            for (int pIndex = 0; pIndex < allProps.Length; pIndex++)
+            if (parameterName != null)
             {
-                var parameterName = (string)allProps[pIndex].GetValue(obj);
-
-                if (parameterName != null)
+                if (parameterName.StartsWith("["))
                 {
-                    if (parameterName.StartsWith("["))
+                    parameterName = parameterName.Replace("[", string.Empty).Replace("]", string.Empty);
+
+                    if (parameters.Any(p => p.Name == parameterName))
                     {
-                        parameterName = parameterName.Replace("[", string.Empty).Replace("]", string.Empty);
-                        var parameterValue = parameters.Where(p => p.Name == parameterName).FirstOrDefault().Value;
-                        allProps[pIndex].SetValue(obj, parameterValue);
+                        parameterName = parameters.Where(p => p.Name == parameterName).FirstOrDefault().Value;
+                    }
+                    else
+                    {
+                        parameterName = "0";
                     }
                 }
             }
+            return parameterName;
         }
 
         /// <summary>
@@ -571,7 +572,9 @@ namespace FabricObserver.Utilities.ServiceFabric
                             if (policy.GetType().Name == ObserverConstants.RGPolicyNodeTypeName)
                             {
                                 var resourceGovernancePolicy = (ResourceGovernancePolicyType)policy;
-                                ReplaceObjectParametersByValues(resourceGovernancePolicy, parameters);
+
+                                resourceGovernancePolicy.MemoryInMBLimit = ReplaceParameterByValues(resourceGovernancePolicy.MemoryInMBLimit, parameters);
+                                resourceGovernancePolicy.MemoryInMB = ReplaceParameterByValues(resourceGovernancePolicy.MemoryInMB, parameters);
 
                                 if (resourceGovernancePolicy.CodePackageRef == codepackageName)
                                 {
@@ -664,7 +667,8 @@ namespace FabricObserver.Utilities.ServiceFabric
                             if (policy.GetType().Name == ObserverConstants.RGPolicyNodeTypeName)
                             {
                                 var resourceGovernancePolicy = (ResourceGovernancePolicyType)policy;
-                                ReplaceObjectParametersByValues(resourceGovernancePolicy, parameters);
+
+                                resourceGovernancePolicy.CpuShares = ReplaceParameterByValues(resourceGovernancePolicy.CpuShares, parameters);
 
                                 if (resourceGovernancePolicy.CpuShares == "0")
                                 {
@@ -686,7 +690,9 @@ namespace FabricObserver.Utilities.ServiceFabric
                             if (policy.GetType().Name == ObserverConstants.RGSvcPkgPolicyNodeTypeName)
                             {
                                 var servicePackagePolicy = (ServicePackageResourceGovernancePolicyType)policy;
-                                ReplaceObjectParametersByValues(servicePackagePolicy, parameters);
+
+                                servicePackagePolicy.CpuCoresLimit = ReplaceParameterByValues(servicePackagePolicy.CpuCoresLimit, parameters);
+                                servicePackagePolicy.CpuCores = ReplaceParameterByValues(servicePackagePolicy.CpuCores, parameters);
 
                                 if (servicePackagePolicy.CpuCoresLimit != "0")
                                 {
