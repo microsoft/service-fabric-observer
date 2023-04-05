@@ -14,6 +14,7 @@ using System.Diagnostics;
 using System.Fabric;
 using System.Fabric.Description;
 using System.Fabric.Health;
+using System.Fabric.Management.ServiceModel;
 using System.Fabric.Query;
 using System.IO;
 using System.Linq;
@@ -21,6 +22,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
+using System.Xml.Serialization;
 using System.Xml.XPath;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
@@ -460,6 +462,48 @@ namespace FabricObserver.Utilities.ServiceFabric
             }
 
             return (null, null, null);
+		}
+		
+        /// <summary>
+        /// Gets the value for application parameters that are specified as variables (e.g., [foo]).
+        /// </summary>
+        /// <param name="parameterName">Name of the parameter variable used to get related value.</param>
+        /// <param name="parameters">ApplicationParameterList instance to look for specified parameter variable name.</param>
+        public static string GetAppParameterVariableValue(string parameterName, ApplicationParameterList parameters)
+        {
+            if (string.IsNullOrWhiteSpace(parameterName) || !parameterName.StartsWith('['))
+            {
+                return null;
+            }
+
+            // Specified as Application Parameter variable in AppManifest.
+            parameterName = parameterName.Replace("[", string.Empty).Replace("]", string.Empty);
+
+            if (parameters.TryGetValue(parameterName, out ApplicationParameter parameter))
+            {
+                return parameter.Value;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Populates one ApplicationParameterList with missing parameters from another ApplicationParameterList.
+        /// </summary>
+        /// <param name="toParameters">ApplicationParameterList to be populated</param>
+        /// <param name="fromParameters">ApplicationParameterList to be used</param>
+        public static void AddParametersIfNotExists(ApplicationParameterList toParameters, ApplicationParameterList fromParameters)
+        {
+            if (fromParameters != null)
+            {
+                foreach (var parameter in fromParameters)
+                {
+                    if (!toParameters.Contains(parameter.Name))
+                    {
+                        toParameters.Add(new ApplicationParameter() { Name = parameter.Name, Value = parameter.Value });
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -468,33 +512,33 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// <param name="appManifestXml">Application Manifest</param>
         /// <param name="servicePkgName">Service Package name</param>
         /// <param name="codepackageName">Code Package name</param>
-        /// <param name="appParameters">Application parameter list</param>
-        /// <returns>A Tuple containing a boolean value (whether or not RG is enabled) and a double value (the absolute limit in megabytes)</returns>
-        public (bool IsMemoryRGEnabled, double MemoryLimitMb) TupleGetMemoryResourceGovernanceInfo(string appManifestXml, string servicePkgName, string codepackageName, ApplicationParameterList appParameters)
+        /// <param name="parameters">Application Parameter List, populated with both application and default parameters</param>
+        /// <returns>A Tuple containing a boolean value (whether or not RG memory is enabled) and a double value (the absolute limit in megabytes)</returns>
+        public (bool IsMemoryRGEnabled, double MemoryLimitMb) TupleGetMemoryResourceGovernanceInfo(string appManifestXml, string servicePkgName, string codepackageName, ApplicationParameterList parameters)
         {
-            logger.LogInfo("Starting TupleGetResourceGovernanceInfo.");
+            logger.LogInfo("Starting TupleGetMemoryResourceGovernanceInfo.");
 
             if (!isWindows)
             {
-                logger.LogInfo("Completing TupleGetResourceGovernanceInfo: OS not yet supported.");
+                logger.LogInfo("Completing TupleGetMemoryResourceGovernanceInfo: OS not yet supported.");
                 return (false, 0);
             }
 
             if (string.IsNullOrWhiteSpace(appManifestXml))
             {
-                logger.LogInfo($"Invalid value for {nameof(appManifestXml)}: {appManifestXml}. Exiting TupleGetResourceGovernanceInfo.");
+                logger.LogInfo($"Invalid value for {nameof(appManifestXml)}: {appManifestXml}. Exiting TupleGetMemoryResourceGovernanceInfo.");
                 return (false, 0);
             }
 
             if (string.IsNullOrWhiteSpace(servicePkgName))
             {
-                logger.LogInfo($"Invalid value for {nameof(servicePkgName)}: {servicePkgName}. Exiting TupleGetResourceGovernanceInfo.");
+                logger.LogInfo($"Invalid value for {nameof(servicePkgName)}: {servicePkgName}. Exiting TupleGetMemoryResourceGovernanceInfo.");
                 return (false, 0);
             }
 
             if (string.IsNullOrWhiteSpace(codepackageName))
             {
-                logger.LogInfo($"Invalid value for {nameof(codepackageName)}: {codepackageName}. Exiting TupleGetResourceGovernanceInfo.");
+                logger.LogInfo($"Invalid value for {nameof(codepackageName)}: {codepackageName}. Exiting TupleGetMemoryResourceGovernanceInfo.");
                 return (false, 0);
             }
 
@@ -504,148 +548,207 @@ namespace FabricObserver.Utilities.ServiceFabric
                 return (false, 0);
             }
 
-            // Safe XML pattern - *Do not use LoadXml*.
-            var appManifestXdoc = new XmlDocument { XmlResolver = null };
+            // Parse XML to find the necessary policy
+            var applicationManifestSerializer = new XmlSerializer(typeof(ApplicationManifestType));
+            ApplicationManifestType applicationManifest = null;
 
-            try
+            using (var sreader = new StringReader(appManifestXml))
             {
-                using (var sreader = new StringReader(appManifestXml))
-                {
-                    using (var xreader = XmlReader.Create(sreader, new XmlReaderSettings { XmlResolver = null }))
-                    {
-                        appManifestXdoc?.Load(xreader);
+                applicationManifest = (ApplicationManifestType)applicationManifestSerializer.Deserialize(sreader);
+            }
 
-                        logger.LogInfo("Completed TupleGetResourceGovernanceInfo.");
-                        return TupleGetRGPolicyInfoFromAppManifest(ref appManifestXdoc, servicePkgName, codepackageName, appParameters);
+            foreach (var import in applicationManifest.ServiceManifestImport)
+            {
+                if (import.ServiceManifestRef.ServiceManifestName == servicePkgName)
+                {
+                    if (import.Policies != null)
+                    {
+                        for (int policyIndex = 0; policyIndex < import.Policies.Length; policyIndex++)
+                        {
+                            var policy = import.Policies[policyIndex];
+
+                            if (policy is ResourceGovernancePolicyType resourceGovernancePolicy)
+                            {
+                                // Specified as Application parameter variable (e.g., [foo]).
+                                if (resourceGovernancePolicy.MemoryInMBLimit.StartsWith('['))
+                                {
+                                    resourceGovernancePolicy.MemoryInMBLimit = GetAppParameterVariableValue(resourceGovernancePolicy.MemoryInMBLimit, parameters);
+                                }
+
+                                if (resourceGovernancePolicy.MemoryInMB.StartsWith('['))
+                                {
+                                    resourceGovernancePolicy.MemoryInMB = GetAppParameterVariableValue(resourceGovernancePolicy.MemoryInMB, parameters);
+                                }
+
+                                if (resourceGovernancePolicy.CodePackageRef == codepackageName)
+                                {
+                                    double RGMemoryLimitMb = 0;
+
+                                    if (double.TryParse(resourceGovernancePolicy.MemoryInMBLimit, out double memInMbLimit) && memInMbLimit > 0)
+                                    {
+                                        RGMemoryLimitMb = memInMbLimit;
+                                    }
+                                    else if (double.TryParse(resourceGovernancePolicy.MemoryInMB, out double memInMb) && memInMb > 0)
+                                    {
+                                        RGMemoryLimitMb = memInMb;
+                                    }
+
+                                    return (RGMemoryLimitMb > 0, RGMemoryLimitMb);
+                                }
+                            }
+                        }
                     }
                 }
-            }
-            catch (Exception e) when (e is ArgumentException or XmlException)
-            {
-                logger.LogWarning($"Failure in TupleGetResourceGovernanceInfo: {e.Message}");
             }
 
             return (false, 0);
         }
 
         /// <summary>
-        /// TODO. Do not call. Gets CPU RG info.
+        /// Windows-only. Gets RG Cpu limit information for a code package.
         /// </summary>
         /// <param name="appManifestXml">Application Manifest</param>
         /// <param name="servicePkgName">Service Package name</param>
         /// <param name="codepackageName">Code Package name</param>
-        /// <param name="appParameters">Application parameter list</param>
-        /// <returns>Calling this throws NotImplementedException.</returns>
-        /// <exception cref="NotImplementedException"></exception>
-        public (bool IsMemoryRGEnabled, double MemoryLimitMb) TupleGetCpuResourceGovernanceInfo(string appManifestXml, string servicePkgName, string codepackageName, ApplicationParameterList appParameters)
+        /// <param name="parameters">Application Parameter List, populated with both application and default parameters</param>
+        /// <returns>A Tuple containing a boolean value (whether or not RG cpu is enabled) and a double value (the absolute limit in cores)</returns>
+        public (bool IsCpuRGEnabled, double CpuLimitCores) TupleGetCpuResourceGovernanceInfo(string appManifestXml, string servicePkgName, string codepackageName, ApplicationParameterList parameters)
         {
-            throw new NotImplementedException();
-        }
+            logger.LogInfo("Starting TupleGetCpuResourceGovernanceInfo.");
 
-        private (bool IsRGMemoryEnabled, double MemoryLimitMb) TupleGetRGPolicyInfoFromAppManifest(ref XmlDocument xDoc, string servicePkgName, string codepackageName, ApplicationParameterList appParameters)
-        {
-            logger.LogInfo("Starting TupleGetResourceGovernanceInfoFromAppManifest.");
-
-            if (xDoc == null || xDoc.DocumentElement == null)
+            if (!isWindows)
             {
-                logger.LogInfo("Completed TupleGetResourceGovernanceInfoFromAppManifest: xDoc/DocumentElement == null.");
+                logger.LogInfo("Completing TupleGetCpuResourceGovernanceInfo: OS not yet supported.");
                 return (false, 0);
             }
 
-            try
+            if (string.IsNullOrWhiteSpace(appManifestXml))
             {
-                // Find the correct manifest import for specified service package name (servicePkgName arg).
-                // There will generally be multiple RG limits set per application (so, per service settings).
-                var sNode =
-                    xDoc.DocumentElement.SelectSingleNode(
-                        $"//*[local-name()='{ObserverConstants.ServiceManifestImport}'][*[local-name()='{ObserverConstants.ServiceManifestRef}' and @*[local-name()='{ObserverConstants.ServiceManifestName}' and . ='{servicePkgName}']]]");
+                logger.LogInfo($"Invalid value for {nameof(appManifestXml)}: {appManifestXml}. Exiting TupleGetCpuResourceGovernanceInfo.");
+                return (false, 0);
+            }
 
-                if (sNode == null)
+            if (string.IsNullOrWhiteSpace(servicePkgName))
+            {
+                logger.LogInfo($"Invalid value for {nameof(servicePkgName)}: {servicePkgName}. Exiting TupleGetCpuResourceGovernanceInfo.");
+                return (false, 0);
+            }
+
+            if (string.IsNullOrWhiteSpace(codepackageName))
+            {
+                logger.LogInfo($"Invalid value for {nameof(codepackageName)}: {codepackageName}. Exiting TupleGetCpuResourceGovernanceInfo.");
+                return (false, 0);
+            }
+
+            // Don't waste cycles with XML parsing if you can easily get a hint first..
+            if (!appManifestXml.Contains($"<{ObserverConstants.RGPolicyNodeName} "))
+            {
+                return (false, 0);
+            }
+
+
+            // Parse XML to find the necessary policies
+            var applicationManifestSerializer = new XmlSerializer(typeof(ApplicationManifestType));
+            ApplicationManifestType applicationManifest = null;
+
+            using (var sreader = new StringReader(appManifestXml))
+            {
+                applicationManifest = (ApplicationManifestType)applicationManifestSerializer.Deserialize(sreader);
+            }
+
+            foreach (var import in applicationManifest.ServiceManifestImport)
+            {
+                if (import.ServiceManifestRef.ServiceManifestName == servicePkgName)
                 {
-                    logger.LogInfo($"Completing TupleGetResourceGovernanceInfoFromAppManifest: Missing ServiceManifestImport for {servicePkgName}.");
-                    return (false, 0);
-                }
-
-                XmlNodeList childNodes = sNode.ChildNodes;
-
-                foreach (XmlNode node in childNodes)
-                {
-                    if (node.Name != ObserverConstants.PoliciesNodeName)
+                    if (import.Policies != null)
                     {
-                        continue;
-                    }
+                        double TotalCpuCores = 0;
+                        double CpuShares = 0;
+                        double CpuSharesSum = 0;
 
-                    foreach (XmlNode rgPolicyNode in node.ChildNodes)
-                    {
-                        try
+                        for (int policyIndex = 0; policyIndex < import.Policies.Length; policyIndex++)
                         {
-                            if (rgPolicyNode.Name != ObserverConstants.RGPolicyNodeName)
+                            var policy = import.Policies[policyIndex];
+
+                            if (policy is ResourceGovernancePolicyType resourceGovernancePolicy)
                             {
-                                continue;
-                            }
+                                // Specified as Application parameter variable (e.g., [foo]).
+                                if (resourceGovernancePolicy.CpuShares.StartsWith('['))
+                                {
+                                    resourceGovernancePolicy.CpuShares = GetAppParameterVariableValue(resourceGovernancePolicy.CpuShares, parameters);
+                                }
 
-                            string codePackageRef = rgPolicyNode.Attributes[ObserverConstants.CodePackageRef]?.Value;
+                                if (string.IsNullOrWhiteSpace(resourceGovernancePolicy.CpuShares))
+                                {
+                                    return (false, 0);
+                                }
 
-                            if (codePackageRef != codepackageName)
-                            {
-                                continue;
-                            }
+                                if (!double.TryParse(resourceGovernancePolicy.CpuShares, out double cpuShares))
+                                {
+                                    return (false, 0);
+                                }
 
-                            // Memory Limit (Note: CPU support is TODO) \\
+                                if (cpuShares == 0)
+                                {
+                                    CpuSharesSum += 1;
 
-                            // Get the rg policy Memory attribute. If user specifies both MemoryInMB and MemoryInMBLimit, prefer MemoryInMBLimit, just like SF RG will.
-                            // FO only cares about the specified memory limit for a code package, not the memory request (unless *only* MemoryInMB is specified).
-                            XmlAttribute memAttr = null;
+                                    if (resourceGovernancePolicy.CodePackageRef == codepackageName)
+                                    {
+                                        CpuShares = 1;
+                                    }
+                                }
+                                else
+                                {
+                                    CpuSharesSum += cpuShares;
 
-                            if (rgPolicyNode.Attributes[ObserverConstants.RGMemoryInMBLimit] != null)
-                            {
-                                memAttr = rgPolicyNode.Attributes[ObserverConstants.RGMemoryInMBLimit];
-                            }
-                            else if (rgPolicyNode.Attributes[ObserverConstants.RGMemoryInMB] != null)
-                            {
-                                memAttr = rgPolicyNode.Attributes[ObserverConstants.RGMemoryInMB];
-                            }
-
-                            // Not the droid we're looking for.
-                            if (memAttr == null || string.IsNullOrWhiteSpace(memAttr.Value))
-                            {
-                                continue;
-                            }
-
-                            // Application Parameter support: This means user has specified the absolute memory value in an Application Parameter.
-                            if (memAttr.Value.StartsWith("["))
-                            {
-                                XmlNode parametersNode = xDoc.DocumentElement.SelectSingleNode($"//*[local-name()='{ObserverConstants.Parameters}']");
-                                XmlNode parameterNode =
-                                    parametersNode.SelectSingleNode($"//*[local-name()='{ObserverConstants.Parameter}' and @Name='{memAttr.Value[1..^1]}']");
-                                XmlAttribute attr = parameterNode.Attributes[ObserverConstants.DefaultValue];
-                                memAttr.Value = attr.Value;
-
-                                // Get the latest value from a parameter-only, version-less application upgrade, for example.
-                                if (appParameters != null && appParameters.Any(a => a.Name == parameterNode.Attributes["Name"].Value)) 
-                                { 
-                                    memAttr.Value = appParameters.First(a => a.Name == parameterNode.Attributes["Name"].Value).Value;
+                                    if (resourceGovernancePolicy.CodePackageRef == codepackageName)
+                                    {
+                                        CpuShares = cpuShares;
+                                    }
                                 }
                             }
+                            else if (policy is ServicePackageResourceGovernancePolicyType servicePackagePolicy)
+                            {
+                                // Specified as Application parameter variable (e.g., [foo]).
+                                if (servicePackagePolicy.CpuCoresLimit.StartsWith('['))
+                                {
+                                    servicePackagePolicy.CpuCoresLimit = GetAppParameterVariableValue(servicePackagePolicy.CpuCoresLimit, parameters);
+                                }
 
-                            logger.LogInfo("Completed TupleGetResourceGovernanceInfoFromAppManifest: Memory RG enabled.");
-                            return (true, double.TryParse(memAttr.Value, out double mem) ? mem : 0);
+                                if (servicePackagePolicy.CpuCores.StartsWith('['))
+                                {
+                                    servicePackagePolicy.CpuCores = GetAppParameterVariableValue(servicePackagePolicy.CpuCores, parameters);
+                                }
+
+                                if (string.IsNullOrWhiteSpace(servicePackagePolicy.CpuCores) && string.IsNullOrWhiteSpace(servicePackagePolicy.CpuCoresLimit))
+                                {
+                                    return (false, 0);
+                                }
+
+                                if (double.TryParse(servicePackagePolicy.CpuCoresLimit, out double cpuLimit) && cpuLimit > 0)
+                                {
+                                    TotalCpuCores = cpuLimit;
+                                }
+                                else if (double.TryParse(servicePackagePolicy.CpuCores, out double cpuCores) && cpuCores > 0)
+                                {
+                                    TotalCpuCores = cpuCores;
+                                }
+                            }
                         }
-                        catch (Exception e) when (e is ArgumentException or XPathException)
+
+                        if (TotalCpuCores == 0)
                         {
-                            logger.LogWarning($"Failure getting RG memory limit value for code package '{codepackageName}': {e.Message}");
                             return (false, 0);
+                        }
+                        else
+                        {
+                            double CpuLimitCores = TotalCpuCores * CpuShares / CpuSharesSum;
+                            return (true, CpuLimitCores);
                         }
                     }
                 }
             }
-            catch (XPathException xe)
-            {
-                logger.LogWarning($"XPath processing failure - {servicePkgName}/{codepackageName}: {xe.Message}");
-                return (false, 0);
-            }
 
-            logger.LogInfo("Completed TupleGetResourceGovernanceInfoFromAppManifest: Memory RG not configured.");
             return (false, 0);
         }
 

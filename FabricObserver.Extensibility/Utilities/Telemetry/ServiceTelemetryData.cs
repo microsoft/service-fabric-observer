@@ -66,18 +66,21 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
 
-        /* TODO..
-        [EventField]
-        public bool RGCpuEnabled
-        {
-            get; set;
-        }
-        */
-
         public double RGAppliedMemoryLimitMb
         {
             get; set;
         }
+
+        public bool RGCpuEnabled
+        {
+            get; set;
+        }
+
+        public double RGAppliedCpuLimitCores
+        {
+            get; set;
+        }
+
         public string ServiceKind
         {
             get; set;
