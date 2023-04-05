@@ -23,7 +23,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
-using System.Xml.XPath;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Utilities.ServiceFabric
@@ -463,28 +462,35 @@ namespace FabricObserver.Utilities.ServiceFabric
 
             return (null, null, null);
 		}
-		
+
         /// <summary>
-        /// Gets the value for application parameters that are specified as variables (e.g., [foo]).
+        /// Processes values for application parameters, returning the specified value in use for application parameter variables.
+        /// If the appParamValue is not a variable name, then the function just returns the supplied appParamValue.
         /// </summary>
-        /// <param name="parameterName">Name of the parameter variable used to get related value.</param>
-        /// <param name="parameters">ApplicationParameterList instance to look for specified parameter variable name.</param>
-        public static string GetAppParameterVariableValue(string parameterName, ApplicationParameterList parameters)
+        /// <param name="appParamValue">The value of an Application parameter.</param>
+        /// <param name="parameters">ApplicationParameterList instance that contains all app parameter values.</param>
+        /// <returns>String representation of the actual parameter value in the case where the supplied value is a variable name, 
+        /// else the value specified in appParamValue.</returns>
+        public static string ParseAppParameterValue(string appParamValue, ApplicationParameterList parameters)
         {
-            if (string.IsNullOrWhiteSpace(parameterName) || !parameterName.StartsWith('['))
+            if (!string.IsNullOrWhiteSpace(appParamValue))
             {
-                return null;
+                // Application parameter value specified as a Service Fabric Application Manifest variable.
+                if (appParamValue.StartsWith("["))
+                {
+                    appParamValue = appParamValue.Replace("[", string.Empty).Replace("]", string.Empty);
+
+                    if (parameters.TryGetValue(appParamValue, out ApplicationParameter parameter))
+                    {
+                        return parameter.Value;
+                    }
+                    else
+                    {
+                        appParamValue = "0";
+                    }
+                }
             }
-
-            // Specified as Application Parameter variable in AppManifest.
-            parameterName = parameterName.Replace("[", string.Empty).Replace("]", string.Empty);
-
-            if (parameters.TryGetValue(parameterName, out ApplicationParameter parameter))
-            {
-                return parameter.Value;
-            }
-
-            return null;
+            return appParamValue;
         }
 
         /// <summary>
@@ -570,16 +576,9 @@ namespace FabricObserver.Utilities.ServiceFabric
                             if (policy is ResourceGovernancePolicyType resourceGovernancePolicy)
                             {
                                 // Specified as Application parameter variable (e.g., [foo]).
-                                if (resourceGovernancePolicy.MemoryInMBLimit.StartsWith('['))
-                                {
-                                    resourceGovernancePolicy.MemoryInMBLimit = GetAppParameterVariableValue(resourceGovernancePolicy.MemoryInMBLimit, parameters);
-                                }
-
-                                if (resourceGovernancePolicy.MemoryInMB.StartsWith('['))
-                                {
-                                    resourceGovernancePolicy.MemoryInMB = GetAppParameterVariableValue(resourceGovernancePolicy.MemoryInMB, parameters);
-                                }
-
+                                resourceGovernancePolicy.MemoryInMBLimit = ParseAppParameterValue(resourceGovernancePolicy.MemoryInMBLimit, parameters);
+                                resourceGovernancePolicy.MemoryInMB = ParseAppParameterValue(resourceGovernancePolicy.MemoryInMB, parameters);
+                                
                                 if (resourceGovernancePolicy.CodePackageRef == codepackageName)
                                 {
                                     double RGMemoryLimitMb = 0;
@@ -672,11 +671,7 @@ namespace FabricObserver.Utilities.ServiceFabric
 
                             if (policy is ResourceGovernancePolicyType resourceGovernancePolicy)
                             {
-                                // Specified as Application parameter variable (e.g., [foo]).
-                                if (resourceGovernancePolicy.CpuShares.StartsWith('['))
-                                {
-                                    resourceGovernancePolicy.CpuShares = GetAppParameterVariableValue(resourceGovernancePolicy.CpuShares, parameters);
-                                }
+                                resourceGovernancePolicy.CpuShares = ParseAppParameterValue(resourceGovernancePolicy.CpuShares, parameters);
 
                                 if (string.IsNullOrWhiteSpace(resourceGovernancePolicy.CpuShares))
                                 {
@@ -709,17 +704,9 @@ namespace FabricObserver.Utilities.ServiceFabric
                             }
                             else if (policy is ServicePackageResourceGovernancePolicyType servicePackagePolicy)
                             {
-                                // Specified as Application parameter variable (e.g., [foo]).
-                                if (servicePackagePolicy.CpuCoresLimit.StartsWith('['))
-                                {
-                                    servicePackagePolicy.CpuCoresLimit = GetAppParameterVariableValue(servicePackagePolicy.CpuCoresLimit, parameters);
-                                }
-
-                                if (servicePackagePolicy.CpuCores.StartsWith('['))
-                                {
-                                    servicePackagePolicy.CpuCores = GetAppParameterVariableValue(servicePackagePolicy.CpuCores, parameters);
-                                }
-
+                                servicePackagePolicy.CpuCoresLimit = ParseAppParameterValue(servicePackagePolicy.CpuCoresLimit, parameters);
+                                servicePackagePolicy.CpuCores = ParseAppParameterValue(servicePackagePolicy.CpuCores, parameters);
+                                
                                 if (string.IsNullOrWhiteSpace(servicePackagePolicy.CpuCores) && string.IsNullOrWhiteSpace(servicePackagePolicy.CpuCoresLimit))
                                 {
                                     return (false, 0);
