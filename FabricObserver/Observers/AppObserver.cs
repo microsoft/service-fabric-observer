@@ -3028,14 +3028,16 @@ namespace FabricObserver.Observers
 
                             if (!string.IsNullOrWhiteSpace(appManifest) && appManifest.Contains($"<{ObserverConstants.RGPolicyNodeName} "))
                             {
-                                ApplicationParameterList parameters = new ApplicationParameterList();
+                                ApplicationParameterList parameters = new();
 
                                 FabricClientUtilities.AddParametersIfNotExists(parameters, appParameters);
                                 FabricClientUtilities.AddParametersIfNotExists(parameters, defaultParameters);
 
+                                // RG Memory
                                 (replicaInfo.RGMemoryEnabled, replicaInfo.RGAppliedMemoryLimitMb) =
                                     fabricClientUtilities.TupleGetMemoryResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName, parameters);
 
+                                // RG Cpu - NOTE: Not fully integrated yet. Will ship in 3.2.8. Here for unit testing base functionality.
                                 (replicaInfo.RGCpuEnabled, replicaInfo.RGAppliedCpuLimitCores) =
                                     fabricClientUtilities.TupleGetCpuResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName, parameters);
                             }

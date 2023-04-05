@@ -464,29 +464,27 @@ namespace FabricObserver.Utilities.ServiceFabric
             return (null, null, null);
 		}
 		
-        /// Populates object properties with application parameter values.
+        /// <summary>
+        /// Gets the value for application parameters that are specified as variables (e.g., [foo]).
         /// </summary>
-        /// <param name="obj">Object to be populated</param>
-        /// <param name="parameters">Application Parameter List</param>
-        public static string ReplaceParameterByValues(string parameterName, ApplicationParameterList parameters)
+        /// <param name="parameterName">Name of the parameter variable used to get related value.</param>
+        /// <param name="parameters">ApplicationParameterList instance to look for specified parameter variable name.</param>
+        public static string GetAppParameterVariableValue(string parameterName, ApplicationParameterList parameters)
         {
-            if (parameterName != null)
+            if (string.IsNullOrWhiteSpace(parameterName) || !parameterName.StartsWith('['))
             {
-                if (parameterName.StartsWith("["))
-                {
-                    parameterName = parameterName.Replace("[", string.Empty).Replace("]", string.Empty);
-
-                    if (parameters.Any(p => p.Name == parameterName))
-                    {
-                        parameterName = parameters.Where(p => p.Name == parameterName).FirstOrDefault().Value;
-                    }
-                    else
-                    {
-                        parameterName = "0";
-                    }
-                }
+                return null;
             }
-            return parameterName;
+
+            // Specified as Application Parameter variable in AppManifest.
+            parameterName = parameterName.Replace("[", string.Empty).Replace("]", string.Empty);
+
+            if (parameters.TryGetValue(parameterName, out ApplicationParameter parameter))
+            {
+                return parameter.Value;
+            }
+
+            return null;
         }
 
         /// <summary>
@@ -494,7 +492,7 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// </summary>
         /// <param name="toParameters">ApplicationParameterList to be populated</param>
         /// <param name="fromParameters">ApplicationParameterList to be used</param>
-        public void AddParametersIfNotExists(ApplicationParameterList toParameters, ApplicationParameterList fromParameters)
+        public static void AddParametersIfNotExists(ApplicationParameterList toParameters, ApplicationParameterList fromParameters)
         {
             if (fromParameters != null)
             {
@@ -569,25 +567,33 @@ namespace FabricObserver.Utilities.ServiceFabric
                         {
                             var policy = import.Policies[policyIndex];
 
-                            if (policy.GetType().Name == ObserverConstants.RGPolicyNodeTypeName)
+                            if (policy is ResourceGovernancePolicyType resourceGovernancePolicy)
                             {
-                                var resourceGovernancePolicy = (ResourceGovernancePolicyType)policy;
+                                // Specified as Application parameter variable (e.g., [foo]).
+                                if (resourceGovernancePolicy.MemoryInMBLimit.StartsWith('['))
+                                {
+                                    resourceGovernancePolicy.MemoryInMBLimit = GetAppParameterVariableValue(resourceGovernancePolicy.MemoryInMBLimit, parameters);
+                                }
 
-                                resourceGovernancePolicy.MemoryInMBLimit = ReplaceParameterByValues(resourceGovernancePolicy.MemoryInMBLimit, parameters);
-                                resourceGovernancePolicy.MemoryInMB = ReplaceParameterByValues(resourceGovernancePolicy.MemoryInMB, parameters);
+                                if (resourceGovernancePolicy.MemoryInMB.StartsWith('['))
+                                {
+                                    resourceGovernancePolicy.MemoryInMB = GetAppParameterVariableValue(resourceGovernancePolicy.MemoryInMB, parameters);
+                                }
 
                                 if (resourceGovernancePolicy.CodePackageRef == codepackageName)
                                 {
-                                    String RGMemoryLimitMb = "0";
-                                    if (resourceGovernancePolicy.MemoryInMBLimit != "0")
+                                    double RGMemoryLimitMb = 0;
+
+                                    if (double.TryParse(resourceGovernancePolicy.MemoryInMBLimit, out double memInMbLimit) && memInMbLimit > 0)
                                     {
-                                        RGMemoryLimitMb = resourceGovernancePolicy.MemoryInMBLimit;
+                                        RGMemoryLimitMb = memInMbLimit;
                                     }
-                                    else if (resourceGovernancePolicy.MemoryInMB != "0")
+                                    else if (double.TryParse(resourceGovernancePolicy.MemoryInMB, out double memInMb) && memInMb > 0)
                                     {
-                                        RGMemoryLimitMb = resourceGovernancePolicy.MemoryInMB;
+                                        RGMemoryLimitMb = memInMb;
                                     }
-                                    return (true, Convert.ToDouble(RGMemoryLimitMb));
+
+                                    return (RGMemoryLimitMb > 0, RGMemoryLimitMb);
                                 }
                             }
                         }
@@ -656,62 +662,87 @@ namespace FabricObserver.Utilities.ServiceFabric
                 {
                     if (import.Policies != null)
                     {
-                        string TotalCpuCores = string.Empty;
-                        string CpuShares = string.Empty;
+                        double TotalCpuCores = 0;
+                        double CpuShares = 0;
                         double CpuSharesSum = 0;
 
                         for (int policyIndex = 0; policyIndex < import.Policies.Length; policyIndex++)
                         {
                             var policy = import.Policies[policyIndex];
 
-                            if (policy.GetType().Name == ObserverConstants.RGPolicyNodeTypeName)
+                            if (policy is ResourceGovernancePolicyType resourceGovernancePolicy)
                             {
-                                var resourceGovernancePolicy = (ResourceGovernancePolicyType)policy;
+                                // Specified as Application parameter variable (e.g., [foo]).
+                                if (resourceGovernancePolicy.CpuShares.StartsWith('['))
+                                {
+                                    resourceGovernancePolicy.CpuShares = GetAppParameterVariableValue(resourceGovernancePolicy.CpuShares, parameters);
+                                }
 
-                                resourceGovernancePolicy.CpuShares = ReplaceParameterByValues(resourceGovernancePolicy.CpuShares, parameters);
+                                if (string.IsNullOrWhiteSpace(resourceGovernancePolicy.CpuShares))
+                                {
+                                    return (false, 0);
+                                }
 
-                                if (resourceGovernancePolicy.CpuShares == "0")
+                                if (!double.TryParse(resourceGovernancePolicy.CpuShares, out double cpuShares))
+                                {
+                                    return (false, 0);
+                                }
+
+                                if (cpuShares == 0)
                                 {
                                     CpuSharesSum += 1;
-                                    if(resourceGovernancePolicy.CodePackageRef == codepackageName)
+
+                                    if (resourceGovernancePolicy.CodePackageRef == codepackageName)
                                     {
-                                        CpuShares = "1";
+                                        CpuShares = 1;
                                     }
                                 }
                                 else
                                 {
-                                    CpuSharesSum += Convert.ToDouble(resourceGovernancePolicy.CpuShares);
+                                    CpuSharesSum += cpuShares;
+
                                     if (resourceGovernancePolicy.CodePackageRef == codepackageName)
                                     {
-                                        CpuShares = resourceGovernancePolicy.CpuShares;
+                                        CpuShares = cpuShares;
                                     }
                                 }
                             }
-                            if (policy.GetType().Name == ObserverConstants.RGSvcPkgPolicyNodeTypeName)
+                            else if (policy is ServicePackageResourceGovernancePolicyType servicePackagePolicy)
                             {
-                                var servicePackagePolicy = (ServicePackageResourceGovernancePolicyType)policy;
-
-                                servicePackagePolicy.CpuCoresLimit = ReplaceParameterByValues(servicePackagePolicy.CpuCoresLimit, parameters);
-                                servicePackagePolicy.CpuCores = ReplaceParameterByValues(servicePackagePolicy.CpuCores, parameters);
-
-                                if (servicePackagePolicy.CpuCoresLimit != "0")
+                                // Specified as Application parameter variable (e.g., [foo]).
+                                if (servicePackagePolicy.CpuCoresLimit.StartsWith('['))
                                 {
-                                    TotalCpuCores = servicePackagePolicy.CpuCoresLimit;
+                                    servicePackagePolicy.CpuCoresLimit = GetAppParameterVariableValue(servicePackagePolicy.CpuCoresLimit, parameters);
                                 }
-                                else if (servicePackagePolicy.CpuCores != "0")
+
+                                if (servicePackagePolicy.CpuCores.StartsWith('['))
                                 {
-                                    TotalCpuCores = servicePackagePolicy.CpuCores;
+                                    servicePackagePolicy.CpuCores = GetAppParameterVariableValue(servicePackagePolicy.CpuCores, parameters);
+                                }
+
+                                if (string.IsNullOrWhiteSpace(servicePackagePolicy.CpuCores) && string.IsNullOrWhiteSpace(servicePackagePolicy.CpuCoresLimit))
+                                {
+                                    return (false, 0);
+                                }
+
+                                if (double.TryParse(servicePackagePolicy.CpuCoresLimit, out double cpuLimit) && cpuLimit > 0)
+                                {
+                                    TotalCpuCores = cpuLimit;
+                                }
+                                else if (double.TryParse(servicePackagePolicy.CpuCores, out double cpuCores) && cpuCores > 0)
+                                {
+                                    TotalCpuCores = cpuCores;
                                 }
                             }
                         }
 
-                        if (TotalCpuCores == string.Empty)
+                        if (TotalCpuCores == 0)
                         {
                             return (false, 0);
                         }
                         else
                         {
-                            double CpuLimitCores = Convert.ToDouble(TotalCpuCores) * Convert.ToDouble(CpuShares) / CpuSharesSum;
+                            double CpuLimitCores = TotalCpuCores * CpuShares / CpuSharesSum;
                             return (true, CpuLimitCores);
                         }
                     }
