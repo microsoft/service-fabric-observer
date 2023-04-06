@@ -3026,6 +3026,7 @@ namespace FabricObserver.Observers
                                                      ConfigurationSettings.AsyncTimeout,
                                                      Token), Token).Result;
 
+                            // TOTHINK: Shouldn't this also contain a check for "ServicePackageResourceGovernancePolicy" node?
                             if (!string.IsNullOrWhiteSpace(appManifest) && appManifest.Contains($"<{ObserverConstants.RGPolicyNodeName} "))
                             {
                                 ApplicationParameterList parameters = new();
@@ -3037,7 +3038,7 @@ namespace FabricObserver.Observers
                                 (replicaInfo.RGMemoryEnabled, replicaInfo.RGAppliedMemoryLimitMb) =
                                     fabricClientUtilities.TupleGetMemoryResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName, parameters);
 
-                                // RG Cpu - NOTE: Not fully integrated yet. Will ship in 3.2.8. Here for unit testing base functionality.
+                                // RG Cpu - NOTE: Not fully integrated yet. Will ship in 3.2.8. Here for unit testing of base functionality.
                                 (replicaInfo.RGCpuEnabled, replicaInfo.RGAppliedCpuLimitCores) =
                                     fabricClientUtilities.TupleGetCpuResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName, parameters);
                             }

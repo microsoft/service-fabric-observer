@@ -638,6 +638,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                 return (false, 0);
             }
 
+            // TOTHINK: Shouldn't this also contain a check for "ServicePackageResourceGovernancePolicy" node?
             // Don't waste cycles with XML parsing if you can easily get a hint first..
             if (!appManifestXml.Contains($"<{ObserverConstants.RGPolicyNodeName} "))
             {
