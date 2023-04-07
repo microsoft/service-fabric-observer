@@ -6,7 +6,6 @@
 using System;
 using System.IO;
 using System.Management;
-using System.Runtime.InteropServices;
 using System.Xml;
 
 namespace FabricObserver.Observers.Utilities
