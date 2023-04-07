@@ -23,7 +23,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Serialization;
-using System.Xml.XPath;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Utilities.ServiceFabric
@@ -463,30 +462,35 @@ namespace FabricObserver.Utilities.ServiceFabric
 
             return (null, null, null);
 		}
-		
-        /// Populates object properties with application parameter values.
-        /// </summary>
-        /// <param name="obj">Object to be populated</param>
-        /// <param name="parameters">Application Parameter List</param>
-        public static string ReplaceParameterByValues(string parameterName, ApplicationParameterList parameters)
-        {
-            if (parameterName != null)
-            {
-                if (parameterName.StartsWith("["))
-                {
-                    parameterName = parameterName.Replace("[", string.Empty).Replace("]", string.Empty);
 
-                    if (parameters.Any(p => p.Name == parameterName))
+        /// <summary>
+        /// Processes values for application parameters, returning the specified value in use for application parameter variables.
+        /// If the appParamValue is not a variable name, then the function just returns the supplied appParamValue.
+        /// </summary>
+        /// <param name="appParamValue">The value of an Application parameter.</param>
+        /// <param name="parameters">ApplicationParameterList instance that contains all app parameter values.</param>
+        /// <returns>String representation of the actual parameter value in the case where the supplied value is a variable name, 
+        /// else the value specified in appParamValue.</returns>
+        public static string ParseAppParameterValue(string appParamValue, ApplicationParameterList parameters)
+        {
+            if (!string.IsNullOrWhiteSpace(appParamValue))
+            {
+                // Application parameter value specified as a Service Fabric Application Manifest variable.
+                if (appParamValue.StartsWith("["))
+                {
+                    appParamValue = appParamValue.Replace("[", string.Empty).Replace("]", string.Empty);
+
+                    if (parameters.TryGetValue(appParamValue, out ApplicationParameter parameter))
                     {
-                        parameterName = parameters.Where(p => p.Name == parameterName).FirstOrDefault().Value;
+                        return parameter.Value;
                     }
                     else
                     {
-                        parameterName = "0";
+                        appParamValue = "0";
                     }
                 }
             }
-            return parameterName;
+            return appParamValue;
         }
 
         /// <summary>
@@ -494,7 +498,7 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// </summary>
         /// <param name="toParameters">ApplicationParameterList to be populated</param>
         /// <param name="fromParameters">ApplicationParameterList to be used</param>
-        public void AddParametersIfNotExists(ApplicationParameterList toParameters, ApplicationParameterList fromParameters)
+        public static void AddParametersIfNotExists(ApplicationParameterList toParameters, ApplicationParameterList fromParameters)
         {
             if (fromParameters != null)
             {
@@ -569,25 +573,25 @@ namespace FabricObserver.Utilities.ServiceFabric
                         {
                             var policy = import.Policies[policyIndex];
 
-                            if (policy.GetType().Name == ObserverConstants.RGPolicyNodeTypeName)
+                            if (policy is ResourceGovernancePolicyType resourceGovernancePolicy)
                             {
-                                var resourceGovernancePolicy = (ResourceGovernancePolicyType)policy;
-
-                                resourceGovernancePolicy.MemoryInMBLimit = ReplaceParameterByValues(resourceGovernancePolicy.MemoryInMBLimit, parameters);
-                                resourceGovernancePolicy.MemoryInMB = ReplaceParameterByValues(resourceGovernancePolicy.MemoryInMB, parameters);
-
+                                resourceGovernancePolicy.MemoryInMBLimit = ParseAppParameterValue(resourceGovernancePolicy.MemoryInMBLimit, parameters);
+                                resourceGovernancePolicy.MemoryInMB = ParseAppParameterValue(resourceGovernancePolicy.MemoryInMB, parameters);
+                                
                                 if (resourceGovernancePolicy.CodePackageRef == codepackageName)
                                 {
-                                    String RGMemoryLimitMb = "0";
-                                    if (resourceGovernancePolicy.MemoryInMBLimit != "0")
+                                    double RGMemoryLimitMb = 0;
+
+                                    if (double.TryParse(resourceGovernancePolicy.MemoryInMBLimit, out double memInMbLimit) && memInMbLimit > 0)
                                     {
-                                        RGMemoryLimitMb = resourceGovernancePolicy.MemoryInMBLimit;
+                                        RGMemoryLimitMb = memInMbLimit;
                                     }
-                                    else if (resourceGovernancePolicy.MemoryInMB != "0")
+                                    else if (double.TryParse(resourceGovernancePolicy.MemoryInMB, out double memInMb) && memInMb > 0)
                                     {
-                                        RGMemoryLimitMb = resourceGovernancePolicy.MemoryInMB;
+                                        RGMemoryLimitMb = memInMb;
                                     }
-                                    return (true, Convert.ToDouble(RGMemoryLimitMb));
+
+                                    return (RGMemoryLimitMb > 0, RGMemoryLimitMb);
                                 }
                             }
                         }
@@ -640,6 +644,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                 return (false, 0);
             }
 
+            // TOTHINK: Shouldn't this also contain a check for "ServicePackageResourceGovernancePolicy" node?
             // Don't waste cycles with XML parsing if you can easily get a hint first..
             if (!appManifestXml.Contains($"<{ObserverConstants.RGPolicyNodeName} ") && !appManifestXml.Contains($"<{ObserverConstants.RGSvcPkgPolicyNodeName} "))
             {
@@ -662,62 +667,75 @@ namespace FabricObserver.Utilities.ServiceFabric
                 {
                     if (import.Policies != null)
                     {
-                        string TotalCpuCores = string.Empty;
-                        string CpuShares = string.Empty;
+                        double TotalCpuCores = 0;
+                        double CpuShares = 0;
                         double CpuSharesSum = 0;
 
                         for (int policyIndex = 0; policyIndex < import.Policies.Length; policyIndex++)
                         {
                             var policy = import.Policies[policyIndex];
 
-                            if (policy.GetType().Name == ObserverConstants.RGPolicyNodeTypeName)
+                            if (policy is ResourceGovernancePolicyType resourceGovernancePolicy)
                             {
-                                var resourceGovernancePolicy = (ResourceGovernancePolicyType)policy;
+                                resourceGovernancePolicy.CpuShares = ParseAppParameterValue(resourceGovernancePolicy.CpuShares, parameters);
 
-                                resourceGovernancePolicy.CpuShares = ReplaceParameterByValues(resourceGovernancePolicy.CpuShares, parameters);
+                                if (string.IsNullOrWhiteSpace(resourceGovernancePolicy.CpuShares))
+                                {
+                                    return (false, 0);
+                                }
 
-                                if (resourceGovernancePolicy.CpuShares == "0")
+                                if (!double.TryParse(resourceGovernancePolicy.CpuShares, out double cpuShares))
+                                {
+                                    return (false, 0);
+                                }
+
+                                if (cpuShares == 0)
                                 {
                                     CpuSharesSum += 1;
-                                    if(resourceGovernancePolicy.CodePackageRef == codepackageName)
+
+                                    if (resourceGovernancePolicy.CodePackageRef == codepackageName)
                                     {
-                                        CpuShares = "1";
+                                        CpuShares = 1;
                                     }
                                 }
                                 else
                                 {
-                                    CpuSharesSum += Convert.ToDouble(resourceGovernancePolicy.CpuShares);
+                                    CpuSharesSum += cpuShares;
+
                                     if (resourceGovernancePolicy.CodePackageRef == codepackageName)
                                     {
-                                        CpuShares = resourceGovernancePolicy.CpuShares;
+                                        CpuShares = cpuShares;
                                     }
                                 }
                             }
-                            if (policy.GetType().Name == ObserverConstants.RGSvcPkgPolicyNodeTypeName)
+                            else if (policy is ServicePackageResourceGovernancePolicyType servicePackagePolicy)
                             {
-                                var servicePackagePolicy = (ServicePackageResourceGovernancePolicyType)policy;
-
-                                servicePackagePolicy.CpuCoresLimit = ReplaceParameterByValues(servicePackagePolicy.CpuCoresLimit, parameters);
-                                servicePackagePolicy.CpuCores = ReplaceParameterByValues(servicePackagePolicy.CpuCores, parameters);
-
-                                if (servicePackagePolicy.CpuCoresLimit != "0")
+                                servicePackagePolicy.CpuCoresLimit = ParseAppParameterValue(servicePackagePolicy.CpuCoresLimit, parameters);
+                                servicePackagePolicy.CpuCores = ParseAppParameterValue(servicePackagePolicy.CpuCores, parameters);
+                                
+                                if (string.IsNullOrWhiteSpace(servicePackagePolicy.CpuCores) && string.IsNullOrWhiteSpace(servicePackagePolicy.CpuCoresLimit))
                                 {
-                                    TotalCpuCores = servicePackagePolicy.CpuCoresLimit;
+                                    return (false, 0);
                                 }
-                                else if (servicePackagePolicy.CpuCores != "0")
+
+                                if (double.TryParse(servicePackagePolicy.CpuCoresLimit, out double cpuLimit) && cpuLimit > 0)
                                 {
-                                    TotalCpuCores = servicePackagePolicy.CpuCores;
+                                    TotalCpuCores = cpuLimit;
+                                }
+                                else if (double.TryParse(servicePackagePolicy.CpuCores, out double cpuCores) && cpuCores > 0)
+                                {
+                                    TotalCpuCores = cpuCores;
                                 }
                             }
                         }
 
-                        if (TotalCpuCores == string.Empty)
+                        if (TotalCpuCores == 0)
                         {
                             return (false, 0);
                         }
                         else
                         {
-                            double CpuLimitCores = Convert.ToDouble(TotalCpuCores) * Convert.ToDouble(CpuShares) / CpuSharesSum;
+                            double CpuLimitCores = TotalCpuCores * CpuShares / CpuSharesSum;
                             return (true, CpuLimitCores);
                         }
                     }

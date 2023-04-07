@@ -1173,10 +1173,10 @@ namespace FabricObserverTests
             var appParameters = appList.First(app => app.ApplicationTypeName == "VotingType").ApplicationParameters;
             var defaultParameters = applicationTypeList.First(a => a.ApplicationTypeVersion == "1.0.0").DefaultParameters;
 
-            ApplicationParameterList parameters = new ApplicationParameterList();
+            ApplicationParameterList parameters = new();
 
-            clientUtilities.AddParametersIfNotExists(parameters, appParameters);
-            clientUtilities.AddParametersIfNotExists(parameters, defaultParameters);
+            FabricClientUtilities.AddParametersIfNotExists(parameters, appParameters);
+            FabricClientUtilities.AddParametersIfNotExists(parameters, defaultParameters);
 
             // VotingWeb has both MemoryInMB and MemoryInMBLimit specified in a code package rg policy node. Ensure that only the value
             // of MemoryInMBLimit is used (this is known to be 2400, whereas MemoryInMB is known to be 1024).
