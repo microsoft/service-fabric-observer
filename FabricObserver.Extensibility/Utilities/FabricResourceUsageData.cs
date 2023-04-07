@@ -271,13 +271,19 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Clears numeric data of the current instance's Data property.
+        /// Clears this frud's numeric data collection (Data property).
         /// </summary>
         public void ClearData()
         {
+            if (!Data.Any())
+            {
+                return;
+            }
+
             if (Data is List<T> list)
             {
-               list.Clear();
+                list.TrimExcess();
+                list.Clear();
             }
             else if (Data is CircularBufferCollection<T> cBuffer)
             {

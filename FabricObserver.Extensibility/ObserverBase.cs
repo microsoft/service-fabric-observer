@@ -1312,47 +1312,44 @@ namespace FabricObserver.Observers
                     ServiceNames.Enqueue(serviceName.OriginalString);
                 }
 
-                // TOTHINK: Add a check to see if the entity is already in Warning for errorWarningCode.
-                if (!data.ActiveErrorOrWarning || data.ActiveErrorOrWarningCode != errorWarningCode)
+                var healthReport = new HealthReport
                 {
-                    var healthReport = new HealthReport
-                    {
-                        AppName = appName,
-                        Code = errorWarningCode,
-                        EmitLogEvent = EnableVerboseLogging || IsObserverWebApiAppDeployed,
-                        HealthData = telemetryData,
-                        HealthMessage = healthMessage.ToString(),
-                        HealthReportTimeToLive = TimeSpan.MaxValue,
-                        EntityType = entityType,
-                        ServiceName = serviceName,
-                        State = healthState,
-                        NodeName = NodeName,
-                        Observer = ObserverName,
-                        Property = telemetryData.Property,
-                        ResourceUsageDataProperty = data.Property,
-                        SourceId = $"{ObserverName}({errorWarningCode})"
-                    };
+                    AppName = appName,
+                    Code = errorWarningCode,
+                    EmitLogEvent = EnableVerboseLogging || IsObserverWebApiAppDeployed,
+                    HealthData = telemetryData,
+                    HealthMessage = healthMessage.ToString(),
+                    HealthReportTimeToLive = healthReportTtl,
+                    EntityType = entityType,
+                    ServiceName = serviceName,
+                    State = healthState,
+                    NodeName = NodeName,
+                    Observer = ObserverName,
+                    Property = telemetryData.Property,
+                    ResourceUsageDataProperty = data.Property,
+                    SourceId = $"{ObserverName}({errorWarningCode})"
+                };
 
-                    // Generate a Service Fabric Health Report.
-                    HealthReporter.ReportHealthToServiceFabric(healthReport);
+                // Generate a Service Fabric Health Report.
+                HealthReporter.ReportHealthToServiceFabric(healthReport);
 
-                    // Set internal health state info on data instance.
-                    data.ActiveErrorOrWarning = true;
-                    data.ActiveErrorOrWarningCode = errorWarningCode;
+                // Set internal health state info on data instance.
+                data.ActiveErrorOrWarning = true;
+                data.ActiveErrorOrWarningCode = errorWarningCode;
 
-                    // This means this observer created a Warning or Error SF Health Report
-                    HasActiveFabricErrorOrWarning = true;
+                // This means this observer created a Warning or Error SF Health Report
+                HasActiveFabricErrorOrWarning = true;
 
-                    // Update internal counters.
-                    if (healthState == HealthState.Warning)
-                    {
-                        CurrentWarningCount++;
-                    }
-                    else if (healthState == HealthState.Error)
-                    {
-                        CurrentErrorCount++;
-                    }
+                // Update internal counters.
+                if (healthState == HealthState.Warning)
+                {
+                    CurrentWarningCount++;
                 }
+                else if (healthState == HealthState.Error)
+                {
+                    CurrentErrorCount++;
+                }
+                
 
                 // Clean up sb.
                 _ = healthMessage.Clear();
