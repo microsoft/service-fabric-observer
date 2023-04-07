@@ -886,8 +886,11 @@ namespace FabricObserver.Utilities.ServiceFabric
 
             var serviceHealthEvents =
                 serviceHealth.HealthEvents.Where(
-                    e => e.HealthInformation.SourceId.StartsWith(ObserverConstants.AppObserverName)
-                      || e.HealthInformation.SourceId.StartsWith(ObserverConstants.ContainerObserverName)).ToList();
+                    e => 
+                        JsonHelper.TryDeserializeObject(e.HealthInformation.Description, out TelemetryDataBase telemetryDataBase)
+                        && telemetryDataBase.NodeName == this.nodeName
+                        && (e.HealthInformation.SourceId.StartsWith(ObserverConstants.AppObserverName)
+                            || e.HealthInformation.SourceId.StartsWith(ObserverConstants.ContainerObserverName))).ToList();
 
             if (!serviceHealthEvents.Any())
             {
@@ -897,7 +900,7 @@ namespace FabricObserver.Utilities.ServiceFabric
             var healthReport = new HealthReport
             {
                 Code = FOErrorWarningCodes.Ok,
-                HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping or restarting.",
+                HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping or starting.",
                 State = HealthState.Ok,
                 NodeName = nodeName,
                 ServiceName = service.ServiceName,
@@ -938,8 +941,12 @@ namespace FabricObserver.Utilities.ServiceFabric
 
             var appHealthEvents =
                 appHealth.HealthEvents.Where(
-                    e => e.HealthInformation.SourceId.StartsWith(ObserverConstants.FabricSystemObserverName)
-                      || e.HealthInformation.SourceId.StartsWith(ObserverConstants.NetworkObserverName)).ToList();
+                    e => 
+                       JsonHelper.TryDeserializeObject(e.HealthInformation.Description, out TelemetryDataBase telemetryDataBase)
+                       && telemetryDataBase.NodeName == this.nodeName
+                       && (e.HealthInformation.SourceId.StartsWith(ObserverConstants.AppObserverName)
+                           || e.HealthInformation.SourceId.StartsWith(ObserverConstants.FabricSystemObserverName)
+                           || e.HealthInformation.SourceId.StartsWith(ObserverConstants.NetworkObserverName))).ToList();
 
             if (!appHealthEvents.Any())
             {
@@ -949,7 +956,7 @@ namespace FabricObserver.Utilities.ServiceFabric
             var healthReport = new HealthReport
             {
                 Code = FOErrorWarningCodes.Ok,
-                HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping or restarting.",
+                HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping or starting.",
                 State = HealthState.Ok,
                 NodeName = nodeName,
                 AppName = app.ApplicationName,
@@ -1009,7 +1016,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                 var healthReport = new HealthReport
                 {
                     Code = FOErrorWarningCodes.Ok,
-                    HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping or restarting.",
+                    HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping or starting.",
                     State = HealthState.Ok,
                     NodeName = this.nodeName,
                     EntityType = EntityType.Machine

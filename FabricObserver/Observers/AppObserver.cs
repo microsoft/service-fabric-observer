@@ -1984,6 +1984,7 @@ namespace FabricObserver.Observers
 
                     if (AllAppCpuData.ContainsKey(id))
                     {
+                        AllAppCpuData[id].ClearData();
                         checkCpu = true;
                     }
 
@@ -1995,6 +1996,7 @@ namespace FabricObserver.Observers
 
                     if (AllAppMemDataMb.ContainsKey(id))
                     {
+                        AllAppMemDataMb[id].ClearData();
                         checkMemMb = true;
                     }
 
@@ -2006,6 +2008,7 @@ namespace FabricObserver.Observers
 
                     if (AllAppMemDataPercent.ContainsKey(id))
                     {
+                        AllAppMemDataPercent[id].ClearData();
                         checkMemPct = true;
                     }
 
@@ -2017,6 +2020,7 @@ namespace FabricObserver.Observers
 
                     if (IsWindows && AllAppPrivateBytesDataMb != null && AllAppPrivateBytesDataMb.ContainsKey(id))
                     {
+                        AllAppPrivateBytesDataMb[id].ClearData();
                         checkMemPrivateBytes = true;
                     }
 
@@ -2028,6 +2032,7 @@ namespace FabricObserver.Observers
 
                     if (IsWindows && AllAppPrivateBytesDataPercent != null && AllAppPrivateBytesDataPercent.ContainsKey(id))
                     {
+                        AllAppPrivateBytesDataPercent[id].ClearData();
                         checkMemPrivateBytesPct = true;
                     }
 
@@ -2052,6 +2057,8 @@ namespace FabricObserver.Observers
                         {
                             rgMemoryPercentThreshold = MaxRGMemoryInUsePercent; // Default: 90%.
                         }
+
+                        AllAppRGMemoryUsagePercent[id].ClearData();
                     }
 
                     // Active TCP Ports
@@ -2062,6 +2069,7 @@ namespace FabricObserver.Observers
 
                     if (AllAppTotalActivePortsData.ContainsKey(id))
                     {
+                        AllAppTotalActivePortsData[id].ClearData();
                         checkAllPorts = true;
                     }
 
@@ -2073,6 +2081,7 @@ namespace FabricObserver.Observers
 
                     if (AllAppEphemeralPortsData.ContainsKey(id))
                     {
+                        AllAppEphemeralPortsData[id].ClearData();
                         checkEphemeralPorts = true;
                     }
 
@@ -2084,6 +2093,7 @@ namespace FabricObserver.Observers
 
                     if (AllAppEphemeralPortsDataPercent.ContainsKey(id))
                     {
+                        AllAppEphemeralPortsDataPercent[id].ClearData();
                         checkPercentageEphemeralPorts = true;
                     }
 
@@ -2096,6 +2106,7 @@ namespace FabricObserver.Observers
 
                     if (AllAppHandlesData.ContainsKey(id))
                     {
+                        AllAppHandlesData[id].ClearData();
                         checkHandles = true;
                     }
 
@@ -2107,6 +2118,7 @@ namespace FabricObserver.Observers
 
                     if (AllAppThreadsData.ContainsKey(id))
                     {
+                        AllAppThreadsData[id].ClearData();
                         checkThreads = true;
                     }
 
@@ -2119,6 +2131,7 @@ namespace FabricObserver.Observers
 
                     if (AllAppKvsLvidsData != null && AllAppKvsLvidsData.ContainsKey(id))
                     {
+                        AllAppKvsLvidsData[id].ClearData();
                         checkLvids = true;
                     }
 
