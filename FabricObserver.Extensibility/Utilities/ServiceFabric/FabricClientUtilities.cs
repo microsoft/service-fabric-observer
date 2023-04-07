@@ -606,7 +606,7 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// <param name="codepackageName">Code Package name</param>
         /// <param name="parameters">Application Parameter List, populated with both application and default parameters</param>
         /// <returns>A Tuple containing a boolean value (whether or not RG cpu is enabled) and a double value (the absolute limit in cores)</returns>
-        public (bool IsCpuRGEnabled, double CpuLimitCores) TupleGetCpuResourceGovernanceInfo(string appManifestXml, string servicePkgName, string codepackageName, ApplicationParameterList parameters)
+        public (bool IsCpuRGEnabled, double CpuLimitCores) TupleGetCpuResourceGovernanceInfo(string appManifestXml, string svcManifestXml, string servicePkgName, string codepackageName, ApplicationParameterList parameters)
         {
             logger.LogInfo("Starting TupleGetCpuResourceGovernanceInfo.");
 
@@ -619,6 +619,12 @@ namespace FabricObserver.Utilities.ServiceFabric
             if (string.IsNullOrWhiteSpace(appManifestXml))
             {
                 logger.LogInfo($"Invalid value for {nameof(appManifestXml)}: {appManifestXml}. Exiting TupleGetCpuResourceGovernanceInfo.");
+                return (false, 0);
+            }
+
+            if (string.IsNullOrWhiteSpace(svcManifestXml))
+            {
+                logger.LogInfo($"Invalid value for {nameof(svcManifestXml)}: {svcManifestXml}. Exiting TupleGetCpuResourceGovernanceInfo.");
                 return (false, 0);
             }
 
@@ -635,7 +641,7 @@ namespace FabricObserver.Utilities.ServiceFabric
             }
 
             // Don't waste cycles with XML parsing if you can easily get a hint first..
-            if (!appManifestXml.Contains($"<{ObserverConstants.RGPolicyNodeName} "))
+            if (!appManifestXml.Contains($"<{ObserverConstants.RGPolicyNodeName} ") && !appManifestXml.Contains($"<{ObserverConstants.RGSvcPkgPolicyNodeName} "))
             {
                 return (false, 0);
             }

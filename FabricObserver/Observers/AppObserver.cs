@@ -32,6 +32,7 @@ namespace FabricObserver.Observers
     {
         private const double KvsLvidsWarningPercentage = 75.0;
         private const double MaxRGMemoryInUsePercent = 90.0;
+        private const double MaxRGCpuInUsePercent = 90.0;
         private const int MaxSameNamedProcesses = 50;
 
         // These are the concurrent data structures that hold all monitoring data for all application service targets for specific metrics.
@@ -55,6 +56,7 @@ namespace FabricObserver.Observers
 
         // Windows-only for now.
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppRGMemoryUsagePercent;
+        private ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppRGCpuUsagePercent;
 
         // Stores process id (key) / process name pairs for all monitored service processes.
         private ConcurrentDictionary<int, string> processInfoDictionary;
@@ -491,6 +493,29 @@ namespace FabricObserver.Observers
                             parentFrud,
                             thresholdError: 0, // Only Warning Threshold is supported for RG reporting.
                             thresholdWarning: app.WarningRGMemoryLimitPercent > 0 ? app.WarningRGMemoryLimitPercent : MaxRGMemoryInUsePercent, // Default: 90%
+                            healthReportTtl,
+                            EntityType.Service,
+                            processName,
+                            repOrInst,
+                            dumpOnError: false, // Not supported
+                            dumpOnWarning: false, // Not supported
+                            processId);
+                    }
+
+                    // RG CPU Monitoring (CPU Time Percent)
+                    if (AllAppRGCpuUsagePercent.ContainsKey(id))
+                    {
+                        var parentFrud = AllAppRGCpuUsagePercent[id];
+
+                        if (hasChildProcs)
+                        {
+                            ProcessChildProcs(AllAppRGCpuUsagePercent, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                        }
+
+                        ProcessResourceDataReportHealth(
+                            parentFrud,
+                            thresholdError: 0, // Only Warning Threshold is supported for RG reporting.
+                            thresholdWarning: app.WarningRGCpuLimitPercent > 0 ? app.WarningRGCpuLimitPercent : MaxRGCpuInUsePercent, // Default: 90%
                             healthReportTtl,
                             EntityType.Service,
                             processName,
@@ -998,6 +1023,9 @@ namespace FabricObserver.Observers
 
                         // RGMemoryLimitPercent
                         existingAppConfig[j].WarningRGMemoryLimitPercent = existingAppConfig[j].WarningRGMemoryLimitPercent == 0 && application.WarningRGMemoryLimitPercent > 0 ? application.WarningRGMemoryLimitPercent : existingAppConfig[j].WarningRGMemoryLimitPercent;
+
+                        // RGCpuLimitPercent
+                        existingAppConfig[j].WarningRGCpuLimitPercent = existingAppConfig[j].WarningRGCpuLimitPercent == 0 && application.WarningRGCpuLimitPercent > 0 ? application.WarningRGCpuLimitPercent : existingAppConfig[j].WarningRGCpuLimitPercent;
                     }
                 }
                 else
@@ -1024,11 +1052,11 @@ namespace FabricObserver.Observers
                         NetworkWarningEphemeralPortsPercent = application.NetworkWarningEphemeralPortsPercent,
                         DumpProcessOnError = application.DumpProcessOnError,
                         DumpProcessOnWarning = application.DumpProcessOnWarning,
-                        
+
                         // Supported Legacy Handle property naming.
                         ErrorOpenFileHandles = application.ErrorOpenFileHandles,
                         WarningOpenFileHandles = application.WarningOpenFileHandles,
-                        
+
                         ErrorHandleCount = application.ErrorHandleCount,
                         WarningHandleCount = application.WarningHandleCount,
                         ErrorThreadCount = application.ErrorThreadCount,
@@ -1037,7 +1065,8 @@ namespace FabricObserver.Observers
                         WarningPrivateBytesMb = application.WarningPrivateBytesMb,
                         ErrorPrivateBytesPercent = application.ErrorPrivateBytesPercent,
                         WarningPrivateBytesPercent = application.WarningPrivateBytesPercent,
-                        WarningRGMemoryLimitPercent = application.WarningRGMemoryLimitPercent
+                        WarningRGMemoryLimitPercent = application.WarningRGMemoryLimitPercent,
+                        WarningRGCpuLimitPercent = application.WarningRGCpuLimitPercent
                     };
 
                     userTargetList.Add(appConfig);
@@ -1769,6 +1798,7 @@ namespace FabricObserver.Observers
                 AllAppPrivateBytesDataMb ??= new ConcurrentDictionary<string, FabricResourceUsageData<float>>();
                 AllAppPrivateBytesDataPercent ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
                 AllAppRGMemoryUsagePercent ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
+                AllAppRGCpuUsagePercent ??= new ConcurrentDictionary<string, FabricResourceUsageData<double>>();
 
                 // LVID usage monitoring for Stateful KVS-based services (e.g., Actors).
                 if (EnableKvsLvidMonitoring)
@@ -1811,6 +1841,7 @@ namespace FabricObserver.Observers
                                     app.TargetAppType?.ToLower() == repOrInst.ApplicationTypeName?.ToLower());
 
                 double rgMemoryPercentThreshold = 0.0;
+                double rgCpuPercentThreshold = 0.0;
                 ConcurrentDictionary<int, string> procs;
 
                 if (application?.TargetApp == null && application?.TargetAppType == null)
@@ -2054,6 +2085,29 @@ namespace FabricObserver.Observers
                         }
                     }
 
+                    // CPU - RG monitoring. Windows-only for now.
+                    if (MonitorResourceGovernanceLimits && repOrInst.RGCpuEnabled && repOrInst.RGAppliedCpuLimitCores > 0)
+                    {
+                        _ = AllAppRGCpuUsagePercent.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.RGCpuUsagePercent, id, 1, false, EnableConcurrentMonitoring));
+                    }
+
+                    if (IsWindows && AllAppRGCpuUsagePercent != null && AllAppRGCpuUsagePercent.ContainsKey(id))
+                    {
+                        rgCpuPercentThreshold = application.WarningRGCpuLimitPercent;
+
+                        if (rgCpuPercentThreshold > 0)
+                        {
+                            if (rgCpuPercentThreshold < 1)
+                            {
+                                rgCpuPercentThreshold = application.WarningRGCpuLimitPercent * 100.0; // decimal to double.
+                            }
+                        }
+                        else
+                        {
+                            rgCpuPercentThreshold = MaxRGCpuInUsePercent; // Default: 90%.
+                        }
+                    }
+
                     // Active TCP Ports
                     if (application.NetworkErrorActivePorts > 0 || application.NetworkWarningActivePorts > 0)
                     {
@@ -2146,6 +2200,7 @@ namespace FabricObserver.Observers
                         repOrInst,
                         usePerfCounter,
                         rgMemoryPercentThreshold,
+                        rgCpuPercentThreshold,
                         token);
                 }
                 catch (Exception e)
@@ -2185,6 +2240,7 @@ namespace FabricObserver.Observers
                         ReplicaOrInstanceMonitoringInfo repOrInst,
                         bool usePerfCounter,
                         double rgMemoryPercentThreshold,
+                        double rgCpuPercentThreshold,
                         CancellationToken token)
         {
             _ = Parallel.For(0, processDictionary.Count, parallelOptions, (i, state) =>
@@ -2571,13 +2627,11 @@ namespace FabricObserver.Observers
                         break;
                     }
 
-                    // CPU (all cores) \\
-
-                    if (checkCpu)
+                    if (checkCpu || (MonitorResourceGovernanceLimits && repOrInst.RGCpuEnabled && rgCpuPercentThreshold > 0))
                     {
                         double cpu = 0;
                         cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, IsWindows ? procName : null);
-
+                       
                         // procId is no longer mapped to process. see CpuUsageProcess/CpuUsageWin32 impls.
 
                         if (cpu < 0)
@@ -2585,23 +2639,51 @@ namespace FabricObserver.Observers
                             continue;
                         }
 
-                        if (procId == parentPid)
+                        // CPU (all cores) \\
+                        if(checkCpu)
                         {
-                            AllAppCpuData[id].AddData(cpu);
-                        }
-                        else
-                        {
-                            // Add new child proc entry if not already present in dictionary.
-                            _ = AllAppCpuData.TryAdd(
-                                    $"{id}:{procName}{procId}",
-                                    new FabricResourceUsageData<double>(
-                                        ErrorWarningProperty.CpuTime,
+                            if (procId == parentPid)
+                            {
+                                AllAppCpuData[id].AddData(cpu);
+                            }
+                            else
+                            {
+                                // Add new child proc entry if not already present in dictionary.
+                                _ = AllAppCpuData.TryAdd(
                                         $"{id}:{procName}{procId}",
-                                        capacity,
-                                        UseCircularBuffer,
-                                        EnableConcurrentMonitoring));
+                                        new FabricResourceUsageData<double>(
+                                            ErrorWarningProperty.CpuTime,
+                                            $"{id}:{procName}{procId}",
+                                            capacity,
+                                            UseCircularBuffer,
+                                            EnableConcurrentMonitoring));
 
-                            AllAppCpuData[$"{id}:{procName}{procId}"].AddData(cpu);
+                                AllAppCpuData[$"{id}:{procName}{procId}"].AddData(cpu);
+                            }
+                        }
+                        if(MonitorResourceGovernanceLimits && repOrInst.RGCpuEnabled && repOrInst.RGAppliedCpuLimitCores > 0  && rgCpuPercentThreshold > 0)
+                        {
+                            double pct = 0;
+                            pct = cpu * Environment.ProcessorCount / repOrInst.RGAppliedCpuLimitCores;
+
+                            if (procId == parentPid)
+                            {
+                                AllAppRGCpuUsagePercent[id].AddData(pct);
+                            }
+                            else
+                            {
+                                // Add new child proc entry if not already present in dictionary.
+                                _ = AllAppRGCpuUsagePercent.TryAdd(
+                                        $"{id}:{procName}{procId}",
+                                        new FabricResourceUsageData<double>(
+                                            ErrorWarningProperty.RGCpuUsagePercent,
+                                            $"{id}:{procName}{procId}",
+                                            capacity,
+                                            UseCircularBuffer,
+                                            EnableConcurrentMonitoring));
+
+                                AllAppRGCpuUsagePercent[$"{id}:{procName}{procId}"].AddData(pct);
+                            }
                         }
                     }
 
@@ -3025,8 +3107,17 @@ namespace FabricObserver.Observers
                                                      appTypeVersion,
                                                      ConfigurationSettings.AsyncTimeout,
                                                      Token), Token).Result;
+                            string svcManifest =
+                                  FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                      async () =>
+                                             await FabricClientInstance.ServiceManager.GetServiceManifestAsync(
+                                                     appTypeName, 
+                                                     appTypeVersion,
+                                                     replicaInfo.ServiceManifestName,
+                                                     ConfigurationSettings.AsyncTimeout,
+                                                     Token), Token).Result;
 
-                            if (!string.IsNullOrWhiteSpace(appManifest) && appManifest.Contains($"<{ObserverConstants.RGPolicyNodeName} "))
+                            if (!string.IsNullOrWhiteSpace(appManifest) && appManifest.Contains($"<{ObserverConstants.RGPolicyNodeName} ") || appManifest.Contains($"<{ObserverConstants.RGSvcPkgPolicyNodeName} "))
                             {
                                 ApplicationParameterList parameters = new ApplicationParameterList();
 
@@ -3037,7 +3128,7 @@ namespace FabricObserver.Observers
                                     fabricClientUtilities.TupleGetMemoryResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName, parameters);
 
                                 (replicaInfo.RGCpuEnabled, replicaInfo.RGAppliedCpuLimitCores) =
-                                    fabricClientUtilities.TupleGetCpuResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName, parameters);
+                                    fabricClientUtilities.TupleGetCpuResourceGovernanceInfo(appManifest, svcManifest, replicaInfo.ServiceManifestName, codepackageName, parameters);
                             }
                         }
 
@@ -3464,6 +3555,12 @@ namespace FabricObserver.Observers
                 {
                     AllAppRGMemoryUsagePercent?.Clear();
                     AllAppRGMemoryUsagePercent = null;
+                }
+
+                if (AllAppRGCpuUsagePercent != null && AllAppRGCpuUsagePercent.All(frud => !frud.Value.ActiveErrorOrWarning))
+                {
+                    AllAppRGCpuUsagePercent?.Clear();
+                    AllAppRGCpuUsagePercent = null;
                 }
 
                 handleToProcSnapshot?.Dispose();

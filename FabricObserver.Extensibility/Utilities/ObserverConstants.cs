@@ -183,6 +183,7 @@ namespace FabricObserver.Observers.Utilities
         public const string RGCpuShares = "CpuShares";
         public const string RGPolicyNodeName = "ResourceGovernancePolicy";
         public const string RGPolicyNodeTypeName = "ResourceGovernancePolicyType";
+        public const string RGSvcPkgPolicyNodeName = "ServicePackageResourceGovernancePolicy";
         public const string RGSvcPkgPolicyNodeTypeName = "ServicePackageResourceGovernancePolicyType";
         public const string CodePackageRef = "CodePackageRef";
         public const string ServiceManifestImport = "ServiceManifestImport";
