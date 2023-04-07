@@ -1140,6 +1140,8 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.IsUnhealthy);
         }
 
+        // NOTE: RG CPU monitoring will not ship until 3.2.8. This is a test of the partial impl, which is not exposed
+        // via configuration today.
         [TestMethod]
         public async Task AppObserver_ObserveAsync_Successful_RGLimit_Validate_Multiple_Memory_Cpu_Specification()
         {
@@ -2786,12 +2788,14 @@ namespace FabricObserverTests
                 Assert.IsTrue(data.Description == null);
                 Assert.IsTrue(data.Source == ObserverConstants.FabricObserverName);
                 
-                // RG
+                // RG Memory
                 if (data.ProcessName is "VotingData" or "VotingWeb" or "ConsoleApp6" or "ConsoleApp7")
                 {
                     Assert.IsTrue(data.RGMemoryEnabled && data.RGAppliedMemoryLimitMb > 0);     
                 }
 
+                // NOTE: RG CPU monitoring will not ship until 3.2.8. This is a test of the partial impl, which is not exposed
+                // via configuration today.
                 if (data.ProcessName == "VotingData" || data.ProcessName == "VotingWeb")
                 {
                     Assert.IsTrue(data.RGCpuEnabled && data.RGAppliedCpuLimitCores > 0);
