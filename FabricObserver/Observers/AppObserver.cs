@@ -2591,11 +2591,11 @@ namespace FabricObserver.Observers
                         double cpu = 0;
                         cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, IsWindows ? procName : null);
 
-                        // procId is no longer mapped to process. see CpuUsageProcess/CpuUsageWin32 impls.
-
-                        if (cpu < 0)
+                        // Process's id is no longer mapped to expected process name or some internal error that is non-retryable. End here.
+                        // See CpuUsageProcess.cs/CpuUsageWin32.cs impls.
+                        if (cpu == -1)
                         {
-                            continue;
+                            break;
                         }
 
                         if (procId == parentPid)
@@ -3039,7 +3039,7 @@ namespace FabricObserver.Observers
                                                      ConfigurationSettings.AsyncTimeout,
                                                      Token), Token).Result;
 
-                            // TOTHINK: Shouldn't this also contain a check for "ServicePackageResourceGovernancePolicy" node?
+                            // TOTHINK: CPU RG - Shouldn't this also contain a check for "ServicePackageResourceGovernancePolicy" node?
                             if (!string.IsNullOrWhiteSpace(appManifest) && appManifest.Contains($"<{ObserverConstants.RGPolicyNodeName} "))
                             {
                                 ApplicationParameterList parameters = new();
@@ -3052,8 +3052,8 @@ namespace FabricObserver.Observers
                                     fabricClientUtilities.TupleGetMemoryResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName, parameters);
 
                                 // RG Cpu - NOTE: Not fully integrated yet. Will ship in 3.2.8. Here for unit testing of base functionality.
-                                (replicaInfo.RGCpuEnabled, replicaInfo.RGAppliedCpuLimitCores) =
-                                    fabricClientUtilities.TupleGetCpuResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName, parameters);
+                                /*(replicaInfo.RGCpuEnabled, replicaInfo.RGAppliedCpuLimitCores) =
+                                    fabricClientUtilities.TupleGetCpuResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName, parameters);*/
                             }
                         }
 
@@ -3086,7 +3086,7 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e) when (e is FabricException or TaskCanceledException or TimeoutException or XmlException)
+            catch (Exception e) when (e is AggregateException or FabricException or TaskCanceledException or TimeoutException or XmlException)
             {
                 ObserverLogger.LogWarning($"Handled: Failed to process Service configuration for {replicaInfo.ServiceName.OriginalString} with exception '{e.Message}'");
                 // move along

@@ -464,7 +464,7 @@ namespace FabricObserver.Utilities.ServiceFabric
 
         /// <summary>
         /// Processes values for application parameters, returning the specified value in use for application parameter variables.
-        /// If the appParamValue is not a variable name, then the function just returns the supplied appParamValue.
+        /// If the appParamValue is not a variable name or the supplied ApplicationParameterList is null, then the function just returns the supplied appParamValue.
         /// </summary>
         /// <param name="appParamValue">The value of an Application parameter.</param>
         /// <param name="parameters">ApplicationParameterList instance that contains all app parameter values.</param>
@@ -472,23 +472,22 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// else the value specified in appParamValue.</returns>
         public static string ParseAppParameterValue(string appParamValue, ApplicationParameterList parameters)
         {
-            if (!string.IsNullOrWhiteSpace(appParamValue))
+            if (parameters == null || string.IsNullOrWhiteSpace(appParamValue))
             {
-                // Application parameter value specified as a Service Fabric Application Manifest variable.
-                if (appParamValue.StartsWith("["))
-                {
-                    appParamValue = appParamValue.Replace("[", string.Empty).Replace("]", string.Empty);
+                return appParamValue;
+            }
 
-                    if (parameters.TryGetValue(appParamValue, out ApplicationParameter parameter))
-                    {
-                        return parameter.Value;
-                    }
-                    else
-                    {
-                        appParamValue = "0";
-                    }
+            // Application parameter value specified as a Service Fabric Application Manifest variable.
+            if (appParamValue.StartsWith("["))
+            {
+                appParamValue = appParamValue.Replace("[", string.Empty).Replace("]", string.Empty);
+
+                if (parameters.TryGetValue(appParamValue, out ApplicationParameter parameter))
+                {
+                    return parameter.Value;
                 }
             }
+            
             return appParamValue;
         }
 
@@ -499,13 +498,23 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// <param name="fromParameters">ApplicationParameterList to be used</param>
         public static void AddParametersIfNotExists(ApplicationParameterList toParameters, ApplicationParameterList fromParameters)
         {
+            // If toParameters is passed in as null, then make it a new instance.
+            toParameters ??= new ApplicationParameterList();
+
             if (fromParameters != null)
             {
                 foreach (var parameter in fromParameters)
                 {
-                    if (!toParameters.Contains(parameter.Name))
+                    try
                     {
-                        toParameters.Add(new ApplicationParameter() { Name = parameter.Name, Value = parameter.Value });
+                        if (!toParameters.Contains(parameter.Name))
+                        {
+                            toParameters.Add(new ApplicationParameter() { Name = parameter.Name, Value = parameter.Value });
+                        }
+                    }
+                    catch (ArgumentException)
+                    {
+
                     }
                 }
             }
