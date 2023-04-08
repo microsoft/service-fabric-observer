@@ -7,6 +7,7 @@ using Microsoft.Win32.SafeHandles;
 using System.Runtime.InteropServices.ComTypes;
 using FabricObserver.Interfaces;
 using System.Threading;
+using System.Runtime.InteropServices;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -21,13 +22,13 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="procId">The target process identifier.</param>
         /// <param name="procName">The name of the process.</param>
         /// <returns>CPU Time percentage for the process as double value. If the supplied procName is no longer mapped to the supplied procId,
-        /// then the result will be -1. If the function can't get a handle to the process object, then the result will be -1.</returns>
+        /// then the result will be -1. Any Win32 failure will result in -1.</returns>
         public double GetCurrentCpuUsagePercentage(int procId, string procName)
         {
             // Is procId still mapped to procName? If not, then this process is not the droid we're looking for.
             if (NativeMethods.GetProcessNameFromId(procId) != procName)
             {
-                ProcessInfoProvider.ProcessInfoLogger.LogWarning($"GetCurrentCpuUsagePercentage: {procId} is no longer mapped to {procName}");
+                ProcessInfoProvider.ProcessInfoLogger.LogWarning($"GetCurrentCpuUsagePercentage(Win32 impl): {procId} is no longer mapped to {procName}");
 
                 // Caller should ignore this result. Don't want to use an Exception here.
                 return -1;
@@ -37,6 +38,8 @@ namespace FabricObserver.Observers.Utilities
 
             if (sProcHandle.IsInvalid)
             {
+                ProcessInfoProvider.ProcessInfoLogger.LogWarning("GetCurrentCpuUsagePercentage(Win32 impl) failure: Invalid handle.");
+
                 // Caller should ignore this result. Don't want to use an Exception here.
                 return -1;
             }
@@ -45,12 +48,18 @@ namespace FabricObserver.Observers.Utilities
             {
                 if (!NativeMethods.GetProcessTimes(sProcHandle, out _, out _, out FILETIME processTimesRawKernelTime, out FILETIME processTimesRawUserTime))
                 {
-                    return 0;
+                    ProcessInfoProvider.ProcessInfoLogger.LogWarning($"GetProcessTimes failed with error code {Marshal.GetLastWin32Error()}.");
+
+                    // Caller should ignore this result. Don't want to use an Exception here.
+                    return -1;
                 }
 
                 if (!NativeMethods.GetSystemTimes(out _, out FILETIME systemTimesRawKernelTime, out FILETIME systemTimesRawUserTime))
                 {
-                    return 0;
+                    ProcessInfoProvider.ProcessInfoLogger.LogWarning($"GetSystemTimes failed with error code {Marshal.GetLastWin32Error()}.");
+
+                    // Caller should ignore this result. Don't want to use an Exception here.
+                    return -1;
                 }
 
                 ulong processTimesDelta =
