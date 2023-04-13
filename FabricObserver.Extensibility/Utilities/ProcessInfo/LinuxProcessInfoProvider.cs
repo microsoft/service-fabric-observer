@@ -96,7 +96,8 @@ namespace FabricObserver.Observers.Utilities
             return result;
         }
 
-        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot = null)
+        // serviceFabricUserProcs is Windows only. This function ignores the parameter, which is passed by ref.
+        public override List<(string ProcName, uint Pid)> GetChildProcessInfo(uint parentPid, ref uint[] serviceFabricUserProcs)
         {
             if (parentPid < 1)
             {
@@ -104,7 +105,7 @@ namespace FabricObserver.Observers.Utilities
             }
 
             // Get child procs.
-            List<(string ProcName, int Pid)> childProcesses = TupleGetChildProcessInfo(parentPid);
+            List<(string ProcName, uint Pid)> childProcesses = TupleGetChildProcessInfo(parentPid);
 
             if (childProcesses == null || childProcesses.Count == 0)
             {
@@ -119,7 +120,7 @@ namespace FabricObserver.Observers.Utilities
             // Get descendant proc at max depth = 5 and max number of descendants = 50. 
             for (int i = 0; i < childProcesses.Count; ++i)
             {
-                List<(string ProcName, int Pid)> c1 = TupleGetChildProcessInfo(childProcesses[i].Pid);
+                List<(string ProcName, uint Pid)> c1 = TupleGetChildProcessInfo(childProcesses[i].Pid);
 
                 if (c1 != null && c1.Count > 0)
                 {
@@ -132,7 +133,7 @@ namespace FabricObserver.Observers.Utilities
 
                     for (int j = 0; j < c1.Count; ++j)
                     {
-                        List<(string ProcName, int Pid)> c2 = TupleGetChildProcessInfo(c1[j].Pid);
+                        List<(string ProcName, uint Pid)> c2 = TupleGetChildProcessInfo(c1[j].Pid);
 
                         if (c2 != null && c2.Count > 0)
                         {
@@ -145,7 +146,7 @@ namespace FabricObserver.Observers.Utilities
 
                             for (int k = 0; k < c2.Count; ++k)
                             {
-                                List<(string ProcName, int Pid)> c3 = TupleGetChildProcessInfo(c2[k].Pid);
+                                List<(string ProcName, uint Pid)> c3 = TupleGetChildProcessInfo(c2[k].Pid);
 
                                 if (c3 != null && c3.Count > 0)
                                 {
@@ -158,7 +159,7 @@ namespace FabricObserver.Observers.Utilities
 
                                     for (int l = 0; l < c3.Count; ++l)
                                     {
-                                        List<(string ProcName, int Pid)> c4 = TupleGetChildProcessInfo(c3[l].Pid);
+                                        List<(string ProcName, uint Pid)> c4 = TupleGetChildProcessInfo(c3[l].Pid);
 
                                         if (c4 != null && c4.Count > 0)
                                         {
@@ -186,11 +187,11 @@ namespace FabricObserver.Observers.Utilities
             return -1;
         }
 
-        private static List<(string ProcName, int Pid)> TupleGetChildProcessInfo(int processId)
+        private static List<(string ProcName, uint Pid)> TupleGetChildProcessInfo(uint processId)
         {
             string pidCmdResult = $"ps -o pid= --ppid {processId}".Bash();
             string procNameCmdResult = $"ps -o comm= --ppid {processId}".Bash();
-            List<(string ProcName, int Pid)> childProcesses = null;
+            List<(string ProcName, uint Pid)> childProcesses = null;
 
             if (!string.IsNullOrWhiteSpace(pidCmdResult) && !string.IsNullOrWhiteSpace(procNameCmdResult))
             {
@@ -199,7 +200,7 @@ namespace FabricObserver.Observers.Utilities
 
                 if (sPids?.Length > 0 && sProcNames?.Length > 0)
                 {
-                    childProcesses = new List<(string ProcName, int Pid)>();
+                    childProcesses = new List<(string ProcName, uint Pid)>();
 
                     for (int i = 0; i < sPids.Length; ++i)
                     {
@@ -208,7 +209,7 @@ namespace FabricObserver.Observers.Utilities
                             continue;
                         }
 
-                        if (int.TryParse(sPids[i], out int childProcId))
+                        if (uint.TryParse(sPids[i], out uint childProcId))
                         {
                             childProcesses.Add((sProcNames[i], childProcId));
                         }

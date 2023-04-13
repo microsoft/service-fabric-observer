@@ -175,11 +175,36 @@ namespace FabricObserver.Utilities.ServiceFabric
         {
             List<ReplicaOrInstanceMonitoringInfo> repList = new();
             List<DeployedApplication> appList = await GetAllDeployedAppsAsync(token);
-            NativeMethods.SafeObjectHandle handleToSnapshot = null;
+            //NativeMethods.SafeObjectHandle handleToSnapshot = null;
+            uint[] currentProcs = null;
 
             if (isWindows && includeChildProcesses)
             {
-                handleToSnapshot = NativeMethods.CreateProcessSnapshot();
+                //handleToSnapshot = NativeMethods.CreateProcessSnapshot();
+                currentProcs = NativeMethods.NtGetSFUserServiceProcessIds();
+
+                if (isWindows && includeChildProcesses)
+                {
+                    logger.LogInfo(
+                        $"OS = Windows, EnableChildProcessMonitoring = true, Creating pid array (currentProcIds) for all processes currently running on the system (NtGetSFUserServiceProcessIds).");
+
+                    // NtGetProcessIds does not throw. Failure leads to null return value.
+                    currentProcs = NativeMethods.NtGetSFUserServiceProcessIds();
+
+                    if (currentProcs == null || currentProcs.Length == 0)
+                    {
+                        string message = "Can't observe child processes. Failure getting process ids on the system (NtGetSFUserServiceProcessIds).";
+                        logger.LogWarning(message);
+                        logger.LogEtw(
+                            ObserverConstants.FabricObserverETWEventName,
+                            new
+                            {
+                                Level = "Warning",
+                                Message = message,
+                                Source = "FabricClientUtilities::GetAllDeployedReplicasOrInstances"
+                            });
+                    }
+                }
             }
 
             try
@@ -201,7 +226,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                                     app.ApplicationTypeName ?? appList.First(a => a.ApplicationName == app.ApplicationName).ApplicationTypeName,
                                     deployedReplicaList,
                                     includeChildProcesses,
-                                    handleToSnapshot,
+                                    currentProcs,
                                     token));
                     }
                     catch (Exception e) when (e is ArgumentException or InvalidOperationException)
@@ -216,9 +241,7 @@ namespace FabricObserver.Utilities.ServiceFabric
             {
                 if (isWindows && includeChildProcesses)
                 {
-                    handleToSnapshot?.Dispose();
-                    GC.KeepAlive(handleToSnapshot);
-                    handleToSnapshot = null;
+                    currentProcs = null;
                 }
             }
         }
@@ -237,7 +260,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                                                         string applicationTypeName,
                                                         DeployedServiceReplicaList deployedReplicaList,
                                                         bool includeChildProcesses,
-                                                        NativeMethods.SafeObjectHandle handleToSnapshot,
+                                                        uint[] currentProcs,
                                                         CancellationToken token)
         {
             ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList = new();
@@ -275,9 +298,10 @@ namespace FabricObserver.Utilities.ServiceFabric
 
                             /* In order to provide accurate resource usage of an SF service process we need to also account for
                             any processes (children) that the service process (parent) created/spawned. */
-                            if (includeChildProcesses && !handleToSnapshot.IsInvalid)
+                            if (includeChildProcesses /*!handleToSnapshot.IsInvalid*/)
                             {
-                                List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, handleToSnapshot);
+                                List<(string ProcName, uint Pid)> childPids = null;
+                                childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((uint)statefulReplica.HostProcessId, ref currentProcs);
 
                                 if (childPids != null && childPids.Count > 0)
                                 {
@@ -305,9 +329,10 @@ namespace FabricObserver.Utilities.ServiceFabric
                                 ReplicaStatus = statelessInstance.ReplicaStatus
                             };
 
-                            if (includeChildProcesses && !handleToSnapshot.IsInvalid)
+                            if (includeChildProcesses)
                             {
-                                List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, handleToSnapshot);
+                                List<(string ProcName, uint Pid)> childPids = null;
+                                childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((uint)statelessInstance.HostProcessId, ref currentProcs);
 
                                 if (childPids != null && childPids.Count > 0)
                                 {
@@ -352,9 +377,9 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// </summary>
         /// <param name="repOrInsts">List of ReplicaOrInstanceMonitoringInfo</param>
         /// <returns>A List of tuple (string ServiceName, string ProcName, int Pid) representing all services supplied in the ReplicaOrInstanceMonitoringInfo instance, including child processes of each service, if any.</returns>
-        public List<(string ServiceName, string ProcName, int Pid)> GetServiceProcessInfo(List<ReplicaOrInstanceMonitoringInfo> repOrInsts)
+        public List<(string ServiceName, string ProcName, uint Pid)> GetServiceProcessInfo(List<ReplicaOrInstanceMonitoringInfo> repOrInsts)
         {
-            List<(string ServiceName, string ProcName, int Pid)> pids = new();
+            List<(string ServiceName, string ProcName, uint Pid)> pids = new();
 
             foreach (var repOrInst in repOrInsts)
             {
@@ -363,13 +388,13 @@ namespace FabricObserver.Utilities.ServiceFabric
                     if (isWindows)
                     {
                         string procName = NativeMethods.GetProcessNameFromId((int)repOrInst.HostProcessId);
-                        pids.Add((repOrInst.ServiceName.OriginalString, procName, (int)repOrInst.HostProcessId));
+                        pids.Add((repOrInst.ServiceName.OriginalString, procName, (uint)repOrInst.HostProcessId));
                     }
                     else
                     {
                         using (var proc = Process.GetProcessById((int)repOrInst.HostProcessId))
                         {
-                            pids.Add((repOrInst.ServiceName.OriginalString, proc.ProcessName, (int)repOrInst.HostProcessId));
+                            pids.Add((repOrInst.ServiceName.OriginalString, proc.ProcessName, (uint)repOrInst.HostProcessId));
                         }
                     }
 
@@ -798,7 +823,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                     catch (Exception e) when (e is FabricException or TimeoutException)
                     {
 #if DEBUG
-                        logger.LogInfo($"Handled Exception in ReportClusterHealthAsync::Node:{Environment.NewLine}{e.Message}");
+                        logger.LogInfo($"Handled Exception in ReportClusterHealthAsync::Node: {e.Message}");
 #endif
                     }
                 }
@@ -841,7 +866,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                         catch (Exception e) when (e is FabricException or TimeoutException)
                         {
 #if DEBUG
-                            logger.LogInfo($"Handled Exception in ReportClusterHealthAsync::Application:{Environment.NewLine}{e.Message}");
+                            logger.LogInfo($"Handled Exception in ReportClusterHealthAsync::Application: {e.Message}");
 #endif
                         }
                     }
@@ -849,14 +874,14 @@ namespace FabricObserver.Utilities.ServiceFabric
             }
             catch (Exception e) when (e is FabricException or TimeoutException)
             {
-                string msg = $"Handled transient exception in ReportClusterHealthAsync:{Environment.NewLine}{e}";
+                string msg = $"Handled transient exception in ClearFabricObserverHealthReportsAsync: {e.Message}";
 
                 // Log it locally.
                 logger.LogWarning(msg);
             }
             catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
-                string msg = $"Unhandled exception in ReportClusterHealthAsync:{Environment.NewLine}{e}";
+                string msg = $"Unhandled exception in ClearFabricObserverHealthReportsAsync:{Environment.NewLine}{e}";
 
                 // Log it locally.
                 logger.LogError(msg);

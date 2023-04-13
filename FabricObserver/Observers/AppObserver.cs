@@ -14,7 +14,6 @@ using System.Fabric.Health;
 using System.Fabric.Query;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
@@ -78,39 +77,7 @@ namespace FabricObserver.Observers
         private string fileName;
         private int appCount;
         private int serviceCount;
-        private NativeMethods.SafeObjectHandle handleToProcSnapshot = null;
-
-        private NativeMethods.SafeObjectHandle Win32HandleToProcessSnapshot
-        {
-            get
-            {
-                // This is only useful for Windows.
-                if (!IsWindows)
-                {
-                    return null;
-                }
-
-                if (handleToProcSnapshot == null)
-                {
-                    lock (lockObj)
-                    {
-                        if (handleToProcSnapshot == null)
-                        {
-                            handleToProcSnapshot = NativeMethods.CreateProcessSnapshot();
-
-                            if (handleToProcSnapshot.IsInvalid)
-                            {
-                                string message = $"HandleToProcessSnapshot: Failed to get process snapshot with error code {Marshal.GetLastWin32Error()}";
-                                ObserverLogger.LogWarning(message);
-                                throw new Win32Exception(message);
-                            }
-                        }
-                    }
-                }
-
-                return handleToProcSnapshot;
-            }
-        }
+        private uint[] currentProcIds;
 
         // ReplicaOrInstanceList is the List of all replicas or instances that will be monitored during the current run.
         // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
@@ -696,6 +663,38 @@ namespace FabricObserver.Observers
             // Support for specifying single configuration JSON object for all applications.
             await ProcessGlobalThresholdSettingsAsync();
 
+            if (IsWindows && EnableChildProcessMonitoring)
+            {
+                ObserverLogger.LogInfo(
+                    $"OS = Windows, EnableChildProcessMonitoring = true, Creating pid array (currentProcIds) for all SF user processes currently running on the system (NtGetSFUserServiceProcessIds).");
+
+                // NtGetSFUserServiceProcessIds does not throw. Failure leads to null return value or empty array. Test for both conditions.
+                currentProcIds = NativeMethods.NtGetSFUserServiceProcessIds();
+
+                if (currentProcIds == null || currentProcIds.Length == 0)
+                {
+                    string message = "Can't observe child processes. Failure getting process ids on the system (NtGetSFUserServiceProcessIds).";
+                    ObserverLogger.LogWarning(message);
+
+                    if (IsTelemetryEnabled)
+                    {
+                        await TelemetryClient?.ReportHealthAsync("", HealthState.Warning, message, ObserverConstants.AppObserverName, Token);
+                    }
+
+                    if (IsEtwEnabled)
+                    {
+                        ObserverLogger.LogEtw(
+                            ObserverConstants.FabricObserverETWEventName,
+                            new
+                            {
+                                Level = "Warning",
+                                Message = message,
+                                Source = ObserverConstants.AppObserverName
+                            });
+                    }
+                }
+            }
+
             int settingsFail = 0;
 
             for (int i = 0; i < userTargetList.Count; i++)
@@ -898,16 +897,6 @@ namespace FabricObserver.Observers
                     if (app.ApplicationName.OriginalString == "fabric:/System")
                     {
                         continue;
-                    }
-
-                    // Multiple code packages?
-                    if (codepackages.Count > 1)
-                    {
-                        foreach (var codepackage in codepackages)
-                        {
-                            int procId = (int)codepackage.EntryPoint.ProcessId;
-                            string procName = NativeMethods.GetProcessNameFromId(procId);
-                        }
                     }
                 }
                 catch (FabricException fe)
@@ -1540,7 +1529,7 @@ namespace FabricObserver.Observers
 
                 try
                 {
-                    int childPid = childProcs[i].Pid;
+                    int childPid = (int)childProcs[i].Pid;
                     string childProcName = childProcs[i].procName;
                     string startTime;
 
@@ -1945,12 +1934,12 @@ namespace FabricObserver.Observers
                             }
 
                             // Make sure the child process still exists. Descendant processes are often ephemeral.
-                            if (!EnsureProcess(repOrInst.ChildProcesses[k].procName, repOrInst.ChildProcesses[k].Pid))
+                            if (!EnsureProcess(repOrInst.ChildProcesses[k].procName, (int)repOrInst.ChildProcesses[k].Pid))
                             {
                                 continue;
                             }
 
-                            _ = procs.TryAdd(repOrInst.ChildProcesses[k].Pid, repOrInst.ChildProcesses[k].procName);
+                            _ = procs.TryAdd((int)repOrInst.ChildProcesses[k].Pid, repOrInst.ChildProcesses[k].procName);
                         }
                     }
 
@@ -2855,16 +2844,8 @@ namespace FabricObserver.Observers
                         {
                             // DEBUG - Perf
                             //var sw = Stopwatch.StartNew();
-                            List<(string ProcName, int Pid)> childPids;
-
-                            if (IsWindows)
-                            {
-                                childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, Win32HandleToProcessSnapshot);
-                            }
-                            else
-                            {
-                                childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId);
-                            }
+                            List<(string ProcName, uint Pid)> childPids;
+                            childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((uint)statefulReplica.HostProcessId, ref currentProcIds);
 
                             if (childPids != null && childPids.Count > 0)
                             {
@@ -2912,16 +2893,8 @@ namespace FabricObserver.Observers
                         {
                             // DEBUG - Perf
                             //var sw = Stopwatch.StartNew();
-                            List<(string ProcName, int Pid)> childPids;
-
-                            if (IsWindows)
-                            {
-                                childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, Win32HandleToProcessSnapshot);
-                            }
-                            else
-                            {
-                                childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId);
-                            }
+                            List<(string ProcName, uint Pid)> childPids;
+                            childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((uint)statelessInstance.HostProcessId, ref currentProcIds);
 
                             if (childPids != null && childPids.Count > 0)
                             {
@@ -3039,11 +3012,9 @@ namespace FabricObserver.Observers
                                                      ConfigurationSettings.AsyncTimeout,
                                                      Token), Token).Result;
 
-                            // TOTHINK: CPU RG - Shouldn't this also contain a check for "ServicePackageResourceGovernancePolicy" node?
                             if (!string.IsNullOrWhiteSpace(appManifest) && appManifest.Contains($"<{ObserverConstants.RGPolicyNodeName} "))
                             {
                                 ApplicationParameterList parameters = new();
-
                                 FabricClientUtilities.AddParametersIfNotExists(parameters, appParameters);
                                 FabricClientUtilities.AddParametersIfNotExists(parameters, defaultParameters);
 
@@ -3051,7 +3022,7 @@ namespace FabricObserver.Observers
                                 (replicaInfo.RGMemoryEnabled, replicaInfo.RGAppliedMemoryLimitMb) =
                                     fabricClientUtilities.TupleGetMemoryResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName, parameters);
 
-                                // RG Cpu - NOTE: Not fully integrated yet. Will ship in 3.2.8. Here for unit testing of base functionality.
+                                // RG Cpu - NOTE: Not fully implemented.
                                 /*(replicaInfo.RGCpuEnabled, replicaInfo.RGAppliedCpuLimitCores) =
                                     fabricClientUtilities.TupleGetCpuResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName, parameters);*/
                             }
@@ -3124,17 +3095,19 @@ namespace FabricObserver.Observers
                     return;
                 }
 
-                foreach (var codepackage in codepackages)
+                if (!codepackages.Any(c => c.CodePackageName != deployedReplica.CodePackageName))
+                {
+                    ObserverLogger.LogInfo($"No helper code packages detected. Completed ProcessMultipleHelperCodePackages.");
+                    return;
+                }
+
+                var helperCodePackages = codepackages.Where(c => c.CodePackageVersion != deployedReplica.CodePackageName);
+
+                foreach (var codepackage in helperCodePackages)
                 {
                     if (Token.IsCancellationRequested)
                     {
                         return;
-                    }
-
-                    // If the code package does not belong to a deployed replica, then this is the droid we're looking for (a helper code package or guest executable).
-                    if (codepackage.CodePackageName == deployedReplica.CodePackageName)
-                    {
-                        continue;
                     }
 
                     int procId = (int)codepackage.EntryPoint.ProcessId; // The actual process id of the helper or guest executable binary.
@@ -3194,17 +3167,9 @@ namespace FabricObserver.Observers
                     {
                         // DEBUG - Perf
                         //var sw = Stopwatch.StartNew();
-                        List<(string ProcName, int Pid)> childPids;
-
-                        if (IsWindows)
-                        {
-                            childPids = ProcessInfoProvider.Instance.GetChildProcessInfo(procId, Win32HandleToProcessSnapshot);
-                        }
-                        else
-                        {
-                            childPids = ProcessInfoProvider.Instance.GetChildProcessInfo(procId);
-                        }
-
+                        List<(string ProcName, uint Pid)> childPids;
+                        childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((uint)procId, ref currentProcIds);
+                        
                         if (childPids != null && childPids.Count > 0)
                         {
                             replicaInfo.ChildProcesses = childPids;
@@ -3482,9 +3447,7 @@ namespace FabricObserver.Observers
                     AllAppRGMemoryUsagePercent = null;
                 }
 
-                handleToProcSnapshot?.Dispose();
-                GC.KeepAlive(handleToProcSnapshot);
-                handleToProcSnapshot = null;
+                currentProcIds = null;
             }
             ObserverLogger.LogInfo("Completed CleanUp...");
         }

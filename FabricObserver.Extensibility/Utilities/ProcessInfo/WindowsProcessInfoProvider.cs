@@ -67,10 +67,15 @@ namespace FabricObserver.Observers.Utilities
             return GetProcessHandleCountWin32(processId);
         }
 
-        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot = null)
+        public override List<(string ProcName, uint Pid)> GetChildProcessInfo(uint parentPid, ref uint[] procIds)
         {
+            if (procIds == null)
+            {
+                return null;
+            }
+
             // Get descendant procs.
-            List<(string ProcName, int Pid)> childProcesses = TupleGetChildProcessesWin32(parentPid, handleToSnapshot);
+            List<(string ProcName, uint Pid)> childProcesses = NativeMethods.GetServiceProcessDescendants(parentPid, ref procIds);
 
             if (childProcesses == null || childProcesses.Count == 0)
             {
@@ -85,7 +90,7 @@ namespace FabricObserver.Observers.Utilities
             // Get descendant proc at max depth = 5 and max number of descendants = 50. 
             for (int i = 0; i < childProcesses.Count; ++i)
             {
-                List<(string ProcName, int Pid)> c1 = TupleGetChildProcessesWin32(childProcesses[i].Pid, handleToSnapshot);
+                List<(string ProcName, uint Pid)> c1 = NativeMethods.GetServiceProcessDescendants(childProcesses[i].Pid, ref procIds);
 
                 if (c1 == null || c1.Count <= 0)
                 {
@@ -101,7 +106,7 @@ namespace FabricObserver.Observers.Utilities
 
                 for (int j = 0; j < c1.Count; ++j)
                 {
-                    List<(string ProcName, int Pid)> c2 = TupleGetChildProcessesWin32(c1[j].Pid, handleToSnapshot);
+                    List<(string ProcName, uint Pid)> c2 = NativeMethods.GetServiceProcessDescendants(c1[j].Pid, ref procIds);
 
                     if (c2 == null || c2.Count <= 0)
                     {
@@ -117,7 +122,7 @@ namespace FabricObserver.Observers.Utilities
 
                     for (int k = 0; k < c2.Count; ++k)
                     {
-                        List<(string ProcName, int Pid)> c3 = TupleGetChildProcessesWin32(c2[k].Pid, handleToSnapshot);
+                        List<(string ProcName, uint Pid)> c3 = NativeMethods.GetServiceProcessDescendants(c2[k].Pid, ref procIds);
 
                         if (c3 == null || c3.Count <= 0)
                         {
@@ -133,7 +138,7 @@ namespace FabricObserver.Observers.Utilities
 
                         for (int l = 0; l < c3.Count; ++l)
                         {
-                            List<(string ProcName, int Pid)> c4 = TupleGetChildProcessesWin32(c3[l].Pid, handleToSnapshot);
+                            List<(string ProcName, uint Pid)> c4 = NativeMethods.GetServiceProcessDescendants(c3[l].Pid, ref procIds);
 
                             if (c4 == null || c4.Count <= 0)
                             {
@@ -253,34 +258,6 @@ namespace FabricObserver.Observers.Utilities
             }
 
             return -1;
-        }
-
-        private static List<(string procName, int pid)> TupleGetChildProcessesWin32(int processId, NativeMethods.SafeObjectHandle handleToSnapshot)
-        {
-            try
-            {
-                List<(string procName, int procId)> childProcs = NativeMethods.GetChildProcesses(processId, handleToSnapshot);
-
-                if (childProcs == null || childProcs.Count == 0)
-                {
-                    return null;
-                }
-
-                return childProcs;
-            }
-
-            catch (Exception e) when (e is Win32Exception) // e.g., process is no longer running.
-            {
-                ProcessInfoLogger.LogWarning($"Handled Exception in TupleGetChildProcessesWin32:{Environment.NewLine}{e.Message}");
-            }
-            catch (Exception e)
-            {
-                // Log the full error(including stack trace) for debugging purposes.
-                ProcessInfoLogger.LogError($"Unhandled Exception in TupleGetChildProcessesWin32:{Environment.NewLine}{e}");
-                throw;
-            }
-
-            return null;
         }
 
         private static int GetProcessHandleCountWin32(int processId)

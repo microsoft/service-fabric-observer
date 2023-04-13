@@ -40,9 +40,9 @@ namespace FabricObserver.Observers.Utilities
         /// Gets process information (name, pid) for descendants of the parent process represented by the supplied process id.
         /// </summary>
         /// <param name="parentPid">The parent process id.</param>
-        /// <param name="handleToSnapshot">Windows only. Handle to a Windows process snapshot(created using NativeMethods.CreateToolhelp32Snapshot). This has no meaning for Linux, just supply IntPtr.Zero.</param>
+        /// <param name="serviceFabricUserProcs">Windows only. Array of pids that are mapped to SF user service processes.</param>
         /// <returns>List of tuple (string ProcName, int Pid) for descendants of the parent process or null if the parent has no children.</returns>
-        List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot = null);
+        List<(string ProcName, uint Pid)> GetChildProcessInfo(uint parentPid, ref uint[] serviceFabricUserProcs);
 
         /// <summary>
         /// Windows only. Determines the percentage of Windows KVS LVIDs currently in use.
