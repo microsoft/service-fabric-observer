@@ -270,69 +270,69 @@ namespace FabricObserver.Utilities.ServiceFabric
                 switch (deployedReplica)
                 {
                     case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole is ReplicaRole.Primary or ReplicaRole.ActiveSecondary:
+                    {
+                        replicaInfo = new ReplicaOrInstanceMonitoringInfo
                         {
-                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
-                            {
-                                ApplicationName = appName,
-                                ApplicationTypeName = applicationTypeName,
-                                HostProcessId = statefulReplica.HostProcessId,
-                                ReplicaOrInstanceId = statefulReplica.ReplicaId,
-                                PartitionId = statefulReplica.Partitionid,
-                                ReplicaRole = statefulReplica.ReplicaRole,
-                                ServiceKind = statefulReplica.ServiceKind,
-                                ServiceName = statefulReplica.ServiceName,
-                                ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
-                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(statefulReplica.ServicePackageActivationId) ?
-                                    ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
-                                ReplicaStatus = statefulReplica.ReplicaStatus
-                            };
+                            ApplicationName = appName,
+                            ApplicationTypeName = applicationTypeName,
+                            HostProcessId = statefulReplica.HostProcessId,
+                            ReplicaOrInstanceId = statefulReplica.ReplicaId,
+                            PartitionId = statefulReplica.Partitionid,
+                            ReplicaRole = statefulReplica.ReplicaRole,
+                            ServiceKind = statefulReplica.ServiceKind,
+                            ServiceName = statefulReplica.ServiceName,
+                            ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
+                            ServicePackageActivationMode = string.IsNullOrWhiteSpace(statefulReplica.ServicePackageActivationId) ?
+                                ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
+                            ReplicaStatus = statefulReplica.ReplicaStatus
+                        };
 
-                            /* In order to provide accurate resource usage of an SF service process we need to also account for
-                            any processes (children) that the service process (parent) created/spawned. */
-                            if (includeChildProcesses)
-                            {
-                                List<(string ProcName, uint Pid)> childPids = null;
-                                childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((uint)statefulReplica.HostProcessId, handleToSnapshot);
+                        /* In order to provide accurate resource usage of an SF service process we need to also account for
+                        any processes (children) that the service process (parent) created/spawned. */
+                        if (includeChildProcesses)
+                        {
+                            List<(string ProcName, uint Pid)> childPids = null;
+                            childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((uint)statefulReplica.HostProcessId, handleToSnapshot);
 
-                                if (childPids != null && childPids.Count > 0)
-                                {
-                                    replicaInfo.ChildProcesses = childPids;
-                                }
+                            if (childPids != null && childPids.Count > 0)
+                            {
+                                replicaInfo.ChildProcesses = childPids;
                             }
-
-                            break;
                         }
+
+                        break;
+                    }
                     case DeployedStatelessServiceInstance statelessInstance:
+                    {
+                        replicaInfo = new ReplicaOrInstanceMonitoringInfo
                         {
-                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
-                            {
-                                ApplicationName = appName,
-                                ApplicationTypeName = applicationTypeName,
-                                HostProcessId = statelessInstance.HostProcessId,
-                                ReplicaOrInstanceId = statelessInstance.InstanceId,
-                                PartitionId = statelessInstance.Partitionid,
-                                ReplicaRole = ReplicaRole.None,
-                                ServiceKind = statelessInstance.ServiceKind,
-                                ServiceName = statelessInstance.ServiceName,
-                                ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
-                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(statelessInstance.ServicePackageActivationId) ?
-                                    ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
-                                ReplicaStatus = statelessInstance.ReplicaStatus
-                            };
+                            ApplicationName = appName,
+                            ApplicationTypeName = applicationTypeName,
+                            HostProcessId = statelessInstance.HostProcessId,
+                            ReplicaOrInstanceId = statelessInstance.InstanceId,
+                            PartitionId = statelessInstance.Partitionid,
+                            ReplicaRole = ReplicaRole.None,
+                            ServiceKind = statelessInstance.ServiceKind,
+                            ServiceName = statelessInstance.ServiceName,
+                            ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
+                            ServicePackageActivationMode = string.IsNullOrWhiteSpace(statelessInstance.ServicePackageActivationId) ?
+                                ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
+                            ReplicaStatus = statelessInstance.ReplicaStatus
+                        };
 
-                            if (includeChildProcesses)
-                            {
-                                List<(string ProcName, uint Pid)> childPids = null;
-                                childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((uint)statelessInstance.HostProcessId, handleToSnapshot);
+                        if (includeChildProcesses)
+                        {
+                            List<(string ProcName, uint Pid)> childPids = null;
+                            childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((uint)statelessInstance.HostProcessId, handleToSnapshot);
 
-                                if (childPids != null && childPids.Count > 0)
-                                {
-                                    replicaInfo.ChildProcesses = childPids;
-                                }
+                            if (childPids != null && childPids.Count > 0)
+                            {
+                                replicaInfo.ChildProcesses = childPids;
                             }
-
-                            break;
                         }
+
+                        break;
+                    }
                 }
 
                 if (replicaInfo?.HostProcessId > 0)

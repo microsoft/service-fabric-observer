@@ -19,6 +19,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using FabricObserver.Interfaces;
+using FabricObserver.Observers.Interfaces;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
@@ -313,6 +314,7 @@ namespace FabricObserver.Observers
                     // Make sure the target process still exists, otherwise why report on it (it was ephemeral as far as this run of AO is concerned).
                     if (!EnsureProcess(processName, processId, processInfoDictionary[processId].ProcessStartTime))
                     {
+                        _ = processInfoDictionary.TryRemove(processId, out _);
                         return;
                     }
                 }
@@ -1480,35 +1482,6 @@ namespace FabricObserver.Observers
 
             double sumValues = 0;
             string metric = string.Empty;
-            string procStartTime = string.Empty;
-
-            if (IsWindows)
-            {
-                try
-                {
-                    procStartTime = NativeMethods.GetProcessStartTime((uint)repOrInst.HostProcessId).ToString("o");
-                }
-                catch (Exception e) when (e is ArgumentException or FormatException or Win32Exception)
-                {
-                    ObserverLogger.LogInfo($"Can't get process start time for {repOrInst.HostProcessId}: {e.Message}");
-                    // Just don't set the ChildProcessTelemetryData.ProcessStartTime field. Don't exit the function.
-                }
-            }
-            else
-            {
-                try
-                {
-                    using (Process proc = Process.GetProcessById((int)repOrInst.HostProcessId))
-                    {
-                        procStartTime = proc.StartTime.ToString("o");
-                    }
-                }
-                catch (Exception e) when (e is ArgumentException or FormatException or InvalidOperationException or NotSupportedException or Win32Exception)
-                {
-                    ObserverLogger.LogInfo($"Can't get process start time for {repOrInst.HostProcessId}: {e.Message}");
-                    // Just don't set the ChildProcessTelemetryData.ProcessStartTime field. Don't exit the function.
-                }
-            }
 
             var childProcessInfoData = new ChildProcessTelemetryData
             {
@@ -1517,7 +1490,7 @@ namespace FabricObserver.Observers
                 NodeName = NodeName,
                 ProcessId = (uint)repOrInst.HostProcessId,
                 ProcessName = IsWindows ? NativeMethods.GetProcessNameFromId((uint)repOrInst.HostProcessId) : Process.GetProcessById((int)repOrInst.HostProcessId)?.ProcessName,
-                ProcessStartTime = procStartTime,
+                ProcessStartTime = GetProcessStartTime((uint)repOrInst.HostProcessId).ToString("o"),
                 PartitionId = repOrInst.PartitionId.ToString(),
                 ReplicaId = repOrInst.ReplicaOrInstanceId,
                 ChildProcessCount = childProcs.Count,
@@ -1536,18 +1509,11 @@ namespace FabricObserver.Observers
 
                     if (!EnsureProcess(childProcName, childPid, processInfoDictionary[childPid].ProcessStartTime))
                     {
+                         _ = processInfoDictionary.TryRemove(childPid, out _);
                         continue;
                     }
 
-                    if (IsWindows)
-                    {
-                        startTime = NativeMethods.GetProcessStartTime(childPid).ToString("o");
-                    }
-                    else
-                    {
-                        using Process p = Process.GetProcessById((int)childPid);
-                        startTime = p.StartTime.ToString("o");
-                    }
+                    startTime = processInfoDictionary[childPid].ProcessStartTime.ToString("o");
 
                     if (fruds.Any(x => x.Key.Contains(childPid.ToString())))
                     {
@@ -1662,6 +1628,7 @@ namespace FabricObserver.Observers
                                     if (dump)
                                     {
                                         ObserverLogger.LogInfo($"Starting dump code path for {repOrInst.HostProcessName}/{childProcName}/{childPid}.");
+                                        
                                         // Make sure the child process is still the one we're looking for.
                                         if (EnsureProcess(childProcName, childPid, processInfoDictionary[childPid].ProcessStartTime))
                                         {
@@ -1674,6 +1641,11 @@ namespace FabricObserver.Observers
                                         else
                                         {
                                             ObserverLogger.LogInfo($"Will not dump child process: {childProcName}({childPid}) is no longer running.");
+
+                                            if (processInfoDictionary != null && processInfoDictionary.ContainsKey(childPid))
+                                            {
+                                                _ = processInfoDictionary.TryRemove(childPid, out _);
+                                            }
                                         }
                                         ObserverLogger.LogInfo($"Completed dump code path for {repOrInst.HostProcessName}/{childProcName}/{childPid}.");
                                     }
@@ -1923,7 +1895,7 @@ namespace FabricObserver.Observers
 
                     // Add parent to the process tree list since we want to monitor all processes in the family. If there are no child processes,
                     // then only the parent process will be in this dictionary..
-                    _ = procs.TryAdd(parentPid, (parentProcName, NativeMethods.GetProcessStartTime(parentPid)));
+                    _ = procs.TryAdd(parentPid, (parentProcName, GetProcessStartTime(parentPid)));
 
                     if (repOrInst.ChildProcesses != null && repOrInst.ChildProcesses.Count > 0)
                     {
@@ -1935,12 +1907,12 @@ namespace FabricObserver.Observers
                             }
 
                             // Make sure the child process still exists. Descendant processes are often ephemeral.
-                            if (!EnsureProcess(repOrInst.ChildProcesses[k].procName, repOrInst.ChildProcesses[k].Pid, NativeMethods.GetProcessStartTime(repOrInst.ChildProcesses[k].Pid)))
+                            if (!EnsureProcess(repOrInst.ChildProcesses[k].procName, repOrInst.ChildProcesses[k].Pid, GetProcessStartTime(repOrInst.ChildProcesses[k].Pid)))
                             {
                                 continue;
                             }
 
-                            _ = procs.TryAdd(repOrInst.ChildProcesses[k].Pid, (repOrInst.ChildProcesses[k].procName, NativeMethods.GetProcessStartTime(repOrInst.ChildProcesses[k].Pid)));
+                            _ = procs.TryAdd(repOrInst.ChildProcesses[k].Pid, (repOrInst.ChildProcesses[k].procName, GetProcessStartTime(repOrInst.ChildProcesses[k].Pid)));
                         }
                     }
 
@@ -2190,8 +2162,9 @@ namespace FabricObserver.Observers
                         double rgMemoryPercentThreshold,
                         CancellationToken token)
         {
-            _ = Parallel.For(0, processDictionary.Count, parallelOptions, (i, state) =>
-            {    if (token.IsCancellationRequested)
+            _ = Parallel.For (0, processDictionary.Count, parallelOptions, (i, state) =>
+            {   
+                if (token.IsCancellationRequested)
                 {
                     if (parallelOptions.MaxDegreeOfParallelism == -1 || parallelOptions.MaxDegreeOfParallelism > 1)
                     {
@@ -2203,13 +2176,22 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                var index = processDictionary.ElementAt(i);
-                string procName = index.Value.ProcName;
-                uint procId = index.Key;
+                var entry = processDictionary.ElementAt(i);
+                string procName = entry.Value.ProcName;
+                uint procId = entry.Key;
 
                 // Make sure this is still the process we're looking for.
-                if (!EnsureProcess(procName, procId, index.Value.ProcessStartTime))
+                if (!EnsureProcess(procName, procId, entry.Value.ProcessStartTime))
                 {
+                    try
+                    {
+                        _ = processDictionary.TryRemove(entry);
+                    }
+                    catch (ArgumentException)
+                    {
+
+                    }
+
                     return;
                 }
 
@@ -3135,9 +3117,24 @@ namespace FabricObserver.Observers
                     }
 
                     // Make sure procName lookup worked and if so that it is still the process we're looking for.
-                    if (string.IsNullOrWhiteSpace(procName) || !EnsureProcess(procName, procId, NativeMethods.GetProcessStartTime(procId)))
+                    if (string.IsNullOrWhiteSpace(procName))
                     {
                         continue;
+                    }
+
+                    if (!EnsureProcess(procName, procId, GetProcessStartTime(procId)))
+                    {
+                        try
+                        {
+                            if (processInfoDictionary != null && processInfoDictionary.ContainsKey(procId))
+                            {
+                                _ = processInfoDictionary.TryRemove(procId, out _);
+                            }
+                        }
+                        catch (ArgumentException)
+                        {
+
+                        }
                     }
 
                     // This ensures that support for multiple CodePackages and GuestExecutable services fit naturally into AppObserver's *existing* implementation.
@@ -3355,29 +3352,63 @@ namespace FabricObserver.Observers
             DataTableFileLogger.Flush();
         }
 
-        private static bool EnsureProcess(string procName, uint procId, DateTime processStartTime)
+        private bool EnsureProcess(string procName, uint procId, DateTime processStartTime)
         {
             if (string.IsNullOrWhiteSpace(procName) || procId == 0)
             {
                 return false;
             }
 
+            // Linux.
             if (!IsWindows)
             {
                 try
                 {
                     using (Process proc = Process.GetProcessById((int)procId))
                     {
-                        return proc.ProcessName == procName;
+                        return proc.ProcessName == procName && proc.StartTime == processStartTime;
                     }
                 }
                 catch (Exception e) when (e is ArgumentException or InvalidOperationException)
                 {
+                    ObserverLogger.LogWarning($"Linux EnsureProcess failure: {e.Message}");
                     return false;
                 }
             }
 
-            return NativeMethods.GetProcessNameFromId(procId) == procName && processStartTime == NativeMethods.GetProcessStartTime(procId);
+            // Windows.
+            try
+            {
+                return NativeMethods.GetProcessNameFromId(procId) == procName && processStartTime == GetProcessStartTime(procId);
+            }
+            catch (Win32Exception e)
+            {
+                ObserverLogger.LogWarning($"Windows EnsureProcess failure: {e.Message}");
+            }
+
+            return false;
+        }
+
+        private DateTime GetProcessStartTime(uint processId)
+        {
+            try
+            {
+                if (IsWindows)
+                {
+                    return NativeMethods.GetProcessStartTime(processId);
+                }
+                else
+                {
+                    using Process p = Process.GetProcessById((int)processId);
+                    return p.StartTime;
+                }
+            }
+            catch (Exception e) when (e is Win32Exception or ArgumentException or InvalidOperationException)
+            {
+                ObserverLogger.LogWarning($"Unable to get process start time: {e.Message}");
+            }
+
+            return DateTime.MinValue;
         }
 
         private void CleanUp()

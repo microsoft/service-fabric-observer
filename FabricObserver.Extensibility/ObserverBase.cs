@@ -984,7 +984,7 @@ namespace FabricObserver.Observers
                     {
                         ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                         EntityType = entityType,
-                        DriveName = id[..2],
+                        DriveName = IsWindows ? id[..2] : string.Empty,
                         FolderName = data.Property == ErrorWarningProperty.FolderSizeMB ? id : null,
                         NodeName = NodeName,
                         NodeType = NodeType,
