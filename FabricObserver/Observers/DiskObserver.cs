@@ -434,17 +434,17 @@ namespace FabricObserver.Observers
                     continue;
                 }
 
-                // Contains env variable(s)?
-                if (path.Contains('%'))
-                {
-                    if (Regex.Match(path, @"^%[a-zA-Z0-9_]+%").Success)
-                    {
-                        path = Environment.ExpandEnvironmentVariables(item.Key);
-                    }
-                }
-
                 try
                 {
+                    // Contains Windows env variable(s)?
+                    if (IsWindows && path.Contains('%'))
+                    {
+                        if (Regex.Match(path, @"^%[a-zA-Z0-9_]+%").Success)
+                        {
+                            path = Environment.ExpandEnvironmentVariables(item.Key);
+                        }
+                    }
+
                     if (!Directory.Exists(path) || item.Value <= 0)
                     {
                         continue;
