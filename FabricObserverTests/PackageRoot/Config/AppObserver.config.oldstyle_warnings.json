@@ -32,5 +32,11 @@
     "cpuWarningLimitPercent": 60,
     "memoryWarningLimitPercent": 30,
     "memoryWarningLimitMb": 10
+  },
+  {
+    "targetApp": "fabric:/TestApp42",
+    "cpuWarningLimitPercent": 60,
+    "memoryWarningLimitPercent": 30,
+    "memoryWarningLimitMb": 10
   }
 ]

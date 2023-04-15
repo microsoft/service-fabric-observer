@@ -31,7 +31,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
 
-        public long ProcessId
+        public uint ProcessId
         {
             get; set;
         }

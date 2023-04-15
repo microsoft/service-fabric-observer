@@ -876,7 +876,7 @@ namespace FabricObserver.Observers
 
             token.ThrowIfCancellationRequested();
 
-            int procId;
+            uint procId;
 
             if (!IsWindows)
             {
@@ -892,7 +892,7 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                procId = process.Id;
+                procId = (uint)process.Id;
             }
             else
             {
@@ -1168,7 +1168,7 @@ namespace FabricObserver.Observers
                 }
 
                 string procName = frud.Id;
-                int procId = 0;
+                uint procId = 0;
 
                 try
                 {
@@ -1177,7 +1177,7 @@ namespace FabricObserver.Observers
                         procId = NativeMethods.GetProcessIdFromName(procName);
 
                         // No longer running.
-                        if (procId == -1)
+                        if (procId == 0)
                         {
                             continue;
                         }
@@ -1194,7 +1194,7 @@ namespace FabricObserver.Observers
                                 continue;
                             }
 
-                            procId = procs[0].Id;
+                            procId = (uint)procs[0].Id;
                         }
                         else
                         {
@@ -1205,7 +1205,7 @@ namespace FabricObserver.Observers
                                 continue;
                             }
 
-                            procId = procs[0].Id;
+                            procId = (uint)procs[0].Id;
                         }
                     }
 

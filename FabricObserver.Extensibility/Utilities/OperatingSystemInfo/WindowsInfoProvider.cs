@@ -313,7 +313,7 @@ namespace FabricObserver.Observers.Utilities
             return windowsDynamicPortRange;
         }
 
-        public override int GetActiveEphemeralPortCount(int processId = -1, string configPath = null)
+        public override int GetActiveEphemeralPortCount(uint processId = 0, string configPath = null)
         {
             int count = 0;
 
@@ -343,7 +343,7 @@ namespace FabricObserver.Observers.Utilities
             return count;
         }
 
-        public override int GetActiveTcpPortCount(int processId = -1, string configPath = null)
+        public override int GetActiveTcpPortCount(uint processId = 0, string configPath = null)
         {
             int count;
 
@@ -372,7 +372,7 @@ namespace FabricObserver.Observers.Utilities
             return count;
         }
 
-        public override double GetActiveEphemeralPortCountPercentage(int processId = -1, string configPath = null)
+        public override double GetActiveEphemeralPortCountPercentage(uint processId = 0, string configPath = null)
         {
             double usedPct = 0.0;
             int count = GetActiveEphemeralPortCount(processId);
@@ -394,7 +394,7 @@ namespace FabricObserver.Observers.Utilities
             return usedPct;
         }
 
-        private int GetTcpPortCountNetstat(int processId = -1, bool ephemeral = false)
+        private int GetTcpPortCountNetstat(uint processId = 0, bool ephemeral = false)
         {
             if (DateTime.UtcNow.Subtract(LastCacheUpdate) > TimeSpan.FromSeconds(portDataMaxCacheTimeSeconds))
             {
@@ -469,7 +469,7 @@ namespace FabricObserver.Observers.Utilities
             return count;
         }
 
-        private int GetTcpPortCountWin32(int processId = -1, bool ephemeral = false)
+        private int GetTcpPortCountWin32(uint processId = 0, bool ephemeral = false)
         {
             if (DateTime.UtcNow.Subtract(LastCacheUpdate) > TimeSpan.FromSeconds(portDataMaxCacheTimeSeconds))
             {

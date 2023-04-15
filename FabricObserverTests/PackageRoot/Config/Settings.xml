@@ -87,7 +87,7 @@
 		<Parameter Name="ResourceUsageDataCapacity" Value=""/>
 		<Parameter Name="MonitorWindowsEventLog" Value="" />
 		<Parameter Name="CpuErrorLimitPercent" Value="" />
-		<Parameter Name="CpuWarningLimitPercent" Value="90" />
+		<Parameter Name="CpuWarningLimitPercent" Value="" />
 		<Parameter Name="MemoryErrorLimitMb" Value="" />
 		<Parameter Name="MemoryWarningLimitMb" Value="" />
 		<Parameter Name="NetworkErrorActivePorts" Value=""  />

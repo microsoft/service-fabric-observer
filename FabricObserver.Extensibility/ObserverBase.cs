@@ -509,7 +509,7 @@ namespace FabricObserver.Observers
         /// <param name="procName">Process name.</param>
         /// <param name="metric">The name of the metric threshold that was breached, leading to dump.</param>
         /// <returns>true or false if the operation succeeded.</returns>
-        public bool DumpWindowsServiceProcess(int processId, string procName, string metric)
+        public bool DumpWindowsServiceProcess(uint processId, string procName, string metric)
         {
             if (!IsWindows)
             {
@@ -744,7 +744,7 @@ namespace FabricObserver.Observers
                         ReplicaOrInstanceMonitoringInfo replicaOrInstance = null,
                         bool dumpOnError = false,
                         bool dumpOnWarning = false,
-                        int processId = 0) where T : struct
+                        uint processId = 0) where T : struct
         {
             if (data == null)
             {
@@ -755,7 +755,7 @@ namespace FabricObserver.Observers
             string thresholdName = "Warning";
             bool warningOrError = false;
             string id = null, appType = null, processStartTime = null, appTypeVersion = null, serviceTypeName = null, serviceTypeVersion = null;
-            int procId = processId;
+            uint procId = processId;
             T threshold = thresholdWarning;
             HealthState healthState = HealthState.Ok;
             Uri appName = null;
@@ -772,7 +772,7 @@ namespace FabricObserver.Observers
                     serviceName = replicaOrInstance.ServiceName;
                     serviceTypeName = replicaOrInstance.ServiceTypeName;
                     serviceTypeVersion = replicaOrInstance.ServiceTypeVersion;
-                    procId = (int)replicaOrInstance.HostProcessId;
+                    procId = (uint)replicaOrInstance.HostProcessId;
                    
                     // This doesn't apply to ContainerObserver.
                     if (ObserverName != ObserverConstants.ContainerObserverName)
@@ -800,7 +800,7 @@ namespace FabricObserver.Observers
                             }
                             else
                             {
-                                using (Process proc = Process.GetProcessById(procId))
+                                using (Process proc = Process.GetProcessById((int)procId))
                                 {
                                     processStartTime = proc.StartTime.ToString("o");
                                 }
@@ -906,7 +906,7 @@ namespace FabricObserver.Observers
                         }
                         else
                         {
-                            using (Process proc = Process.GetProcessById(procId))
+                            using (Process proc = Process.GetProcessById((int)procId))
                             {
                                 processStartTime = proc.StartTime.ToString("o");
                             }
@@ -1449,9 +1449,9 @@ namespace FabricObserver.Observers
         /// <param name="procName">The process name.</param>
         /// <param name="procId">The process id.</param>
         /// <returns>True if the pid is mapped to the process of supplied name. False otherwise.</returns>
-        public static bool EnsureProcess(string procName, int procId)
+        private static bool EnsureProcess(string procName, uint procId)
         {
-            if (string.IsNullOrWhiteSpace(procName) || procId < 1)
+            if (string.IsNullOrWhiteSpace(procName) || procId == 0)
             {
                 return false;
             }
@@ -1460,7 +1460,7 @@ namespace FabricObserver.Observers
             {
                 try
                 {
-                    using (Process proc = Process.GetProcessById(procId))
+                    using (Process proc = Process.GetProcessById((int)procId))
                     {
                         return proc.ProcessName == procName;
                     }
@@ -1471,7 +1471,6 @@ namespace FabricObserver.Observers
                 }
             }
 
-            // net core's ProcessManager.EnsureState is a CPU bottleneck on Windows.
             return NativeMethods.GetProcessNameFromId(procId) == procName;
         }
 
