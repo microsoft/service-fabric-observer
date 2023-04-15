@@ -175,38 +175,27 @@ namespace FabricObserver.Utilities.ServiceFabric
         {
             List<ReplicaOrInstanceMonitoringInfo> repList = new();
             List<DeployedApplication> appList = await GetAllDeployedAppsAsync(token);
-            //NativeMethods.SafeObjectHandle handleToSnapshot = null;
-            uint[] currentProcs = null;
+            NativeMethods.SafeObjectHandle handleToSnapshot = null;
 
             if (isWindows && includeChildProcesses)
             {
-                //handleToSnapshot = NativeMethods.CreateProcessSnapshot();
-                currentProcs = NativeMethods.NtGetSFUserServiceProcessIds();
+                handleToSnapshot = NativeMethods.CreateProcessSnapshot();
 
-                if (isWindows && includeChildProcesses)
+                if (handleToSnapshot.IsInvalid)
                 {
-                    logger.LogInfo(
-                        $"OS = Windows, EnableChildProcessMonitoring = true, Creating pid array (currentProcIds) for all processes currently running on the system (NtGetSFUserServiceProcessIds).");
-
-                    // NtGetProcessIds does not throw. Failure leads to null return value.
-                    currentProcs = NativeMethods.NtGetSFUserServiceProcessIds();
-
-                    if (currentProcs == null || currentProcs.Length == 0)
-                    {
-                        string message = "Can't observe child processes. Failure getting process ids on the system (NtGetSFUserServiceProcessIds).";
-                        logger.LogWarning(message);
-                        logger.LogEtw(
-                            ObserverConstants.FabricObserverETWEventName,
-                            new
-                            {
-                                Level = "Warning",
-                                Message = message,
-                                Source = "FabricClientUtilities::GetAllDeployedReplicasOrInstances"
-                            });
-                    }
+                    string message = "Can't observe child processes. Failure getting process ids on the system (CreateProcessSnapshot).";
+                    logger.LogWarning(message);
+                    logger.LogEtw(
+                        ObserverConstants.FabricObserverETWEventName,
+                        new
+                        {
+                            Level = "Warning",
+                            Message = message,
+                            Source = "FabricClientUtilities::GetAllDeployedReplicasOrInstances"
+                        });
                 }
             }
-
+            
             try
             {
                 foreach (DeployedApplication app in appList)
@@ -226,7 +215,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                                     app.ApplicationTypeName ?? appList.First(a => a.ApplicationName == app.ApplicationName).ApplicationTypeName,
                                     deployedReplicaList,
                                     includeChildProcesses,
-                                    currentProcs,
+                                    handleToSnapshot,
                                     token));
                     }
                     catch (Exception e) when (e is ArgumentException or InvalidOperationException)
@@ -241,7 +230,9 @@ namespace FabricObserver.Utilities.ServiceFabric
             {
                 if (isWindows && includeChildProcesses)
                 {
-                    currentProcs = null;
+                    GC.KeepAlive(handleToSnapshot);
+                    handleToSnapshot.Dispose();
+                    handleToSnapshot = null;
                 }
             }
         }
@@ -260,7 +251,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                                                         string applicationTypeName,
                                                         DeployedServiceReplicaList deployedReplicaList,
                                                         bool includeChildProcesses,
-                                                        uint[] currentProcs,
+                                                        NativeMethods.SafeObjectHandle handleToSnapshot,
                                                         CancellationToken token)
         {
             ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList = new();
@@ -298,10 +289,10 @@ namespace FabricObserver.Utilities.ServiceFabric
 
                             /* In order to provide accurate resource usage of an SF service process we need to also account for
                             any processes (children) that the service process (parent) created/spawned. */
-                            if (includeChildProcesses /*!handleToSnapshot.IsInvalid*/)
+                            if (includeChildProcesses)
                             {
                                 List<(string ProcName, uint Pid)> childPids = null;
-                                childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((uint)statefulReplica.HostProcessId, ref currentProcs);
+                                childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((uint)statefulReplica.HostProcessId, handleToSnapshot);
 
                                 if (childPids != null && childPids.Count > 0)
                                 {
@@ -332,7 +323,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                             if (includeChildProcesses)
                             {
                                 List<(string ProcName, uint Pid)> childPids = null;
-                                childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((uint)statelessInstance.HostProcessId, ref currentProcs);
+                                childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((uint)statelessInstance.HostProcessId, handleToSnapshot);
 
                                 if (childPids != null && childPids.Count > 0)
                                 {
@@ -348,7 +339,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                 {
                     if (isWindows)
                     {
-                        replicaInfo.HostProcessName = NativeMethods.GetProcessNameFromId((int)replicaInfo.HostProcessId);
+                        replicaInfo.HostProcessName = NativeMethods.GetProcessNameFromId((uint)replicaInfo.HostProcessId);
                     }
                     else
                     {
@@ -387,7 +378,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                 {
                     if (isWindows)
                     {
-                        string procName = NativeMethods.GetProcessNameFromId((int)repOrInst.HostProcessId);
+                        string procName = NativeMethods.GetProcessNameFromId((uint)repOrInst.HostProcessId);
                         pids.Add((repOrInst.ServiceName.OriginalString, procName, (uint)repOrInst.HostProcessId));
                     }
                     else

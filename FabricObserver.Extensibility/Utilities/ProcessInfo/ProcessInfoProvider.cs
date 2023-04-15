@@ -63,26 +63,26 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        public abstract float GetProcessWorkingSetMb(int processId, string procName, CancellationToken token, bool getPrivateWorkingSet = false);
+        public abstract float GetProcessWorkingSetMb(uint processId, string procName, CancellationToken token, bool getPrivateWorkingSet = false);
 
-        public abstract float GetProcessPrivateBytesMb(int processId);
+        public abstract float GetProcessPrivateBytesMb(uint processId);
 
-        public abstract List<(string ProcName, uint Pid)> GetChildProcessInfo(uint parentPid, ref uint[] serviceFabricUserProcs);
+        public abstract List<(string ProcName, uint Pid)> GetChildProcessInfo(uint parentPid, NativeMethods.SafeObjectHandle handleToSnapshot);
 
-        public abstract float GetProcessAllocatedHandles(int processId, string configPath = null);
+        public abstract float GetProcessAllocatedHandles(uint processId, string configPath = null);
 
-        public abstract double GetProcessKvsLvidsUsagePercentage(string procName, CancellationToken token, int procId = -1);
+        public abstract double GetProcessKvsLvidsUsagePercentage(string procName, CancellationToken token, uint procId = 0);
 
         /// <summary>
         /// Gets the number of execution threads owned by the process of supplied process id.
         /// </summary>
         /// <param name="processId">Id of the process.</param>
         /// <returns>Number of threads owned by specified process.</returns>
-        public static int GetProcessThreadCount(int processId)
+        public static int GetProcessThreadCount(uint processId)
         {
             try
             {
-                using Process p = Process.GetProcessById(processId);
+                using Process p = Process.GetProcessById((int)processId);
                 p.Refresh();
                 return p.Threads.Count;
             }

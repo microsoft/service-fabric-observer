@@ -78,7 +78,7 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Parses /proc/{pid}/status file.
         /// </summary>
-        public static bool TryParseStatusFile(int pid, out ParsedStatus result)
+        public static bool TryParseStatusFile(uint pid, out ParsedStatus result)
         {
             string statuSFilePath = RootPath + pid + StatuSFileName;
 

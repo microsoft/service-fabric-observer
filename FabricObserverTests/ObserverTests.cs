@@ -1266,7 +1266,7 @@ namespace FabricObserverTests
             Assert.IsTrue(services.Any());
 
             ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
-            ConcurrentQueue<int> serviceProcs = new();
+            ConcurrentQueue<uint> serviceProcs = new();
 
             ParallelOptions parallelOptions = new()
             {
@@ -1278,7 +1278,7 @@ namespace FabricObserverTests
             _ = Parallel.For(0, services.Count, parallelOptions, (i, state) =>
             {
                 var service = services[i];
-                string procName = NativeMethods.GetProcessNameFromId((int)service.HostProcessId);
+                string procName = NativeMethods.GetProcessNameFromId((uint)service.HostProcessId);
 
                 _ = AllAppCpuData.TryAdd($"{procName}:{service.HostProcessId}", new FabricResourceUsageData<double>(
                         property: ErrorWarningProperty.CpuTime,
@@ -1287,7 +1287,7 @@ namespace FabricObserverTests
                         useCircularBuffer: false,
                         isParallel: true));
 
-                serviceProcs.Enqueue((int)service.HostProcessId);
+                serviceProcs.Enqueue((uint)service.HostProcessId);
             });
 
             Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
@@ -1298,7 +1298,7 @@ namespace FabricObserverTests
             _ = Parallel.For(0, serviceProcs.Count, parallelOptions, (i, state) =>
             {
                 Stopwatch sw = Stopwatch.StartNew();
-                int procId = serviceProcs.ElementAt(i);
+                uint procId = serviceProcs.ElementAt(i);
                 string procName = NativeMethods.GetProcessNameFromId(procId);
                 CpuUsageWin32 cpuUsage = new();
 
@@ -1329,7 +1329,7 @@ namespace FabricObserverTests
             Assert.IsTrue(services.Any());
 
             ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
-            ConcurrentQueue<int> serviceProcs = new();
+            ConcurrentQueue<uint> serviceProcs = new();
 
             ParallelOptions parallelOptions = new()
             {
@@ -1341,7 +1341,7 @@ namespace FabricObserverTests
             _ = Parallel.For(0, services.Count, parallelOptions, (i, state) =>
             {
                 var service = services[i];
-                string procName = NativeMethods.GetProcessNameFromId((int)service.HostProcessId);
+                string procName = NativeMethods.GetProcessNameFromId((uint)service.HostProcessId);
 
                 _ = AllAppCpuData.TryAdd($"{procName}:{service.HostProcessId}", new FabricResourceUsageData<double>(
                         property: ErrorWarningProperty.CpuTime,
@@ -1350,7 +1350,7 @@ namespace FabricObserverTests
                         useCircularBuffer: false,
                         isParallel: true));
 
-                serviceProcs.Enqueue((int)service.HostProcessId);
+                serviceProcs.Enqueue((uint)service.HostProcessId);
             });
 
             Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
@@ -1361,7 +1361,7 @@ namespace FabricObserverTests
             _ = Parallel.For(0, serviceProcs.Count, parallelOptions, (i, state) =>
             {
                 Stopwatch sw = Stopwatch.StartNew();
-                int procId = serviceProcs.ElementAt(i);
+                uint procId = serviceProcs.ElementAt(i);
                 string procName = NativeMethods.GetProcessNameFromId(procId);
                 CpuUsageProcess cpuUsage = new();
 
@@ -1392,7 +1392,7 @@ namespace FabricObserverTests
             Assert.IsTrue(services.Any());
 
             ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
-            ConcurrentQueue<int> serviceProcs = new();
+            ConcurrentQueue<uint> serviceProcs = new();
 
             ParallelOptions parallelOptions = new()
             {
@@ -1404,7 +1404,7 @@ namespace FabricObserverTests
             _ = Parallel.For(0, services.Count, parallelOptions, (i, state) =>
             {
                 var service = services[i];
-                string procName = NativeMethods.GetProcessNameFromId((int)service.HostProcessId);
+                string procName = NativeMethods.GetProcessNameFromId((uint)service.HostProcessId);
 
                 _ = AllAppCpuData.TryAdd($"{procName}:{service.HostProcessId}", new FabricResourceUsageData<double>(
                         property: ErrorWarningProperty.CpuTime,
@@ -1413,7 +1413,7 @@ namespace FabricObserverTests
                         useCircularBuffer: true,
                         isParallel: true));
 
-                serviceProcs.Enqueue((int)service.HostProcessId);
+                serviceProcs.Enqueue((uint)service.HostProcessId);
             });
 
             Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
@@ -1424,7 +1424,7 @@ namespace FabricObserverTests
             _ = Parallel.For(0, serviceProcs.Count, parallelOptions, (i, state) =>
             {
                 Stopwatch sw = Stopwatch.StartNew();
-                int procId = serviceProcs.ElementAt(i);
+                uint procId = serviceProcs.ElementAt(i);
                 string procName = NativeMethods.GetProcessNameFromId(procId);
                 CpuUsageWin32 cpuUsage = new();
 
@@ -1455,7 +1455,7 @@ namespace FabricObserverTests
             Assert.IsTrue(services.Any());
 
             ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
-            ConcurrentQueue<int> serviceProcs = new();
+            ConcurrentQueue<uint> serviceProcs = new();
 
             ParallelOptions parallelOptions = new()
             {
@@ -1467,7 +1467,7 @@ namespace FabricObserverTests
             _ = Parallel.For(0, services.Count, parallelOptions, (i, state) =>
             {
                 var service = services[i];
-                string procName = NativeMethods.GetProcessNameFromId((int)service.HostProcessId);
+                string procName = NativeMethods.GetProcessNameFromId((uint)service.HostProcessId);
 
                 _ = AllAppCpuData.TryAdd($"{procName}:{service.HostProcessId}", new FabricResourceUsageData<double>(
                         property: ErrorWarningProperty.CpuTime,
@@ -1476,7 +1476,7 @@ namespace FabricObserverTests
                         useCircularBuffer: true,
                         isParallel: true));
 
-                serviceProcs.Enqueue((int)service.HostProcessId);
+                serviceProcs.Enqueue((uint)service.HostProcessId);
             });
 
             Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
@@ -1487,7 +1487,7 @@ namespace FabricObserverTests
             _ = Parallel.For(0, serviceProcs.Count, parallelOptions, (i, state) =>
             {
                 Stopwatch sw = Stopwatch.StartNew();
-                int procId = serviceProcs.ElementAt(i);
+                uint procId = serviceProcs.ElementAt(i);
                 string procName = NativeMethods.GetProcessNameFromId(procId);
                 CpuUsageProcess cpuUsage = new();
 

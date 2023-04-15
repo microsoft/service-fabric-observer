@@ -15,7 +15,7 @@ namespace FabricObserver.Observers.Utilities
     {
         private const int MaxDescendants = 50;
 
-        public override float GetProcessWorkingSetMb(int processId, string procName, CancellationToken token, bool getPrivateWorkingSet = false)
+        public override float GetProcessWorkingSetMb(uint processId, string procName, CancellationToken token, bool getPrivateWorkingSet = false)
         {
             if (LinuxProcFS.TryParseStatusFile(processId, out ParsedStatus status))
             {
@@ -27,12 +27,12 @@ namespace FabricObserver.Observers.Utilities
         }
 
         // TODO.. cgroups on file system.. 
-        public override float GetProcessPrivateBytesMb(int processId)
+        public override float GetProcessPrivateBytesMb(uint processId)
         {
             return GetProcessWorkingSetMb(processId, null, CancellationToken.None);
         }
 
-        public override float GetProcessAllocatedHandles(int processId, string configPath)
+        public override float GetProcessAllocatedHandles(uint processId, string configPath)
         {
             if (processId < 0 || string.IsNullOrWhiteSpace(configPath))
             {
@@ -96,8 +96,7 @@ namespace FabricObserver.Observers.Utilities
             return result;
         }
 
-        // serviceFabricUserProcs is Windows only. This function ignores the parameter, which is passed by ref.
-        public override List<(string ProcName, uint Pid)> GetChildProcessInfo(uint parentPid, ref uint[] serviceFabricUserProcs)
+        public override List<(string ProcName, uint Pid)> GetChildProcessInfo(uint parentPid, NativeMethods.SafeObjectHandle handleToSnapshot)
         {
             if (parentPid < 1)
             {
@@ -181,7 +180,7 @@ namespace FabricObserver.Observers.Utilities
             return childProcesses;
         }
 
-        public override double GetProcessKvsLvidsUsagePercentage(string procName, CancellationToken token, int procId = -1)
+        public override double GetProcessKvsLvidsUsagePercentage(string procName, CancellationToken token, uint procId = 0)
         {
             // Not supported on Linux.
             return -1;

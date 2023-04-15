@@ -23,7 +23,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="procName">The name of the process.</param>
         /// <returns>CPU Time percentage for the process as double value. If the supplied procName is no longer mapped to the supplied procId,
         /// then the result will be -1. Any Win32 failure will result in -1.</returns>
-        public double GetCurrentCpuUsagePercentage(int procId, string procName)
+        public double GetCurrentCpuUsagePercentage(uint procId, string procName)
         {
             // Is procId still mapped to procName? If not, then this process is not the droid we're looking for.
             if (NativeMethods.GetProcessNameFromId(procId) != procName)

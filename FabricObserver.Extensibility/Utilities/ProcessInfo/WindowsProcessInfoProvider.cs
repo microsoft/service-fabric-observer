@@ -29,7 +29,7 @@ namespace FabricObserver.Observers.Utilities
         private readonly ConcurrentDictionary<string, List<(string InternalName, int Pid)>> _procCache = new();
         private DateTime sameNamedProcCacheLastUpdated = DateTime.MinValue;
 
-        public override float GetProcessWorkingSetMb(int processId, string procName, CancellationToken token, bool getPrivateWorkingSet = false)
+        public override float GetProcessWorkingSetMb(uint processId, string procName, CancellationToken token, bool getPrivateWorkingSet = false)
         {
             if (string.IsNullOrWhiteSpace(procName) || processId <= 0)
             {
@@ -52,7 +52,7 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         /// <param name="processId">The id of the process.</param>
         /// <returns>Current Private Bytes usage in Megabytes.</returns>
-        public override float GetProcessPrivateBytesMb(int processId)
+        public override float GetProcessPrivateBytesMb(uint processId)
         {
             if (processId <= 0)
             {
@@ -62,20 +62,15 @@ namespace FabricObserver.Observers.Utilities
             return GetProcessMemoryMbWin32(processId, getPrivateBytes: true);
         }
 
-        public override float GetProcessAllocatedHandles(int processId, string configPath = null)
+        public override float GetProcessAllocatedHandles(uint processId, string configPath = null)
         {
             return GetProcessHandleCountWin32(processId);
         }
 
-        public override List<(string ProcName, uint Pid)> GetChildProcessInfo(uint parentPid, ref uint[] procIds)
+        public override List<(string ProcName, uint Pid)> GetChildProcessInfo(uint parentPid, NativeMethods.SafeObjectHandle handleToSnapshot)
         {
-            if (procIds == null)
-            {
-                return null;
-            }
-
             // Get descendant procs.
-            List<(string ProcName, uint Pid)> childProcesses = NativeMethods.GetServiceProcessDescendants(parentPid, ref procIds);
+            List<(string ProcName, uint Pid)> childProcesses = TupleGetChildProcessesWin32(parentPid, handleToSnapshot);
 
             if (childProcesses == null || childProcesses.Count == 0)
             {
@@ -90,7 +85,7 @@ namespace FabricObserver.Observers.Utilities
             // Get descendant proc at max depth = 5 and max number of descendants = 50. 
             for (int i = 0; i < childProcesses.Count; ++i)
             {
-                List<(string ProcName, uint Pid)> c1 = NativeMethods.GetServiceProcessDescendants(childProcesses[i].Pid, ref procIds);
+                List<(string ProcName, uint Pid)> c1 = TupleGetChildProcessesWin32(childProcesses[i].Pid, handleToSnapshot);
 
                 if (c1 == null || c1.Count <= 0)
                 {
@@ -106,7 +101,7 @@ namespace FabricObserver.Observers.Utilities
 
                 for (int j = 0; j < c1.Count; ++j)
                 {
-                    List<(string ProcName, uint Pid)> c2 = NativeMethods.GetServiceProcessDescendants(c1[j].Pid, ref procIds);
+                    List<(string ProcName, uint Pid)> c2 = TupleGetChildProcessesWin32(c1[j].Pid, handleToSnapshot);
 
                     if (c2 == null || c2.Count <= 0)
                     {
@@ -122,7 +117,7 @@ namespace FabricObserver.Observers.Utilities
 
                     for (int k = 0; k < c2.Count; ++k)
                     {
-                        List<(string ProcName, uint Pid)> c3 = NativeMethods.GetServiceProcessDescendants(c2[k].Pid, ref procIds);
+                        List<(string ProcName, uint Pid)> c3 = TupleGetChildProcessesWin32(c2[k].Pid, handleToSnapshot);
 
                         if (c3 == null || c3.Count <= 0)
                         {
@@ -138,7 +133,7 @@ namespace FabricObserver.Observers.Utilities
 
                         for (int l = 0; l < c3.Count; ++l)
                         {
-                            List<(string ProcName, uint Pid)> c4 = NativeMethods.GetServiceProcessDescendants(c3[l].Pid, ref procIds);
+                            List<(string ProcName, uint Pid)> c4 = TupleGetChildProcessesWin32(c3[l].Pid, handleToSnapshot);
 
                             if (c4 == null || c4.Count <= 0)
                             {
@@ -159,7 +154,35 @@ namespace FabricObserver.Observers.Utilities
             return childProcesses;
         }
 
-        public override double GetProcessKvsLvidsUsagePercentage(string procName, CancellationToken token, int procId = -1)
+        private static List<(string procName, uint pid)> TupleGetChildProcessesWin32(uint processId, NativeMethods.SafeObjectHandle handleToSnapshot)
+        {
+            try
+            {
+                List<(string procName, uint procId)> childProcs = NativeMethods.GetChildProcesses(processId, handleToSnapshot);
+
+                if (childProcs == null || childProcs.Count == 0)
+                {
+                    return null;
+                }
+
+                return childProcs;
+            }
+
+            catch (Exception e) when (e is Win32Exception) // e.g., process is no longer running.
+            {
+                ProcessInfoLogger.LogWarning($"Handled Exception in TupleGetChildProcessesWin32:{Environment.NewLine}{e.Message}");
+            }
+            catch (Exception e)
+            {
+                // Log the full error(including stack trace) for debugging purposes.
+                ProcessInfoLogger.LogError($"Unhandled Exception in TupleGetChildProcessesWin32:{Environment.NewLine}{e}");
+                throw;
+            }
+
+            return null;
+        }
+
+        public override double GetProcessKvsLvidsUsagePercentage(string procName, CancellationToken token, uint procId = 0)
         {
             if (string.IsNullOrWhiteSpace(procName) || token.IsCancellationRequested)
             {
@@ -260,14 +283,14 @@ namespace FabricObserver.Observers.Utilities
             return -1;
         }
 
-        private static int GetProcessHandleCountWin32(int processId)
+        private static uint GetProcessHandleCountWin32(uint processId)
         {
             SafeProcessHandle handle = null;
 
             try
             {
                 uint handles = 0;
-                handle = NativeMethods.GetSafeProcessHandle((uint)processId);
+                handle = NativeMethods.GetSafeProcessHandle(processId);
 
                 if (handle.IsInvalid || !NativeMethods.GetProcessHandleCount(handle, out handles))
                 {
@@ -278,7 +301,7 @@ namespace FabricObserver.Observers.Utilities
                     }
                 }
 
-                return (int)handles;
+                return handles;
             }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or Win32Exception)
             {
@@ -288,7 +311,7 @@ namespace FabricObserver.Observers.Utilities
                     ProcessInfoLogger.LogWarning($"GetProcessHandleCountWin32: Exception getting working set for process {processId}:{Environment.NewLine}{e.Message}");
                 }
 
-                return -1;
+                return 0;
             }
             finally
             {
@@ -304,7 +327,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="getPrivateBytes">Whether or not to return Private Bytes (The Commit Charge value in bytes for this process. 
         /// Commit Charge is the total amount of private memory that the memory manager has committed for a running process.)</param>
         /// <returns>Process memory usage expressed as Megabytes.</returns>
-        private static float GetProcessMemoryMbWin32(int processId, bool getPrivateBytes = false)
+        private static float GetProcessMemoryMbWin32(uint processId, bool getPrivateBytes = false)
         {
             if (processId < 1)
             {
@@ -361,7 +384,7 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        private float GetProcessMemoryMbPerfCounter(string procName, int procId, CancellationToken token, string perfCounterName = "Working Set - Private")
+        private float GetProcessMemoryMbPerfCounter(string procName, uint procId, CancellationToken token, string perfCounterName = "Working Set - Private")
         {
             if (string.IsNullOrWhiteSpace(procName) || procId < 1)
             {
@@ -486,7 +509,7 @@ namespace FabricObserver.Observers.Utilities
             return 0F;
         }
 
-        private string GetInternalProcessName(string procName, int pid, CancellationToken token)
+        private string GetInternalProcessName(string procName, uint pid, CancellationToken token)
         {
             if (token.IsCancellationRequested)
             {
@@ -541,7 +564,7 @@ namespace FabricObserver.Observers.Utilities
             return procName;
         }
 
-        private static string GetInternalProcNameFromId(string procName, int pid, CancellationToken token)
+        private static string GetInternalProcNameFromId(string procName, uint pid, CancellationToken token)
         {
             if (token.IsCancellationRequested)
             {
