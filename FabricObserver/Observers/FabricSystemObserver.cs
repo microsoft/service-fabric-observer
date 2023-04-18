@@ -28,12 +28,12 @@ namespace FabricObserver.Observers
     public sealed class FabricSystemObserver : ObserverBase
     {
         private const double KvsLvidsWarningPercentage = 75.0;
-        private readonly string[] processWatchList;
+        private readonly string[] processNameWatchList;
         private Stopwatch stopwatch;
         private bool checkPrivateWorkingSet;
 
         // Health Report data container - For use in analysis to determine health state.
-        private Dictionary<string, FabricResourceUsageData<int>> allCpuData;
+        private Dictionary<string, FabricResourceUsageData<double>> allCpuData;
         private Dictionary<string, FabricResourceUsageData<float>> allMemData;
         private Dictionary<string, FabricResourceUsageData<int>> allActiveTcpPortData;
         private Dictionary<string, FabricResourceUsageData<int>> allEphemeralTcpPortData;
@@ -54,7 +54,7 @@ namespace FabricObserver.Observers
             // Linux
             if (!IsWindows)
             {
-                processWatchList = new[]
+                processNameWatchList = new[]
                 {
                     "Fabric",
                     "FabricDCA.dll",
@@ -71,7 +71,7 @@ namespace FabricObserver.Observers
             else
             {
                 // Windows
-                processWatchList = new[]
+                processNameWatchList = new[]
                 {
                     "Fabric",
                     "FabricApplicationGateway",
@@ -224,10 +224,10 @@ namespace FabricObserver.Observers
         {
             Initialize();
 
-            foreach (string procName in processWatchList)
+            for (int i = 0; i < processNameWatchList.Length; i++)
             {
                 token.ThrowIfCancellationRequested();
-
+                string procName = processNameWatchList[i];
                 string dotnet = string.Empty;
 
                 if (!IsWindows && procName.EndsWith(".dll"))
@@ -571,15 +571,13 @@ namespace FabricObserver.Observers
             return result.ToArray();
         }
 
-#pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning restore IDE0079 // Remove unnecessary suppression
         private void Initialize()
         {
             Token.ThrowIfCancellationRequested();
 
             // fabric:/System
             MonitoredAppCount = 1;
-            MonitoredServiceProcessCount = processWatchList.Length;
+            MonitoredServiceProcessCount = processNameWatchList.Length;
             int frudCapacity = 4;
 
             if (UseCircularBuffer)
@@ -598,11 +596,12 @@ namespace FabricObserver.Observers
             // CPU data
             if (allCpuData == null && (CpuErrorUsageThresholdPct > 0 || CpuWarnUsageThresholdPct > 0))
             {
-                allCpuData = new Dictionary<string, FabricResourceUsageData<int>>();
+                allCpuData = new Dictionary<string, FabricResourceUsageData<double>>();
 
-                foreach (var proc in processWatchList)
+                foreach (var proc in processNameWatchList)
                 {
-                    allCpuData.Add(proc, new FabricResourceUsageData<int>(ErrorWarningProperty.CpuTime, proc, frudCapacity, UseCircularBuffer));
+                    _ = allCpuData.TryAdd(
+                            proc, new FabricResourceUsageData<double>(ErrorWarningProperty.CpuTime, proc, frudCapacity, UseCircularBuffer));
                 }
             }
 
@@ -611,9 +610,10 @@ namespace FabricObserver.Observers
             {
                 allMemData = new Dictionary<string, FabricResourceUsageData<float>>();
 
-                foreach (var proc in processWatchList)
+                foreach (var proc in processNameWatchList)
                 {
-                    allMemData.Add(proc, new FabricResourceUsageData<float>(ErrorWarningProperty.MemoryConsumptionMb, proc, frudCapacity, UseCircularBuffer));
+                    _ = allMemData.TryAdd(
+                            proc, new FabricResourceUsageData<float>(ErrorWarningProperty.MemoryConsumptionMb, proc, frudCapacity, UseCircularBuffer));
                 }
             }
 
@@ -622,9 +622,10 @@ namespace FabricObserver.Observers
             {
                 allActiveTcpPortData = new Dictionary<string, FabricResourceUsageData<int>>();
 
-                foreach (var proc in processWatchList)
+                foreach (var proc in processNameWatchList)
                 {
-                    allActiveTcpPortData.Add(proc, new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveTcpPorts, proc, frudCapacity, UseCircularBuffer));
+                    _ = allActiveTcpPortData.TryAdd(
+                            proc, new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveTcpPorts, proc, frudCapacity, UseCircularBuffer));
                 }
             }
 
@@ -632,9 +633,10 @@ namespace FabricObserver.Observers
             {
                 allEphemeralTcpPortData = new Dictionary<string, FabricResourceUsageData<int>>();
 
-                foreach (var proc in processWatchList)
+                foreach (var proc in processNameWatchList)
                 {
-                    allEphemeralTcpPortData.Add(proc, new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveEphemeralPorts, proc, frudCapacity, UseCircularBuffer));
+                    _ = allEphemeralTcpPortData.TryAdd(
+                            proc, new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveEphemeralPorts, proc, frudCapacity, UseCircularBuffer));
                 }
             }
 
@@ -643,9 +645,10 @@ namespace FabricObserver.Observers
             {
                 allHandlesData = new Dictionary<string, FabricResourceUsageData<float>>();
 
-                foreach (var proc in processWatchList)
+                foreach (var proc in processNameWatchList)
                 {
-                    allHandlesData.Add(proc, new FabricResourceUsageData<float>(ErrorWarningProperty.AllocatedFileHandles, proc, frudCapacity, UseCircularBuffer));
+                    _ = allHandlesData.TryAdd(
+                            proc, new FabricResourceUsageData<float>(ErrorWarningProperty.AllocatedFileHandles, proc, frudCapacity, UseCircularBuffer));
                 }
             }
 
@@ -654,9 +657,10 @@ namespace FabricObserver.Observers
             {
                 allThreadsData = new Dictionary<string, FabricResourceUsageData<int>>();
 
-                foreach (var proc in processWatchList)
+                foreach (var proc in processNameWatchList)
                 {
-                    allThreadsData.Add(proc, new FabricResourceUsageData<int>(ErrorWarningProperty.ThreadCount, proc, frudCapacity, UseCircularBuffer));
+                    _ = allThreadsData.TryAdd(
+                            proc, new FabricResourceUsageData<int>(ErrorWarningProperty.ThreadCount, proc, frudCapacity, UseCircularBuffer));
                 }
             }
 
@@ -665,7 +669,7 @@ namespace FabricObserver.Observers
             {
                 allAppKvsLvidsData = new Dictionary<string, FabricResourceUsageData<double>>();
 
-                foreach (var proc in processWatchList)
+                foreach (var proc in processNameWatchList)
                 {
                     Token.ThrowIfCancellationRequested();
 
@@ -674,7 +678,8 @@ namespace FabricObserver.Observers
                         continue;
                     }
 
-                    allAppKvsLvidsData.Add(proc, new FabricResourceUsageData<double>(ErrorWarningProperty.KvsLvidsPercent, proc, frudCapacity, UseCircularBuffer));
+                    _ = allAppKvsLvidsData.TryAdd(
+                            proc, new FabricResourceUsageData<double>(ErrorWarningProperty.KvsLvidsPercent, proc, frudCapacity, UseCircularBuffer));
                 }
             }
 
@@ -899,8 +904,6 @@ namespace FabricObserver.Observers
                 procId = NativeMethods.GetProcessIdFromName(procName);
             }
 
-            Stopwatch timer = new();
-
             try
             {
                 if (IsWindows && procId < 1)
@@ -908,10 +911,7 @@ namespace FabricObserver.Observers
                     // This will be a Win32Exception or InvalidOperationException if FabricObserver.exe is not running as Admin or LocalSystem on Windows.
                     // It's OK. Just means that the elevated process (like FabricHost.exe) won't be observed. 
                     // It is generally *not* worth running FO process as a Windows elevated user just for this scenario. On Linux, FO always should be run as normal user, not root.
-#if DEBUG
-                    ObserverLogger.LogWarning($"FabricObserver must be running as System or Admin user on Windows to monitor {dotnetArg}.");
-#endif
-                    TryRemoveTargetFromFruds(dotnetArg);
+                    TryRemoveTargetMonitoringLists(dotnetArg);
                     return;
                 }
 
@@ -1008,24 +1008,6 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                ICpuUsage cpuUsage;
-
-                if (IsWindows)
-                {
-                    cpuUsage = new CpuUsageWin32();
-                }
-                else
-                {
-                    cpuUsage = new CpuUsageProcess();
-                }
-
-                TimeSpan duration = TimeSpan.FromSeconds(1);
-
-                if (MonitorDuration > TimeSpan.MinValue)
-                {
-                    duration = MonitorDuration;
-                }
-
                 // Memory MB
                 if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
                 {
@@ -1037,18 +1019,36 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                timer.Start();
-
-                while (timer.Elapsed <= duration)
+                // CPU Time for service process.
+                if (CpuErrorUsageThresholdPct > 0 || CpuWarnUsageThresholdPct > 0)
                 {
-                    token.ThrowIfCancellationRequested();
+                    ICpuUsage cpuUsage;
 
-                    try
+                    if (IsWindows)
                     {
-                        // CPU Time for service process.
-                        if (CpuErrorUsageThresholdPct > 0 || CpuWarnUsageThresholdPct > 0)
+                        cpuUsage = new CpuUsageWin32();
+                    }
+                    else
+                    {
+                        cpuUsage = new CpuUsageProcess();
+                    }
+
+                    TimeSpan duration = TimeSpan.FromSeconds(1);
+
+                    if (MonitorDuration > TimeSpan.MinValue)
+                    {
+                        duration = MonitorDuration;
+                    }
+
+                    Stopwatch timer = Stopwatch.StartNew();
+
+                    while (timer.Elapsed <= duration)
+                    {
+                        token.ThrowIfCancellationRequested();
+
+                        try
                         {
-                            int cpu = (int)cpuUsage.GetCurrentCpuUsagePercentage(procId, IsWindows ? dotnetArg : null);
+                            double cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, IsWindows ? dotnetArg : null);
 
                             // process is no longer mapped to process name.
                             if (cpu > 0)
@@ -1058,20 +1058,20 @@ namespace FabricObserver.Observers
                                     allCpuData[dotnetArg].AddData(cpu);
                                 }
                             }
+
+                            await Task.Delay(150, Token);
                         }
+                        catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
+                        {
+                            ObserverLogger.LogWarning($"Unhandled Exception thrown in GetProcessInfoAsync:{Environment.NewLine}{e}");
 
-                        await Task.Delay(150, Token);
+                            // Fix the bug..
+                            throw;
+                        }
                     }
-                    catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
-                    {
-                        ObserverLogger.LogWarning($"Unhandled Exception thrown in GetProcessInfoAsync:{Environment.NewLine}{e}");
 
-                        // Fix the bug..
-                        throw;
-                    }
+                    timer.Stop();
                 }
-
-                timer.Stop();
             }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException)
             {
@@ -1091,7 +1091,7 @@ namespace FabricObserver.Observers
             }
         }
 
-        private void TryRemoveTargetFromFruds(string dotnetArg)
+        private void TryRemoveTargetMonitoringLists(string dotnetArg)
         {
             try
             {
@@ -1177,7 +1177,7 @@ namespace FabricObserver.Observers
                         procId = NativeMethods.GetProcessIdFromName(procName);
 
                         // No longer running.
-                        if (procId == -1)
+                        if (procId == 0)
                         {
                             continue;
                         }
@@ -1253,46 +1253,60 @@ namespace FabricObserver.Observers
 
         private void CleanUp()
         {
-            if (allCpuData != null && !allCpuData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            if (allCpuData != null)
             {
-                allCpuData.Clear();
-                allCpuData = null;
+                foreach (var cpuData in allCpuData)
+                {
+                    cpuData.Value?.ClearData();
+                }
             }
 
-            if (allEphemeralTcpPortData != null && !allEphemeralTcpPortData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            if (allEphemeralTcpPortData != null)
             {
-                allEphemeralTcpPortData.Clear();
-                allEphemeralTcpPortData = null;
+                foreach (var ephemeralTcpPortData in allEphemeralTcpPortData)
+                {
+                    ephemeralTcpPortData.Value?.ClearData();
+                }
             }
 
-            if (IsWindows && allAppKvsLvidsData != null && !allAppKvsLvidsData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            if (IsWindows && allAppKvsLvidsData != null)
             {
-                allAppKvsLvidsData.Clear();
-                allAppKvsLvidsData = null;
+                foreach (var kvsData in allAppKvsLvidsData)
+                {
+                    kvsData.Value?.ClearData();
+                }
             }
 
-            if (allHandlesData != null && !allHandlesData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            if (allHandlesData != null)
             {
-                allHandlesData.Clear();
-                allHandlesData = null;
+                foreach (var handleData in allHandlesData)
+                {
+                    handleData.Value?.ClearData();
+                }
             }
 
-            if (allThreadsData != null && !allThreadsData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            if (allThreadsData != null)
             {
-                allThreadsData.Clear();
-                allThreadsData = null;
+                foreach (var threadData in allThreadsData)
+                {
+                    threadData.Value?.ClearData();
+                }
             }
 
-            if (allMemData != null && !allMemData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            if (allMemData != null)
             {
-                allMemData.Clear();
-                allMemData = null;
+                foreach (var memData in allMemData)
+                {
+                    memData.Value?.ClearData();
+                }
             }
 
-            if (allActiveTcpPortData != null && !allActiveTcpPortData.Any(frud => frud.Value.ActiveErrorOrWarning))
+            if (allActiveTcpPortData != null)
             {
-                allActiveTcpPortData.Clear();
-                allActiveTcpPortData = null;
+                foreach (var activeTcpPortData in allActiveTcpPortData)
+                {
+                    activeTcpPortData.Value?.ClearData();
+                }
             }
         }
     }

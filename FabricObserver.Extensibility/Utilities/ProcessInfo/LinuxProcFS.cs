@@ -48,7 +48,7 @@ namespace FabricObserver.Observers.Utilities
                 {
                     int colonIndex = line.IndexOf(':');
 
-                    string key = line.Substring(0, colonIndex);
+                    string key = line[..colonIndex];
 
                     ulong value = ReadUInt64(line, colonIndex + 1);
                     result.Add(key, value);
@@ -69,8 +69,8 @@ namespace FabricObserver.Observers.Utilities
             // Source code: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/fs/proc/uptime.c
             string text = Encoding.UTF8.GetString(File.ReadAllBytes("/proc/uptime"));
             int spaceIndex = text.IndexOf(' ');
-            float uptime = float.Parse(text.Substring(0, spaceIndex));
-            float idleTime = float.Parse(text.Substring(spaceIndex + 1));
+            float uptime = float.Parse(text[..spaceIndex]);
+            float idleTime = float.Parse(text[(spaceIndex + 1)..]);
 
             return (uptime, idleTime);
         }

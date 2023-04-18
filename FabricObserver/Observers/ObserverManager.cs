@@ -201,9 +201,7 @@ namespace FabricObserver.Observers
 
             try
             {
-                // If FO crashed (like process killed or out of memory or some other unhandled exception that can't be caught before rethrowing it)
-                // then clean up orphaned health reports.
-                Logger.LogInfo("StartObserversAsync: Clearing orphaned health reports.");
+                // Clear out any orphaned health reports left behind when FO ungracefully exits.
                 FabricClientUtilities fabricClientUtilities = new();
                 await fabricClientUtilities.ClearFabricObserverHealthReportsAsync(true, CancellationToken.None);
 
@@ -411,7 +409,7 @@ namespace FabricObserver.Observers
             var healthReport = new HealthReport
             {
                 Code = FOErrorWarningCodes.Ok,
-                HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping, restarting, or updating.{configUpdateLinux}.",
+                HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping, starting, or updating.{configUpdateLinux}.",
                 State = HealthState.Ok,
                 NodeName = nodeName
             };

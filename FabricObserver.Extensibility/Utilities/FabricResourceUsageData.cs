@@ -122,7 +122,7 @@ namespace FabricObserver.Observers.Utilities
         {
             get
             {
-                if (Data?.Count() > 0)
+                if (Data != null && Data.Any())
                 {
                     return Data.Max();
                 }
@@ -256,35 +256,50 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="data"></param>
         public void AddData(T data)
         {
+            if (Data == null)
+            {
+                return;
+            }
+
             if (Data is List<T> d)
             {
                 d.Add(data);
             }
             else if (Data is CircularBufferCollection<T> c)
             {
+                // Impl employs a write lock.
                 c.Add(data);
             }
             else if (Data is ConcurrentQueue<T> e)
             {
+                // Impl employs a write lock.
                 e.Enqueue(data);
             }
         }
 
         /// <summary>
-        /// Clears numeric data of the current instance's Data property.
+        /// Clears this frud's numeric data collection (Data property).
         /// </summary>
         public void ClearData()
         {
+            if (Data == null || !Data.Any())
+            {
+                return;
+            }
+
             if (Data is List<T> list)
             {
-               list.Clear();
+                list.TrimExcess();
+                list.Clear();
             }
             else if (Data is CircularBufferCollection<T> cBuffer)
             {
+                // Impl employs a write lock.
                 cBuffer.Clear();
             }
             else if (Data is ConcurrentQueue<T> conQ)
             {
+                // Impl employs a write lock.
                 conQ.Clear();
             }
         }

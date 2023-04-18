@@ -96,7 +96,7 @@ namespace FabricObserver.Observers.Utilities
             return result;
         }
 
-        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot = null)
+        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot)
         {
             if (parentPid < 1)
             {
@@ -180,7 +180,7 @@ namespace FabricObserver.Observers.Utilities
             return childProcesses;
         }
 
-        public override double GetProcessKvsLvidsUsagePercentage(string procName, CancellationToken token, int procId = -1)
+        public override double GetProcessKvsLvidsUsagePercentage(string procName, CancellationToken token, int procId = 0)
         {
             // Not supported on Linux.
             return -1;

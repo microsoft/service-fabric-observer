@@ -5,9 +5,10 @@
 
 using Microsoft.Win32.SafeHandles;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
@@ -29,6 +30,8 @@ namespace FabricObserver.Observers.Utilities
         private const int STILL_ACTIVE = 259;
         private const int ERROR_NO_MORE_ITEMS = 259;
         private const int ERROR_INSUFFICIENT_BUFFER_SIZE = 122;
+        private const int MAX_PATH = 260;
+        private const int SystemProcessInformation = 5;
         private static readonly Logger logger = new("NativeMethods");
         private static readonly string[] ignoreProcessList = new string[]
         {
@@ -45,34 +48,6 @@ namespace FabricObserver.Observers.Utilities
             "FabricDCA.exe", "FabricDnsService.exe", "FabricFAS.exe", "FabricGateway.exe",
             "FabricHost.exe", "FabricIS.exe", "FabricRM.exe", "FabricUS.exe"
         };
-
-        [Flags]
-        public enum MINIDUMP_TYPE
-        {
-            MiniDumpNormal = 0x00000000,
-            MiniDumpWithDataSegs = 0x00000001,
-            MiniDumpWithFullMemory = 0x00000002,
-            MiniDumpWithHandleData = 0x00000004,
-            MiniDumpFilterMemory = 0x00000008,
-            MiniDumpScanMemory = 0x00000010,
-            MiniDumpWithUnloadedModules = 0x00000020,
-            MiniDumpWithIndirectlyReferencedMemory = 0x00000040,
-            MiniDumpFilterModulePaths = 0x00000080,
-            MiniDumpWithProcessThreadData = 0x00000100,
-            MiniDumpWithPrivateReadWriteMemory = 0x00000200,
-            MiniDumpWithoutOptionalData = 0x00000400,
-            MiniDumpWithFullMemoryInfo = 0x00000800,
-            MiniDumpWithThreadInfo = 0x00001000,
-            MiniDumpWithCodeSegs = 0x00002000,
-            MiniDumpWithoutAuxiliaryState = 0x00004000,
-            MiniDumpWithFullAuxiliaryState = 0x00008000,
-            MiniDumpWithPrivateWriteCopyMemory = 0x00010000,
-            MiniDumpIgnoreInaccessibleMemory = 0x00020000,
-            MiniDumpWithTokenInformation = 0x00040000,
-            MiniDumpWithModuleHeaders = 0x00080000,
-            MiniDumpFilterTriage = 0x00100000,
-            MiniDumpValidTypeFlags = 0x001fffff
-        }
 
         [Flags]
         public enum CreateToolhelp32SnapshotFlags : uint
@@ -133,6 +108,34 @@ namespace FabricObserver.Observers.Utilities
             /// th32ProcessID.
             /// </summary>
             TH32CS_SNAPALL = TH32CS_SNAPHEAPLIST | TH32CS_SNAPMODULE | TH32CS_SNAPPROCESS | TH32CS_SNAPTHREAD,
+        }
+
+        [Flags]
+        public enum MINIDUMP_TYPE
+        {
+            MiniDumpNormal = 0x00000000,
+            MiniDumpWithDataSegs = 0x00000001,
+            MiniDumpWithFullMemory = 0x00000002,
+            MiniDumpWithHandleData = 0x00000004,
+            MiniDumpFilterMemory = 0x00000008,
+            MiniDumpScanMemory = 0x00000010,
+            MiniDumpWithUnloadedModules = 0x00000020,
+            MiniDumpWithIndirectlyReferencedMemory = 0x00000040,
+            MiniDumpFilterModulePaths = 0x00000080,
+            MiniDumpWithProcessThreadData = 0x00000100,
+            MiniDumpWithPrivateReadWriteMemory = 0x00000200,
+            MiniDumpWithoutOptionalData = 0x00000400,
+            MiniDumpWithFullMemoryInfo = 0x00000800,
+            MiniDumpWithThreadInfo = 0x00001000,
+            MiniDumpWithCodeSegs = 0x00002000,
+            MiniDumpWithoutAuxiliaryState = 0x00004000,
+            MiniDumpWithFullAuxiliaryState = 0x00008000,
+            MiniDumpWithPrivateWriteCopyMemory = 0x00010000,
+            MiniDumpIgnoreInaccessibleMemory = 0x00020000,
+            MiniDumpWithTokenInformation = 0x00040000,
+            MiniDumpWithModuleHeaders = 0x00080000,
+            MiniDumpFilterTriage = 0x00100000,
+            MiniDumpValidTypeFlags = 0x001fffff
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -504,12 +507,147 @@ namespace FabricObserver.Observers.Utilities
             /// <summary>
             /// <para>The count of threads in the snapshot.</para>
             /// </summary>
-            public uint ThreadsCaptured;
+            internal uint ThreadsCaptured;
 
             /// <summary>
             /// <para>The length of the <c>CONTEXT</c> record captured, in bytes.</para>
             /// </summary>
-            public uint ContextLength;
+            internal uint ContextLength;
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct PSS_PROCESS_INFORMATION
+        {
+            /// <summary>
+            /// <para>The exit code of the process. If the process has not exited, this is set to <c>STILL_ACTIVE</c> (259).</para>
+            /// </summary>
+            internal uint ExitStatus;
+
+            /// <summary>
+            /// <para>The address to the process environment block (PEB). Reserved for use by the operating system.</para>
+            /// </summary>
+            internal IntPtr PebBaseAddress;
+
+            /// <summary>
+            /// <para>The affinity mask of the process.</para>
+            /// </summary>
+            internal UIntPtr AffinityMask;
+
+            /// <summary>
+            /// <para>The base priority level of the process.</para>
+            /// </summary>
+            internal int BasePriority;
+
+            /// <summary>
+            /// <para>The process ID.</para>
+            /// </summary>
+            internal uint ProcessId;
+
+            /// <summary>
+            /// <para>The parent process ID.</para>
+            /// </summary>
+            internal uint ParentProcessId;
+
+            /// <summary>
+            /// <para>Flags about the process. For more information, see PSS_PROCESS_FLAGS.</para>
+            /// </summary>
+            internal PSS_PROCESS_FLAGS Flags;
+
+            /// <summary>
+            /// <para>The time the process was created. For more information, see FILETIME.</para>
+            /// </summary>
+            internal FILETIME CreateTime;
+
+            /// <summary>
+            /// <para>If the process exited, the time of the exit. For more information, see FILETIME.</para>
+            /// </summary>
+            internal FILETIME ExitTime;
+
+            /// <summary>
+            /// <para>The amount of time the process spent executing in kernel-mode. For more information, see FILETIME.</para>
+            /// </summary>
+            internal FILETIME KernelTime;
+
+            /// <summary>
+            /// <para>The amount of time the process spent executing in user-mode. For more information, see FILETIME.</para>
+            /// </summary>
+            internal FILETIME UserTime;
+
+            /// <summary>
+            /// <para>The priority class.</para>
+            /// </summary>
+            internal uint PriorityClass;
+
+            /// <summary>
+            /// <para>A memory usage counter. See the GetProcessMemoryInfo function for more information.</para>
+            /// </summary>
+            internal UIntPtr PeakVirtualSize;
+
+            /// <summary>
+            /// <para>A memory usage counter. See the GetProcessMemoryInfo function for more information.</para>
+            /// </summary>
+            internal UIntPtr VirtualSize;
+
+            /// <summary>
+            /// <para>A memory usage counter. See the GetProcessMemoryInfo function for more information.</para>
+            /// </summary>
+            internal uint PageFaultCount;
+
+            /// <summary>
+            /// <para>A memory usage counter. See the GetProcessMemoryInfo function for more information.</para>
+            /// </summary>
+            internal UIntPtr PeakWorkingSetSize;
+
+            /// <summary>
+            /// <para>A memory usage counter. See the GetProcessMemoryInfo function for more information.</para>
+            /// </summary>
+            internal UIntPtr WorkingSetSize;
+
+            /// <summary>
+            /// <para>A memory usage counter. See the GetProcessMemoryInfo function for more information.</para>
+            /// </summary>
+            internal UIntPtr QuotaPeakPagedPoolUsage;
+
+            /// <summary>
+            /// <para>A memory usage counter. See the GetProcessMemoryInfo function for more information.</para>
+            /// </summary>
+            internal UIntPtr QuotaPagedPoolUsage;
+
+            /// <summary>
+            /// <para>A memory usage counter. See the GetProcessMemoryInfo function for more information.</para>
+            /// </summary>
+            internal UIntPtr QuotaPeakNonPagedPoolUsage;
+
+            /// <summary>
+            /// <para>A memory usage counter. See the GetProcessMemoryInfo function for more information.</para>
+            /// </summary>
+            internal UIntPtr QuotaNonPagedPoolUsage;
+
+            /// <summary>
+            /// <para>A memory usage counter. See the GetProcessMemoryInfo function for more information.</para>
+            /// </summary>
+            internal UIntPtr PagefileUsage;
+
+            /// <summary>
+            /// <para>A memory usage counter. See the GetProcessMemoryInfo function for more information.</para>
+            /// </summary>
+            internal UIntPtr PeakPagefileUsage;
+
+            /// <summary>
+            /// <para>A memory usage counter. See the GetProcessMemoryInfo function for more information.</para>
+            /// </summary>
+            internal UIntPtr PrivateUsage;
+
+            /// <summary>
+            /// <para>Reserved for use by the operating system.</para>
+            /// </summary>
+            internal uint ExecuteFlags;
+
+            /// <summary>
+            /// <para>The full path to the process executable. If the path exceeds the allocated buffer size, it is truncated.</para>
+            /// </summary>
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = MAX_PATH)]
+            internal string ImageFileName;
         }
 
         // For PSCaptureSnapshot/PSQuerySnapshot \\
@@ -815,10 +953,52 @@ namespace FabricObserver.Observers.Utilities
             public ulong OtherTransferCount;
         }
 
+        // NtQuerySystemInformation - Process \\
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        public struct UNICODE_STRING
+        {
+            public ushort Length;
+            public ushort MaximumLength;
+            [MarshalAs(UnmanagedType.LPWStr)]
+            public string Buffer;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct SYSTEM_PROCESS_INFORMATION
+        {
+            internal uint NextEntryOffset;
+            internal uint NumberOfThreads;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 48)]
+            internal readonly byte[] Reserved1;
+            internal UNICODE_STRING ImageName;
+            internal int BasePriority;
+            internal UIntPtr UniqueProcessId;
+            internal readonly UIntPtr Reserved2;
+            internal uint HandleCount;
+            internal uint SessionId;
+            private readonly UIntPtr Reserved3;
+            internal UIntPtr PeakVirtualSize;  // SIZE_T
+            internal UIntPtr VirtualSize;
+            private readonly uint Reserved4;
+            internal UIntPtr PeakWorkingSetSize;  // SIZE_T
+            internal UIntPtr WorkingSetSize;  // SIZE_T
+            private readonly UIntPtr Reserved5;
+            internal UIntPtr QuotaPagedPoolUsage;  // SIZE_T
+            private readonly UIntPtr Reserved6;
+            internal UIntPtr QuotaNonPagedPoolUsage;  // SIZE_T
+            internal UIntPtr PagefileUsage;  // SIZE_T
+            internal UIntPtr PeakPagefileUsage;  // SIZE_T
+            internal UIntPtr PrivatePageCount;  // SIZE_T
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 6)]
+            private readonly long[] Reserved7;
+        }
+
         // Method Imports \\
 
-        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
-        private static extern SafeObjectHandle CreateToolhelp32Snapshot([In] uint dwFlags, [In] uint th32ProcessID);
+        [DllImport("psapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool EnumProcesses([In, Out, MarshalAs(UnmanagedType.LPArray)] uint[] lpidProcess, uint cb, out uint lpcbNeeded);
 
         [DllImport("psapi.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -836,9 +1016,6 @@ namespace FabricObserver.Observers.Utilities
         [DllImport("kernel32.dll", SetLastError = true)]
         internal static extern SafeProcessHandle OpenProcess(uint processAccess, bool bInheritHandle,uint processId);
 
-        [DllImport("psapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        internal static extern uint GetModuleBaseName(SafeProcessHandle hProcess, [Optional] IntPtr hModule, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder lpBaseName, uint nSize);
-
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static extern bool GetProcessTimes(SafeProcessHandle ProcessHandle, out FILETIME CreationTime, out FILETIME ExitTime, out FILETIME KernelTime, out FILETIME UserTime);
@@ -846,20 +1023,8 @@ namespace FabricObserver.Observers.Utilities
         [DllImport("kernel32.dll", SetLastError = true)]
         internal static extern bool GetSystemTimes(out FILETIME lpIdleTime, out FILETIME lpKernelTime, out FILETIME lpUserTime);
 
-        [DllImport("kernel32.dll", SetLastError = true)]
-        internal static extern IntPtr GetProcessHeap();
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        internal static extern bool HeapFree(IntPtr hHeap, uint dwFlags, IntPtr lpMem);
-
-        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool Process32First([In] SafeObjectHandle hSnapshot, ref PROCESSENTRY32 lppe);
-
-        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool Process32Next([In] SafeObjectHandle hSnapshot, ref PROCESSENTRY32 lppe);
+        [DllImport("psapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        internal static extern uint GetModuleBaseName(SafeProcessHandle hProcess, [Optional] IntPtr hModule, [MarshalAs(UnmanagedType.LPWStr)] StringBuilder lpBaseName, uint nSize);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -880,10 +1045,6 @@ namespace FabricObserver.Observers.Utilities
 
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern IntPtr GetCurrentProcess();
-
-        [DllImport("psapi.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool EnumProcesses([In, Out, MarshalAs(UnmanagedType.LPArray)] uint[] lpidProcess, uint cb, out uint lpcbNeeded);
 
         [DllImport("kernel32.dll", SetLastError = false)]
         private static extern int PssWalkSnapshot(IntPtr SnapshotHandle, PSS_WALK_INFORMATION_CLASS InformationClass, IntPtr WalkMarkerHandle, IntPtr Buffer, uint BufferLength);
@@ -909,6 +1070,27 @@ namespace FabricObserver.Observers.Utilities
         [DllImport("kernel32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern bool GetProcessIoCounters([In] SafeProcessHandle ProcessHandle, out IO_COUNTERS lpIoCounters);
 
+        [DllImport("ntdll.dll", SetLastError = true)]
+        private static extern int NtQuerySystemInformation(int SystemInformationClass, IntPtr SystemInformation, uint SystemInformationLength, out uint ReturnLength);
+
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern SafeObjectHandle CreateToolhelp32Snapshot([In] uint dwFlags, [In] uint th32ProcessID);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        internal static extern IntPtr GetProcessHeap();
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool HeapFree(IntPtr hHeap, uint dwFlags, IntPtr lpMem);
+
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool Process32First([In] SafeObjectHandle hSnapshot, ref PROCESSENTRY32 lppe);
+
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Auto)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool Process32Next([In] SafeObjectHandle hSnapshot, ref PROCESSENTRY32 lppe);
+
         // Impls/Helpers \\
 
         /// <summary>
@@ -922,7 +1104,7 @@ namespace FabricObserver.Observers.Utilities
             int activeThreads = 0;
             IntPtr snap = IntPtr.Zero;
             IntPtr buffer = IntPtr.Zero;
-            SafeProcessHandle hProc = GetSafeProcessHandle((uint)pid);
+            SafeProcessHandle hProc = GetSafeProcessHandle(pid);
 
             try
             {
@@ -961,6 +1143,11 @@ namespace FabricObserver.Observers.Utilities
                     }
                 }
             }
+            catch (OutOfMemoryException)
+            {
+                // Immediately die.
+                Environment.FailFast($"OOM. Taking down FO:{Environment.NewLine}{Environment.StackTrace}");
+            }
             catch (ArgumentException)
             {
 
@@ -998,6 +1185,245 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
+        /// Creates a native snapshot of all processes currently running on the system.
+        /// </summary>
+        /// <returns>SafeObjectHandle to the snapshot.</returns>
+        public static SafeObjectHandle CreateAllProcessSnapshot()
+        {
+            return CreateToolhelp32Snapshot((uint)CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
+        }
+
+        /// <summary>
+        /// Takes a snapshot of Process object with specified pid.
+        /// </summary>
+        /// <param name="pid">The process id of the target process.</param>
+        /// <returns>A PSS_PROCESS_INFORMATION structure containing current information about the process. An empty structure means this function failed.</returns>
+        /// <exception cref="Win32Exception">This is thrown if PssCaptureSnapshot fails.</exception>
+        private static PSS_PROCESS_INFORMATION PssGetProcessSnapshot(uint pid)
+        {
+            PSS_PROCESS_INFORMATION procInfo = new();
+            IntPtr snapShot = IntPtr.Zero;
+            IntPtr procInfoBuffer = IntPtr.Zero;
+            SafeProcessHandle hProc = null;
+
+            try
+            {
+                hProc = OpenProcess((uint)ProcessAccessFlags.All, false, pid);
+
+                if (hProc == null || hProc.IsInvalid)
+                {
+                    return procInfo;
+                }
+
+                if (PssCaptureSnapshot(hProc, PSS_CAPTURE_FLAGS.PSS_CAPTURE_NONE, 0, ref snapShot) != ERROR_SUCCESS)
+                {
+                    throw new Win32Exception(
+                       $"PssGetProcessSnapshot({pid}) Failed with Win32 error code {Marshal.GetLastWin32Error()}");
+                }
+
+                int size = Marshal.SizeOf(typeof(PSS_PROCESS_INFORMATION));
+                procInfoBuffer = Marshal.AllocHGlobal(size);
+
+                if (PssQuerySnapshot(snapShot, PSS_QUERY_INFORMATION_CLASS.PSS_QUERY_PROCESS_INFORMATION, procInfoBuffer, (uint)size) != ERROR_SUCCESS)
+                {
+                    throw new Win32Exception(
+                       $"PssQuerySnapshot({pid}) Failed with Win32 error code {Marshal.GetLastWin32Error()}");
+                }
+
+                procInfo = (PSS_PROCESS_INFORMATION)Marshal.PtrToStructure(procInfoBuffer, typeof(PSS_PROCESS_INFORMATION));
+            }
+            catch (ArgumentException)
+            {
+                return procInfo;
+            }
+            catch (OutOfMemoryException)
+            {
+                // Immediately die.
+                Environment.FailFast($"OOM. Taking down FO:{Environment.NewLine}{Environment.StackTrace}");
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(procInfoBuffer);
+                IntPtr currentHProc = GetCurrentProcess();
+                _ = PssFreeSnapshot(currentHProc, snapShot);
+                hProc.Dispose();
+                hProc = null;
+            }
+
+            return procInfo;
+        }
+
+        /// <summary>
+        /// Gets the child processes, if any, belonging to the process with supplied pid.
+        /// </summary>
+        /// <param name="parentpid">The process ID (pid) of target parent process.</param>
+        /// <param name="parentProcName">Name of the process associated to specified pid when this call is made.</param>
+        /// <param name="handleToSnapshot">Handle to process snapshot (created using NativeMethods.CreateToolhelp32Snapshot).</param>
+        /// <returns>A List of tuple (string procName,  int procId) representing each child process.</returns>
+        /// <exception cref="Win32Exception">A Win32 Error Code will be present in the exception Message.</exception>
+        public static List<(string procName, int procId)> GetChildProcesses(int parentpid, string parentProcName, SafeObjectHandle handleToSnapshot = null)
+        {
+            if (parentpid < 1 || string.IsNullOrWhiteSpace(parentProcName))
+            {
+                return null;
+            }
+
+            bool isLocalSnapshot = false;
+
+            try
+            {
+                if (handleToSnapshot == null || handleToSnapshot.IsInvalid || handleToSnapshot.IsClosed)
+                {
+                    isLocalSnapshot = true;
+                    handleToSnapshot = CreateToolhelp32Snapshot((uint)CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
+
+                    if (handleToSnapshot.IsInvalid)
+                    {
+                        logger.LogWarning(
+                            $"GetChildProcesses({parentpid}): Failed to process snapshot at CreateToolhelp32Snapshot " +
+                            $"with Win32 error code {Marshal.GetLastWin32Error()}");
+
+                        return null;
+                    }
+                }
+
+                PROCESSENTRY32 procEntry = new()
+                {
+                    dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32))
+                };
+
+                if (!Process32First(handleToSnapshot, ref procEntry))
+                {
+                    logger.LogWarning($"GetChildProcesses({parentpid}): Failed to process snapshot at Process32First " +
+                                      $"with Win32 error code {Marshal.GetLastWin32Error()}");
+                    
+                    return null;
+                }
+
+                List<(string procName, int procId)> childProcs = new();
+
+                do
+                {
+                    try
+                    {
+                        // Filter out the procs we know are not the droids we're looking for just by name or pid.
+                        if (procEntry.th32ProcessID == 0 || FindInStringArray(ignoreProcessList, procEntry.szExeFile)
+                            || FindInStringArray(ignoreFabricSystemServicesList, procEntry.szExeFile))
+                        {
+                            continue;
+                        }
+
+                        // If the detected pid is not a child of the supplied parent pid, then ignore.
+                        if (parentpid != procEntry.th32ParentProcessID)
+                        {
+                            continue;
+                        }
+
+                        string parentSnapProcName = GetProcessNameFromId((int)procEntry.th32ParentProcessID);
+
+                        if (string.IsNullOrWhiteSpace(parentSnapProcName))
+                        {
+                            continue;
+                        }
+
+                        if (parentProcName.Equals(parentSnapProcName))
+                        {
+                            childProcs.Add((procEntry.szExeFile.Replace(".exe", ""), (int)procEntry.th32ProcessID));
+                        }
+                    }
+                    catch (ArgumentException)
+                    {
+
+                    }
+                    catch (Win32Exception)
+                    {
+                        // From GetProcessNameFromId.
+                    }
+
+                } while (Process32Next(handleToSnapshot, ref procEntry));
+
+                return childProcs;
+            }
+            finally
+            {
+                if (isLocalSnapshot && !handleToSnapshot.IsInvalid)
+                {
+                    handleToSnapshot?.Dispose();
+                    handleToSnapshot = null;
+                }
+            }
+        }
+
+        // Credit: https://github.com/dahall/Vanara/blob/5b22a156f0ba1301b48229f30b6ff4758f60a4ee/PInvoke/Kernel32/PsApi.cs#L258
+        private static uint[] EnumProcesses()
+        {
+            uint rsz = 1024;
+            uint sz;
+            uint[] ids;
+
+            do
+            {
+                sz = rsz * 2;
+                ids = new uint[sz / sizeof(uint)];
+
+                if (!EnumProcesses(ids, sz, out rsz))
+                {
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                }
+
+            } while (sz == rsz);
+
+            try
+            {
+                List<uint> list = ids.ToList();
+                list.RemoveAll(x => x == 0);
+                ids = list.ToArray();
+                list.Clear();
+                list = null;
+            }
+            catch (ArgumentException)
+            {
+
+            }
+
+            return ids;
+        }
+
+        /// <summary>
+        /// Get the process name for the specified process identifier.
+        /// </summary>
+        /// <param name="pid">The process id.</param>
+        /// <returns>Process name string, if successful. Else, null.</returns>
+        /// <exception cref="Win32Exception">A Win32Exception exception will be thrown if this specified process id is not found or if it is non-accessible due to its access control level.</exception>
+        private static string GetProcessNameFromIdNt(uint pid)
+        {
+            try
+            {
+                string s = NtGetProcessNameFromId(pid);
+
+                if (s == null)
+                {
+                    return null;
+                }
+
+                return s.Replace(".exe", string.Empty);
+            }
+            catch (ArgumentException)
+            {
+
+            }
+            catch (Win32Exception e)
+            {
+                if (e.NativeErrorCode is 5 or 6)
+                {
+                    throw;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// Get the process name for the specified process identifier.
         /// </summary>
         /// <param name="pid">The process id.</param>
@@ -1007,7 +1433,7 @@ namespace FabricObserver.Observers.Utilities
         {
             try
             {
-                string s = GetProcessNameFromId((uint)pid);
+                string s = GetProcessNameFromIdInternal((uint)pid);
 
                 if (s?.Length == 0)
                 {
@@ -1031,60 +1457,91 @@ namespace FabricObserver.Observers.Utilities
             return null;
         }
 
-        /// <summary>
-        /// Creates a native snapshot of all processes currently running on the system.
-        /// </summary>
-        /// <returns>SafeObjectHandle to the snapshot.</returns>
-        public static SafeObjectHandle CreateProcessSnapshot()
+        private static string GetProcessNameFromIdInternal(uint pid)
         {
-            return CreateToolhelp32Snapshot((uint)CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
+            SafeProcessHandle hProc = null;
+            StringBuilder sbProcName = new(1024);
+
+            try
+            {
+                hProc = GetSafeProcessHandle((int)pid);
+
+                if (!hProc.IsInvalid)
+                {
+                    // Get the name of the process.
+                    // If GetModuleBaseName succeeds, the return value specifies the length of the string copied to the buffer, in characters.
+                    // If GetModuleBaseName fails, the return value is 0.
+                    if (GetModuleBaseName(hProc, IntPtr.Zero, sbProcName, (uint)sbProcName.Capacity) == 0)
+                    {
+                        return string.Empty;
+                    }
+                }
+
+                return sbProcName.ToString();
+            }
+            finally
+            {
+                sbProcName.Clear();
+                sbProcName = null;
+                hProc.Dispose();
+                hProc = null;
+            }
         }
 
         /// <summary>
         /// Gets the process id for the specified process name. **Note that this is only useful if there is one process of the specified name**.
         /// </summary>
         /// <param name="procName">The name of the process.</param>
-        /// <returns>Process id as int. If this fails for any reason, it will return -1.</returns>
+        /// <returns>Process id as uint. If this fails for any reason, it will return 0.</returns>
         public static int GetProcessIdFromName(string procName)
         {
-            uint[] ids = EnumProcesses();
-
-            for (int i = 0; i < ids.Length; ++i)
+            try
             {
-                uint id = ids[i];
+                uint[] ids = EnumProcesses(); //NtGetSFServiceProcessIds();
 
-                if (id < 5)
+                for (int i = 0; i < ids.Length; ++i)
                 {
-                    continue;
-                }
+                    uint pid = ids[i];
 
-                string name;
-                try
-                {
-                    name = GetProcessNameFromId(id);
-                }
-                catch (Win32Exception)
-                {
-                    // FO can't access specified (restricted) process.
-                    continue;
-                }
+                    if (pid < 5)
+                    {
+                        continue;
+                    }
 
-                if (string.IsNullOrWhiteSpace(name) || ignoreProcessList.Any(n => n == name))
-                {
-                    continue;
+                    string name;
+
+                    try
+                    {
+                        name = GetProcessNameFromIdInternal(pid);
+                    }
+                    catch (Win32Exception)
+                    {
+                        // FO can't access specified (restricted) process.
+                        continue;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(name) || FindInStringArray(ignoreProcessList, name))
+                    {
+                        continue;
+                    }
+
+                    name = name.Replace(".exe", string.Empty);
+
+                    if (name != procName)
+                    {
+                        continue;
+                    }
+
+                    return (int)pid;
                 }
-
-                name = name.Replace(".exe", string.Empty);
-
-                if (name != procName)
-                {
-                    continue;
-                }
-
-                return (int)id;
+            }
+            catch (Win32Exception we)
+            {
+                // From EnumProcesses
+                logger.LogWarning($"Failure getting process information: {we.Message}");
             }
 
-            return -1;
+            return 0;
         }
 
         /// <summary>
@@ -1099,9 +1556,9 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                procHandle = GetSafeProcessHandle((uint)procId);
+                procHandle = GetSafeProcessHandle(procId);
 
-                if (procHandle.IsInvalid)
+                if (procHandle.IsInvalid || procHandle.IsClosed)
                 {
                     throw new Win32Exception(Marshal.GetLastWin32Error());
                 }
@@ -1143,9 +1600,9 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                procHandle = GetSafeProcessHandle((uint)procId);
+                procHandle = GetSafeProcessHandle(procId);
 
-                if (procHandle.IsInvalid)
+                if (procHandle.IsInvalid || procHandle.IsClosed)
                 {
                     throw new Win32Exception(Marshal.GetLastWin32Error());
                 }
@@ -1186,9 +1643,9 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         /// <param name="id">Process id.</param>
         /// <returns>SafeProcessHandle instance.</returns>
-        public static SafeProcessHandle GetSafeProcessHandle(uint id)
+        public static SafeProcessHandle GetSafeProcessHandle(int id, ProcessAccessFlags flags = ProcessAccessFlags.All)
         {
-            return OpenProcess((uint)ProcessAccessFlags.All, false, id);
+            return OpenProcess((uint)flags, false, (uint)id);
         }
 
         internal static MEMORYSTATUSEX GetSystemMemoryInfo()
@@ -1224,94 +1681,53 @@ namespace FabricObserver.Observers.Utilities
         /// <summary>
         /// Gets the child processes, if any, belonging to the process with supplied pid.
         /// </summary>
-        /// <param name="parentpid">The process ID of parent process.</param>
-        /// <param name="handleToSnapshot">Handle to process snapshot (created using NativeMethods.CreateToolhelp32Snapshot).</param>
-        /// <returns>A List of tuple (string procName,  int procId) representing each child process.</returns>
-        /// <exception cref="Win32Exception">A Win32 Error Code will be present in the exception Message.</exception>
-        internal static List<(string procName, int procId)> GetChildProcesses(int parentpid, SafeObjectHandle handleToSnapshot = null)
+        /// <param name="parentPid">The process ID of parent process (SF service host process).</param>
+        /// <param name="currentProcIds">An array containing all pids of processes running at the time it was created.</param>
+        /// <returns>A List of tuple (string procName, int procId) representing each child process belonging to the specified parent process (with parentPid).</returns>
+        internal static List<(string, uint)> PssGetServiceProcessDescendants(uint parentPid, ref uint[] currentProcIds)
         {
-            if (parentpid < 1)
+            if (currentProcIds == null || parentPid < 0)
             {
                 return null;
             }
 
-            bool isLocalSnapshot = false;
+            List<(string, uint)> ret = new();
 
-            try
+            for (int i = 0; i < currentProcIds.Length; ++i)
             {
-                if (handleToSnapshot == null || handleToSnapshot.IsInvalid || handleToSnapshot.IsClosed)
+                try
                 {
-                    isLocalSnapshot = true;
-                    handleToSnapshot = CreateToolhelp32Snapshot((uint)CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
-                    
-                    if (handleToSnapshot.IsInvalid)
+                    var snapshot = PssGetProcessSnapshot(currentProcIds[i]);
+
+                    if (string.IsNullOrWhiteSpace(snapshot.ImageFileName))
                     {
-                        logger.LogWarning(
-                            $"GetChildProcesses({parentpid}): Failed to process snapshot at CreateToolhelp32Snapshot with Win32 error code {Marshal.GetLastWin32Error()}");
-                        return null;
+                        continue;
+                    }
+
+                    string procName = Path.GetFileName(snapshot.ImageFileName);
+
+                    // We don't care about SF system service procs.
+                    if (FindInStringArray(ignoreFabricSystemServicesList, procName))
+                    {
+                        continue;
+                    }
+
+                    // Rename as file extension is not expected by caller.
+                    procName = procName.Replace(".exe", string.Empty);
+
+                    // The process is a child of the supplied process with the given pid (parentPid). Add it to the list.
+                    if (parentPid == snapshot.ParentProcessId)
+                    {
+                        ret.Add((procName, snapshot.ProcessId));
                     }
                 }
-
-                PROCESSENTRY32 procEntry = new()
+                catch (Exception e) when (e is ArgumentException or Win32Exception)
                 {
-                    dwSize = (uint)Marshal.SizeOf(typeof(PROCESSENTRY32))
-                };
 
-                if (!Process32First(handleToSnapshot, ref procEntry))
-                {
-                    logger.LogWarning($"GetChildProcesses({parentpid}): Failed to process snapshot at Process32First with Win32 error code {Marshal.GetLastWin32Error()}");
-                    return null;
-                }
-
-                List<(string procName, int procId)> childProcs = new();
-
-                do
-                {
-                    try
-                    {
-                        // Filter out the procs we know are not the droids we're looking for just by name or pid.
-                        if (procEntry.th32ProcessID == 0 || FindInStringArray(ignoreProcessList, procEntry.szExeFile)
-                            || FindInStringArray(ignoreFabricSystemServicesList, procEntry.szExeFile))
-                        {
-                            continue;
-                        }
-
-                        // If the detected pid is not a child of the supplied parent pid, then ignore.
-                        if (parentpid != (int)procEntry.th32ParentProcessID)
-                        {
-                            continue;
-                        }
-
-                        // Make sure the parent process is still the active process with supplied identifier.
-                        string suppliedParentProcIdName = GetProcessNameFromId((uint)parentpid);
-                        string parentSnapProcName = GetProcessNameFromId(procEntry.th32ParentProcessID);
-
-                        if (suppliedParentProcIdName.Equals(parentSnapProcName))
-                        {
-                            childProcs.Add((procEntry.szExeFile.Replace(".exe", ""), (int)procEntry.th32ProcessID));
-                        }
-                    }
-                    catch (ArgumentException)
-                    {
-
-                    }
-                    catch (Win32Exception)
-                    {
-                        // From GetProcessNameFromId.
-                    }
-
-                } while (Process32Next(handleToSnapshot, ref procEntry));
-
-                return childProcs;
-            }
-            finally
-            {
-                if (isLocalSnapshot && !handleToSnapshot.IsInvalid)
-                {
-                    handleToSnapshot?.Dispose();
-                    handleToSnapshot = null;
                 }
             }
+
+            return ret;
         }
 
         // Networking \\
@@ -1321,8 +1737,8 @@ namespace FabricObserver.Observers.Utilities
         /// Gets a list of TCPv4 connection info tuples for use in determining TCP ports in use per process or machine-wide.
         /// Note that this does not consider BOUND state connections. If you need that information, then use the netstat-based API in OSProviderInfo platform impls.
         /// </summary>
-        /// <returns>List of (ushort LocalPort, uint OwningProcessId, MIB_TCP_STATE State) tuples.</returns>
-        public static List<(ushort LocalPort, uint OwningProcessId, MIB_TCP_STATE State)> GetAllTcpConnections()
+        /// <returns>List of (ushort LocalPort, int OwningProcessId, MIB_TCP_STATE State) tuples.</returns>
+        public static List<(ushort LocalPort, int OwningProcessId, MIB_TCP_STATE State)> GetAllTcpConnections()
         {
             return InternalGetTcpConnections();
         }
@@ -1331,8 +1747,8 @@ namespace FabricObserver.Observers.Utilities
         /// Gets a list of TCPv6 connection info tuples for use in determining TCP ports in use per process or machine-wide.
         /// Note that this does not consider BOUND state connections. If you need that information, then use the netstat-based API in OSProviderInfo platform impls.
         /// </summary>
-        /// <returns>List of (ushort LocalPort, uint OwningProcessId, MIB_TCP_STATE State) tuples.</returns>
-        public static List<(ushort LocalPort, uint OwningProcessId, MIB_TCP_STATE State)> GetAllTcp6Connections()
+        /// <returns>List of (ushort LocalPort, int OwningProcessId, MIB_TCP_STATE State) tuples.</returns>
+        public static List<(ushort LocalPort, int OwningProcessId, MIB_TCP_STATE State)> GetAllTcp6Connections()
         {
             return InternalGetTcp6Connections();
         }
@@ -1345,11 +1761,11 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="processId">The ID of the target process.</param>
         /// <returns>The number of read operations performed by the process as a long value.</returns>
         /// <exception cref="Win32Exception"></exception>
-        public static long GetProcessIOReadOperationCount(int processId)
+        public static long GetProcessIOReadOperationCount(uint processId)
         {
             long reads = 0;
 
-            using SafeProcessHandle safeProcessHandle = GetSafeProcessHandle((uint)processId) ?? throw new Win32Exception(Marshal.GetLastWin32Error());
+            using SafeProcessHandle safeProcessHandle = GetSafeProcessHandle((int)processId) ?? throw new Win32Exception(Marshal.GetLastWin32Error());
 
             if (!GetProcessIoCounters(safeProcessHandle, out IO_COUNTERS info))
             {
@@ -1374,10 +1790,10 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="processId">The ID of the target process.</param>
         /// <returns>The number of write operations performed by the process as a long value.</returns>
         /// <exception cref="Win32Exception"></exception>
-        public static long GetProcessIOWriteOperationCount(int processId)
+        public static long GetProcessIOWriteOperationCount(uint processId)
         {
             long writes = 0;
-            using SafeProcessHandle safeProcessHandle = GetSafeProcessHandle((uint)processId) ?? throw new Win32Exception(Marshal.GetLastWin32Error());
+            using SafeProcessHandle safeProcessHandle = GetSafeProcessHandle((int)processId) ?? throw new Win32Exception(Marshal.GetLastWin32Error());
 
             if (!GetProcessIoCounters(safeProcessHandle, out IO_COUNTERS info))
             {
@@ -1402,11 +1818,11 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="processId">The ID of the target process.</param>
         /// <returns>The number of bytes read as a long value.</returns>
         /// <exception cref="Win32Exception"></exception>
-        public static long GetProcessIOReadTransferCount(int processId)
+        public static long GetProcessIOReadTransferCount(uint processId)
         {
             long reads = 0;
 
-            using SafeProcessHandle safeProcessHandle = GetSafeProcessHandle((uint)processId) ?? throw new Win32Exception(Marshal.GetLastWin32Error());
+            using SafeProcessHandle safeProcessHandle = GetSafeProcessHandle((int)processId) ?? throw new Win32Exception(Marshal.GetLastWin32Error());
 
             if (!GetProcessIoCounters(safeProcessHandle, out IO_COUNTERS info))
             {
@@ -1431,10 +1847,10 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="processId">The ID of the target process.</param>
         /// <returns>The number of bytes written as a long value.</returns>
         /// <exception cref="Win32Exception"></exception>
-        public static long GetProcessIOWriteTransferCount(int processId)
+        public static long GetProcessIOWriteTransferCount(uint processId)
         {
             long writes = 0;
-            using SafeProcessHandle safeProcessHandle = GetSafeProcessHandle((uint)processId) ?? throw new Win32Exception(Marshal.GetLastWin32Error());
+            using SafeProcessHandle safeProcessHandle = GetSafeProcessHandle((int)processId) ?? throw new Win32Exception(Marshal.GetLastWin32Error());
 
             if (!GetProcessIoCounters(safeProcessHandle, out IO_COUNTERS info))
             {
@@ -1453,7 +1869,72 @@ namespace FabricObserver.Observers.Utilities
             return writes;
         }
 
-        private static List<(ushort LocalPort, uint OwningProcessId, MIB_TCP_STATE State)> InternalGetTcpConnections()
+        /// <summary>
+        /// Gets identifiers of all currently running SF user service host processes and their descendants.
+        /// </summary>
+        /// <returns>An array of uint values that are process identifiers of all currently running SF user service host processes (and descendants) on the system. 
+        /// If the function fails, then it will return null.</returns>
+        public static int[] NtGetSFServiceProcessIds()
+        {
+            SYSTEM_PROCESS_INFORMATION[] procInfo = NtGetSysProcInfo();
+
+            if (procInfo == null)
+            {
+                return null;
+            }
+
+            List<int> procList = new();
+
+            for (int i = 0; i < procInfo.Length; ++i)
+            {
+                try
+                {
+                    if (procInfo[i].UniqueProcessId == UIntPtr.Zero)
+                    {
+                        continue;
+                    }
+
+                    uint pid = procInfo[i].UniqueProcessId.ToUInt32();
+
+                    using (SafeProcessHandle safeProcessHandle = GetSafeProcessHandle((int)pid))
+                    {
+                        // Failure in OpenProcess, ignore.
+                        if (safeProcessHandle.IsInvalid)
+                        {
+                            continue;
+                        }
+
+                        // What happens if child is spawned with breakaway from Job Object? This is highly unlikely for SF user services.
+                        // All SF user service host processes (and their descendants) are owned by JOs, therefore if the process is not part of a JO, then ignore it.
+                        if (!IsProcessInJob(safeProcessHandle, IntPtr.Zero, out bool isInJob) || !isInJob)
+                        {
+                            continue;
+                        }
+                    }
+
+                    string procName = Path.GetFileName(procInfo[i].ImageName.Buffer);
+
+                    if (FindInStringArray(ignoreProcessList, procName))
+                    {
+                        continue;
+                    }
+
+                    procList.Add((int)pid);
+                }
+                catch (ArgumentException)
+                {
+
+                }
+            }
+
+            int[] pids = procList.ToArray();
+            procList.Clear();
+            procList = null;
+
+            return pids;
+        }
+
+        private static List<(ushort LocalPort, int OwningProcessId, MIB_TCP_STATE State)> InternalGetTcpConnections()
         {
             MIB_TCPROW_OWNER_PID[] tableRows;
             uint buffSize = 0;
@@ -1488,11 +1969,11 @@ namespace FabricObserver.Observers.Utilities
 
                 if (tableRows != null)
                 {
-                    var values = new List<(ushort LocalPort, uint OwningProcessId, MIB_TCP_STATE State)>();
+                    var values = new List<(ushort LocalPort, int OwningProcessId, MIB_TCP_STATE State)>();
 
                     foreach (var row in tableRows)
                     {
-                        values.Add((row.LocalPort, row.owningPid, row.State));
+                        values.Add((row.LocalPort, (int)row.owningPid, row.State));
                     }
 
                     return values;
@@ -1506,7 +1987,7 @@ namespace FabricObserver.Observers.Utilities
             return null;
         }
 
-        private static List<(ushort LocalPort, uint OwningProcessId, MIB_TCP_STATE State)> InternalGetTcp6Connections()
+        private static List<(ushort LocalPort, int OwningProcessId, MIB_TCP_STATE State)> InternalGetTcp6Connections()
         {
             MIB_TCP6ROW_OWNER_PID[] tableRows;
             uint buffSize = 0;
@@ -1541,11 +2022,11 @@ namespace FabricObserver.Observers.Utilities
 
                 if (tableRows != null)
                 {
-                    var values = new List<(ushort LocalPort, uint OwningProcessId, MIB_TCP_STATE State)>();
+                    var values = new List<(ushort LocalPort, int OwningProcessId, MIB_TCP_STATE State)>();
 
                     foreach (var row in tableRows)
                     {
-                        values.Add((row.LocalPort, row.owningPid, row.State));
+                        values.Add((row.LocalPort, (int)row.owningPid, row.State));
                     }
 
                     return values;
@@ -1559,56 +2040,87 @@ namespace FabricObserver.Observers.Utilities
             return null;
         }
 
-        // Credit: https://github.com/dahall/Vanara/blob/5b22a156f0ba1301b48229f30b6ff4758f60a4ee/PInvoke/Kernel32/PsApi.cs#L258
-        private static uint[] EnumProcesses()
+        private static SYSTEM_PROCESS_INFORMATION[] NtGetSysProcInfo()
         {
-            uint rsz = 1024, sz;
-            uint[] ids;
-
-            do
-            {
-                sz = rsz * 2;
-                ids = new uint[sz / sizeof(uint)];
-
-                if (!EnumProcesses(ids, sz, out rsz))
-                {
-                    throw new Win32Exception(Marshal.GetLastWin32Error());
-                }
-
-            } while (sz == rsz);
-
-            return ids;
-        }
-
-        private static string GetProcessNameFromId(uint pid)
-        {
-            SafeProcessHandle hProc = null;
-            StringBuilder sbProcName = new(1024);
+            const int MAX_TRIES = 5;
+            ArrayList arrProcInfo = new();
+            uint size = 1024;
+            int tried = 0;
+            IntPtr procInfoBuffer = IntPtr.Zero;
 
             try
             {
-                hProc = GetSafeProcessHandle(pid);
+                procInfoBuffer = Marshal.AllocHGlobal(1024);
 
-                if (!hProc.IsInvalid)
+                // Figure out the actual memory size we need. So, set actualSize given current related system state (number of processes currently executing).
+                int status = NtQuerySystemInformation(SystemProcessInformation, procInfoBuffer, size, out uint actualSize);
+
+                while (status != 0 && tried <= MAX_TRIES)
                 {
-                    // Get the name of the process.
-                    // If GetModuleBaseName succeeds, the return value specifies the length of the string copied to the buffer, in characters.
-                    // If GetModuleBaseName fails, the return value is 0.
-                    if (GetModuleBaseName(hProc, IntPtr.Zero, sbProcName, (uint)sbProcName.Capacity) == 0)
-                    {
-                        return string.Empty;
-                    }
+                    Marshal.FreeHGlobal(procInfoBuffer);
+
+                    // Pad the buffer to have a better chance of getting the right size after 1 iteration.
+                    size += actualSize;
+                    procInfoBuffer = Marshal.AllocHGlobal((int)size);
+                    status = NtQuerySystemInformation(SystemProcessInformation, procInfoBuffer, size, out actualSize);
+                    tried++;
                 }
 
-                return sbProcName.ToString();
+                if (tried == MAX_TRIES && status != 0)
+                {
+                    return null;
+                }
+
+                long offset = 0;
+                SYSTEM_PROCESS_INFORMATION sysProcInfo = (SYSTEM_PROCESS_INFORMATION)Marshal.PtrToStructure(procInfoBuffer, typeof(SYSTEM_PROCESS_INFORMATION));
+                arrProcInfo.Add(sysProcInfo);
+
+                while (sysProcInfo.NextEntryOffset > 0)
+                {
+                    offset += sysProcInfo.NextEntryOffset;
+                    IntPtr tempPtr = new(procInfoBuffer.ToInt64() + offset);
+                    sysProcInfo = (SYSTEM_PROCESS_INFORMATION)Marshal.PtrToStructure(tempPtr, typeof(SYSTEM_PROCESS_INFORMATION));
+                    arrProcInfo.Add(sysProcInfo);
+                }
+
+                var arr = new SYSTEM_PROCESS_INFORMATION[arrProcInfo.Count];
+                arrProcInfo.CopyTo(arr);
+                return arr;
+            }
+            catch (OutOfMemoryException)
+            {
+                // Immediately die.
+                Environment.FailFast($"OOM. Taking down FO:{Environment.NewLine}{Environment.StackTrace}");
             }
             finally
             {
-                sbProcName.Clear();
-                sbProcName = null;
-                hProc.Dispose();
-                hProc = null;
+                if (procInfoBuffer != IntPtr.Zero)
+                {
+                    Marshal.FreeHGlobal(procInfoBuffer);
+                }
             }
+
+            return null;
+        }
+
+        private static string NtGetProcessNameFromId(uint pid)
+        {
+            try 
+            { 
+                // Let the Win32Exception through, if it comes.
+                PSS_PROCESS_INFORMATION snapshot = PssGetProcessSnapshot(pid);
+
+                if (!string.IsNullOrWhiteSpace(snapshot.ImageFileName))
+                {
+                    return Path.GetFileName(snapshot.ImageFileName);
+                }
+            }
+            catch (ArgumentException)
+            {
+
+            }
+
+            return null;
         }
 
         // Credit (MIT): https://github.com/dahall/Vanara/blob/master/PInvoke/Kernel32/ProcessSnapshot.cs, author: https://github.com/dahall

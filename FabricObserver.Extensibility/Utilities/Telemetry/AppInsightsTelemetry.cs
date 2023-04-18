@@ -160,13 +160,13 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
             catch (Exception e)
             {
-                if (e is not OutOfMemoryException) // Since this can be handled, don't handle it.
+                logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e.Message}");
+                
+                if (e is OutOfMemoryException)
                 {
-                    logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e.Message}");
-                    return Task.CompletedTask;
-                }
-
-                throw;
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
+                };
             }
 
             return Task.CompletedTask;
@@ -213,8 +213,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                         { "ReplicaId", serviceTelemData.ReplicaId > 0 ? serviceTelemData.ReplicaId.ToString() : null },
                         { "RGMemoryEnabled", serviceTelemData.ServiceName != null ? serviceTelemData.RGMemoryEnabled.ToString() : null },
                         { "RGMemoryLimitMb", serviceTelemData.RGMemoryEnabled ? serviceTelemData.RGAppliedMemoryLimitMb.ToString() : null },
-                        { "RGCpuEnabled", serviceTelemData.ServiceName != null ? serviceTelemData.RGCpuEnabled.ToString() : null },
-                        { "RGCpuLimitCores", serviceTelemData.RGCpuEnabled ? serviceTelemData.RGAppliedCpuLimitCores.ToString() : null },
+                        //{ "RGCpuEnabled", serviceTelemData.ServiceName != null ? serviceTelemData.RGCpuEnabled.ToString() : null },
+                        //{ "RGCpuLimitCores", serviceTelemData.RGCpuEnabled ? serviceTelemData.RGAppliedCpuLimitCores.ToString() : null },
                         { "ObserverName", serviceTelemData.ObserverName },
                         { "NodeName", serviceTelemData.NodeName },
                         { "OS", serviceTelemData.OS }
@@ -333,10 +333,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             catch (Exception e)
             {
                 logger.LogWarning($"Unhandled exception in AppInsights ReportHealthAsync: {e.Message}");
-                
-                if (e is OutOfMemoryException) // Since this can be handled, don't handle it.
+
+                if (e is OutOfMemoryException)
                 {
-                    throw;
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
                 }
             }
 
@@ -408,8 +409,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                         { "ReplicaId", serviceTelemData.ReplicaId > 0 ? serviceTelemData.ReplicaId.ToString() : null },
                         { "RGMemoryEnabled", serviceTelemData.ServiceName != null ? serviceTelemData.RGMemoryEnabled.ToString() : null },
                         { "RGMemoryLimitMb", serviceTelemData.RGMemoryEnabled ? serviceTelemData.RGAppliedMemoryLimitMb.ToString() : null },
-                        { "RGCpuEnabled", serviceTelemData.ServiceName != null ? serviceTelemData.RGCpuEnabled.ToString() : null },
-                        { "RGCpuLimitCores", serviceTelemData.RGCpuEnabled ? serviceTelemData.RGAppliedCpuLimitCores.ToString() : null },
+                        //{ "RGCpuEnabled", serviceTelemData.ServiceName != null ? serviceTelemData.RGCpuEnabled.ToString() : null },
+                        //{ "RGCpuLimitCores", serviceTelemData.RGCpuEnabled ? serviceTelemData.RGAppliedCpuLimitCores.ToString() : null },
                         { "ObserverName", serviceTelemData.ObserverName },
                         { "NodeName", serviceTelemData.NodeName },
                         { "OS", serviceTelemData.OS }
@@ -527,9 +528,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             {
                 logger.LogWarning($"Unhandled exception in AppInsights ReportMetricAsync impl: {e.Message}");
 
-                if (e is OutOfMemoryException) // Since this can be handled, don't handle it.
+                if (e is OutOfMemoryException)
                 {
-                    throw;
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
                 }
             }
 
@@ -582,9 +584,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 {
                     logger.LogWarning($"Unhandled exception in TelemetryClient.ReportMetricAsync: {e.Message}");
 
-                    if (e is OutOfMemoryException) // Since this can be handled, don't handle it.
+                    if (e is OutOfMemoryException)
                     {
-                        throw;
+                        // Terminate now.
+                        Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
                     }
                 }
             }
@@ -652,9 +655,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             {
                 logger.LogWarning($"Unhandled exception in TelemetryClient.ReportMetricAsync:{Environment.NewLine}{e.Message}");
 
-                if (e is OutOfMemoryException) // Since this can be handled, don't handle it.
+                if (e is OutOfMemoryException)
                 {
-                    throw;
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
                 }
             }
 
@@ -726,9 +730,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 // Telemetry is non-critical and should not take down FH.
                 logger.LogWarning($"Failure in ReportClusterUpgradeStatus:{Environment.NewLine}{e.Message}");
 
-                if (e is OutOfMemoryException) // Since this can be handled, don't handle it.
+                if (e is OutOfMemoryException)
                 {
-                    throw;
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
                 }
             }
 
@@ -776,9 +781,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 // Telemetry is non-critical and should not take down FH.
                 logger.LogWarning($"Failure in ReportApplicationUpgradeStatus:{Environment.NewLine}{e}");
 
-                if (e is OutOfMemoryException) // Since this can be handled, don't handle it.
+                if (e is OutOfMemoryException)
                 {
-                    throw;
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
                 }
             }
 
@@ -825,9 +831,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             {
                 logger.LogWarning($"Unhandled exception in AppInsights impl: ReportNodeSnapshotAsync:{Environment.NewLine}{e.Message}");
 
-                if (e is OutOfMemoryException) // Since this can be handled, don't handle it.
+                if (e is OutOfMemoryException)
                 {
-                    throw;
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
                 }
             }
 

@@ -21,7 +21,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml;
 using System.Xml.Serialization;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
@@ -180,9 +179,23 @@ namespace FabricObserver.Utilities.ServiceFabric
 
             if (isWindows && includeChildProcesses)
             {
-                handleToSnapshot = NativeMethods.CreateProcessSnapshot();
-            }
+                handleToSnapshot = NativeMethods.CreateAllProcessSnapshot();
 
+                if (handleToSnapshot.IsInvalid)
+                {
+                    string message = "Can't observe child processes. Failure getting process ids on the system (CreateProcessSnapshot).";
+                    logger.LogWarning(message);
+                    logger.LogEtw(
+                        ObserverConstants.FabricObserverETWEventName,
+                        new
+                        {
+                            Level = "Warning",
+                            Message = message,
+                            Source = "FabricClientUtilities::GetAllDeployedReplicasOrInstances"
+                        });
+                }
+            }
+            
             try
             {
                 foreach (DeployedApplication app in appList)
@@ -217,8 +230,8 @@ namespace FabricObserver.Utilities.ServiceFabric
             {
                 if (isWindows && includeChildProcesses)
                 {
-                    handleToSnapshot?.Dispose();
                     GC.KeepAlive(handleToSnapshot);
+                    handleToSnapshot.Dispose();
                     handleToSnapshot = null;
                 }
             }
@@ -257,67 +270,69 @@ namespace FabricObserver.Utilities.ServiceFabric
                 switch (deployedReplica)
                 {
                     case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole is ReplicaRole.Primary or ReplicaRole.ActiveSecondary:
+                    {
+                        replicaInfo = new ReplicaOrInstanceMonitoringInfo
                         {
-                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
-                            {
-                                ApplicationName = appName,
-                                ApplicationTypeName = applicationTypeName,
-                                HostProcessId = statefulReplica.HostProcessId,
-                                ReplicaOrInstanceId = statefulReplica.ReplicaId,
-                                PartitionId = statefulReplica.Partitionid,
-                                ReplicaRole = statefulReplica.ReplicaRole,
-                                ServiceKind = statefulReplica.ServiceKind,
-                                ServiceName = statefulReplica.ServiceName,
-                                ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
-                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(statefulReplica.ServicePackageActivationId) ?
-                                    ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
-                                ReplicaStatus = statefulReplica.ReplicaStatus
-                            };
+                            ApplicationName = appName,
+                            ApplicationTypeName = applicationTypeName,
+                            HostProcessId = statefulReplica.HostProcessId,
+                            ReplicaOrInstanceId = statefulReplica.ReplicaId,
+                            PartitionId = statefulReplica.Partitionid,
+                            ReplicaRole = statefulReplica.ReplicaRole,
+                            ServiceKind = statefulReplica.ServiceKind,
+                            ServiceName = statefulReplica.ServiceName,
+                            ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
+                            ServicePackageActivationMode = string.IsNullOrWhiteSpace(statefulReplica.ServicePackageActivationId) ?
+                                ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
+                            ReplicaStatus = statefulReplica.ReplicaStatus
+                        };
 
-                            /* In order to provide accurate resource usage of an SF service process we need to also account for
-                            any processes (children) that the service process (parent) created/spawned. */
-                            if (includeChildProcesses && !handleToSnapshot.IsInvalid)
-                            {
-                                List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, handleToSnapshot);
+                        /* In order to provide accurate resource usage of an SF service process we need to also account for
+                        any processes (children) that the service process (parent) created/spawned. */
+                        if (includeChildProcesses)
+                        {
+                            List<(string ProcName, int Pid)> childPids = null;
+                            childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, handleToSnapshot);
 
-                                if (childPids != null && childPids.Count > 0)
-                                {
-                                    replicaInfo.ChildProcesses = childPids;
-                                }
+                            if (childPids != null && childPids.Count > 0)
+                            {
+                                replicaInfo.ChildProcesses = childPids;
                             }
-
-                            break;
                         }
+
+                        break;
+                    }
                     case DeployedStatelessServiceInstance statelessInstance:
+                    {
+                        replicaInfo = new ReplicaOrInstanceMonitoringInfo
                         {
-                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
-                            {
-                                ApplicationName = appName,
-                                ApplicationTypeName = applicationTypeName,
-                                HostProcessId = statelessInstance.HostProcessId,
-                                ReplicaOrInstanceId = statelessInstance.InstanceId,
-                                PartitionId = statelessInstance.Partitionid,
-                                ReplicaRole = ReplicaRole.None,
-                                ServiceKind = statelessInstance.ServiceKind,
-                                ServiceName = statelessInstance.ServiceName,
-                                ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
-                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(statelessInstance.ServicePackageActivationId) ?
-                                    ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
-                                ReplicaStatus = statelessInstance.ReplicaStatus
-                            };
+                            ApplicationName = appName,
+                            ApplicationTypeName = applicationTypeName,
+                            HostProcessId = statelessInstance.HostProcessId,
+                            ReplicaOrInstanceId = statelessInstance.InstanceId,
+                            PartitionId = statelessInstance.Partitionid,
+                            ReplicaRole = ReplicaRole.None,
+                            ServiceKind = statelessInstance.ServiceKind,
+                            ServiceName = statelessInstance.ServiceName,
+                            ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
+                            ServicePackageActivationMode = string.IsNullOrWhiteSpace(statelessInstance.ServicePackageActivationId) ?
+                                ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
+                            ReplicaStatus = statelessInstance.ReplicaStatus
+                        };
 
-                            if (includeChildProcesses && !handleToSnapshot.IsInvalid)
-                            {
-                                List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, handleToSnapshot);
+                        if (includeChildProcesses)
+                        {
+                            List<(string ProcName, int Pid)> childPids = null;
+                            childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, handleToSnapshot);
 
-                                if (childPids != null && childPids.Count > 0)
-                                {
-                                    replicaInfo.ChildProcesses = childPids;
-                                }
+                            if (childPids != null && childPids.Count > 0)
+                            {
+                                replicaInfo.ChildProcesses = childPids;
                             }
-
-                            break;
                         }
+
+                        break;
+                    }
                 }
 
                 if (replicaInfo?.HostProcessId > 0)
@@ -465,7 +480,7 @@ namespace FabricObserver.Utilities.ServiceFabric
 
         /// <summary>
         /// Processes values for application parameters, returning the specified value in use for application parameter variables.
-        /// If the appParamValue is not a variable name, then the function just returns the supplied appParamValue.
+        /// If the appParamValue is not a variable name or the supplied ApplicationParameterList is null, then the function just returns the supplied appParamValue.
         /// </summary>
         /// <param name="appParamValue">The value of an Application parameter.</param>
         /// <param name="parameters">ApplicationParameterList instance that contains all app parameter values.</param>
@@ -473,23 +488,22 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// else the value specified in appParamValue.</returns>
         public static string ParseAppParameterValue(string appParamValue, ApplicationParameterList parameters)
         {
-            if (!string.IsNullOrWhiteSpace(appParamValue))
+            if (parameters == null || string.IsNullOrWhiteSpace(appParamValue))
             {
-                // Application parameter value specified as a Service Fabric Application Manifest variable.
-                if (appParamValue.StartsWith("["))
-                {
-                    appParamValue = appParamValue.Replace("[", string.Empty).Replace("]", string.Empty);
+                return appParamValue;
+            }
 
-                    if (parameters.TryGetValue(appParamValue, out ApplicationParameter parameter))
-                    {
-                        return parameter.Value;
-                    }
-                    else
-                    {
-                        appParamValue = "0";
-                    }
+            // Application parameter value specified as a Service Fabric Application Manifest variable.
+            if (appParamValue.StartsWith("["))
+            {
+                appParamValue = appParamValue.Replace("[", string.Empty).Replace("]", string.Empty);
+
+                if (parameters.TryGetValue(appParamValue, out ApplicationParameter parameter))
+                {
+                    return parameter.Value;
                 }
             }
+            
             return appParamValue;
         }
 
@@ -500,13 +514,23 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// <param name="fromParameters">ApplicationParameterList to be used</param>
         public static void AddParametersIfNotExists(ApplicationParameterList toParameters, ApplicationParameterList fromParameters)
         {
+            // If toParameters is passed in as null, then make it a new instance.
+            toParameters ??= new ApplicationParameterList();
+
             if (fromParameters != null)
             {
                 foreach (var parameter in fromParameters)
                 {
-                    if (!toParameters.Contains(parameter.Name))
+                    try
                     {
-                        toParameters.Add(new ApplicationParameter() { Name = parameter.Name, Value = parameter.Value });
+                        if (!toParameters.Contains(parameter.Name))
+                        {
+                            toParameters.Add(new ApplicationParameter() { Name = parameter.Name, Value = parameter.Value });
+                        }
+                    }
+                    catch (ArgumentException)
+                    {
+
                     }
                 }
             }
@@ -816,7 +840,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                     catch (Exception e) when (e is FabricException or TimeoutException)
                     {
 #if DEBUG
-                        logger.LogInfo($"Handled Exception in ReportClusterHealthAsync::Node:{Environment.NewLine}{e.Message}");
+                        logger.LogInfo($"Handled Exception in ReportClusterHealthAsync::Node: {e.Message}");
 #endif
                     }
                 }
@@ -859,7 +883,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                         catch (Exception e) when (e is FabricException or TimeoutException)
                         {
 #if DEBUG
-                            logger.LogInfo($"Handled Exception in ReportClusterHealthAsync::Application:{Environment.NewLine}{e.Message}");
+                            logger.LogInfo($"Handled Exception in ReportClusterHealthAsync::Application: {e.Message}");
 #endif
                         }
                     }
@@ -867,14 +891,14 @@ namespace FabricObserver.Utilities.ServiceFabric
             }
             catch (Exception e) when (e is FabricException or TimeoutException)
             {
-                string msg = $"Handled transient exception in ReportClusterHealthAsync:{Environment.NewLine}{e}";
+                string msg = $"Handled transient exception in ClearFabricObserverHealthReportsAsync: {e.Message}";
 
                 // Log it locally.
                 logger.LogWarning(msg);
             }
             catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
-                string msg = $"Unhandled exception in ReportClusterHealthAsync:{Environment.NewLine}{e}";
+                string msg = $"Unhandled exception in ClearFabricObserverHealthReportsAsync:{Environment.NewLine}{e}";
 
                 // Log it locally.
                 logger.LogError(msg);
@@ -912,8 +936,11 @@ namespace FabricObserver.Utilities.ServiceFabric
 
             var serviceHealthEvents =
                 serviceHealth.HealthEvents.Where(
-                    e => e.HealthInformation.SourceId.StartsWith(ObserverConstants.AppObserverName)
-                      || e.HealthInformation.SourceId.StartsWith(ObserverConstants.ContainerObserverName)).ToList();
+                    e => 
+                        JsonHelper.TryDeserializeObject(e.HealthInformation.Description, out TelemetryDataBase telemetryDataBase)
+                        && telemetryDataBase.NodeName == this.nodeName
+                        && (e.HealthInformation.SourceId.StartsWith(ObserverConstants.AppObserverName)
+                            || e.HealthInformation.SourceId.StartsWith(ObserverConstants.ContainerObserverName))).ToList();
 
             if (!serviceHealthEvents.Any())
             {
@@ -923,7 +950,7 @@ namespace FabricObserver.Utilities.ServiceFabric
             var healthReport = new HealthReport
             {
                 Code = FOErrorWarningCodes.Ok,
-                HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping or restarting.",
+                HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping or starting.",
                 State = HealthState.Ok,
                 NodeName = nodeName,
                 ServiceName = service.ServiceName,
@@ -964,8 +991,12 @@ namespace FabricObserver.Utilities.ServiceFabric
 
             var appHealthEvents =
                 appHealth.HealthEvents.Where(
-                    e => e.HealthInformation.SourceId.StartsWith(ObserverConstants.FabricSystemObserverName)
-                      || e.HealthInformation.SourceId.StartsWith(ObserverConstants.NetworkObserverName)).ToList();
+                    e => 
+                       JsonHelper.TryDeserializeObject(e.HealthInformation.Description, out TelemetryDataBase telemetryDataBase)
+                       && telemetryDataBase.NodeName == this.nodeName
+                       && (e.HealthInformation.SourceId.StartsWith(ObserverConstants.AppObserverName)
+                           || e.HealthInformation.SourceId.StartsWith(ObserverConstants.FabricSystemObserverName)
+                           || e.HealthInformation.SourceId.StartsWith(ObserverConstants.NetworkObserverName))).ToList();
 
             if (!appHealthEvents.Any())
             {
@@ -975,7 +1006,7 @@ namespace FabricObserver.Utilities.ServiceFabric
             var healthReport = new HealthReport
             {
                 Code = FOErrorWarningCodes.Ok,
-                HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping or restarting.",
+                HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping or starting.",
                 State = HealthState.Ok,
                 NodeName = nodeName,
                 AppName = app.ApplicationName,
@@ -1035,7 +1066,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                 var healthReport = new HealthReport
                 {
                     Code = FOErrorWarningCodes.Ok,
-                    HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping or restarting.",
+                    HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping or starting.",
                     State = HealthState.Ok,
                     NodeName = this.nodeName,
                     EntityType = EntityType.Machine

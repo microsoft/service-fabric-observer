@@ -27,7 +27,7 @@ namespace FabricObserver.Observers.Utilities
         /// to this constructor as the instance is not used anywhere in this type.</param>
         public ObserverHealthReporter(Logger logger, FabricClient fabricClient = null)
         {
-            this.logger = logger ?? throw new ArgumentException("logger can't be null.");
+            this.logger = logger;
         }
 
         /// <summary>
@@ -107,20 +107,20 @@ namespace FabricObserver.Observers.Utilities
             };
 
             // Log health event locally.
-            if (healthReport.EmitLogEvent)
+            if (healthReport.EmitLogEvent && logger != null)
             {
                 switch (healthReport.State)
                 {
                     case HealthState.Error:
-                        logger.LogError(healthReport.NodeName + ": {0}", healthInformation.Description);
+                        logger?.LogError(healthReport.NodeName + ": {0}", healthInformation.Description);
                         break;
 
                     case HealthState.Warning:
-                        logger.LogWarning(healthReport.NodeName + ": {0}", healthInformation.Description);
+                        logger?.LogWarning(healthReport.NodeName + ": {0}", healthInformation.Description);
                         break;
 
                     default:
-                        logger.LogInfo(healthReport.NodeName + ": {0}", healthInformation.Description);
+                        logger?.LogInfo(healthReport.NodeName + ": {0}", healthInformation.Description);
                         break;
                 }
             }
@@ -224,7 +224,7 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (FabricException fe)
             {
-                logger.LogWarning($"Handled Exception while generating SF health report:{Environment.NewLine}{fe}");
+                logger?.LogWarning($"Handled Exception while generating SF health report: {fe.Message}");
             }
         }
     }

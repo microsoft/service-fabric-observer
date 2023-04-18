@@ -77,7 +77,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="configPath">Optional (this is used by Linux callers only - see LinuxInfoProvider.cs): 
         /// If supplied, will use the path to find the Linux Capabilities binary to run this command.</param>
         /// <returns>Number of active TCP ports in use as integer value.</returns>
-        public abstract int GetActiveTcpPortCount(int processId = -1, string configPath = null);
+        public abstract int GetActiveTcpPortCount(int processId = 0, string configPath = null);
 
         /// <summary>
         /// Compute count of active TCP ports in the dynamic range.
@@ -86,7 +86,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="configPath">Optional (this is used by Linux callers only - see LinuxInfoProvider.cs): 
         /// If supplied, will use the path to find the Linux Capabilities binary to run this command.</param>
         /// <returns>Number of active TCP ports in use as integer value.</returns>
-        public abstract int GetActiveEphemeralPortCount(int processId = -1, string configPath = null);
+        public abstract int GetActiveEphemeralPortCount(int processId = 0, string configPath = null);
 
         /// <summary>
         /// 
@@ -119,6 +119,6 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="processId">Id of process.</param>
         /// <param name="configPath">Configuration Settings path. This is required by the Linux impl. Ignored for Windows.</param>
         /// <returns>Percentage of ephemeral ports in use as a double.</returns>
-        public abstract double GetActiveEphemeralPortCountPercentage(int processId = -1, string configPath = null);
+        public abstract double GetActiveEphemeralPortCountPercentage(int processId = 0, string configPath = null);
     }
 }

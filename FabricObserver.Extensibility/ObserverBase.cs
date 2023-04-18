@@ -639,9 +639,9 @@ namespace FabricObserver.Observers
                     return false;
                 }
 
-                using (SafeProcessHandle processHandle = NativeMethods.GetSafeProcessHandle((uint)processId))
+                using (SafeProcessHandle processHandle = NativeMethods.GetSafeProcessHandle(processId))
                 {
-                    if (processHandle.IsInvalid)
+                    if (processHandle.IsInvalid || processHandle.IsClosed)
                     {
                         throw new Win32Exception($"Failed getting handle to process {processId} with Win32 error {Marshal.GetLastWin32Error()}");
                     }
@@ -839,8 +839,8 @@ namespace FabricObserver.Observers
                             ReplicaStatus = replicaOrInstance.ReplicaStatus.ToString(),
                             RGMemoryEnabled = replicaOrInstance.RGMemoryEnabled,
                             RGAppliedMemoryLimitMb = replicaOrInstance.RGAppliedMemoryLimitMb,
-                            RGCpuEnabled = replicaOrInstance.RGCpuEnabled,
-                            RGAppliedCpuLimitCores = replicaOrInstance.RGAppliedCpuLimitCores,
+                            //RGCpuEnabled = replicaOrInstance.RGCpuEnabled,
+                            //RGAppliedCpuLimitCores = replicaOrInstance.RGAppliedCpuLimitCores,
                             ServiceKind = replicaOrInstance.ServiceKind.ToString(),
                             ServiceName = serviceName.OriginalString,
                             ServiceTypeName = serviceTypeName,
@@ -984,7 +984,7 @@ namespace FabricObserver.Observers
                     {
                         ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                         EntityType = entityType,
-                        DriveName = id[..2],
+                        DriveName = IsWindows ? id[..2] : string.Empty,
                         FolderName = data.Property == ErrorWarningProperty.FolderSizeMB ? id : null,
                         NodeName = NodeName,
                         NodeType = NodeType,
@@ -1241,14 +1241,15 @@ namespace FabricObserver.Observers
                         break;
 
                     // RG CPU Limit Percent. Only Warning is supported.
-                    case ErrorWarningProperty.RGCpuUsagePercent when entityType == EntityType.Application || entityType == EntityType.Service:
+                    /*case ErrorWarningProperty.RGCpuUsagePercent when entityType == EntityType.Application || entityType == EntityType.Service:
                         errorWarningCode = FOErrorWarningCodes.AppWarningRGCpuLimitPercent;
-                        break;
+                        break;*/
                 }
 
                 var healthMessage = new StringBuilder();
                 string childProcMsg = string.Empty;
                 string rgInfo = string.Empty;
+                //string rgCpuInfo = string.Empty;
                 string drive = string.Empty;
 
                 if (replicaOrInstance != null && replicaOrInstance.ChildProcesses != null)
@@ -1262,10 +1263,10 @@ namespace FabricObserver.Observers
                     rgInfo = $" of {replicaOrInstance.RGAppliedMemoryLimitMb}MB";
                 }
 
-                if (replicaOrInstance != null && data.Property == ErrorWarningProperty.RGCpuUsagePercent)
+                /*if (replicaOrInstance != null && data.Property == ErrorWarningProperty.RGCpuUsagePercent)
                 {
                     rgInfo = $" of {replicaOrInstance.RGAppliedCpuLimitCores} cores";
-                }
+                }*/
 
                 string metric = data.Property;
 
@@ -1312,48 +1313,44 @@ namespace FabricObserver.Observers
                     ServiceNames.Enqueue(serviceName.OriginalString);
                 }
 
-                // TOTHINK: Add a check to see if the entity is already in Warning for errorWarningCode.
-                if (!data.ActiveErrorOrWarning || data.ActiveErrorOrWarningCode != errorWarningCode)
+                var healthReport = new HealthReport
                 {
-                    var healthReport = new HealthReport
-                    {
-                        AppName = appName,
-                        Code = errorWarningCode,
-                        EmitLogEvent = EnableVerboseLogging || IsObserverWebApiAppDeployed,
-                        HealthData = telemetryData,
-                        HealthMessage = healthMessage.ToString(),
-                        HealthReportTimeToLive = TimeSpan.MaxValue,
-                        EntityType = entityType,
-                        ServiceName = serviceName,
-                        State = healthState,
-                        NodeName = NodeName,
-                        Observer = ObserverName,
-                        Property = telemetryData.Property,
-                        ResourceUsageDataProperty = data.Property,
-                        SourceId = $"{ObserverName}({errorWarningCode})"
-                    };
+                    AppName = appName,
+                    Code = errorWarningCode,
+                    EmitLogEvent = EnableVerboseLogging || IsObserverWebApiAppDeployed,
+                    HealthData = telemetryData,
+                    HealthMessage = healthMessage.ToString(),
+                    HealthReportTimeToLive = healthReportTtl,
+                    EntityType = entityType,
+                    ServiceName = serviceName,
+                    State = healthState,
+                    NodeName = NodeName,
+                    Observer = ObserverName,
+                    Property = telemetryData.Property,
+                    ResourceUsageDataProperty = data.Property,
+                    SourceId = $"{ObserverName}({errorWarningCode})"
+                };
 
-                    // Generate a Service Fabric Health Report.
-                    HealthReporter.ReportHealthToServiceFabric(healthReport);
+                // Generate a Service Fabric Health Report.
+                HealthReporter.ReportHealthToServiceFabric(healthReport);
 
-                    // Set internal health state info on data instance.
-                    data.ActiveErrorOrWarning = true;
-                    data.ActiveErrorOrWarningCode = errorWarningCode;
+                // Set internal health state info on data instance.
+                data.ActiveErrorOrWarning = true;
+                data.ActiveErrorOrWarningCode = errorWarningCode;
 
-                    // This means this observer created a Warning or Error SF Health Report
-                    HasActiveFabricErrorOrWarning = true;
+                // This means this observer created a Warning or Error SF Health Report
+                HasActiveFabricErrorOrWarning = true;
 
-                    // Update internal counters.
-                    if (healthState == HealthState.Warning)
-                    {
-                        CurrentWarningCount++;
-                    }
-                    else if (healthState == HealthState.Error)
-                    {
-                        CurrentErrorCount++;
-                    }
+                // Update internal counters.
+                if (healthState == HealthState.Warning)
+                {
+                    CurrentWarningCount++;
                 }
-
+                else if (healthState == HealthState.Error)
+                {
+                    CurrentErrorCount++;
+                }
+                
                 // Clean up sb.
                 _ = healthMessage.Clear();
                 healthMessage = null;
@@ -1452,9 +1449,9 @@ namespace FabricObserver.Observers
         /// <param name="procName">The process name.</param>
         /// <param name="procId">The process id.</param>
         /// <returns>True if the pid is mapped to the process of supplied name. False otherwise.</returns>
-        public static bool EnsureProcess(string procName, int procId)
+        private static bool EnsureProcess(string procName, int procId)
         {
-            if (string.IsNullOrWhiteSpace(procName) || procId < 1)
+            if (string.IsNullOrWhiteSpace(procName) || procId == 0)
             {
                 return false;
             }
@@ -1474,7 +1471,6 @@ namespace FabricObserver.Observers
                 }
             }
 
-            // net core's ProcessManager.EnsureState is a CPU bottleneck on Windows.
             return NativeMethods.GetProcessNameFromId(procId) == procName;
         }
 

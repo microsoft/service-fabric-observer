@@ -40,7 +40,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
 
-        public long ProcessId
+        public uint ProcessId
         {
             get; set;
         }
@@ -80,7 +80,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
 
-        public bool RGCpuEnabled
+        /*public bool RGCpuEnabled
         {
             get; set;
         }
@@ -88,7 +88,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         public double RGAppliedCpuLimitCores
         {
             get; set;
-        }
+        }*/
 
         public string ServiceKind
         {

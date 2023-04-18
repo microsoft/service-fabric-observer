@@ -229,6 +229,7 @@ namespace FabricObserver.Observers
             }
 
             await ReportAsync(token);
+            CleanUp();
 
             // The time it took to run this observer.
             stopWatch.Stop();
@@ -433,17 +434,17 @@ namespace FabricObserver.Observers
                     continue;
                 }
 
-                // Contains env variable(s)?
-                if (path.Contains('%'))
-                {
-                    if (Regex.Match(path, @"^%[a-zA-Z0-9_]+%").Success)
-                    {
-                        path = Environment.ExpandEnvironmentVariables(item.Key);
-                    }
-                }
-
                 try
                 {
+                    // Contains Windows env variable(s)?
+                    if (IsWindows && path.Contains('%'))
+                    {
+                        if (Regex.Match(path, @"^%[a-zA-Z0-9_]+%").Success)
+                        {
+                            path = Environment.ExpandEnvironmentVariables(item.Key);
+                        }
+                    }
+
                     if (!Directory.Exists(path) || item.Value <= 0)
                     {
                         continue;
@@ -519,6 +520,8 @@ namespace FabricObserver.Observers
                         DiskSpacePercentWarningThreshold,
                         timeToLiveWarning,
                         EntityType.Disk);
+
+                    data.ClearData();
                 }
 
                 // Folder size.
@@ -546,6 +549,8 @@ namespace FabricObserver.Observers
                         warningThreshold,
                         timeToLiveWarning,
                         EntityType.Disk);
+
+                    data.ClearData();
                 }
 
                 // User-supplied Average disk queue length thresholds from ApplicationManifest.xml. Windows only.
@@ -562,6 +567,8 @@ namespace FabricObserver.Observers
                             AverageQueueLengthWarningThreshold,
                             timeToLiveWarning,
                             EntityType.Disk);
+
+                        data.ClearData();
                     }
                 }
 
@@ -575,6 +582,7 @@ namespace FabricObserver.Observers
                         token.ThrowIfCancellationRequested();
                         var data = DiskSpaceAvailableMbData[i];
                         ProcessResourceDataReportHealth(data, 0, 0, timeToLiveWarning, EntityType.Disk);
+                        data.ClearData();
                     }
 
                     // Disk Space Total
@@ -583,6 +591,7 @@ namespace FabricObserver.Observers
                         token.ThrowIfCancellationRequested();
                         var data = DiskSpaceTotalMbData[i];
                         ProcessResourceDataReportHealth(data, 0, 0, timeToLiveWarning, EntityType.Disk);
+                        data.ClearData();
                     }
                 }
 
@@ -695,6 +704,41 @@ namespace FabricObserver.Observers
             _ = sb.Clear();
 
             return ret;
+        }
+
+        private void CleanUp()
+        {
+            ObserverLogger.LogInfo("Starting CleanUp...");
+            if (IsWindows && DiskAverageQueueLengthData != null && !DiskAverageQueueLengthData.Any(frud => frud.ActiveErrorOrWarning))
+            {
+                DiskAverageQueueLengthData.Clear();
+                DiskAverageQueueLengthData = null;
+            }
+
+            if (DiskSpaceUsagePercentageData != null && !DiskSpaceUsagePercentageData.Any(frud => frud.ActiveErrorOrWarning))
+            {
+                DiskSpaceUsagePercentageData.Clear();
+                DiskSpaceUsagePercentageData = null;
+            }
+
+            if (DiskSpaceAvailableMbData != null && !DiskSpaceAvailableMbData.Any(frud => frud.ActiveErrorOrWarning))
+            {
+                DiskSpaceAvailableMbData.Clear();
+                DiskSpaceAvailableMbData = null;
+            }
+
+            if (DiskSpaceTotalMbData != null && !DiskSpaceTotalMbData.Any(frud => frud.ActiveErrorOrWarning))
+            {
+                DiskSpaceTotalMbData.Clear();
+                DiskSpaceTotalMbData = null;
+            }
+
+            if (FolderSizeDataMb != null && !FolderSizeDataMb.Any(frud => frud.ActiveErrorOrWarning))
+            {
+                FolderSizeDataMb.Clear();
+                FolderSizeDataMb = null;
+            }
+            ObserverLogger.LogInfo("Completed CleanUp...");
         }
     }
 }

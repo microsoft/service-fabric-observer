@@ -3,7 +3,6 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
-using FabricObserver.Observers.Interfaces;
 using FabricObserver.Observers.Utilities.Telemetry;
 using System;
 using System.Collections.Concurrent;
@@ -13,7 +12,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Management;
-using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,7 +27,7 @@ namespace FabricObserver.Observers.Utilities
         private readonly bool useNetstat = true;
 
         // Win32 Impl (iphlpapi.dll pInvoke call, fills this cache. *Does not include BOUND state records*).
-        private readonly List<(ushort LocalPort, uint OwningProcessId, MIB_TCP_STATE State)> win32TcpConnInfo = null;
+        private readonly List<(ushort LocalPort, int OwningProcessId, MIB_TCP_STATE State)> win32TcpConnInfo = null;
 
         // Netstat Impl (launches console, calls netstat -qno -p tcp, parses output, fills this cache).
         private readonly ConcurrentDictionary<int, string> netstatOutput = null;
@@ -58,7 +56,7 @@ namespace FabricObserver.Observers.Utilities
             }
             else
             {
-                win32TcpConnInfo = new List<(ushort LocalPort, uint OwningProcessId, MIB_TCP_STATE State)>();
+                win32TcpConnInfo = new List<(ushort LocalPort, int OwningProcessId, MIB_TCP_STATE State)>();
             }
         }
 
@@ -315,7 +313,7 @@ namespace FabricObserver.Observers.Utilities
             return windowsDynamicPortRange;
         }
 
-        public override int GetActiveEphemeralPortCount(int processId = -1, string configPath = null)
+        public override int GetActiveEphemeralPortCount(int processId = 0, string configPath = null)
         {
             int count = 0;
 
@@ -345,7 +343,7 @@ namespace FabricObserver.Observers.Utilities
             return count;
         }
 
-        public override int GetActiveTcpPortCount(int processId = -1, string configPath = null)
+        public override int GetActiveTcpPortCount(int processId = 0, string configPath = null)
         {
             int count;
 
@@ -374,7 +372,7 @@ namespace FabricObserver.Observers.Utilities
             return count;
         }
 
-        public override double GetActiveEphemeralPortCountPercentage(int processId = -1, string configPath = null)
+        public override double GetActiveEphemeralPortCountPercentage(int processId = 0, string configPath = null)
         {
             double usedPct = 0.0;
             int count = GetActiveEphemeralPortCount(processId);
@@ -396,7 +394,7 @@ namespace FabricObserver.Observers.Utilities
             return usedPct;
         }
 
-        private int GetTcpPortCountNetstat(int processId = -1, bool ephemeral = false)
+        private int GetTcpPortCountNetstat(int processId = 0, bool ephemeral = false)
         {
             if (DateTime.UtcNow.Subtract(LastCacheUpdate) > TimeSpan.FromSeconds(portDataMaxCacheTimeSeconds))
             {
@@ -471,7 +469,7 @@ namespace FabricObserver.Observers.Utilities
             return count;
         }
 
-        private int GetTcpPortCountWin32(int processId = -1, bool ephemeral = false)
+        private int GetTcpPortCountWin32(int processId = 0, bool ephemeral = false)
         {
             if (DateTime.UtcNow.Subtract(LastCacheUpdate) > TimeSpan.FromSeconds(portDataMaxCacheTimeSeconds))
             {
@@ -485,7 +483,7 @@ namespace FabricObserver.Observers.Utilities
                 }
             }
 
-            var tempLocalPortData = new List<(int Port, uint Pid)>();
+            var tempLocalPortData = new List<(int Port, int Pid)>();
             string findStrProc = string.Empty;
             string error = string.Empty;
             (int lowPortRange, int highPortRange) = (-1, -1);
@@ -498,7 +496,7 @@ namespace FabricObserver.Observers.Utilities
             foreach (var (LocalPort, OwningProcessId, State) in win32TcpConnInfo)
             {
                 int localPort = LocalPort;
-                uint pid = OwningProcessId;
+                int pid = OwningProcessId;
 
                 if (processId > 0)
                 {

@@ -161,6 +161,7 @@
     <Parameter Name="DiskObserverEnableFolderSizeMonitoring" DefaultValue="false" />
     <!-- Supply full path/threshold(in MB) pairs for Warning/Error level monitoring here. Format is "fullpath0, size0 | fullpath1, size1 | fullpath2, size2 ..." -->
     <Parameter Name="DiskObserverFolderPathsErrorThresholdsMb" DefaultValue="" />
+    <!-- Note that on Linux, .NET core Environment.Get/SetEnvironmentVariable is only supported at process level, not machine level. So, environment variables for path are not supported by DiskObserver. -->
     <Parameter Name="DiskObserverFolderPathsWarningThresholdsMb" DefaultValue="C:\fabric_observer_logs, 250 | D:\SomeFolder, 1024 | %SOMEFULLPATH%, 4096 | %SOMEPATH%\SubFolder, 1024" />
     <!-- FabricSystemObserver -->
     <Parameter Name="FabricSystemObserverUseCircularBuffer" DefaultValue="false" />
