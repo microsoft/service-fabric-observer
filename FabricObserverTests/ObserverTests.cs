@@ -632,18 +632,18 @@ namespace FabricObserverTests
                 string packagePathInImageStore = "CpuStressApp";
 
                 // Clean up the unzipped directory.
-                fabricClient.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
+                FabricClient.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
 
                 // Delete services.
                 var deleteServiceDescription = new DeleteServiceDescription(new Uri(serviceName));
-                await fabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription);
+                await FabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription);
 
                 // Delete an application instance from the application type.
                 var deleteApplicationDescription = new DeleteApplicationDescription(new Uri(appName));
-                await fabricClient.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
+                await FabricClient.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
 
                 // Un-provision the application type.
-                await fabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+                await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
             }
         }
 
@@ -1253,9 +1253,9 @@ namespace FabricObserverTests
             Assert.IsTrue(RGMemoryLimit1 == 0);
 
             // CPU RG is not implemented fully. This is for the next version.
-            /*var (RGCpuEnabled1, RGCpuLimit1) = clientUtilities.TupleGetCpuResourceGovernanceInfo(null, "VotingWebPkg", "Code", null);
+            var (RGCpuEnabled1, RGCpuLimit1) = clientUtilities.TupleGetCpuResourceGovernanceInfo(null, null, "VotingWebPkg", "Code", null);
             Assert.IsFalse(RGCpuEnabled1);
-            Assert.IsTrue(RGCpuLimit1 == 0);*/
+            Assert.IsTrue(RGCpuLimit1 == 0);
 
             // Upgrade app RG memory App parameter.
             ApplicationUpgradeDescription appUpgradeDescription = new()
@@ -2909,6 +2909,7 @@ namespace FabricObserverTests
                 }
 
                 if (data.ProcessName is "VotingData" or "VotingWeb" or "ConsoleApp6" or "ConsoleApp7")
+                { 
                     Assert.IsTrue(data.RGCpuEnabled && data.RGAppliedCpuLimitCores > 0);
                 }
 

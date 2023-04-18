@@ -643,7 +643,27 @@ namespace FabricObserver.Observers
 
                         if (hasChildProcs)
                         {
-                            ProcessChildProcs(AllAppRGCpuUsagePercent, childProcessTelemetryDataList, repOrInst, app, parentFrud, token);
+                            var targetFruds = AllAppRGCpuUsagePercent.Where(f => f.Key.StartsWith(id));
+                            ConcurrentDictionary<string, FabricResourceUsageData<double>> childProcDictionary = new();
+
+                            foreach (var frud in targetFruds)
+                            {
+                                // Parent.
+                                if (frud.Key == id)
+                                {
+                                    continue;
+                                }
+
+                                _ = childProcDictionary.TryAdd(frud.Key, frud.Value);
+                            }
+
+                            ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
+
+                            // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
+                            foreach (var item in childProcDictionary)
+                            {
+                                _ = AllAppRGMemoryUsagePercent.TryRemove(item);
+                            }
                         }
 
                         ProcessResourceDataReportHealth(
