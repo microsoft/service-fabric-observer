@@ -1239,8 +1239,7 @@ namespace FabricObserverTests
             using var obs = new AppObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.oldstyle_nowarnings.json"),
-                EnableConcurrentMonitoring = true
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.oldstyle_nowarnings.json")
             };
 
             await obs.ObserveAsync(Token);
@@ -1266,7 +1265,7 @@ namespace FabricObserverTests
             Assert.IsTrue(services.Any());
 
             ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
-            ConcurrentQueue<uint> serviceProcs = new();
+            ConcurrentQueue<int> serviceProcs = new();
 
             ParallelOptions parallelOptions = new()
             {
@@ -1278,7 +1277,7 @@ namespace FabricObserverTests
             _ = Parallel.For(0, services.Count, parallelOptions, (i, state) =>
             {
                 var service = services[i];
-                string procName = NativeMethods.GetProcessNameFromId((uint)service.HostProcessId);
+                string procName = NativeMethods.GetProcessNameFromId((int)service.HostProcessId);
 
                 _ = AllAppCpuData.TryAdd($"{procName}:{service.HostProcessId}", new FabricResourceUsageData<double>(
                         property: ErrorWarningProperty.CpuTime,
@@ -1287,7 +1286,7 @@ namespace FabricObserverTests
                         useCircularBuffer: false,
                         isParallel: true));
 
-                serviceProcs.Enqueue((uint)service.HostProcessId);
+                serviceProcs.Enqueue((int)service.HostProcessId);
             });
 
             Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
@@ -1298,7 +1297,7 @@ namespace FabricObserverTests
             _ = Parallel.For(0, serviceProcs.Count, parallelOptions, (i, state) =>
             {
                 Stopwatch sw = Stopwatch.StartNew();
-                uint procId = serviceProcs.ElementAt(i);
+                int procId = serviceProcs.ElementAt(i);
                 string procName = NativeMethods.GetProcessNameFromId(procId);
                 CpuUsageWin32 cpuUsage = new();
 
@@ -1329,7 +1328,7 @@ namespace FabricObserverTests
             Assert.IsTrue(services.Any());
 
             ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
-            ConcurrentQueue<uint> serviceProcs = new();
+            ConcurrentQueue<int> serviceProcs = new();
 
             ParallelOptions parallelOptions = new()
             {
@@ -1341,7 +1340,7 @@ namespace FabricObserverTests
             _ = Parallel.For(0, services.Count, parallelOptions, (i, state) =>
             {
                 var service = services[i];
-                string procName = NativeMethods.GetProcessNameFromId((uint)service.HostProcessId);
+                string procName = NativeMethods.GetProcessNameFromId((int)service.HostProcessId);
 
                 _ = AllAppCpuData.TryAdd($"{procName}:{service.HostProcessId}", new FabricResourceUsageData<double>(
                         property: ErrorWarningProperty.CpuTime,
@@ -1350,7 +1349,7 @@ namespace FabricObserverTests
                         useCircularBuffer: false,
                         isParallel: true));
 
-                serviceProcs.Enqueue((uint)service.HostProcessId);
+                serviceProcs.Enqueue((int)service.HostProcessId);
             });
 
             Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
@@ -1361,7 +1360,7 @@ namespace FabricObserverTests
             _ = Parallel.For(0, serviceProcs.Count, parallelOptions, (i, state) =>
             {
                 Stopwatch sw = Stopwatch.StartNew();
-                uint procId = serviceProcs.ElementAt(i);
+                int procId = serviceProcs.ElementAt(i);
                 string procName = NativeMethods.GetProcessNameFromId(procId);
                 CpuUsageProcess cpuUsage = new();
 
@@ -1392,7 +1391,7 @@ namespace FabricObserverTests
             Assert.IsTrue(services.Any());
 
             ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
-            ConcurrentQueue<uint> serviceProcs = new();
+            ConcurrentQueue<int> serviceProcs = new();
 
             ParallelOptions parallelOptions = new()
             {
@@ -1404,7 +1403,7 @@ namespace FabricObserverTests
             _ = Parallel.For(0, services.Count, parallelOptions, (i, state) =>
             {
                 var service = services[i];
-                string procName = NativeMethods.GetProcessNameFromId((uint)service.HostProcessId);
+                string procName = NativeMethods.GetProcessNameFromId((int)service.HostProcessId);
 
                 _ = AllAppCpuData.TryAdd($"{procName}:{service.HostProcessId}", new FabricResourceUsageData<double>(
                         property: ErrorWarningProperty.CpuTime,
@@ -1413,7 +1412,7 @@ namespace FabricObserverTests
                         useCircularBuffer: true,
                         isParallel: true));
 
-                serviceProcs.Enqueue((uint)service.HostProcessId);
+                serviceProcs.Enqueue((int)service.HostProcessId);
             });
 
             Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
@@ -1424,7 +1423,7 @@ namespace FabricObserverTests
             _ = Parallel.For(0, serviceProcs.Count, parallelOptions, (i, state) =>
             {
                 Stopwatch sw = Stopwatch.StartNew();
-                uint procId = serviceProcs.ElementAt(i);
+                int procId = serviceProcs.ElementAt(i);
                 string procName = NativeMethods.GetProcessNameFromId(procId);
                 CpuUsageWin32 cpuUsage = new();
 
@@ -1455,7 +1454,7 @@ namespace FabricObserverTests
             Assert.IsTrue(services.Any());
 
             ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
-            ConcurrentQueue<uint> serviceProcs = new();
+            ConcurrentQueue<int> serviceProcs = new();
 
             ParallelOptions parallelOptions = new()
             {
@@ -1467,7 +1466,7 @@ namespace FabricObserverTests
             _ = Parallel.For(0, services.Count, parallelOptions, (i, state) =>
             {
                 var service = services[i];
-                string procName = NativeMethods.GetProcessNameFromId((uint)service.HostProcessId);
+                string procName = NativeMethods.GetProcessNameFromId((int)service.HostProcessId);
 
                 _ = AllAppCpuData.TryAdd($"{procName}:{service.HostProcessId}", new FabricResourceUsageData<double>(
                         property: ErrorWarningProperty.CpuTime,
@@ -1476,7 +1475,7 @@ namespace FabricObserverTests
                         useCircularBuffer: true,
                         isParallel: true));
 
-                serviceProcs.Enqueue((uint)service.HostProcessId);
+                serviceProcs.Enqueue((int)service.HostProcessId);
             });
 
             Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
@@ -1487,7 +1486,7 @@ namespace FabricObserverTests
             _ = Parallel.For(0, serviceProcs.Count, parallelOptions, (i, state) =>
             {
                 Stopwatch sw = Stopwatch.StartNew();
-                uint procId = serviceProcs.ElementAt(i);
+                int procId = serviceProcs.ElementAt(i);
                 string procName = NativeMethods.GetProcessNameFromId(procId);
                 CpuUsageProcess cpuUsage = new();
 
@@ -2309,14 +2308,10 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors()
         {
-            using var client = new FabricClient();
-            var nodeList = await client.QueryManager.GetNodeListAsync();
+            var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
-            if (nodeList?.Count > 1)
-            {
-                return;
-            }
+            Assert.IsTrue(nodeList?.Count == 1);
 
             var startDateTime = DateTime.Now;
 
@@ -2326,7 +2321,6 @@ namespace FabricObserverTests
 
             using var obs = new FabricSystemObserver(TestServiceContext)
             {
-                IsEnabled = true,
                 DataCapacity = 5,
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 IsEtwProviderEnabled = true,
@@ -2352,6 +2346,11 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_MemoryWarningsOrErrorsDetected()
         {
+            var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
+
+            // This is meant to be run on your dev machine's one node test cluster.
+            Assert.IsTrue(nodeList?.Count == 1);
+
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -2382,10 +2381,7 @@ namespace FabricObserverTests
             var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
-            if (nodeList?.Count > 1)
-            {
-                return;
-            }
+            Assert.IsTrue(nodeList?.Count == 1);
 
             var startDateTime = DateTime.Now;
 
@@ -2418,10 +2414,7 @@ namespace FabricObserverTests
             var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
-            if (nodeList?.Count > 1)
-            {
-                return;
-            }
+            Assert.IsTrue(nodeList?.Count == 1);
 
             var startDateTime = DateTime.Now;
 
@@ -2454,10 +2447,7 @@ namespace FabricObserverTests
             var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
-            if (nodeList?.Count > 1)
-            {
-                return;
-            }
+            Assert.IsTrue(nodeList?.Count == 1);
 
             var startDateTime = DateTime.Now;
 
@@ -2487,14 +2477,10 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_Negative_Integer_CPU_Warn_Threshold_No_Unhandled_Exception()
         {
-            using var client = new FabricClient();
-            var nodeList = await client.QueryManager.GetNodeListAsync();
+            var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
-            if (nodeList?.Count > 1)
-            {
-                return;
-            }
+            Assert.IsTrue(nodeList?.Count == 1);
 
             var startDateTime = DateTime.Now;
 
@@ -2527,10 +2513,7 @@ namespace FabricObserverTests
             var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
-            if (nodeList?.Count > 1)
-            {
-                return;
-            }
+            Assert.IsTrue(nodeList?.Count == 1);
 
             var startDateTime = DateTime.Now;
 
@@ -3220,5 +3203,81 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.IsUnhealthy);
         }
         #endregion
+
+        [TestMethod]
+        public async Task Validate_AppObserver_ObserveAsync_Successful_IsHealthy_Exited_Process_Removed()
+        {
+            var startDateTime = DateTime.Now;
+
+            ObserverManager.FabricServiceContext = TestServiceContext;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = true;
+
+            using var obs = new AppObserver(TestServiceContext)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
+                EnableConcurrentMonitoring = true,
+                IsEtwProviderEnabled = true,
+                EnableChildProcessMonitoring = true,
+                MaxChildProcTelemetryDataCount = 25,
+                MonitorResourceGovernanceLimits = true
+            };
+
+            int pid = NativeMethods.GetProcessIdFromName("ChildProcessCreator");
+            Assert.IsTrue(pid > 0);
+
+            await obs.InitializeAsync();
+
+            using Process p = Process.GetProcessById(pid);
+            p.Kill(true);
+            
+            while (NativeMethods.GetProcessIdFromName("ChildProcessCreator") == pid)
+            {
+                await Task.Delay(1000);
+            }
+
+            Assert.IsTrue(NativeMethods.GetProcessIdFromName("ChildProcessCreator") == 0);
+
+            int newPid;
+
+            // Wait for SF to restart the service and for the service to start child processes.
+            while (true)
+            {
+                newPid = NativeMethods.GetProcessIdFromName("ChildProcessCreator");
+                
+                if (newPid == 0)
+                {
+                    await Task.Delay(1000);
+                    continue;
+                }
+
+                // Get child proc info from a new process snapshot (passing null for handle to snapshot means create a new one).
+                var descendants = NativeMethods.GetChildProcesses(newPid, "ChildProcessCreator");
+                
+                if (descendants.Count == 3)
+                {
+                    break;
+                }
+
+                await Task.Delay(1000);
+            }
+
+            await obs.MonitorDeployedAppsAsync(Token);
+            await obs.ReportAsync(Token);
+
+            // Ensure that the old process and its descendants were removed from AppObserver's monitored process list.
+            Assert.IsFalse(
+                obs.processInfoDictionary.ContainsKey(pid) && obs.processInfoDictionary.Any(p => p.Value.ProcName == "cmd"));
+
+            obs.CleanUp();
+            obs.LastRunDateTime = DateTime.Now;
+
+            // observer detected no warning conditions.
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+        }
     }
 }

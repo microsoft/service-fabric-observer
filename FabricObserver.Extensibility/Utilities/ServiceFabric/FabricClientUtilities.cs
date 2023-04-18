@@ -179,7 +179,7 @@ namespace FabricObserver.Utilities.ServiceFabric
 
             if (isWindows && includeChildProcesses)
             {
-                handleToSnapshot = NativeMethods.CreateProcessSnapshot();
+                handleToSnapshot = NativeMethods.CreateAllProcessSnapshot();
 
                 if (handleToSnapshot.IsInvalid)
                 {
@@ -291,8 +291,8 @@ namespace FabricObserver.Utilities.ServiceFabric
                         any processes (children) that the service process (parent) created/spawned. */
                         if (includeChildProcesses)
                         {
-                            List<(string ProcName, uint Pid)> childPids = null;
-                            childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((uint)statefulReplica.HostProcessId, handleToSnapshot);
+                            List<(string ProcName, int Pid)> childPids = null;
+                            childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, handleToSnapshot);
 
                             if (childPids != null && childPids.Count > 0)
                             {
@@ -322,8 +322,8 @@ namespace FabricObserver.Utilities.ServiceFabric
 
                         if (includeChildProcesses)
                         {
-                            List<(string ProcName, uint Pid)> childPids = null;
-                            childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((uint)statelessInstance.HostProcessId, handleToSnapshot);
+                            List<(string ProcName, int Pid)> childPids = null;
+                            childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, handleToSnapshot);
 
                             if (childPids != null && childPids.Count > 0)
                             {
@@ -339,7 +339,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                 {
                     if (isWindows)
                     {
-                        replicaInfo.HostProcessName = NativeMethods.GetProcessNameFromId((uint)replicaInfo.HostProcessId);
+                        replicaInfo.HostProcessName = NativeMethods.GetProcessNameFromId((int)replicaInfo.HostProcessId);
                     }
                     else
                     {
@@ -368,9 +368,9 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// </summary>
         /// <param name="repOrInsts">List of ReplicaOrInstanceMonitoringInfo</param>
         /// <returns>A List of tuple (string ServiceName, string ProcName, int Pid) representing all services supplied in the ReplicaOrInstanceMonitoringInfo instance, including child processes of each service, if any.</returns>
-        public List<(string ServiceName, string ProcName, uint Pid)> GetServiceProcessInfo(List<ReplicaOrInstanceMonitoringInfo> repOrInsts)
+        public List<(string ServiceName, string ProcName, int Pid)> GetServiceProcessInfo(List<ReplicaOrInstanceMonitoringInfo> repOrInsts)
         {
-            List<(string ServiceName, string ProcName, uint Pid)> pids = new();
+            List<(string ServiceName, string ProcName, int Pid)> pids = new();
 
             foreach (var repOrInst in repOrInsts)
             {
@@ -378,14 +378,14 @@ namespace FabricObserver.Utilities.ServiceFabric
                 {
                     if (isWindows)
                     {
-                        string procName = NativeMethods.GetProcessNameFromId((uint)repOrInst.HostProcessId);
-                        pids.Add((repOrInst.ServiceName.OriginalString, procName, (uint)repOrInst.HostProcessId));
+                        string procName = NativeMethods.GetProcessNameFromId((int)repOrInst.HostProcessId);
+                        pids.Add((repOrInst.ServiceName.OriginalString, procName, (int)repOrInst.HostProcessId));
                     }
                     else
                     {
                         using (var proc = Process.GetProcessById((int)repOrInst.HostProcessId))
                         {
-                            pids.Add((repOrInst.ServiceName.OriginalString, proc.ProcessName, (uint)repOrInst.HostProcessId));
+                            pids.Add((repOrInst.ServiceName.OriginalString, proc.ProcessName, (int)repOrInst.HostProcessId));
                         }
                     }
 

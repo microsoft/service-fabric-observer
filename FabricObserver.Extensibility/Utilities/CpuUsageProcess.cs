@@ -25,11 +25,11 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         /// <param name="procId">Target Process object</param>
         /// <returns>CPU Time percentage for supplied procId. If the process is no longer running, then -1 will be returned.</returns>
-        public double GetCurrentCpuUsagePercentage(uint procId, string procName = null)
+        public double GetCurrentCpuUsagePercentage(int procId, string procName = null)
         {
             try
             {
-                using (Process p = Process.GetProcessById((int)procId))
+                using (Process p = Process.GetProcessById(procId))
                 {
                     // First run.
                     if (prevTime == DateTime.MinValue)

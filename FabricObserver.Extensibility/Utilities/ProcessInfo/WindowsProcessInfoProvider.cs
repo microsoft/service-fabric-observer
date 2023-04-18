@@ -22,14 +22,14 @@ namespace FabricObserver.Observers.Utilities
         private const int MaxDescendants = 50;
         private const int MaxSameNamedProcesses = 50;
         private const int MaxInstanceNameLengthTruncated = 64;
-        private static readonly object _lock = new();
-        private readonly object _lockUpdate = new();
+        private static readonly object lockObj = new();
+        private readonly object lockUpdate = new();
         private volatile bool hasWarnedProcessNameLength = false;
         private readonly TimeSpan maxLifetimeForProcCache = TimeSpan.FromMinutes(3);
-        private readonly ConcurrentDictionary<string, List<(string InternalName, int Pid)>> _procCache = new();
+        private readonly ConcurrentDictionary<string, List<(string InternalName, int Pid)>> procCache = new();
         private DateTime sameNamedProcCacheLastUpdated = DateTime.MinValue;
 
-        public override float GetProcessWorkingSetMb(uint processId, string procName, CancellationToken token, bool getPrivateWorkingSet = false)
+        public override float GetProcessWorkingSetMb(int processId, string procName, CancellationToken token, bool getPrivateWorkingSet = false)
         {
             if (string.IsNullOrWhiteSpace(procName) || processId <= 0)
             {
@@ -52,7 +52,7 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         /// <param name="processId">The id of the process.</param>
         /// <returns>Current Private Bytes usage in Megabytes.</returns>
-        public override float GetProcessPrivateBytesMb(uint processId)
+        public override float GetProcessPrivateBytesMb(int processId)
         {
             if (processId <= 0)
             {
@@ -62,15 +62,15 @@ namespace FabricObserver.Observers.Utilities
             return GetProcessMemoryMbWin32(processId, getPrivateBytes: true);
         }
 
-        public override float GetProcessAllocatedHandles(uint processId, string configPath = null)
+        public override float GetProcessAllocatedHandles(int processId, string configPath = null)
         {
             return GetProcessHandleCountWin32(processId);
         }
 
-        public override List<(string ProcName, uint Pid)> GetChildProcessInfo(uint parentPid, NativeMethods.SafeObjectHandle handleToSnapshot)
+        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot)
         {
             // Get descendant procs.
-            List<(string ProcName, uint Pid)> childProcesses = TupleGetChildProcessesWin32(parentPid, handleToSnapshot);
+            List<(string ProcName, int Pid)> childProcesses = TupleGetChildProcessesWin32(parentPid, handleToSnapshot);
 
             if (childProcesses == null || childProcesses.Count == 0)
             {
@@ -85,7 +85,7 @@ namespace FabricObserver.Observers.Utilities
             // Get descendant proc at max depth = 5 and max number of descendants = 50. 
             for (int i = 0; i < childProcesses.Count; ++i)
             {
-                List<(string ProcName, uint Pid)> c1 = TupleGetChildProcessesWin32(childProcesses[i].Pid, handleToSnapshot);
+                List<(string ProcName, int Pid)> c1 = TupleGetChildProcessesWin32(childProcesses[i].Pid, handleToSnapshot);
 
                 if (c1 == null || c1.Count <= 0)
                 {
@@ -101,7 +101,7 @@ namespace FabricObserver.Observers.Utilities
 
                 for (int j = 0; j < c1.Count; ++j)
                 {
-                    List<(string ProcName, uint Pid)> c2 = TupleGetChildProcessesWin32(c1[j].Pid, handleToSnapshot);
+                    List<(string ProcName, int Pid)> c2 = TupleGetChildProcessesWin32(c1[j].Pid, handleToSnapshot);
 
                     if (c2 == null || c2.Count <= 0)
                     {
@@ -117,7 +117,7 @@ namespace FabricObserver.Observers.Utilities
 
                     for (int k = 0; k < c2.Count; ++k)
                     {
-                        List<(string ProcName, uint Pid)> c3 = TupleGetChildProcessesWin32(c2[k].Pid, handleToSnapshot);
+                        List<(string ProcName, int Pid)> c3 = TupleGetChildProcessesWin32(c2[k].Pid, handleToSnapshot);
 
                         if (c3 == null || c3.Count <= 0)
                         {
@@ -133,7 +133,7 @@ namespace FabricObserver.Observers.Utilities
 
                         for (int l = 0; l < c3.Count; ++l)
                         {
-                            List<(string ProcName, uint Pid)> c4 = TupleGetChildProcessesWin32(c3[l].Pid, handleToSnapshot);
+                            List<(string ProcName, int Pid)> c4 = TupleGetChildProcessesWin32(c3[l].Pid, handleToSnapshot);
 
                             if (c4 == null || c4.Count <= 0)
                             {
@@ -154,11 +154,12 @@ namespace FabricObserver.Observers.Utilities
             return childProcesses;
         }
 
-        private static List<(string procName, uint pid)> TupleGetChildProcessesWin32(uint processId, NativeMethods.SafeObjectHandle handleToSnapshot)
+        private static List<(string procName, int pid)> TupleGetChildProcessesWin32(int processId, NativeMethods.SafeObjectHandle handleToSnapshot)
         {
             try
             {
-                List<(string procName, uint procId)> childProcs = NativeMethods.GetChildProcesses(processId, handleToSnapshot);
+                string parentProcName = NativeMethods.GetProcessNameFromId(processId);
+                List<(string procName, int procId)> childProcs = NativeMethods.GetChildProcesses(processId, parentProcName, handleToSnapshot);
 
                 if (childProcs == null || childProcs.Count == 0)
                 {
@@ -170,7 +171,7 @@ namespace FabricObserver.Observers.Utilities
 
             catch (Exception e) when (e is Win32Exception) // e.g., process is no longer running.
             {
-                ProcessInfoLogger.LogWarning($"Handled Exception in TupleGetChildProcessesWin32:{Environment.NewLine}{e.Message}");
+                ProcessInfoLogger.LogWarning($"Handled Exception in TupleGetChildProcessesWin32: {e.Message}");
             }
             catch (Exception e)
             {
@@ -182,7 +183,7 @@ namespace FabricObserver.Observers.Utilities
             return null;
         }
 
-        public override double GetProcessKvsLvidsUsagePercentage(string procName, CancellationToken token, uint procId = 0)
+        public override double GetProcessKvsLvidsUsagePercentage(string procName, CancellationToken token, int procId = 0)
         {
             if (string.IsNullOrWhiteSpace(procName) || token.IsCancellationRequested)
             {
@@ -209,7 +210,7 @@ namespace FabricObserver.Observers.Utilities
                     // Make sure the correct process is the one we compute memory usage for (re: multiple processes of the same name..).
                     if (procCount >= MaxSameNamedProcesses && DateTime.UtcNow.Subtract(sameNamedProcCacheLastUpdated) >= maxLifetimeForProcCache)
                     {
-                        lock (_lockUpdate)
+                        lock (lockUpdate)
                         {
                             if (procCount >= MaxSameNamedProcesses && DateTime.UtcNow.Subtract(sameNamedProcCacheLastUpdated) >= maxLifetimeForProcCache)
                             {
@@ -283,7 +284,7 @@ namespace FabricObserver.Observers.Utilities
             return -1;
         }
 
-        private static uint GetProcessHandleCountWin32(uint processId)
+        private static int GetProcessHandleCountWin32(int processId)
         {
             SafeProcessHandle handle = null;
 
@@ -301,7 +302,7 @@ namespace FabricObserver.Observers.Utilities
                     }
                 }
 
-                return handles;
+                return (int)handles;
             }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or Win32Exception)
             {
@@ -327,7 +328,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="getPrivateBytes">Whether or not to return Private Bytes (The Commit Charge value in bytes for this process. 
         /// Commit Charge is the total amount of private memory that the memory manager has committed for a running process.)</param>
         /// <returns>Process memory usage expressed as Megabytes.</returns>
-        private static float GetProcessMemoryMbWin32(uint processId, bool getPrivateBytes = false)
+        private static float GetProcessMemoryMbWin32(int processId, bool getPrivateBytes = false)
         {
             if (processId < 1)
             {
@@ -341,7 +342,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 NativeMethods.PROCESS_MEMORY_COUNTERS_EX memoryCounters;
                 memoryCounters.cb = (uint)Marshal.SizeOf(typeof(NativeMethods.PROCESS_MEMORY_COUNTERS_EX));
-                handle = NativeMethods.GetSafeProcessHandle((uint)processId);
+                handle = NativeMethods.GetSafeProcessHandle(processId);
 
                 if (handle.IsInvalid)
                 {
@@ -384,7 +385,7 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        private float GetProcessMemoryMbPerfCounter(string procName, uint procId, CancellationToken token, string perfCounterName = "Working Set - Private")
+        private float GetProcessMemoryMbPerfCounter(string procName, int procId, CancellationToken token, string perfCounterName = "Working Set - Private")
         {
             if (string.IsNullOrWhiteSpace(procName) || procId < 1)
             {
@@ -436,7 +437,7 @@ namespace FabricObserver.Observers.Utilities
                 // Only log this once to limit disk IO noise and log file size.
                 if (!hasWarnedProcessNameLength)
                 {
-                    lock (_lock)
+                    lock (lockObj)
                     {
                         if (!hasWarnedProcessNameLength)
                         {
@@ -509,7 +510,7 @@ namespace FabricObserver.Observers.Utilities
             return 0F;
         }
 
-        private string GetInternalProcessName(string procName, uint pid, CancellationToken token)
+        private string GetInternalProcessName(string procName, int pid, CancellationToken token)
         {
             if (token.IsCancellationRequested)
             {
@@ -541,9 +542,9 @@ namespace FabricObserver.Observers.Utilities
                     return GetInternalProcNameFromId(procName, pid, token);
                 }
 
-                if (_procCache.ContainsKey(procName) && _procCache[procName].Any(inst => inst.Pid == pid))
+                if (procCache.ContainsKey(procName) && procCache[procName].Any(inst => inst.Pid == pid))
                 {
-                    return _procCache[procName].First(inst => inst.Pid == pid).InternalName;
+                    return procCache[procName].First(inst => inst.Pid == pid).InternalName;
                 }
             }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or Win32Exception)
@@ -564,7 +565,7 @@ namespace FabricObserver.Observers.Utilities
             return procName;
         }
 
-        private static string GetInternalProcNameFromId(string procName, uint pid, CancellationToken token)
+        private static string GetInternalProcNameFromId(string procName, int pid, CancellationToken token)
         {
             if (token.IsCancellationRequested)
             {
@@ -625,7 +626,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                _procCache.Clear();
+                procCache.Clear();
                 PerformanceCounterCategory cat = new("Process");
                 var instances = cat.GetInstanceNames().Where(inst => inst == procName || inst.StartsWith($"{procName}#"));
                 cnt = new PerformanceCounter("Process", "ID Process", true);
@@ -642,13 +643,13 @@ namespace FabricObserver.Observers.Utilities
                         cnt.InstanceName = instance;
                         var sample = cnt.NextSample();
 
-                        if (!_procCache.ContainsKey(procName))
+                        if (!procCache.ContainsKey(procName))
                         {
-                            _ = _procCache.TryAdd(procName, new List<(string InternalName, int Pid)> { (instance, (int)sample.RawValue) });
+                            _ = procCache.TryAdd(procName, new List<(string InternalName, int Pid)> { (instance, (int)sample.RawValue) });
                         }
                         else
                         {
-                            _procCache[procName].Add((instance, (int)sample.RawValue));
+                            procCache[procName].Add((instance, (int)sample.RawValue));
                         }
                     }
                     catch (Exception e) when (e is ArgumentException or InvalidOperationException or Win32Exception or UnauthorizedAccessException)

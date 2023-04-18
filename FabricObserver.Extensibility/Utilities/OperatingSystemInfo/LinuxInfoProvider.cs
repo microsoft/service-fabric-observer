@@ -65,13 +65,13 @@ namespace FabricObserver.Observers.Utilities
             */
         }
 
-        public override int GetActiveTcpPortCount(uint processId = 0, string configPath = null)
+        public override int GetActiveTcpPortCount(int processId = 0, string configPath = null)
         {
             int count = GetPortCount(processId, predicate: line => true, configPath);
             return count;
         }
 
-        public override int GetActiveEphemeralPortCount(uint processId = 0, string configPath = null)
+        public override int GetActiveEphemeralPortCount(int processId = 0, string configPath = null)
         {
             (int lowPort, int highPort, _) = TupleGetDynamicPortRange();
 
@@ -84,7 +84,7 @@ namespace FabricObserver.Observers.Utilities
             return count;
         }
 
-        public override double GetActiveEphemeralPortCountPercentage(uint processId = 0, string configPath = null)
+        public override double GetActiveEphemeralPortCountPercentage(int processId = 0, string configPath = null)
         {
             double usedPct = 0.0;
             int count = GetActiveEphemeralPortCount(processId, configPath);
@@ -165,7 +165,7 @@ namespace FabricObserver.Observers.Utilities
             return osInfo;
         }
 
-        private static int GetPortCount(uint processId, Predicate<string> predicate, string configPath = null)
+        private static int GetPortCount(int processId, Predicate<string> predicate, string configPath = null)
         {
             string processIdStr = processId == 0 ? string.Empty : " " + processId + "/";
 

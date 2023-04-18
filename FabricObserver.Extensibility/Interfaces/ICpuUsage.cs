@@ -16,6 +16,6 @@ namespace FabricObserver.Interfaces
         /// <param name="procId">Process identifier.</param>
         /// <param name="procName">Optional: Process name.</param>
         /// <returns>Percentage of usage across all cores.</returns>
-        double GetCurrentCpuUsagePercentage(uint procId, string procName = null);
+        double GetCurrentCpuUsagePercentage(int procId, string procName = null);
     }
 }

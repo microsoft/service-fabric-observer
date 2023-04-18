@@ -82,7 +82,7 @@
 		<Parameter Name="EnableVerboseLogging" Value="" />
 		<Parameter Name="MonitorDuration" Value="" />
 		<Parameter Name="RunInterval" Value="" />
-		<Parameter Name="MonitorPrivateWorkingSet" Value="" />
+		<Parameter Name="MonitorPrivateWorkingSet" Value="true" />
 		<Parameter Name="UseCircularBuffer" Value="" />
 		<Parameter Name="ResourceUsageDataCapacity" Value=""/>
 		<Parameter Name="MonitorWindowsEventLog" Value="" />
