@@ -661,6 +661,15 @@ namespace FabricObserver.Utilities.ServiceFabric
                 applicationManifest = (ApplicationManifestType)applicationManifestSerializer.Deserialize(sreader);
             }
 
+            // We need the service manifest to get the code package count
+            var serviceManifestSerializer = new XmlSerializer(typeof(ServiceManifestType));
+            ServiceManifestType serviceManifest = null;
+
+            using (var sreader = new StringReader(svcManifestXml))
+            {
+                serviceManifest = (ServiceManifestType)serviceManifestSerializer.Deserialize(sreader);
+            }
+                
             foreach (var import in applicationManifest.ServiceManifestImport)
             {
                 if (import.ServiceManifestRef.ServiceManifestName == servicePkgName)
@@ -670,6 +679,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                         double TotalCpuCores = 0;
                         double CpuShares = 0;
                         double CpuSharesSum = 0;
+                        int RGPoliciesCount = 0;
 
                         for (int policyIndex = 0; policyIndex < import.Policies.Length; policyIndex++)
                         {
@@ -677,6 +687,7 @@ namespace FabricObserver.Utilities.ServiceFabric
 
                             if (policy is ResourceGovernancePolicyType resourceGovernancePolicy)
                             {
+                                RGPoliciesCount++;
                                 resourceGovernancePolicy.CpuShares = ParseAppParameterValue(resourceGovernancePolicy.CpuShares, parameters);
 
                                 if (string.IsNullOrWhiteSpace(resourceGovernancePolicy.CpuShares))
@@ -735,6 +746,15 @@ namespace FabricObserver.Utilities.ServiceFabric
                         }
                         else
                         {
+                            // If we didn't find the RG policy for the required CodePackage, we assign it the default.
+                            if (CpuShares == 0)
+                            {
+                                CpuShares = 1;
+                            }
+
+                            // We need to count all CodePackages which don't have an RG policy defined. 
+                            CpuSharesSum += serviceManifest.CodePackage.Length - RGPoliciesCount; 
+
                             double CpuLimitCores = TotalCpuCores * CpuShares / CpuSharesSum;
                             return (true, CpuLimitCores);
                         }

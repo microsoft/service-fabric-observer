@@ -1,0 +1,6 @@
+﻿[
+  {
+    "targetApp": "CpuStress",
+    "warningRGCpuLimitPercent": 1
+  }
+]
