@@ -301,7 +301,7 @@ namespace FabricObserver.Observers
                                 }
 
                                 // Get established port count per service.
-                                uint procId = (uint)rep.HostProcessId;
+                                int procId = (int)rep.HostProcessId;
                                 int ports = 0, ephemeralPorts = 0;
 
                                 if (procId > 0)
