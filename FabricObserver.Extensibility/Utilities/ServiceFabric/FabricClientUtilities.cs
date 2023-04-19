@@ -204,19 +204,38 @@ namespace FabricObserver.Utilities.ServiceFabric
                     {
                         token.ThrowIfCancellationRequested();
 
-                        var deployedReplicaList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                           () => FabricClientSingleton.QueryManager.GetDeployedReplicaListAsync(
-                                                                    !string.IsNullOrWhiteSpace(nodeName) ? nodeName : this.nodeName, app.ApplicationName),
-                                                           token);
+                        var deployedReplicaList = 
+                            await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                    () => FabricClientSingleton.QueryManager.GetDeployedReplicaListAsync(
+                                            nodeName ?? this.nodeName, app.ApplicationName, null, null, TimeSpan.FromSeconds(60), token),
+                                    token);
 
-                        repList.AddRange(
-                                GetInstanceOrReplicaMonitoringList(
+                        if (deployedReplicaList == null || !deployedReplicaList.Any())
+                        {
+                            return null;
+                        }
+
+                        List<DeployedServiceReplica> deployedReplicas;
+
+                        try
+                        {
+                            deployedReplicas = deployedReplicaList.DistinctBy(x => x.HostProcessId).ToList();
+                        }
+                        catch (Exception e) when (e is ArgumentException)
+                        {
+                            return null;
+                        }
+
+                        var repOrInstances = 
+                            GetInstanceOrReplicaMonitoringList(
                                     app.ApplicationName,
                                     app.ApplicationTypeName ?? appList.First(a => a.ApplicationName == app.ApplicationName).ApplicationTypeName,
-                                    deployedReplicaList,
+                                    deployedReplicas,
                                     includeChildProcesses,
                                     handleToSnapshot,
-                                    token));
+                                    token);
+
+                        repList.AddRange(repOrInstances);
                     }
                     catch (Exception e) when (e is ArgumentException or InvalidOperationException)
                     {
@@ -224,7 +243,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                     }
                 }
 
-                return repList.Count > 0 ? repList.Distinct().ToList() : repList;
+                return repList;
             }
             finally
             {
@@ -249,7 +268,7 @@ namespace FabricObserver.Utilities.ServiceFabric
         private List<ReplicaOrInstanceMonitoringInfo> GetInstanceOrReplicaMonitoringList(
                                                         Uri appName,
                                                         string applicationTypeName,
-                                                        DeployedServiceReplicaList deployedReplicaList,
+                                                        List<DeployedServiceReplica> deployedReplicaList,
                                                         bool includeChildProcesses,
                                                         NativeMethods.SafeObjectHandle handleToSnapshot,
                                                         CancellationToken token)
@@ -335,7 +354,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                     }
                 }
 
-                if (replicaInfo?.HostProcessId > 0)
+                if (replicaInfo?.HostProcessId > 0 && !replicaMonitoringList.Any(r => r.HostProcessId == replicaInfo.HostProcessId))
                 {
                     if (isWindows)
                     {

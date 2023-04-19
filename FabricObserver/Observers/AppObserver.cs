@@ -928,9 +928,9 @@ namespace FabricObserver.Observers
             userTargetList = new List<ApplicationInfo>();
             deployedTargetList = new List<ApplicationInfo>();
 
-            // NodeName is passed here to not break unit tests, which include a mock service fabric context..
+            // NodeName is passed here to not break unit tests, which include a mock service fabric context.
             fabricClientUtilities = new FabricClientUtilities(NodeName);
-            deployedApps = await fabricClientUtilities.GetAllDeployedAppsAsync(Token);
+            deployedApps = await fabricClientUtilities.GetAllDeployedAppsAsync(Token, NodeName);
 
             // DEBUG - Perf
             //var stopwatch = Stopwatch.StartNew();
@@ -2905,7 +2905,7 @@ namespace FabricObserver.Observers
                             userTarget.TargetApp = depApps[i].ApplicationName.OriginalString;
                         }
 
-                        if (userTarget.TargetApp == null)
+                        if (string.IsNullOrWhiteSpace(userTarget.TargetApp))
                         {
                             continue;
                         }
@@ -2930,11 +2930,12 @@ namespace FabricObserver.Observers
                             filterType = ServiceFilterType.Include;
                         }
 
-                        List<ReplicaOrInstanceMonitoringInfo> replicasOrInstances = await GetDeployedReplicasAsync(
-                                                                                            new Uri(userTarget.TargetApp),
-                                                                                            filteredServiceList,
-                                                                                            filterType,
-                                                                                            applicationType);
+                        List<ReplicaOrInstanceMonitoringInfo> replicasOrInstances =
+                                await GetDeployedReplicasAsync(
+                                        new Uri(userTarget.TargetApp),
+                                        filteredServiceList,
+                                        filterType,
+                                        applicationType);
 
                         if (replicasOrInstances != null && replicasOrInstances.Count > 0)
                         {
@@ -2956,7 +2957,7 @@ namespace FabricObserver.Observers
                     catch (Exception e) when (e is ArgumentException or FabricException or Win32Exception)
                     {
                         ObserverLogger.LogWarning(
-                            $"SetDeployedReplicaOrInstanceListAsync: Unable to process replica information for {userTarget}{Environment.NewLine}{e}");
+                            $"SetDeployedReplicaOrInstanceListAsync: Unable to process replica information for {userTarget}: {e.Message}");
                     }
                 }
             }
@@ -2987,6 +2988,17 @@ namespace FabricObserver.Observers
                 return null;
             }
 
+            List<DeployedServiceReplica> deployedReplicas;
+
+            try
+            {
+                deployedReplicas = deployedReplicaList.DistinctBy(x => x.HostProcessId).ToList();
+            }
+            catch (Exception e) when (e is ArgumentException)
+            {
+                return null;
+            }
+
             //ObserverLogger.LogInfo($"QueryManager.GetDeployedReplicaListAsync for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
             var replicaMonitoringList = new ConcurrentQueue<ReplicaOrInstanceMonitoringInfo>();
             string appType = appTypeName;
@@ -3011,7 +3023,7 @@ namespace FabricObserver.Observers
                 appType,
                 serviceFilterList,
                 filterType,
-                deployedReplicaList,
+                deployedReplicas,
                 replicaMonitoringList);
 
             ObserverLogger.LogInfo("Completed GetDeployedReplicasAsync.");
@@ -3026,7 +3038,7 @@ namespace FabricObserver.Observers
                         string appTypeName,
                         string[] filterList,
                         ServiceFilterType filterType,
-                        DeployedServiceReplicaList deployedReplicaList,
+                        List<DeployedServiceReplica> deployedReplicaList,
                         ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> replicaMonitoringList)
         {
             ObserverLogger.LogInfo("Starting SetInstanceOrReplicaMonitoringList.");
@@ -3148,7 +3160,7 @@ namespace FabricObserver.Observers
 
                 ProcessServiceConfiguration(appTypeName, deployedReplica.CodePackageName, replicaInfo);
 
-                if (replicaInfo?.HostProcessId > 0 && !ReplicaOrInstanceList.Any(r => r.ServiceName.Equals(replicaInfo.ServiceName)))
+                if (replicaInfo?.HostProcessId > 0 && !ReplicaOrInstanceList.Any(r => r.HostProcessId == replicaInfo.HostProcessId))
                 {
                     if (IsWindows)
                     {
@@ -3339,7 +3351,7 @@ namespace FabricObserver.Observers
                     return;
                 }
 
-                var helperCodePackages = codepackages.Where(c => c.CodePackageVersion != deployedReplica.CodePackageName);
+                var helperCodePackages = codepackages.Where(c => c.CodePackageName != deployedReplica.CodePackageName);
 
                 foreach (var codepackage in helperCodePackages)
                 {
