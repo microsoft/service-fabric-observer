@@ -259,12 +259,7 @@ namespace FabricObserver.Observers
                     MaxResults = 50,
                 };
 
-                var appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                        () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                deployedAppQueryDesc,
-                                                ConfigurationSettings.AsyncTimeout,
-                                                Token),
-                                        Token);
+                var appList = await FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(deployedAppQueryDesc, ConfigurationSettings.AsyncTimeout, Token);
 
                 // DeployedApplicationList is a wrapper around List, but does not support AddRange.. Thus, cast it ToList and add to the temp list, then iterate through it.
                 // In reality, this list will never be greater than, say, 1000 apps deployed to a node, but it's a good idea to be prepared since AppObserver supports
@@ -281,12 +276,7 @@ namespace FabricObserver.Observers
                     }
 
                     deployedAppQueryDesc.ContinuationToken = appList.ContinuationToken;
-                    appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                        () => FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(
-                                                deployedAppQueryDesc,
-                                                ConfigurationSettings.AsyncTimeout,
-                                                Token),
-                                        Token);
+                    appList = await FabricClientInstance.QueryManager.GetDeployedApplicationPagedListAsync(deployedAppQueryDesc, ConfigurationSettings.AsyncTimeout, Token);
                     apps.AddRange(appList.ToList());
                     await Task.Delay(250, Token);
                 }
@@ -390,15 +380,13 @@ namespace FabricObserver.Observers
 
                 try
                 {
-                    var codepackages = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                               () => FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(
-                                                        NodeName,
-                                                        new Uri(application.TargetApp),
-                                                        null,
-                                                        null,
-                                                        ConfigurationSettings.AsyncTimeout,
-                                                        token),
-                                               Token);
+                    var codepackages = await FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(
+                                                NodeName,
+                                                new Uri(application.TargetApp),
+                                                null,
+                                                null,
+                                                ConfigurationSettings.AsyncTimeout,
+                                                token);
 
                     if (codepackages.Count == 0)
                     {
@@ -730,9 +718,8 @@ namespace FabricObserver.Observers
                             string appTypeName)
         {
 
-            var deployedReplicaList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                               () => FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, appName),
-                                               Token);
+            var deployedReplicaList = await FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(NodeName, appName);
+
             // DEBUG
             //var stopwatch = Stopwatch.StartNew();
             _ = Parallel.For(0, deployedReplicaList.Count, ParallelOptions, (i, state) =>

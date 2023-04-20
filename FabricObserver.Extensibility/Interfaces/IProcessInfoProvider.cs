@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System;
 using System.Collections.Generic;
 using System.Threading;
 
@@ -42,7 +43,7 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="parentPid"></param>
         /// <param name="safeObjectHandle">SafeObjectHandle to process snapshot.</param>
         /// <returns></returns>
-        List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot);
+        List<(string ProcName, int Pid, DateTime ProcessStartTime)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot = null);
 
         /// <summary>
         /// Windows only. Determines the percentage of Windows KVS LVIDs currently in use.

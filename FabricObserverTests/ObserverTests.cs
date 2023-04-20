@@ -3407,10 +3407,11 @@ namespace FabricObserverTests
                     continue;
                 }
 
-                // Get child proc info from a new process snapshot (passing null for handle to snapshot means create a new one).
-                var descendants = NativeMethods.GetChildProcesses(newPid, "ChildProcessCreator");
+                // Refresh SF user service (and descendants) process cache.
+                _ = NativeMethods.RefreshSFUserChildProcessDataCache();
+                List<(string procName, int procId, DateTime processStartTime)> descendants = NativeMethods.GetChildProcesses(newPid, "ChildProcessCreator");
                 
-                if (descendants.Count == 3)
+                if (descendants?.Count == 3)
                 {
                     break;
                 }
