@@ -4,11 +4,8 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.7</version>
 		<releaseNotes>
-			This is primarily a servicing release that contains a bug fix for concurrent processing in AppObserver. Note: If you do not set AppObserverEnableConcurrentMonitoring to true, then you don't need to upgrade from 3.2.5. Else, you should.
-
-			- Bug Fix: https://github.com/microsoft/service-fabric-observer/issues/266
-			- Added new telemetry data types (SystemServiceTelemetryData and ContainerTelemetryData).
-			- Added new handlers for OOM (FailFast).  These just ensure that FO exits immediately when an OOM is encountered, which only happens when the host machine is running out of available physical memory.
+- Performance and Code Improvements.
+- Bug fixes.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

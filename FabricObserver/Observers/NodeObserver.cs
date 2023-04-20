@@ -770,35 +770,44 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                timer.Start();
+                // Memory
+                if (MemDataInUse != null || MemDataPercent != null)
+                {
+                    var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetSystemPhysicalMemoryInfo();
 
+                    if (MemDataInUse != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
+                    {
+                        MemDataInUse.AddData(MemoryInUseMb);
+                    }
+
+                    if (MemDataPercent != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
+                    {
+                        MemDataPercent.AddData(PercentInUse);
+                    }
+                }
+
+                // No need to proceed.
+                if (CpuTimeData == null)
+                {
+                    return;
+                }
+
+                // Warm up counter.
+                _ = CpuUtilizationProvider.Instance.GetProcessorTimePercentage();
+
+                timer.Start();
+                
                 while (timer.Elapsed <= duration)
                 {
                     token.ThrowIfCancellationRequested();
 
                     // CPU
-                    if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
+                    if (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0)
                     {
                          CpuTimeData.AddData(CpuUtilizationProvider.Instance.GetProcessorTimePercentage());
                     }
 
-                    // Memory
-                    if (MemDataInUse != null || MemDataPercent != null)
-                    {
-                        var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetSystemPhysicalMemoryInfo();
-
-                        if (MemDataInUse != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
-                        {
-                            MemDataInUse.AddData(MemoryInUseMb);
-                        }
-
-                        if (MemDataPercent != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
-                        {
-                            MemDataPercent.AddData(PercentInUse);
-                        }
-                    }
-
-                    await Task.Delay(250, Token);
+                    await Task.Delay(1000, Token);
                 }
 
                 timer.Stop();
@@ -827,11 +836,10 @@ namespace FabricObserver.Observers
 
             try
             {
-                NodeList nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricClientInstance.QueryManager.GetNodeListAsync(
-                                            this.NodeName,
-                                            ConfigurationSettings.AsyncTimeout,
-                                            Token), Token);
+                NodeList nodes = await FabricClientInstance.QueryManager.GetNodeListAsync(
+                                        this.NodeName,
+                                        ConfigurationSettings.AsyncTimeout,
+                                        Token);
 
                 if (nodes?.Count == 0)
                 {
@@ -889,51 +897,96 @@ namespace FabricObserver.Observers
 
         private void CleanUp()
         {
-            if (ActivePortsData != null && !ActivePortsData.ActiveErrorOrWarning)
+            if (ActivePortsData != null)
             {
-                ActivePortsData = null;
+                ActivePortsData.ClearData();
+
+                if (!ActivePortsData.ActiveErrorOrWarning)
+                {
+                    ActivePortsData = null;
+                }
             }
 
-            if (CpuTimeData != null && !CpuTimeData.ActiveErrorOrWarning)
+            if (CpuTimeData != null)
             {
-                CpuTimeData = null;
+                CpuTimeData.ClearData();
+                
+                if (!CpuTimeData.ActiveErrorOrWarning)
+                {
+                    CpuTimeData = null;
+                }
             }
 
-            if (EphemeralPortsDataPercent != null && !EphemeralPortsDataPercent.ActiveErrorOrWarning)
+            if (EphemeralPortsDataPercent != null)
             {
-                EphemeralPortsDataPercent = null;
+                EphemeralPortsDataPercent.ClearData();
+
+                if (!EphemeralPortsDataPercent.ActiveErrorOrWarning)
+                {
+                    EphemeralPortsDataPercent = null;
+                }
             }
 
-            if (EphemeralPortsDataRaw != null && !EphemeralPortsDataRaw.ActiveErrorOrWarning)
+            if (EphemeralPortsDataRaw != null)
             {
-                EphemeralPortsDataRaw = null;
+                EphemeralPortsDataRaw.ClearData();
+
+                if (!EphemeralPortsDataRaw.ActiveErrorOrWarning)
+                {
+                    EphemeralPortsDataRaw = null;
+                }
             }
 
-            if (MemDataInUse != null && !MemDataInUse.ActiveErrorOrWarning)
+            if (MemDataInUse != null)
             {
-                MemDataInUse = null;
+                MemDataInUse.ClearData();
+
+                if (!MemDataInUse.ActiveErrorOrWarning)
+                {
+                    MemDataInUse = null;
+                }
             }
 
-            if (MemDataPercent != null && !MemDataPercent.ActiveErrorOrWarning)
+            if (MemDataPercent != null)
             {
-                MemDataPercent = null;
+                MemDataPercent.ClearData();
+
+                if (!MemDataPercent.ActiveErrorOrWarning)
+                {
+                    MemDataPercent = null;
+                }
             }
 
-            if (IsWindows && FirewallData != null && !FirewallData.ActiveErrorOrWarning)
+            if (IsWindows && FirewallData != null)
             {
-                FirewallData = null;
+                FirewallData.ClearData();
+
+                if (!FirewallData.ActiveErrorOrWarning)
+                {
+                    FirewallData = null;
+                }    
             }
 
             if (!IsWindows)
             {
-                if (LinuxFileHandlesDataPercentAllocated != null && !LinuxFileHandlesDataPercentAllocated.ActiveErrorOrWarning)
+                if (LinuxFileHandlesDataPercentAllocated != null)
                 {
-                    LinuxFileHandlesDataPercentAllocated = null;
+                    LinuxFileHandlesDataPercentAllocated.ClearData();
+
+                    if (!LinuxFileHandlesDataPercentAllocated.ActiveErrorOrWarning)
+                    {
+                        LinuxFileHandlesDataPercentAllocated = null;
+                    }
                 }
 
-                if (LinuxFileHandlesDataTotalAllocated != null && !LinuxFileHandlesDataTotalAllocated.ActiveErrorOrWarning)
+                if (LinuxFileHandlesDataTotalAllocated != null)
                 {
-                    LinuxFileHandlesDataTotalAllocated = null;
+                    LinuxFileHandlesDataTotalAllocated.ClearData();
+
+                    if (!LinuxFileHandlesDataTotalAllocated.ActiveErrorOrWarning)
+                    {
+                        LinuxFileHandlesDataTotalAllocated = null;
+                    }
                 }
             }
         }

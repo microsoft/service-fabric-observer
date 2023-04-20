@@ -28,12 +28,34 @@ namespace FabricObserver.Observers.Utilities
         private readonly TimeSpan maxLifetimeForProcCache = TimeSpan.FromMinutes(3);
         private readonly ConcurrentDictionary<string, List<(string InternalName, int Pid)>> procCache = new();
         private DateTime sameNamedProcCacheLastUpdated = DateTime.MinValue;
+        private static PerformanceCounter memPerfCtr = null;
+
+        private static PerformanceCounter ProcessMemCounter
+        {
+            get
+            {
+                if (memPerfCtr == null)
+                {
+                    lock (lockObj)
+                    {
+                        memPerfCtr ??= new("Process", "Working Set - Private", true);
+                    }
+                }
+
+                return memPerfCtr;
+            }
+        }
 
         public override float GetProcessWorkingSetMb(int processId, string procName, CancellationToken token, bool getPrivateWorkingSet = false)
         {
             if (string.IsNullOrWhiteSpace(procName) || processId <= 0)
             {
                 return 0F;
+            }
+
+            if (NativeMethods.GetProcessNameFromId(processId) != procName) 
+            { 
+                return 0F; 
             }
 
             if (getPrivateWorkingSet)
@@ -67,10 +89,10 @@ namespace FabricObserver.Observers.Utilities
             return GetProcessHandleCountWin32(processId);
         }
 
-        public override List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot)
+        public override List<(string ProcName, int Pid, DateTime ProcessStartTime)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot)
         {
             // Get descendant procs.
-            List<(string ProcName, int Pid)> childProcesses = TupleGetChildProcessesWin32(parentPid, handleToSnapshot);
+            List<(string ProcName, int Pid, DateTime ProcessStartTime)> childProcesses = TupleGetChildProcessesWin32(parentPid, handleToSnapshot);
 
             if (childProcesses == null || childProcesses.Count == 0)
             {
@@ -85,7 +107,7 @@ namespace FabricObserver.Observers.Utilities
             // Get descendant proc at max depth = 5 and max number of descendants = 50. 
             for (int i = 0; i < childProcesses.Count; ++i)
             {
-                List<(string ProcName, int Pid)> c1 = TupleGetChildProcessesWin32(childProcesses[i].Pid, handleToSnapshot);
+                List<(string ProcName, int Pid, DateTime ProcessStartTime)> c1 = TupleGetChildProcessesWin32(childProcesses[i].Pid, handleToSnapshot);
 
                 if (c1 == null || c1.Count <= 0)
                 {
@@ -101,7 +123,7 @@ namespace FabricObserver.Observers.Utilities
 
                 for (int j = 0; j < c1.Count; ++j)
                 {
-                    List<(string ProcName, int Pid)> c2 = TupleGetChildProcessesWin32(c1[j].Pid, handleToSnapshot);
+                    List<(string ProcName, int Pid, DateTime ProcessStartTime)> c2 = TupleGetChildProcessesWin32(c1[j].Pid, handleToSnapshot);
 
                     if (c2 == null || c2.Count <= 0)
                     {
@@ -117,7 +139,7 @@ namespace FabricObserver.Observers.Utilities
 
                     for (int k = 0; k < c2.Count; ++k)
                     {
-                        List<(string ProcName, int Pid)> c3 = TupleGetChildProcessesWin32(c2[k].Pid, handleToSnapshot);
+                        List<(string ProcName, int Pid, DateTime ProcessStartTime)> c3 = TupleGetChildProcessesWin32(c2[k].Pid, handleToSnapshot);
 
                         if (c3 == null || c3.Count <= 0)
                         {
@@ -133,7 +155,7 @@ namespace FabricObserver.Observers.Utilities
 
                         for (int l = 0; l < c3.Count; ++l)
                         {
-                            List<(string ProcName, int Pid)> c4 = TupleGetChildProcessesWin32(c3[l].Pid, handleToSnapshot);
+                            List<(string ProcName, int Pid, DateTime ProcessStartTime)> c4 = TupleGetChildProcessesWin32(c3[l].Pid, handleToSnapshot);
 
                             if (c4 == null || c4.Count <= 0)
                             {
@@ -154,12 +176,12 @@ namespace FabricObserver.Observers.Utilities
             return childProcesses;
         }
 
-        private static List<(string procName, int pid)> TupleGetChildProcessesWin32(int processId, NativeMethods.SafeObjectHandle handleToSnapshot)
+        private static List<(string procName, int pid, DateTime ProcessStartTime)> TupleGetChildProcessesWin32(int processId, NativeMethods.SafeObjectHandle handleToSnapshot)
         {
             try
             {
                 string parentProcName = NativeMethods.GetProcessNameFromId(processId);
-                List<(string procName, int procId)> childProcs = NativeMethods.GetChildProcesses(processId, parentProcName, handleToSnapshot);
+                List<(string procName, int procId, DateTime ProcessStartTime)> childProcs = NativeMethods.GetChildProcesses(processId, parentProcName, handleToSnapshot);
 
                 if (childProcs == null || childProcs.Count == 0)
                 {
@@ -482,8 +504,8 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                using PerformanceCounter perfCounter = new("Process", perfCounterName, internalProcName, true);
-                return perfCounter.NextValue() / 1024 / 1024;
+                ProcessMemCounter.InstanceName = internalProcName;
+                return ProcessMemCounter.NextValue() / 1024 / 1024;
             }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or UnauthorizedAccessException or Win32Exception)
             {
@@ -565,6 +587,8 @@ namespace FabricObserver.Observers.Utilities
             return procName;
         }
 
+        public readonly static ConcurrentDictionary<int, (string procName, string instanceName, DateTime processStartTime)> InstanceNameDictionary = new();
+
         private static string GetInternalProcNameFromId(string procName, int pid, CancellationToken token)
         {
             if (token.IsCancellationRequested)
@@ -577,6 +601,22 @@ namespace FabricObserver.Observers.Utilities
             try
             {
                 PerformanceCounterCategory cat = new("Process");
+
+                if (InstanceNameDictionary.ContainsKey(pid))
+                {
+                    string instanceName = InstanceNameDictionary[pid].instanceName;
+                    DateTime processStartTime = InstanceNameDictionary[pid].processStartTime;
+
+                    if (InstanceNameDictionary[pid].procName == procName && NativeMethods.GetProcessStartTime(pid).Equals(processStartTime)) 
+                    { 
+                        return InstanceNameDictionary[pid].instanceName;
+                    }
+                    else
+                    {
+                        _ = InstanceNameDictionary.TryRemove(pid, out _);
+                    }
+                }
+
                 var instances = cat.GetInstanceNames().Where(inst => inst == procName || inst.StartsWith($"{procName}#"));
                 cnt = new PerformanceCounter("Process", "ID Process", true);
 
@@ -594,6 +634,7 @@ namespace FabricObserver.Observers.Utilities
                             continue;
                         }
 
+                        _ = InstanceNameDictionary.TryAdd(pid, (procName, instance, NativeMethods.GetProcessStartTime(pid)));
                         return instance;
                     }
                     catch (Exception e) when (e is InvalidOperationException or UnauthorizedAccessException or Win32Exception)

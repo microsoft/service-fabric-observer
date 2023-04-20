@@ -281,18 +281,15 @@ namespace FabricObserver.Observers
             try
             {
                 var allSystemServices =
-                        await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricClientInstance.QueryManager.GetServiceListAsync(
-                                                new Uri(ObserverConstants.SystemAppName),
-                                                null,
-                                                AsyncClusterOperationTimeoutSeconds,
-                                                Token), 
-                                    Token);
+                        await FabricClientInstance.QueryManager.GetServiceListAsync(
+                                new Uri(ObserverConstants.SystemAppName),
+                                null, 
+                                AsyncClusterOperationTimeoutSeconds, Token);
 
-                return allSystemServices.Count > 0 && allSystemServices.Count(
-                                service => service.ServiceTypeName.Equals(
-                                            ObserverConstants.InfrastructureServiceType,
-                                            StringComparison.InvariantCultureIgnoreCase)) > 0;
+                return allSystemServices.Count > 0 && allSystemServices.Any(
+                                                        service => service.ServiceTypeName.Equals(
+                                                            ObserverConstants.InfrastructureServiceType,
+                                                            StringComparison.InvariantCultureIgnoreCase));
             }
             catch (Exception e) when (e is FabricException or TimeoutException)
             {

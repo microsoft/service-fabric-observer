@@ -6,11 +6,13 @@
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reflection.Metadata.Ecma335;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Security;
@@ -48,6 +50,7 @@ namespace FabricObserver.Observers.Utilities
             "FabricDCA.exe", "FabricDnsService.exe", "FabricFAS.exe", "FabricGateway.exe",
             "FabricHost.exe", "FabricIS.exe", "FabricRM.exe", "FabricUS.exe"
         };
+        private static object lockObj = new object();
 
         [Flags]
         public enum CreateToolhelp32SnapshotFlags : uint
@@ -1188,7 +1191,7 @@ namespace FabricObserver.Observers.Utilities
         /// Creates a native snapshot of all processes currently running on the system.
         /// </summary>
         /// <returns>SafeObjectHandle to the snapshot.</returns>
-        public static SafeObjectHandle CreateAllProcessSnapshot()
+        public static SafeObjectHandle CreateProcessSnapshot()
         {
             return CreateToolhelp32Snapshot((uint)CreateToolhelp32SnapshotFlags.TH32CS_SNAPPROCESS, 0);
         }
@@ -1253,20 +1256,111 @@ namespace FabricObserver.Observers.Utilities
             return procInfo;
         }
 
+        private static Dictionary<int, List<(string childProcName, int childProcId, DateTime childProcStartTime)>> descendantsDictionary = new();
+
+        public static bool RefreshSFUserChildProcessDataCache()
+        {
+            NtSetSFUserServiceDescendantCache();
+            return descendantsDictionary.Any();
+        }
+
+        private static bool NtSetSFUserServiceDescendantCache()
+        {
+            descendantsDictionary = new Dictionary<int, List<(string childProcName, int childProcId, DateTime childProcStartTime)>>();
+            List<SYSTEM_PROCESS_INFORMATION> procInfoList = NtGetFilteredProcessInfo();
+            
+            if (procInfoList == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < procInfoList.Count; ++i)
+            {
+                SYSTEM_PROCESS_INFORMATION procInfo = procInfoList[i];
+                
+                if (procInfo.UniqueProcessId != UIntPtr.Zero)
+                {
+                    uint pid = procInfo.UniqueProcessId.ToUInt32();
+
+                    // Has a parent process.
+                    if (procInfo.Reserved2 != UIntPtr.Zero)
+                    {
+                        uint parentPid = procInfo.Reserved2.ToUInt32();
+                        string childProcName = Path.GetFileNameWithoutExtension(procInfo.ImageName.Buffer);
+
+                        try
+                        {
+                            if (!descendantsDictionary.ContainsKey((int)parentPid))
+                            {
+                                List<(string childProcName, int childProcId, DateTime childProcStartTime)> descendants = new()
+                            {
+                                (childProcName, (int)pid, GetProcessStartTime((int)pid))
+                            };
+
+                                _ = descendantsDictionary.TryAdd((int)parentPid, descendants);
+                            }
+                            else
+                            {
+                                descendantsDictionary[(int)parentPid].Add((childProcName, (int)pid, GetProcessStartTime((int)pid)));
+                            }
+                        }
+                        catch (ArgumentException)
+                        {
+
+                        }
+                        catch (Win32Exception)
+                        {
+                            // process no longer around or not allowed to access its information..
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        public static void ClearSFUserChildProcessDataCache()
+        {
+            try
+            {
+                descendantsDictionary?.Clear();
+                descendantsDictionary = null;
+            }
+            catch (ArgumentException)
+            {
+
+            }
+        }
+
         /// <summary>
         /// Gets the child processes, if any, belonging to the process with supplied pid.
         /// </summary>
-        /// <param name="parentpid">The process ID (pid) of target parent process.</param>
+        /// <param name="parentPid">The process ID (pid) of target parent process.</param>
         /// <param name="parentProcName">Name of the process associated to specified pid when this call is made.</param>
         /// <param name="handleToSnapshot">Handle to process snapshot (created using NativeMethods.CreateToolhelp32Snapshot).</param>
-        /// <returns>A List of tuple (string procName,  int procId) representing each child process.</returns>
+        /// <returns>A List of tuple (string procName, int procId, DateTime processStartTime) representing each child process.</returns>
         /// <exception cref="Win32Exception">A Win32 Error Code will be present in the exception Message.</exception>
-        public static List<(string procName, int procId)> GetChildProcesses(int parentpid, string parentProcName, SafeObjectHandle handleToSnapshot = null)
+        public static List<(string procName, int procId, DateTime processStartTime)> GetChildProcesses(int parentPid, string parentProcName, SafeObjectHandle handleToSnapshot = null)
         {
-            if (parentpid < 1 || string.IsNullOrWhiteSpace(parentProcName))
+            if (parentPid < 1 || string.IsNullOrWhiteSpace(parentProcName))
             {
                 return null;
             }
+
+            if (descendantsDictionary != null && descendantsDictionary.Any())
+            {
+                if (descendantsDictionary.ContainsKey(parentPid))
+                {
+                    return descendantsDictionary[parentPid];
+                }
+                else
+                {
+                    // parent has no children.
+                    return null;
+                }
+            }
+
+            // Else, take a snapshot (so, something failed with the more performant approach or the required initialization function was not called first) \\
 
             bool isLocalSnapshot = false;
 
@@ -1280,7 +1374,7 @@ namespace FabricObserver.Observers.Utilities
                     if (handleToSnapshot.IsInvalid)
                     {
                         logger.LogWarning(
-                            $"GetChildProcesses({parentpid}): Failed to process snapshot at CreateToolhelp32Snapshot " +
+                            $"GetChildProcesses({parentPid}): Failed to process snapshot at CreateToolhelp32Snapshot " +
                             $"with Win32 error code {Marshal.GetLastWin32Error()}");
 
                         return null;
@@ -1294,27 +1388,27 @@ namespace FabricObserver.Observers.Utilities
 
                 if (!Process32First(handleToSnapshot, ref procEntry))
                 {
-                    logger.LogWarning($"GetChildProcesses({parentpid}): Failed to process snapshot at Process32First " +
+                    logger.LogWarning($"GetChildProcesses({parentPid}): Failed to process snapshot at Process32First " +
                                       $"with Win32 error code {Marshal.GetLastWin32Error()}");
                     
                     return null;
                 }
 
-                List<(string procName, int procId)> childProcs = new();
+                List<(string procName, int procId, DateTime processStartTime)> childProcs = new();
 
                 do
                 {
                     try
                     {
-                        // Filter out the procs we know are not the droids we're looking for just by name or pid.
-                        if (procEntry.th32ProcessID == 0 || FindInStringArray(ignoreProcessList, procEntry.szExeFile)
-                            || FindInStringArray(ignoreFabricSystemServicesList, procEntry.szExeFile))
+                        // If the detected pid is not a child of the supplied parent pid, then ignore.
+                        if (parentPid != procEntry.th32ParentProcessID)
                         {
                             continue;
                         }
 
-                        // If the detected pid is not a child of the supplied parent pid, then ignore.
-                        if (parentpid != procEntry.th32ParentProcessID)
+                        // Filter out the procs we know are not the droids we're looking for just by name or pid.
+                        if (procEntry.th32ProcessID == 0 || FindInStringArray(ignoreProcessList, procEntry.szExeFile)
+                            || FindInStringArray(ignoreFabricSystemServicesList, procEntry.szExeFile))
                         {
                             continue;
                         }
@@ -1326,9 +1420,9 @@ namespace FabricObserver.Observers.Utilities
                             continue;
                         }
 
-                        if (parentProcName.Equals(parentSnapProcName))
+                        if (string.CompareOrdinal(parentProcName, parentSnapProcName) == 0)
                         {
-                            childProcs.Add((procEntry.szExeFile.Replace(".exe", ""), (int)procEntry.th32ProcessID));
+                            childProcs.Add((procEntry.szExeFile.Replace(".exe", ""), (int)procEntry.th32ProcessID, GetProcessStartTime((int)procEntry.th32ProcessID)));
                         }
                     }
                     catch (ArgumentException)
@@ -1870,11 +1964,11 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Gets identifiers of all currently running SF user service host processes and their descendants.
+        /// Gets a filtered list of process information that includes all, but not limited to, executing SF user services and their descendants.
         /// </summary>
         /// <returns>An array of uint values that are process identifiers of all currently running SF user service host processes (and descendants) on the system. 
         /// If the function fails, then it will return null.</returns>
-        public static int[] NtGetSFServiceProcessIds()
+        private static List<SYSTEM_PROCESS_INFORMATION> NtGetFilteredProcessInfo()
         {
             SYSTEM_PROCESS_INFORMATION[] procInfo = NtGetSysProcInfo();
 
@@ -1883,7 +1977,7 @@ namespace FabricObserver.Observers.Utilities
                 return null;
             }
 
-            List<int> procList = new();
+            List<SYSTEM_PROCESS_INFORMATION> procInfoList = new();
 
             for (int i = 0; i < procInfo.Length; ++i)
             {
@@ -1904,7 +1998,7 @@ namespace FabricObserver.Observers.Utilities
                             continue;
                         }
 
-                        // What happens if child is spawned with breakaway from Job Object? This is highly unlikely for SF user services.
+                        // What happens if child is spawned with breakaway from Job Object? This is highly unlikely for SF user services..
                         // All SF user service host processes (and their descendants) are owned by JOs, therefore if the process is not part of a JO, then ignore it.
                         if (!IsProcessInJob(safeProcessHandle, IntPtr.Zero, out bool isInJob) || !isInJob)
                         {
@@ -1919,7 +2013,12 @@ namespace FabricObserver.Observers.Utilities
                         continue;
                     }
 
-                    procList.Add((int)pid);
+                    if (FindInStringArray(ignoreFabricSystemServicesList, procName))
+                    {
+                        continue;
+                    }
+
+                    procInfoList.Add(procInfo[i]);
                 }
                 catch (ArgumentException)
                 {
@@ -1927,11 +2026,7 @@ namespace FabricObserver.Observers.Utilities
                 }
             }
 
-            int[] pids = procList.ToArray();
-            procList.Clear();
-            procList = null;
-
-            return pids;
+            return procInfoList;
         }
 
         private static List<(ushort LocalPort, int OwningProcessId, MIB_TCP_STATE State)> InternalGetTcpConnections()
@@ -2091,6 +2186,10 @@ namespace FabricObserver.Observers.Utilities
             {
                 // Immediately die.
                 Environment.FailFast($"OOM. Taking down FO:{Environment.NewLine}{Environment.StackTrace}");
+            }
+            catch (Exception e) when (e is ArgumentException or MissingMethodException or Win32Exception)
+            {
+                
             }
             finally
             {

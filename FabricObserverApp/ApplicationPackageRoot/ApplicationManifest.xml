@@ -76,13 +76,10 @@
     <Parameter Name="NodeObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
-    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00): How long an enabled observer should monitor resources (CPU and Memory) per target. This setting only applies to 3 observers.
-         If you enable concurrent monitoring for AppObserver and you are running on capable hardware (>= 4 logical processors),
-         then you should increase this value from 1 second to at most (1/2 the number of logical processors) seconds on the target machine.
-         **However, if you monitor a *very* large number of services (> 200) AND you enable concurrent monitoring AND machines have capable CPU(s), then keep this value at 1 or 2.**
-         Set this to a small value if AppObserver is monitoring several services AND FO is running on a VM/Machine with insufficient number of logical processors (< 4). -->
+    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00): How long an observer should monitor CPU usage per target (process or machine).
+         This setting only applies to 3 observers.  -->
     <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:05" />
-    <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:01" />
+    <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:05" />
     <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:10" />
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00): How often an enabled observer should run. -->
     <Parameter Name="AppObserverRunInterval" DefaultValue="" />
@@ -197,9 +194,9 @@
     <Parameter Name="NodeObserverMemoryErrorLimitPercent" DefaultValue="" />
     <Parameter Name="NodeObserverMemoryWarningLimitPercent" DefaultValue="90" />
     <Parameter Name="NodeObserverNetworkErrorActivePorts" DefaultValue="" />
-    <Parameter Name="NodeObserverNetworkWarningActivePorts" DefaultValue="50000" />
+    <Parameter Name="NodeObserverNetworkWarningActivePorts" DefaultValue="" />
     <Parameter Name="NodeObserverNetworkErrorFirewallRules" DefaultValue="" />
-    <Parameter Name="NodeObserverNetworkWarningFirewallRules" DefaultValue="2500" />
+    <Parameter Name="NodeObserverNetworkWarningFirewallRules" DefaultValue="" />
     <Parameter Name="NodeObserverNetworkErrorEphemeralPorts" DefaultValue="" />
     <Parameter Name="NodeObserverNetworkWarningEphemeralPorts" DefaultValue="20000" />
     <Parameter Name="NodeObserverNetworkErrorEphemeralPortsPercentage" DefaultValue="" />
