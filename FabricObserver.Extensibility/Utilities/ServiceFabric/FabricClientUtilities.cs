@@ -905,7 +905,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                                         ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(90),
                                         cancellationToken);
 
-            if (serviceHealth == null)
+            if (serviceHealth == null || serviceHealth.AggregatedHealthState == HealthState.Ok)
             {
                 return;
             }
@@ -958,7 +958,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                                     ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(90),
                                     cancellationToken);
 
-            if (appHealth == null)
+            if (appHealth == null || appHealth.AggregatedHealthState == HealthState.Ok)
             {
                 return;
             }
@@ -1017,7 +1017,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                                         ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(90), 
                                         cancellationToken);
 
-                if (nodeHealth == null)
+                if (nodeHealth == null || nodeHealth.AggregatedHealthState == HealthState.Ok)
                 {
                     return;
                 }

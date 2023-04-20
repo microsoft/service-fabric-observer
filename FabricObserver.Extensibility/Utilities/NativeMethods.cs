@@ -1256,7 +1256,7 @@ namespace FabricObserver.Observers.Utilities
             return procInfo;
         }
 
-        private static Dictionary<int, List<(DateTime parentStartTime, string childProcName, int childProcId, DateTime childProcStartTime)>> descendantsDictionary = new();
+        private static Dictionary<int, List<(string childProcName, int childProcId, DateTime childProcStartTime)>> descendantsDictionary = new();
 
         public static bool RefreshSFUserChildProcessDataCache()
         {
@@ -1266,7 +1266,7 @@ namespace FabricObserver.Observers.Utilities
 
         private static bool NtSetSFUserServiceDescendantCache()
         {
-            descendantsDictionary = new Dictionary<int, List<(DateTime parentStartTime, string childProcName, int childProcId, DateTime childProcStartTime)>>();
+            descendantsDictionary = new Dictionary<int, List<(string childProcName, int childProcId, DateTime childProcStartTime)>>();
             List<SYSTEM_PROCESS_INFORMATION> procInfoList = NtGetFilteredProcessInfo();
             
             if (procInfoList == null)
@@ -1292,16 +1292,16 @@ namespace FabricObserver.Observers.Utilities
                         {
                             if (!descendantsDictionary.ContainsKey((int)parentPid))
                             {
-                                List<(DateTime parentStartTime, string childProcName, int childProcId, DateTime childProcStartTime)> descendants = new()
+                                List<(string childProcName, int childProcId, DateTime childProcStartTime)> descendants = new()
                             {
-                                (GetProcessStartTime((int)parentPid), childProcName, (int)pid, GetProcessStartTime((int)pid))
+                                (childProcName, (int)pid, GetProcessStartTime((int)pid))
                             };
 
                                 _ = descendantsDictionary.TryAdd((int)parentPid, descendants);
                             }
                             else
                             {
-                                descendantsDictionary[(int)parentPid].Add((GetProcessStartTime((int)parentPid), childProcName, (int)pid, GetProcessStartTime((int)pid)));
+                                descendantsDictionary[(int)parentPid].Add((childProcName, (int)pid, GetProcessStartTime((int)pid)));
                             }
                         }
                         catch (ArgumentException)
@@ -1349,27 +1349,9 @@ namespace FabricObserver.Observers.Utilities
 
             if (descendantsDictionary != null && descendantsDictionary.Any())
             {
-                // Supplied parent pid must still be mapped to supplied process name.
-                if (descendantsDictionary.ContainsKey(parentPid) && GetProcessNameFromId(parentPid) == parentProcName)
+                if (descendantsDictionary.ContainsKey(parentPid))
                 {
-                    try
-                    {
-                        // parentPid is a key in the dictionary, thus it will have the data below or it is not the key we're looking for anymore..
-                        var descendants = descendantsDictionary[parentPid].Where(d => d.parentStartTime == GetProcessStartTime(parentPid));
-                        List<(string procName, int procId, DateTime processStartTime)> childPidInfo = new();
-
-                        foreach (var (_, childProcName, childProcId, childProcStartTime) in descendants)
-                        {
-                            childPidInfo.Add((childProcName, childProcId, childProcStartTime));
-                        }
-
-                        return childPidInfo;
-                    }
-                    catch (Exception e) when (e is ArgumentException or Win32Exception)
-                    {
-                        // no-op.
-                        return null;
-                    }
+                    return descendantsDictionary[parentPid];
                 }
                 else
                 {
