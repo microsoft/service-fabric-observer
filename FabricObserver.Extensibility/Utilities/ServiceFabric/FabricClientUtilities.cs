@@ -39,6 +39,7 @@ namespace FabricObserver.Utilities.ServiceFabric
         private static readonly object lockObj = new();
         private readonly bool isWindows;
         private readonly Logger logger;
+        private static readonly XmlSerializer applicationManifestSerializer = new (typeof(ApplicationManifestType));
 
         /// <summary>
         /// The singleton FabricClient instance that is used throughout FabricObserver.
@@ -131,12 +132,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                 ApplicationNameFilter = appNameFilter
             };
 
-            var appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricClientSingleton.QueryManager.GetDeployedApplicationPagedListAsync(
-                                            deployedAppQueryDesc,
-                                            TimeSpan.FromSeconds(120),
-                                            token),
-                                    token);
+            var appList = await FabricClientSingleton.QueryManager.GetDeployedApplicationPagedListAsync(deployedAppQueryDesc, TimeSpan.FromSeconds(120), token);
 
             // DeployedApplicationList is a wrapper around List, but does not support AddRange.. Thus, cast it ToList and add to the temp list, then iterate through it.
             // In reality, this list will never be greater than, say, 1000 apps deployed to a node, but it's a good idea to be prepared since AppObserver supports
@@ -150,12 +146,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                 token.ThrowIfCancellationRequested();
 
                 deployedAppQueryDesc.ContinuationToken = appList.ContinuationToken;
-                appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricClientSingleton.QueryManager.GetDeployedApplicationPagedListAsync(
-                                            deployedAppQueryDesc,
-                                            TimeSpan.FromSeconds(120),
-                                            token),
-                                    token);
+                appList = await FabricClientSingleton.QueryManager.GetDeployedApplicationPagedListAsync(deployedAppQueryDesc, TimeSpan.FromSeconds(120), token);
 
                 apps.AddRange(appList.ToList());
                 await Task.Delay(250, token);
@@ -179,7 +170,7 @@ namespace FabricObserver.Utilities.ServiceFabric
 
             if (isWindows && includeChildProcesses)
             {
-                handleToSnapshot = NativeMethods.CreateAllProcessSnapshot();
+                handleToSnapshot = NativeMethods.CreateProcessSnapshot();
 
                 if (handleToSnapshot.IsInvalid)
                 {
@@ -205,10 +196,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                         token.ThrowIfCancellationRequested();
 
                         var deployedReplicaList = 
-                            await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricClientSingleton.QueryManager.GetDeployedReplicaListAsync(
-                                            nodeName ?? this.nodeName, app.ApplicationName, null, null, TimeSpan.FromSeconds(60), token),
-                                    token);
+                            await FabricClientSingleton.QueryManager.GetDeployedReplicaListAsync(nodeName ?? this.nodeName, app.ApplicationName, null, null, TimeSpan.FromSeconds(60), token);
 
                         if (deployedReplicaList == null || !deployedReplicaList.Any())
                         {
@@ -310,7 +298,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                         any processes (children) that the service process (parent) created/spawned. */
                         if (includeChildProcesses)
                         {
-                            List<(string ProcName, int Pid)> childPids = null;
+                            List<(string ProcName, int Pid, DateTime ProcessStartTime)> childPids = null;
                             childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, handleToSnapshot);
 
                             if (childPids != null && childPids.Count > 0)
@@ -341,7 +329,7 @@ namespace FabricObserver.Utilities.ServiceFabric
 
                         if (includeChildProcesses)
                         {
-                            List<(string ProcName, int Pid)> childPids = null;
+                            List<(string ProcName, int Pid, DateTime ProcessStartTime)> childPids = null;
                             childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, handleToSnapshot);
 
                             if (childPids != null && childPids.Count > 0)
@@ -387,9 +375,9 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// </summary>
         /// <param name="repOrInsts">List of ReplicaOrInstanceMonitoringInfo</param>
         /// <returns>A List of tuple (string ServiceName, string ProcName, int Pid) representing all services supplied in the ReplicaOrInstanceMonitoringInfo instance, including child processes of each service, if any.</returns>
-        public List<(string ServiceName, string ProcName, int Pid)> GetServiceProcessInfo(List<ReplicaOrInstanceMonitoringInfo> repOrInsts)
+        public List<(string ServiceName, string ProcName, int Pid, DateTime ProcessStartTime)> GetServiceProcessInfo(List<ReplicaOrInstanceMonitoringInfo> repOrInsts)
         {
-            List<(string ServiceName, string ProcName, int Pid)> pids = new();
+            List<(string ServiceName, string ProcName, int Pid, DateTime ProcessStartTime)> pids = new();
 
             foreach (var repOrInst in repOrInsts)
             {
@@ -398,22 +386,22 @@ namespace FabricObserver.Utilities.ServiceFabric
                     if (isWindows)
                     {
                         string procName = NativeMethods.GetProcessNameFromId((int)repOrInst.HostProcessId);
-                        pids.Add((repOrInst.ServiceName.OriginalString, procName, (int)repOrInst.HostProcessId));
+                        pids.Add((repOrInst.ServiceName.OriginalString, procName, (int)repOrInst.HostProcessId, NativeMethods.GetProcessStartTime((int)repOrInst.HostProcessId)));
                     }
                     else
                     {
                         using (var proc = Process.GetProcessById((int)repOrInst.HostProcessId))
                         {
-                            pids.Add((repOrInst.ServiceName.OriginalString, proc.ProcessName, (int)repOrInst.HostProcessId));
+                            pids.Add((repOrInst.ServiceName.OriginalString, proc.ProcessName, (int)repOrInst.HostProcessId, proc.StartTime));
                         }
                     }
 
                     // Child processes?
                     if (repOrInst.ChildProcesses != null && repOrInst.ChildProcesses.Count > 0)
                     {
-                        foreach (var (procName, Pid) in repOrInst.ChildProcesses)
+                        foreach (var (procName, Pid, processStartTime) in repOrInst.ChildProcesses)
                         {
-                            pids.Add((repOrInst.ServiceName.OriginalString, procName, Pid));
+                            pids.Add((repOrInst.ServiceName.OriginalString, procName, Pid, processStartTime));
                         }
                     }
                 }
@@ -598,7 +586,7 @@ namespace FabricObserver.Utilities.ServiceFabric
             }
 
             // Parse XML to find the necessary policy
-            var applicationManifestSerializer = new XmlSerializer(typeof(ApplicationManifestType));
+            
             ApplicationManifestType applicationManifest = null;
 
             using (var sreader = new StringReader(appManifestXml))
@@ -809,13 +797,10 @@ namespace FabricObserver.Utilities.ServiceFabric
                 };
 
                 ClusterHealth clusterHealth =
-                    await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                            () =>
-                                FabricClientSingleton.HealthManager.GetClusterHealthAsync(
-                                    clusterQueryDesc,
-                                    TimeSpan.FromSeconds(90),
-                                    cancellationToken),
-                             cancellationToken);
+                        await FabricClientSingleton.HealthManager.GetClusterHealthAsync(
+                                clusterQueryDesc,
+                                TimeSpan.FromSeconds(90),
+                                cancellationToken);
 
                 // Cluster is healthy. Nothing to do here.
                 if (clusterHealth.AggregatedHealthState == HealthState.Ok)
@@ -915,12 +900,10 @@ namespace FabricObserver.Utilities.ServiceFabric
                     ExcludeHealthStatistics = false
                 }
             };
-            var serviceHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricClientSingleton.HealthManager.GetServiceHealthAsync(
-                                            serviceHealthQueryDescription,
-                                            ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(90),
-                                            cancellationToken),
-                                    cancellationToken);
+            var serviceHealth = await FabricClientSingleton.HealthManager.GetServiceHealthAsync(
+                                        serviceHealthQueryDescription,
+                                        ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(90),
+                                        cancellationToken);
 
             if (serviceHealth == null)
             {
@@ -970,11 +953,9 @@ namespace FabricObserver.Utilities.ServiceFabric
 
         private async Task RemoveApplicationHealthReportsAsync(ApplicationHealthState app, bool ignoreDefaultQueryTimeout, CancellationToken cancellationToken)
         {
-            var appHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricClientSingleton.HealthManager.GetApplicationHealthAsync(
-                                            app.ApplicationName,
-                                            ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(90),
-                                            cancellationToken),
+            var appHealth = await FabricClientSingleton.HealthManager.GetApplicationHealthAsync(
+                                    app.ApplicationName,
+                                    ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(90),
                                     cancellationToken);
 
             if (appHealth == null)
@@ -1031,11 +1012,9 @@ namespace FabricObserver.Utilities.ServiceFabric
 
             foreach (var nodeHealthState in nodeHealthStates)
             {
-                var nodeHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                        () => FabricClientSingleton.HealthManager.GetNodeHealthAsync(
-                                                nodeHealthState.NodeName,
-                                                ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(90),
-                                                cancellationToken),
+                var nodeHealth = await FabricClientSingleton.HealthManager.GetNodeHealthAsync(
+                                        nodeHealthState.NodeName,
+                                        ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(90), 
                                         cancellationToken);
 
                 if (nodeHealth == null)

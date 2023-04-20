@@ -67,7 +67,7 @@ namespace FabricObserver.Observers.Utilities
 
         public abstract float GetProcessPrivateBytesMb(int processId);
 
-        public abstract List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot);
+        public abstract List<(string ProcName, int Pid, DateTime ProcessStartTime)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot = null);
 
         public abstract float GetProcessAllocatedHandles(int processId, string configPath = null);
 

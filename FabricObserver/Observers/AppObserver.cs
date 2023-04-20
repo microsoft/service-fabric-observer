@@ -78,6 +78,7 @@ namespace FabricObserver.Observers
         private string fileName;
         private int appCount;
         private int serviceCount;
+        private bool descendantDictionaryNotEmpty;
 
         // ReplicaOrInstanceList is the List of all replicas or instances that will be monitored during the current run.
         // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
@@ -140,13 +141,19 @@ namespace FabricObserver.Observers
                     return null;
                 }
 
+                // If the more performant approach (see NativeMethods.cs) for getting child processes worked, then don't proceed.
+                if (descendantDictionaryNotEmpty)
+                {
+                    return null;
+                }
+
                 if (handleToProcSnapshot == null)
                 {
                     lock (lockObj)
                     {
                         if (handleToProcSnapshot == null)
                         {
-                            handleToProcSnapshot = NativeMethods.CreateAllProcessSnapshot();
+                            handleToProcSnapshot = NativeMethods.CreateProcessSnapshot();
 
                             if (handleToProcSnapshot.IsInvalid)
                             {
@@ -938,6 +945,11 @@ namespace FabricObserver.Observers
             // Set properties with Application Parameter settings (housed in ApplicationManifest.xml) for this run.
             SetPropertiesFromApplicationSettings();
 
+            if (IsWindows && EnableChildProcessMonitoring)
+            {
+                descendantDictionaryNotEmpty = NativeMethods.RefreshSFUserChildProcessDataCache();
+            }
+
             // Process JSON object configuration settings (housed in [AppObserver.config].json) for this run.
             if (!await ProcessJSONConfigAsync())
             {
@@ -1124,20 +1136,12 @@ namespace FabricObserver.Observers
                 try
                 {
                     // Make sure deployed app is not a containerized app.
-                    var codepackages = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                () => FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(
-                                                        NodeName,
-                                                        app.ApplicationName,
-                                                        null,
-                                                        null,
-                                                        ConfigurationSettings.AsyncTimeout,
-                                                        Token), Token);
+                    var codepackages = await FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(NodeName, app.ApplicationName, null, null, ConfigurationSettings.AsyncTimeout, Token);
 
                     if (codepackages.Count == 0)
                     {
                         continue;
                     }
-
 
                     int containerHostCount = codepackages.Count(c => c.HostType == HostType.ContainerHost);
 
@@ -2157,17 +2161,18 @@ namespace FabricObserver.Observers
                             }
 
                             // Make sure the child process still exists. Descendant processes are often ephemeral.
-                            if (!EnsureProcess(repOrInst.ChildProcesses[k].procName, repOrInst.ChildProcesses[k].Pid, GetProcessStartTime(repOrInst.ChildProcesses[k].Pid)))
+                            if (!EnsureProcess(repOrInst.ChildProcesses[k].procName, repOrInst.ChildProcesses[k].Pid, repOrInst.ChildProcesses[k].ProcessStartTime))
                             {
                                 _ = repOrInst.ChildProcesses.Remove(repOrInst.ChildProcesses[k]);
                                 k--;
                                 continue;
                             }
 
-                            _ = procs.TryAdd(repOrInst.ChildProcesses[k].Pid, (repOrInst.ChildProcesses[k].procName, GetProcessStartTime(repOrInst.ChildProcesses[k].Pid)));
+                            _ = procs.TryAdd(repOrInst.ChildProcesses[k].Pid, (repOrInst.ChildProcesses[k].procName, repOrInst.ChildProcesses[k].ProcessStartTime));
                         }
                     }
 
+                    // Update the global process dictionary.
                     foreach (var proc in procs)
                     {
                         if (token.IsCancellationRequested)
@@ -2350,7 +2355,7 @@ namespace FabricObserver.Observers
                     }
 
                     // For Windows: Regardless of user setting, if there are more than 50 service processes with the same name, then FO will employ Win32 API (fast, lightweight).
-                    bool usePerfCounter = IsWindows && ReplicaOrInstanceList.Count(p => p.HostProcessName == parentProcName) < MaxSameNamedProcesses;
+                    bool usePerfCounter = IsWindows && CheckPrivateWorkingSet && ReplicaOrInstanceList.Count(p => p.HostProcessName == parentProcName) < MaxSameNamedProcesses;
 
                     // Compute the resource usage of the family of processes (each proc in the family tree). This is also parallelized and has real perf benefits when 
                     // a service process has mulitple descendants.
@@ -2727,7 +2732,7 @@ namespace FabricObserver.Observers
 
                     if (procId == parentPid)
                     {
-                        AllAppMemDataMb[id].AddData(ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, IsWindows && usePerfCounter));
+                        AllAppMemDataMb[id].AddData(ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, usePerfCounter));
                     }
                     else
                     {
@@ -2740,7 +2745,7 @@ namespace FabricObserver.Observers
                                         UseCircularBuffer,
                                         EnableConcurrentMonitoring));
 
-                        AllAppMemDataMb[$"{id}:{procName}{procId}"].AddData(ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, IsWindows && usePerfCounter));
+                        AllAppMemDataMb[$"{id}:{procName}{procId}"].AddData(ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, usePerfCounter));
                     }
                 }
 
@@ -2750,7 +2755,7 @@ namespace FabricObserver.Observers
                     if (IsWindows && usePerfCounter)
                     {
                         // Warm up counter.
-                        _ = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token, usePerfCounter);
+                        _ = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, procName, Token);
                         Thread.Sleep(250);
                     }
 
@@ -2847,7 +2852,7 @@ namespace FabricObserver.Observers
                         }
                     }
 
-                    Thread.Sleep(150);
+                    Thread.Sleep(500);
                 }
 
                 timer.Stop();
@@ -2978,9 +2983,12 @@ namespace FabricObserver.Observers
             ObserverLogger.LogInfo("Starting GetDeployedReplicasAsync.");
             // DEBUG - Perf
             //var stopwatch = Stopwatch.StartNew();
-            var deployedReplicaList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                () => FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(
-                                                        NodeName, appName, null, null, ConfigurationSettings.AsyncTimeout, Token),
+            var deployedReplicaList = await FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(
+                                                NodeName,
+                                                appName, 
+                                                null, 
+                                                null, 
+                                                ConfigurationSettings.AsyncTimeout, 
                                                 Token);
 
             if (deployedReplicaList == null || !deployedReplicaList.Any()) 
@@ -3096,7 +3104,8 @@ namespace FabricObserver.Observers
                         {
                             // DEBUG - Perf
                             //var sw = Stopwatch.StartNew();
-                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, Win32HandleToProcessSnapshot);
+                            List<(string ProcName, int Pid, DateTime ProcessStartTime)> childPids =
+                                ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, Win32HandleToProcessSnapshot);
    
                             if (childPids != null && childPids.Count > 0)
                             {
@@ -3144,7 +3153,8 @@ namespace FabricObserver.Observers
                         {
                             // DEBUG - Perf
                             //var sw = Stopwatch.StartNew();
-                            List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, Win32HandleToProcessSnapshot);
+                            List<(string ProcName, int Pid, DateTime ProcessStartTime)> childPids =
+                                ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, Win32HandleToProcessSnapshot);
                             
                             if (childPids != null && childPids.Count > 0)
                             {
@@ -3212,20 +3222,16 @@ namespace FabricObserver.Observers
                 ApplicationParameterList defaultParameters = null;
 
                 ApplicationList appList =
-                    FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                        async () => 
-                                await FabricClientInstance.QueryManager.GetApplicationListAsync(
-                                        replicaInfo.ApplicationName,
-                                        ConfigurationSettings.AsyncTimeout,
-                                        Token), Token).Result;
+                    FabricClientInstance.QueryManager.GetApplicationListAsync(
+                        replicaInfo.ApplicationName,
+                        ConfigurationSettings.AsyncTimeout,
+                        Token).Result;
 
                 ApplicationTypeList applicationTypeList =
-                    FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                        async () =>
-                                await FabricClientInstance.QueryManager.GetApplicationTypeListAsync(
-                                        appTypeName,
-                                        ConfigurationSettings.AsyncTimeout,
-                                        Token), Token).Result;
+                    FabricClientInstance.QueryManager.GetApplicationTypeListAsync(
+                        appTypeName,
+                        ConfigurationSettings.AsyncTimeout,
+                        Token).Result;
 
                 if (appList?.Count > 0)
                 {
@@ -3254,13 +3260,11 @@ namespace FabricObserver.Observers
                         if (IsWindows)
                         {
                             string appManifest =
-                                  FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                     async () =>
-                                             await FabricClientInstance.ApplicationManager.GetApplicationManifestAsync(
-                                                     appTypeName,
-                                                     appTypeVersion,
-                                                     ConfigurationSettings.AsyncTimeout,
-                                                     Token), Token).Result;
+                                      FabricClientInstance.ApplicationManager.GetApplicationManifestAsync(
+                                        appTypeName,
+                                        appTypeVersion,
+                                        ConfigurationSettings.AsyncTimeout,
+                                        Token).Result;
 
                             if (!string.IsNullOrWhiteSpace(appManifest) && appManifest.Contains($"<{ObserverConstants.RGPolicyNodeName} "))
                             {
@@ -3280,13 +3284,11 @@ namespace FabricObserver.Observers
 
                         // ServiceTypeVersion
                         var serviceList =
-                            FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                async () => 
-                                        await FabricClientInstance.QueryManager.GetServiceListAsync(
-                                            replicaInfo.ApplicationName,
-                                            replicaInfo.ServiceName,
-                                            ConfigurationSettings.AsyncTimeout,
-                                            Token), Token).Result;
+                            FabricClientInstance.QueryManager.GetServiceListAsync(
+                                replicaInfo.ApplicationName,
+                                replicaInfo.ServiceName,
+                                ConfigurationSettings.AsyncTimeout,
+                                Token).Result;
 
                         if (serviceList?.Count > 0)
                         {
@@ -3326,15 +3328,13 @@ namespace FabricObserver.Observers
             try
             {
                 DeployedCodePackageList codepackages =
-                    FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                        async () =>
-                                await FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(
-                                        NodeName,
-                                        appName,
-                                        deployedReplica.ServiceManifestName,
-                                        null,
-                                        ConfigurationSettings.AsyncTimeout,
-                                        Token), Token).Result;
+                    FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(
+                        NodeName,
+                        appName,
+                        deployedReplica.ServiceManifestName,
+                        null,
+                        ConfigurationSettings.AsyncTimeout,
+                        Token).Result;
 
                 ReplicaOrInstanceMonitoringInfo replicaInfo = null;
 
@@ -3417,7 +3417,7 @@ namespace FabricObserver.Observers
                     {
                         // DEBUG - Perf
                         //var sw = Stopwatch.StartNew();
-                        List<(string ProcName, int Pid)>  childPids = ProcessInfoProvider.Instance.GetChildProcessInfo(procId, Win32HandleToProcessSnapshot);
+                        List<(string ProcName, int Pid, DateTime ProcessStartTime)>  childPids = ProcessInfoProvider.Instance.GetChildProcessInfo(procId, Win32HandleToProcessSnapshot);
                         
                         if (childPids != null && childPids.Count > 0)
                         {
@@ -3760,6 +3760,11 @@ namespace FabricObserver.Observers
                     handleToProcSnapshot.Dispose();
                     GC.KeepAlive(handleToProcSnapshot);
                     handleToProcSnapshot = null;
+                }
+
+                if (descendantDictionaryNotEmpty)
+                {
+                    NativeMethods.ClearSFUserChildProcessDataCache();
                 }
             }
             ObserverLogger.LogInfo("Completed CleanUp...");

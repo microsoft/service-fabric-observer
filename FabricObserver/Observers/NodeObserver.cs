@@ -770,6 +770,28 @@ namespace FabricObserver.Observers
                     }
                 }
 
+                // Memory
+                if (MemDataInUse != null || MemDataPercent != null)
+                {
+                    var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetSystemPhysicalMemoryInfo();
+
+                    if (MemDataInUse != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
+                    {
+                        MemDataInUse.AddData(MemoryInUseMb);
+                    }
+
+                    if (MemDataPercent != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
+                    {
+                        MemDataPercent.AddData(PercentInUse);
+                    }
+                }
+
+                // No need to proceed.
+                if (CpuTimeData == null)
+                {
+                    return;
+                }
+
                 timer.Start();
 
                 while (timer.Elapsed <= duration)
@@ -777,28 +799,12 @@ namespace FabricObserver.Observers
                     token.ThrowIfCancellationRequested();
 
                     // CPU
-                    if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
+                    if (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0)
                     {
                          CpuTimeData.AddData(CpuUtilizationProvider.Instance.GetProcessorTimePercentage());
                     }
 
-                    // Memory
-                    if (MemDataInUse != null || MemDataPercent != null)
-                    {
-                        var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetSystemPhysicalMemoryInfo();
-
-                        if (MemDataInUse != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
-                        {
-                            MemDataInUse.AddData(MemoryInUseMb);
-                        }
-
-                        if (MemDataPercent != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
-                        {
-                            MemDataPercent.AddData(PercentInUse);
-                        }
-                    }
-
-                    await Task.Delay(250, Token);
+                    await Task.Delay(500, Token);
                 }
 
                 timer.Stop();
@@ -827,11 +833,10 @@ namespace FabricObserver.Observers
 
             try
             {
-                NodeList nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricClientInstance.QueryManager.GetNodeListAsync(
-                                            this.NodeName,
-                                            ConfigurationSettings.AsyncTimeout,
-                                            Token), Token);
+                NodeList nodes = await FabricClientInstance.QueryManager.GetNodeListAsync(
+                                        this.NodeName,
+                                        ConfigurationSettings.AsyncTimeout,
+                                        Token);
 
                 if (nodes?.Count == 0)
                 {
