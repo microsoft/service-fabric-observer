@@ -3,7 +3,7 @@
 <ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.7" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- ObserverManager Configuration -->
-    <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
+    <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="" />
     <Parameter Name="ObserverManagerObserverExecutionTimeoutSeconds" DefaultValue="3600" />
     <Parameter Name="ObserverManagerEnableVerboseLogging" DefaultValue="false" />
     <!-- If you want to transmit ETW events to Kusto, for example, then enable this setting. Otherwise, set this to false. Please see ETW.md for related documentation. -->
@@ -25,14 +25,14 @@
          Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can run
          versionless parameter-only application upgrades to modify them while FO is running. By design, any observer you make using our
          extensibility model will employ the same basic config parameters as all observers do. Please see Observers.md -->
-    <Parameter Name="AppObserverEnabled" DefaultValue="true" />
+    <Parameter Name="AppObserverEnabled" DefaultValue="false" />
     <Parameter Name="AzureStorageUploadObserverEnabled" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnabled" DefaultValue="true" />
     <!-- Note: You must run FO as System or Admin user on Windows in order to run ContainerObserver on Windows. -->
     <Parameter Name="ContainerObserverEnabled" DefaultValue="false" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
-    <Parameter Name="NetworkObserverEnabled" DefaultValue="false" />
+    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="true" />
+    <Parameter Name="NetworkObserverEnabled" DefaultValue="true" />
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
     <!-- Deprecated: SFConfigurationObserver is only useful if you deploy the now-obsolete (and unsupported) FabricObserverWebApi application. -->
@@ -102,7 +102,7 @@
     <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
     <!-- Process family tree monitoring: AppObserver monitors the resource usage by child processes of target services.
          NOTE: If you already know that your target services do *not* spawn child processes, then you should not enable this feature. -->
-    <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="false" />
+    <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="true" />
     <!-- The maximum number of child process data items to include in a sorted list of top n consumers for some metric, where n is the value of this setting. -->
     <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
     <!-- Service process dumps (dumpProcessOnError/dumpProcessOnWarning setting).
@@ -124,11 +124,11 @@
          You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
          eating some additional CPU and Memory to complete the parallelized monitoring on a node with lots of services (>= 100). The impact of parallelization on nodes with less than 100 services is minimal.
          Please test and choose a value that suits your needs or simply leave this unset and go with the default. Please see Observers.md for more information. -->
-    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
+    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="-1" />
     <!-- KVS LVID Usage Monitoring - Windows-only.
          NOTE: If you monitor stateful Actor services, then you should set this to true.
          This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
-    <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
+    <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="true" />
     <!-- Windows-only: Process Working Set type for AppObserver to monitor. 
          Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). 
          NOTE: If you have *several* service processes of the **same name**, setting this to true will add *significant* time-to-completion and increased CPU usage (small, but more than necessary) to AppObserver. 
@@ -136,7 +136,7 @@
     <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
     <!-- Windows-only. AppObserver can monitor services with resource governance limits set and put related services into Warning if they reach 90% of the specified limit (only Memory limit is supported in this release). 
          If you set RG Memory limits for your service code packages, then you should consider enabling this feature. Else, don't. -->
-    <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="false" />
+    <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="true" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />

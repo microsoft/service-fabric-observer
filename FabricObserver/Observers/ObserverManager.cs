@@ -59,8 +59,7 @@ namespace FabricObserver.Observers
         private int ObserverExecutionLoopSleepSeconds
         {
             get; set;
-        } = ObserverConstants.ObserverRunLoopSleepTimeSeconds;
-
+        }
 
         private bool FabricObserverOperationalTelemetryEnabled
         {
@@ -273,7 +272,7 @@ namespace FabricObserver.Observers
                     else if (Observers.Count == 1)
                     {
                         // This protects against loop spinning when you run FO with one observer enabled and no sleep time set.
-                        await Task.Delay(TimeSpan.FromSeconds(15), token);
+                        await Task.Delay(TimeSpan.FromSeconds(5), token);
                     }
 
                     // All observers have run at this point. Try and empty the trash now.

@@ -1156,6 +1156,13 @@ namespace FabricObserver.Observers
                 fileName = $"FabricSystemServices{(CsvWriteFormat == CsvFileWriteFormat.MultipleFilesNoArchives ? "_" + DateTime.UtcNow.ToString("o") : string.Empty)}";
             }
 
+            List<(string ProcName, int ProcId)> sfSysProcInfoList = new();
+
+            if (IsWindows)
+            {
+                sfSysProcInfoList = NativeMethods.TupleGetSFSystemServiceProcessInfo();
+            }
+
             foreach (var item in data)
             {
                 Token.ThrowIfCancellationRequested();
@@ -1174,7 +1181,10 @@ namespace FabricObserver.Observers
                 {
                     if (IsWindows)
                     {
-                        procId = NativeMethods.GetProcessIdFromName(procName);
+                        if (sfSysProcInfoList.Any(s => s.ProcName == procName))
+                        {
+                            procId = sfSysProcInfoList.First(s => s.ProcName == procName).ProcId;
+                        }
 
                         // No longer running.
                         if (procId == 0)

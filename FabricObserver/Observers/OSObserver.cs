@@ -298,7 +298,7 @@ namespace FabricObserver.Observers
             }
         }
 
-        private string GetWindowsHotFixes(bool generateKbUrl, CancellationToken token)
+        private static string GetWindowsHotFixes(bool generateKbUrl, CancellationToken token)
         {
             if (!IsWindows)
             {

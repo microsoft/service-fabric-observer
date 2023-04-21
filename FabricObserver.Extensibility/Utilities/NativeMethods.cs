@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using Microsoft.Win32.SafeHandles;
+using NLog.LayoutRenderers;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -1260,6 +1261,7 @@ namespace FabricObserver.Observers.Utilities
 
         public static bool RefreshSFUserChildProcessDataCache()
         {
+            ClearSFUserChildProcessDataCache();
             NtSetSFUserServiceDescendantCache();
             return descendantsDictionary.Any();
         }
@@ -1267,7 +1269,7 @@ namespace FabricObserver.Observers.Utilities
         private static bool NtSetSFUserServiceDescendantCache()
         {
             descendantsDictionary = new Dictionary<int, List<(string childProcName, int childProcId, DateTime childProcStartTime)>>();
-            List<SYSTEM_PROCESS_INFORMATION> procInfoList = NtGetFilteredProcessInfo();
+            List<SYSTEM_PROCESS_INFORMATION> procInfoList = NtGetFilteredSystemProcessInfo();
             
             if (procInfoList == null)
             {
@@ -1484,27 +1486,16 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Get the process name for the specified process identifier.
+        /// Gets the Windows process name, without extension, for the specified process identifier.
         /// </summary>
         /// <param name="pid">The process id.</param>
         /// <returns>Process name string, if successful. Else, null.</returns>
         /// <exception cref="Win32Exception">A Win32Exception exception will be thrown if this specified process id is not found or if it is non-accessible due to its access control level.</exception>
-        private static string GetProcessNameFromIdNt(uint pid)
+        public static string NtGetProcessNameFromId(uint pid)
         {
             try
             {
-                string s = NtGetProcessNameFromId(pid);
-
-                if (s == null)
-                {
-                    return null;
-                }
-
-                return s.Replace(".exe", string.Empty);
-            }
-            catch (ArgumentException)
-            {
-
+               return NtGetProcessNameFromIdInternal(pid);
             }
             catch (Win32Exception e)
             {
@@ -1591,7 +1582,7 @@ namespace FabricObserver.Observers.Utilities
         {
             try
             {
-                uint[] ids = EnumProcesses(); //NtGetSFServiceProcessIds();
+                uint[] ids = EnumProcesses();
 
                 for (int i = 0; i < ids.Length; ++i)
                 {
@@ -1636,6 +1627,36 @@ namespace FabricObserver.Observers.Utilities
             }
 
             return 0;
+        }
+
+        /// <summary>
+        /// Gets the process identifiers for all running processes of the specified process name.
+        /// </summary>
+        /// <param name="processName"></param>
+        /// <returns></returns>
+        public static int[] NtGetProcessIdFromName(string processName)
+        {
+            List<int> pids = new();
+            var procInfo = NtGetSysProcInfo();
+
+            for (int i = 0; i < procInfo.Length; ++i)
+            {
+                try
+                {
+                    if (string.CompareOrdinal(Path.GetFileNameWithoutExtension(procInfo[i].ImageName.Buffer), processName) != 0)
+                    {
+                        continue;
+                    }
+
+                    pids.Add((int)procInfo[i].UniqueProcessId.ToUInt32());
+                }
+                catch (Exception e) when (e is ArgumentException or Win32Exception)
+                {
+
+                }
+            }
+            
+            return pids.ToArray();
         }
 
         /// <summary>
@@ -1963,12 +1984,43 @@ namespace FabricObserver.Observers.Utilities
             return writes;
         }
 
+        private static List<SYSTEM_PROCESS_INFORMATION> GetSFServiceProcessInfo(bool includeFabricSystemServices = false)
+        {
+            var procInfo = NtGetFilteredSystemProcessInfo(includeFabricSystemServices);
+            List<SYSTEM_PROCESS_INFORMATION> ret = new();
+            uint parentPid = 0;
+
+            for (int i = 0; i < procInfo.Count; ++i)
+            {
+                if (Path.GetFileName(procInfo[i].ImageName.Buffer) == "Fabric.exe")
+                {
+                    parentPid = procInfo[i].Reserved2.ToUInt32();
+                    break;
+                }
+            }
+
+            if (parentPid == 0)
+            {
+                return ret;
+            }
+
+            for (int i = 0; i < procInfo.Count; ++i)
+            {
+                if (procInfo[i].Reserved2.ToUInt32() == parentPid)
+                {
+                    ret.Add(procInfo[i]);
+                }
+            }
+
+            return ret;
+        }
+
         /// <summary>
-        /// Gets a filtered list of process information that includes all, but not limited to, executing SF user services and their descendants.
+        /// Gets a filtered list of process information objeccts that will includes all, but not limited to, executing SF user services and their descendants.
         /// </summary>
         /// <returns>An array of uint values that are process identifiers of all currently running SF user service host processes (and descendants) on the system. 
         /// If the function fails, then it will return null.</returns>
-        private static List<SYSTEM_PROCESS_INFORMATION> NtGetFilteredProcessInfo()
+        private static List<SYSTEM_PROCESS_INFORMATION> NtGetFilteredSystemProcessInfo(bool includeFabricSystemServices = false)
         {
             SYSTEM_PROCESS_INFORMATION[] procInfo = NtGetSysProcInfo();
 
@@ -2013,7 +2065,7 @@ namespace FabricObserver.Observers.Utilities
                         continue;
                     }
 
-                    if (FindInStringArray(ignoreFabricSystemServicesList, procName))
+                    if (!includeFabricSystemServices && FindInStringArray(ignoreFabricSystemServicesList, procName))
                     {
                         continue;
                     }
@@ -2202,16 +2254,18 @@ namespace FabricObserver.Observers.Utilities
             return null;
         }
 
-        private static string NtGetProcessNameFromId(uint pid)
+        private static string NtGetProcessNameFromIdInternal(uint pid)
         {
             try 
-            { 
-                // Let the Win32Exception through, if it comes.
-                PSS_PROCESS_INFORMATION snapshot = PssGetProcessSnapshot(pid);
+            {
+                var procInfo = NtGetSysProcInfo();
 
-                if (!string.IsNullOrWhiteSpace(snapshot.ImageFileName))
-                {
-                    return Path.GetFileName(snapshot.ImageFileName);
+                for (int i = 0; i < procInfo.Length; ++i) 
+                { 
+                    if (procInfo[i].UniqueProcessId.ToUInt32() == pid)
+                    {
+                        return Path.GetFileNameWithoutExtension(procInfo[i].ImageName.Buffer);
+                    }
                 }
             }
             catch (ArgumentException)
