@@ -59,8 +59,7 @@ namespace FabricObserver.Observers
         private int ObserverExecutionLoopSleepSeconds
         {
             get; set;
-        } = ObserverConstants.ObserverRunLoopSleepTimeSeconds;
-
+        }
 
         private bool FabricObserverOperationalTelemetryEnabled
         {
@@ -448,8 +447,6 @@ namespace FabricObserver.Observers
 
                                                 var healthReporter = new ObserverHealthReporter(Logger);
                                                 healthReporter.ReportHealthToServiceFabric(healthReport);
-
-                                                await Task.Delay(150);
                                             }
                                             catch (FabricException)
                                             {
@@ -478,8 +475,6 @@ namespace FabricObserver.Observers
 
                                                 var healthReporter = new ObserverHealthReporter(Logger);
                                                 healthReporter.ReportHealthToServiceFabric(healthReport);
-
-                                                await Task.Delay(150);
                                             }
                                             catch (FabricException)
                                             {
@@ -520,8 +515,6 @@ namespace FabricObserver.Observers
 
                                     var healthReporter = new ObserverHealthReporter(Logger);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
-
-                                    await Task.Delay(150);
                                 }
                                 catch (FabricException)
                                 {
@@ -561,8 +554,6 @@ namespace FabricObserver.Observers
 
                                     var healthReporter = new ObserverHealthReporter(Logger);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
-
-                                    await Task.Delay(150);
                                 }
                                 catch (FabricException)
                                 {
@@ -611,8 +602,6 @@ namespace FabricObserver.Observers
 
                             var healthReporter = new ObserverHealthReporter(Logger);
                             healthReporter.ReportHealthToServiceFabric(healthReport);
-
-                            await Task.Delay(150);
                         }
                         catch (FabricException)
                         {
@@ -639,8 +628,6 @@ namespace FabricObserver.Observers
 
                             var healthReporter = new ObserverHealthReporter(Logger);
                             healthReporter.ReportHealthToServiceFabric(healthReport);
-
-                            await Task.Delay(150);
                         }
                         catch (FabricException)
                         {

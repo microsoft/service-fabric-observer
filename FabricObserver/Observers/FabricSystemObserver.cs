@@ -31,6 +31,7 @@ namespace FabricObserver.Observers
         private readonly string[] processNameWatchList;
         private Stopwatch stopwatch;
         private bool checkPrivateWorkingSet;
+        private List<(string procName, int procId)> fabricSystemProcInfo = new();
 
         // Health Report data container - For use in analysis to determine health state.
         private Dictionary<string, FabricResourceUsageData<double>> allCpuData;
@@ -73,6 +74,7 @@ namespace FabricObserver.Observers
                 // Windows
                 processNameWatchList = new[]
                 {
+                    "EventStore.Service",
                     "Fabric",
                     "FabricApplicationGateway",
                     "FabricCAS",
@@ -575,6 +577,11 @@ namespace FabricObserver.Observers
         {
             Token.ThrowIfCancellationRequested();
 
+            if (IsWindows)
+            {
+                fabricSystemProcInfo = NativeMethods.NtGetSFSystemServiceProcessInfo();
+            }
+
             // fabric:/System
             MonitoredAppCount = 1;
             MonitoredServiceProcessCount = processNameWatchList.Length;
@@ -881,7 +888,7 @@ namespace FabricObserver.Observers
 
             token.ThrowIfCancellationRequested();
 
-            int procId;
+            int procId = 0;
 
             if (!IsWindows)
             {
@@ -901,7 +908,10 @@ namespace FabricObserver.Observers
             }
             else
             {
-                procId = NativeMethods.GetProcessIdFromName(procName);
+                if (fabricSystemProcInfo != null && fabricSystemProcInfo.Any(s => s.procName == procName))
+                {
+                    procId = fabricSystemProcInfo.First(s => s.procName == procName).procId;
+                }
             }
 
             try
@@ -1174,9 +1184,12 @@ namespace FabricObserver.Observers
                 {
                     if (IsWindows)
                     {
-                        procId = NativeMethods.GetProcessIdFromName(procName);
+                        if (fabricSystemProcInfo != null && fabricSystemProcInfo.Any(s => s.procName == procName))
+                        {
+                            procId = fabricSystemProcInfo.First(s => s.procName == procName).procId;
+                        }
 
-                        // No longer running.
+                        // No longer running or not allowed to monitor the proc..
                         if (procId == 0)
                         {
                             continue;
