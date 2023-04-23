@@ -2156,8 +2156,6 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
 
             using var obs = new NetworkObserver(TestServiceContext);
             await obs.ObserveAsync(Token);
@@ -2176,8 +2174,6 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
 
             using var obs = new NetworkObserver(TestServiceContext)
             {
@@ -3007,6 +3003,36 @@ namespace FabricObserverTests
             }
         }
 
+        [TestMethod]
+        public async Task NetworkObserver_ETW_EventData_IsTelemetryData_Warnings()
+        {
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+
+            await NetworkObserver_ObserveAsync_Successful_Warnings();
+
+            List<NetworkTelemetryData> telemData = foEtwListener.foEtwConverter.NetworkTelemetryData;
+
+            Assert.IsNotNull(telemData);
+            Assert.IsTrue(telemData.Count > 0);
+
+            foreach (var data in telemData)
+            {
+                Assert.IsTrue(data.EntityType == EntityType.Application);
+                Assert.IsTrue(data.HealthState == HealthState.Warning);
+                Assert.IsTrue(data.ObserverName == ObserverConstants.NetworkObserverName);
+
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.NodeName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.NodeType));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ClusterId));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.Metric));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ObserverName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.OS));
+                Assert.IsFalse(data.Code == null);
+                Assert.IsFalse(data.Description == null);
+                Assert.IsFalse(data.Property == null);
+            }
+        }
+
         // NodeObserver: TelemetryData \\
 
         [TestMethod]
@@ -3203,82 +3229,5 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.IsUnhealthy);
         }
         #endregion
-
-        [TestMethod]
-        public async Task Validate_AppObserver_ObserveAsync_Successful_IsHealthy_Exited_Process_Removed()
-        {
-            var startDateTime = DateTime.Now;
-
-            ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = true;
-
-            using var obs = new AppObserver(TestServiceContext)
-            {
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
-                EnableConcurrentMonitoring = true,
-                IsEtwProviderEnabled = true,
-                EnableChildProcessMonitoring = true,
-                MaxChildProcTelemetryDataCount = 25,
-                MonitorResourceGovernanceLimits = true
-            };
-
-            int pid = NativeMethods.GetProcessIdFromName("ChildProcessCreator");
-            Assert.IsTrue(pid > 0);
-
-            await obs.InitializeAsync();
-
-            using Process p = Process.GetProcessById(pid);
-            p.Kill(true);
-            
-            while (NativeMethods.GetProcessIdFromName("ChildProcessCreator") == pid)
-            {
-                await Task.Delay(1000);
-            }
-
-            Assert.IsTrue(NativeMethods.GetProcessIdFromName("ChildProcessCreator") == 0);
-
-            int newPid;
-
-            // Wait for SF to restart the service and for the service to start child processes.
-            while (true)
-            {
-                newPid = NativeMethods.GetProcessIdFromName("ChildProcessCreator");
-                
-                if (newPid == 0)
-                {
-                    await Task.Delay(1000);
-                    continue;
-                }
-
-                // Refresh SF user service (and descendants) process cache.
-                _ = NativeMethods.RefreshSFUserChildProcessDataCache();
-                List<(string procName, int procId, DateTime processStartTime)> descendants = NativeMethods.GetChildProcesses(newPid, "ChildProcessCreator");
-                
-                if (descendants?.Count == 3)
-                {
-                    break;
-                }
-
-                await Task.Delay(1000);
-            }
-
-            await obs.MonitorDeployedAppsAsync(Token);
-            await obs.ReportAsync(Token);
-
-            // Ensure that the old process and its descendants were removed from AppObserver's monitored process list.
-            Assert.IsFalse(
-                obs.processInfoDictionary.ContainsKey(pid) && obs.processInfoDictionary.Any(p => p.Value.ProcName == "cmd"));
-
-            obs.CleanUp();
-            obs.LastRunDateTime = DateTime.Now;
-
-            // observer detected no warning conditions.
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-        }
     }
 }

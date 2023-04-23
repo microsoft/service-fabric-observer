@@ -46,7 +46,7 @@ namespace FabricObserver.Observers.Utilities
         };
         private static readonly string[] ignoreFabricSystemServicesList = new string[]
         {
-            "Fabric.exe", "FabricHost.exe", "FabricApplicationGateway.exe", "FabricCAS.exe",
+            "EventStore.Service.exe", "Fabric.exe", "FabricHost.exe", "FabricApplicationGateway.exe", "FabricCAS.exe",
             "FabricDCA.exe", "FabricDnsService.exe", "FabricFAS.exe", "FabricGateway.exe",
             "FabricHost.exe", "FabricIS.exe", "FabricRM.exe", "FabricUS.exe"
         };
@@ -1256,23 +1256,87 @@ namespace FabricObserver.Observers.Utilities
             return procInfo;
         }
 
-        private static Dictionary<int, List<(string childProcName, int childProcId, DateTime childProcStartTime)>> descendantsDictionary = new();
+        private static Dictionary<int, List<(string childProcName, int childProcId, DateTime childProcStartTime)>> descendantsDictionary;
 
         public static bool RefreshSFUserChildProcessDataCache()
         {
-            NtSetSFUserServiceDescendantCache();
-            return descendantsDictionary.Any();
+            try
+            {
+                return NtSetSFUserServiceDescendantCache();
+            }
+            catch (Win32Exception)
+            {
+                return false;
+            }
+        }
+
+        public static List<(string procName, int procId)> NtGetSFSystemServiceProcessInfo()
+        {
+            SYSTEM_PROCESS_INFORMATION[] procInfoList = NtGetSysProcInfo();
+            List<(string procName, int procId)> result = new();
+            uint fabricHostPid = 0;
+
+            if (procInfoList == null)
+            {
+                return null;
+            }
+
+            for (int i = 0; i < procInfoList.Length; ++i)
+            {
+                var procInfo = procInfoList[i];
+
+                if (Path.GetFileName(procInfo.ImageName.Buffer) == "Fabric.exe")
+                {
+                    fabricHostPid = procInfo.Reserved2.ToUInt32();
+                    break;
+                }
+            }
+
+            if (fabricHostPid == 0)
+            {
+                return null;
+            }
+
+            for (int i = 0; i < procInfoList.Length; ++i)
+            {
+                var procInfo = procInfoList[i];
+               
+                if (procInfo.Reserved2.ToUInt32() != fabricHostPid)
+                {
+                    continue;
+                }
+
+                uint pid = procInfo.UniqueProcessId.ToUInt32();
+                string procName = Path.GetFileName(procInfo.ImageName.Buffer);
+
+                // FabricHost.
+                if (pid == fabricHostPid)
+                {
+                    result.Add((procName.Replace(".exe", string.Empty), (int)pid));
+                }
+
+                // FabricHost's direct children that are system service processes.
+                if (!FindInStringArray(ignoreFabricSystemServicesList, procName))
+                {
+                    continue;
+                }
+
+                result.Add((procName.Replace(".exe", string.Empty), (int)pid));
+            }
+
+            return result;
         }
 
         private static bool NtSetSFUserServiceDescendantCache()
         {
-            descendantsDictionary = new Dictionary<int, List<(string childProcName, int childProcId, DateTime childProcStartTime)>>();
             List<SYSTEM_PROCESS_INFORMATION> procInfoList = NtGetFilteredProcessInfo();
-            
-            if (procInfoList == null)
-            {
-                return false;
+
+            if (procInfoList == null) 
+            { 
+                return false; 
             }
+
+            descendantsDictionary = new Dictionary<int, List<(string childProcName, int childProcId, DateTime childProcStartTime)>>();
 
             for (int i = 0; i < procInfoList.Count; ++i)
             {
@@ -1522,7 +1586,6 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         /// <param name="pid">The process id.</param>
         /// <returns>Process name string, if successful. Else, null.</returns>
-        /// <exception cref="Win32Exception">A Win32Exception exception will be thrown if this specified process id is not found or if it is non-accessible due to its access control level.</exception>
         public static string GetProcessNameFromId(int pid)
         {
             try
@@ -1540,12 +1603,9 @@ namespace FabricObserver.Observers.Utilities
             {
 
             }
-            catch (Win32Exception e)
+            catch (Win32Exception)
             {
-                if (e.NativeErrorCode is 5 or 6)
-                {
-                    throw;
-                }
+
             }
 
             return null;
@@ -1577,7 +1637,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 sbProcName.Clear();
                 sbProcName = null;
-                hProc.Dispose();
+                hProc?.Dispose();
                 hProc = null;
             }
         }
@@ -1737,9 +1797,9 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         /// <param name="id">Process id.</param>
         /// <returns>SafeProcessHandle instance.</returns>
-        public static SafeProcessHandle GetSafeProcessHandle(int id, ProcessAccessFlags flags = ProcessAccessFlags.All)
+        public static SafeProcessHandle GetSafeProcessHandle(int id)
         {
-            return OpenProcess((uint)flags, false, (uint)id);
+            return OpenProcess((uint)ProcessAccessFlags.All, false, (uint)id);
         }
 
         internal static MEMORYSTATUSEX GetSystemMemoryInfo()
@@ -1972,6 +2032,7 @@ namespace FabricObserver.Observers.Utilities
         {
             SYSTEM_PROCESS_INFORMATION[] procInfo = NtGetSysProcInfo();
 
+            // If NtGetSysProcInfo returns null, it means that something went wrong (logged).
             if (procInfo == null)
             {
                 return null;
@@ -2013,14 +2074,13 @@ namespace FabricObserver.Observers.Utilities
                         continue;
                     }
 
-                    if (FindInStringArray(ignoreFabricSystemServicesList, procName))
-                    {
-                        continue;
-                    }
-
                     procInfoList.Add(procInfo[i]);
                 }
                 catch (ArgumentException)
+                {
+
+                }
+                catch (Win32Exception)
                 {
 
                 }
@@ -2163,6 +2223,7 @@ namespace FabricObserver.Observers.Utilities
 
                 if (tried == MAX_TRIES && status != 0)
                 {
+                    logger.LogWarning($"NtGetSysProcInfo failed with Win32 error code {Marshal.GetLastWin32Error()}");
                     return null;
                 }
 
@@ -2185,11 +2246,20 @@ namespace FabricObserver.Observers.Utilities
             catch (OutOfMemoryException)
             {
                 // Immediately die.
-                Environment.FailFast($"OOM. Taking down FO:{Environment.NewLine}{Environment.StackTrace}");
+                Environment.FailFast($"FO hit OOM:{Environment.NewLine}{Environment.StackTrace}");
             }
-            catch (Exception e) when (e is ArgumentException or MissingMethodException or Win32Exception)
+            catch (Exception e) when (e is ArgumentException or InvalidCastException or MissingMethodException or SEHException or Win32Exception)
             {
-                
+                int errorCode = 0;
+                string message = string.Empty;
+
+                if (e is Win32Exception)
+                {
+                    errorCode = Marshal.GetLastWin32Error();
+                    message = $"Win32 error code: {errorCode}";
+                }
+
+                logger.LogWarning($"Failure in NtGetSysProcInfo: {e.Message} {message}");
             }
             finally
             {

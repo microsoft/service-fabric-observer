@@ -29,8 +29,6 @@ namespace FabricObserver.Observers.Utilities
 
             if (sProcHandle.IsInvalid)
             {
-                ProcessInfoProvider.ProcessInfoLogger.LogWarning("GetCurrentCpuUsagePercentage(Win32 impl) failure: Invalid handle.");
-
                 // Caller should ignore this result. Don't want to use an Exception here.
                 return -1;
             }

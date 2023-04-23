@@ -754,7 +754,7 @@ namespace FabricObserver.Observers
 
             string thresholdName = "Warning";
             bool warningOrError = false;
-            string id = null, appType = null, processStartTime = null, appTypeVersion = null, serviceTypeName = null, serviceTypeVersion = null;
+            string id = null, appType = null, appTypeVersion = null, serviceTypeName = null, serviceTypeVersion = null;
             int procId = processId;
             T threshold = thresholdWarning;
             HealthState healthState = HealthState.Ok;
@@ -791,28 +791,6 @@ namespace FabricObserver.Observers
                             return;
                         }
 
-                        try
-                        {
-                            // Accessing Process properties is really expensive for Windows (net core), so call the interop function instead.
-                            if (IsWindows)
-                            {
-                                processStartTime = NativeMethods.GetProcessStartTime(procId).ToString("o");
-                            }
-                            else
-                            {
-                                using (Process proc = Process.GetProcessById(procId))
-                                {
-                                    processStartTime = proc.StartTime.ToString("o");
-                                }
-                            }
-                        }
-                        catch (Exception e) when (e is ArgumentException or InvalidOperationException or PlatformNotSupportedException or Win32Exception)
-                        {
-                            // Process may no longer be alive. It makes no sense to report on it.
-                            data.ClearData();
-                            return;
-                        }
-
                         id = $"{NodeName}_{processName}_{data.Property.Replace(" ", string.Empty)}";
 
                         // The health event description will be a serialized instance of telemetryData,
@@ -832,7 +810,7 @@ namespace FabricObserver.Observers
                             PartitionId = replicaOrInstance.PartitionId.ToString(),
                             ProcessId = procId,
                             ProcessName = processName,
-                            ProcessStartTime = processStartTime,
+                            ProcessStartTime = replicaOrInstance.HostProcessStartTime.ToString("o"),
                             Property = id,
                             ReplicaId = replicaOrInstance.ReplicaOrInstanceId,
                             ReplicaRole = replicaOrInstance.ReplicaRole.ToString(),
@@ -898,28 +876,6 @@ namespace FabricObserver.Observers
 
                     appName = new Uri(ObserverConstants.SystemAppName);
 
-                    try
-                    {
-                        if (IsWindows)
-                        {
-                            processStartTime = NativeMethods.GetProcessStartTime(procId).ToString("o");
-                        }
-                        else
-                        {
-                            using (Process proc = Process.GetProcessById(procId))
-                            {
-                                processStartTime = proc.StartTime.ToString("o");
-                            }
-                        }
-                    }
-                    catch (Exception e) when (e is ArgumentException or InvalidOperationException or PlatformNotSupportedException or Win32Exception)
-                    {
-                        // Process may no longer be alive or we can't access privileged information (FO running as user with lesser privilege than target process).
-                        // It makes no sense to report on it.
-                        data.ClearData();
-                        return;
-                    }
-
                     id = $"{NodeName}_{processName}_{data.Property.Replace(" ", string.Empty)}";
 
                     // The health event description will be a serialized instance of telemetryData,
@@ -935,7 +891,7 @@ namespace FabricObserver.Observers
                         ObserverName = ObserverName,
                         ProcessId = procId,
                         ProcessName = processName,
-                        ProcessStartTime = processStartTime,
+                        ProcessStartTime = GetProcessStartTime(procId).ToString("o"),
                         Property = id,
                         Source = ObserverConstants.FabricObserverName,
                         Value = data.AverageDataValue
@@ -1472,6 +1428,28 @@ namespace FabricObserver.Observers
             }
 
             return NativeMethods.GetProcessNameFromId(procId) == procName;
+        }
+
+        public DateTime GetProcessStartTime(int processId)
+        {
+            try
+            {
+                if (IsWindows)
+                {
+                    return NativeMethods.GetProcessStartTime(processId);
+                }
+                else
+                {
+                    using Process p = Process.GetProcessById(processId);
+                    return p.StartTime;
+                }
+            }
+            catch (Exception e) when (e is Win32Exception or ArgumentException or InvalidOperationException)
+            {
+                ObserverLogger.LogInfo($"Unable to get process start time: {e.Message}. This means process {processId} is no longer running or FO can't access it due to access rights.");
+            }
+
+            return DateTime.MinValue;
         }
 
         /// <summary>
