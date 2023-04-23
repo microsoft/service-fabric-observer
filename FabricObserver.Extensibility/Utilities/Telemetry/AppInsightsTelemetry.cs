@@ -275,11 +275,26 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                         { "HealthState", systemServiceTelemData.HealthState.ToString() },
                         { "Description", systemServiceTelemData.Description },
                         { "NodeName", systemServiceTelemData.NodeName },
+                        { "NodeType", systemServiceTelemData.NodeType },
                         { "ObserverName", systemServiceTelemData.ObserverName },
                         { "ProcessId", systemServiceTelemData.ProcessId.ToString() },
                         { "ProcessName", systemServiceTelemData.ProcessName },
                         { "ProcessStartTime", systemServiceTelemData.ProcessStartTime },
                         { "OS", systemServiceTelemData.OS }
+                    };
+                }
+                else if (telemetryData is NetworkTelemetryData networkTelemData)
+                {
+                    properties = new Dictionary<string, string>
+                    {
+                        { "ApplicationName", networkTelemData.ApplicationName },
+                        { "ClusterId", networkTelemData.ClusterId },
+                        { "EntityType", EntityType.Cluster.ToString() },
+                        { "HealthState", networkTelemData.HealthState.ToString() },
+                        { "Description", networkTelemData.Description },
+                        { "NodeName", networkTelemData.NodeName },
+                        { "ObserverName", networkTelemData.ObserverName },
+                        { "OS", networkTelemData.OS }
                     };
                 }
                 else if (telemetryData is ContainerTelemetryData containerTelemData)
@@ -475,6 +490,20 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                         { "ProcessName", systemServiceTelemData.ProcessName },
                         { "ProcessStartTime", systemServiceTelemData.ProcessStartTime },
                         { "OS", systemServiceTelemData.OS }
+                    };
+                }
+                else if (telemetryData is NetworkTelemetryData networkTelemData)
+                {
+                    properties = new Dictionary<string, string>
+                    {
+                        { "ApplicationName", networkTelemData.ApplicationName },
+                        { "ClusterId", networkTelemData.ClusterId },
+                        { "EntityType", EntityType.Cluster.ToString() },
+                        { "HealthState", networkTelemData.HealthState.ToString() },
+                        { "Description", networkTelemData.Description },
+                        { "NodeName", networkTelemData.NodeName },
+                        { "ObserverName", networkTelemData.ObserverName },
+                        { "OS", networkTelemData.OS }
                     };
                 }
                 else if (telemetryData is ContainerTelemetryData containerTelemData)

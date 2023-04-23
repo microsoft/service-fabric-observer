@@ -241,8 +241,6 @@ namespace FabricObserver.Observers
             }
         }
 
-#pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning restore IDE0079 // Remove unnecessary suppression
         public override Task ReportAsync(CancellationToken token)
         {
             try
@@ -908,7 +906,13 @@ namespace FabricObserver.Observers
             }
             else
             {
-                if (fabricSystemProcInfo != null && fabricSystemProcInfo.Any(s => s.procName == procName))
+                // This means the more efficient approach to acquire this info failed.
+                if (fabricSystemProcInfo == null) 
+                { 
+                    // This employs EnumProcesses.
+                    procId = NativeMethods.GetProcessIdFromName(procName);
+                }
+                else if (fabricSystemProcInfo.Any(s => s.procName == procName))
                 {
                     procId = fabricSystemProcInfo.First(s => s.procName == procName).procId;
                 }
@@ -1184,7 +1188,12 @@ namespace FabricObserver.Observers
                 {
                     if (IsWindows)
                     {
-                        if (fabricSystemProcInfo != null && fabricSystemProcInfo.Any(s => s.procName == procName))
+                        // This means the more efficient approach to acquire this info failed.
+                        if (fabricSystemProcInfo == null)
+                        {
+                            procId = NativeMethods.GetProcessIdFromName(procName);
+                        }
+                        else if (fabricSystemProcInfo.Any(s => s.procName == procName))
                         {
                             procId = fabricSystemProcInfo.First(s => s.procName == procName).procId;
                         }

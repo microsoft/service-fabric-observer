@@ -6,13 +6,11 @@
 using Microsoft.Win32.SafeHandles;
 using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Reflection.Metadata.Ecma335;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Security;
@@ -1276,6 +1274,8 @@ namespace FabricObserver.Observers.Utilities
             List<(string procName, int procId)> result = new();
             uint fabricHostPid = 0;
 
+            // If NtGetSysProcInfo returns null, it means that something went wrong (logged). FSO accounts for this and
+            // will try something else.
             if (procInfoList == null)
             {
                 return null;
@@ -1331,6 +1331,8 @@ namespace FabricObserver.Observers.Utilities
         {
             List<SYSTEM_PROCESS_INFORMATION> procInfoList = NtGetFilteredProcessInfo();
 
+            // This will be the case if NtGetSysProcInfo fails. End here. AppObserver accounts for this and will
+            // try something else (process snapshot will be taken and its cached handle will be passed to GetChildProcesses).
             if (procInfoList == null) 
             { 
                 return false; 
@@ -1646,12 +1648,12 @@ namespace FabricObserver.Observers.Utilities
         /// Gets the process id for the specified process name. **Note that this is only useful if there is one process of the specified name**.
         /// </summary>
         /// <param name="procName">The name of the process.</param>
-        /// <returns>Process id as uint. If this fails for any reason, it will return 0.</returns>
+        /// <returns>Process id as int. If this fails for any reason, it will return 0.</returns>
         public static int GetProcessIdFromName(string procName)
         {
             try
             {
-                uint[] ids = EnumProcesses(); //NtGetSFServiceProcessIds();
+                uint[] ids = EnumProcesses();
 
                 for (int i = 0; i < ids.Length; ++i)
                 {
@@ -2243,23 +2245,21 @@ namespace FabricObserver.Observers.Utilities
                 arrProcInfo.CopyTo(arr);
                 return arr;
             }
-            catch (OutOfMemoryException)
+            catch (OutOfMemoryException) // Since OOMs can be caught in .net, failfast here.
             {
-                // Immediately die.
                 Environment.FailFast($"FO hit OOM:{Environment.NewLine}{Environment.StackTrace}");
             }
-            catch (Exception e) when (e is ArgumentException or InvalidCastException or MissingMethodException or SEHException or Win32Exception)
+            catch (Exception e) // Note: Catching all here as it is unclear what the error would be if the SYSTEM_PROCESS_INFORMATION structure definition is invalid (Windows changes support for what is used here, for example).
             {
-                int errorCode = 0;
-                string message = string.Empty;
+                string win32errCodeMessage = string.Empty;
 
                 if (e is Win32Exception)
                 {
-                    errorCode = Marshal.GetLastWin32Error();
-                    message = $"Win32 error code: {errorCode}";
+                    int errorCode = Marshal.GetLastWin32Error();
+                    win32errCodeMessage = $" Win32 error code: {errorCode}.";
                 }
 
-                logger.LogWarning($"Failure in NtGetSysProcInfo: {e.Message} {message}");
+                logger.LogWarning($"Failure in NtGetSysProcInfo: {e.Message}.{win32errCodeMessage}");
             }
             finally
             {

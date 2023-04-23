@@ -162,74 +162,84 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             switch (telemetryData)
             {
                 case ServiceTelemetryData serviceTelemData:
+                {
+                    if (JsonHelper.TrySerializeObject(serviceTelemData, out string jsonPayload))
                     {
-                        if (JsonHelper.TrySerializeObject(serviceTelemData, out string jsonPayload))
-                        {
-                            await SendTelemetryAsync(jsonPayload, cancellationToken);
-                        }
-
-                        break;
+                        await SendTelemetryAsync(jsonPayload, cancellationToken);
                     }
+
+                    break;
+                }
 
                 case NodeTelemetryData nodeTelemData:
+                {
+                    if (JsonHelper.TrySerializeObject(nodeTelemData, out string jsonPayload))
                     {
-                        if (JsonHelper.TrySerializeObject(nodeTelemData, out string jsonPayload))
-                        {
-                            await SendTelemetryAsync(jsonPayload, cancellationToken);
-                        }
-
-                        break;
+                        await SendTelemetryAsync(jsonPayload, cancellationToken);
                     }
+
+                    break;
+                }
 
                 case DiskTelemetryData diskTelemData:
+                {
+                    if (JsonHelper.TrySerializeObject(diskTelemData, out string jsonPayload))
                     {
-                        if (JsonHelper.TrySerializeObject(diskTelemData, out string jsonPayload))
-                        {
-                            await SendTelemetryAsync(jsonPayload, cancellationToken);
-                        }
-
-                        break;
+                        await SendTelemetryAsync(jsonPayload, cancellationToken);
                     }
+
+                    break;
+                }
 
                 case ClusterTelemetryData clusterTelemData:
+                {
+                    if (JsonHelper.TrySerializeObject(clusterTelemData, out string jsonPayload))
                     {
-                        if (JsonHelper.TrySerializeObject(clusterTelemData, out string jsonPayload))
-                        {
-                            await SendTelemetryAsync(jsonPayload, cancellationToken);
-                        }
-
-                        break;
+                        await SendTelemetryAsync(jsonPayload, cancellationToken);
                     }
+
+                    break;
+                }
 
                 case SystemServiceTelemetryData systemServiceTelemData:
+                {
+                    if (JsonHelper.TrySerializeObject(systemServiceTelemData, out string jsonPayload))
                     {
-                        if (JsonHelper.TrySerializeObject(systemServiceTelemData, out string jsonPayload))
-                        {
-                            await SendTelemetryAsync(jsonPayload, cancellationToken);
-                        }
-
-                        break;
+                        await SendTelemetryAsync(jsonPayload, cancellationToken);
                     }
+
+                    break;
+                }
+
+                case NetworkTelemetryData networkTelemData:
+                {
+                    if (JsonHelper.TrySerializeObject(networkTelemData, out string jsonPayload))
+                    {
+                        await SendTelemetryAsync(jsonPayload, cancellationToken);
+                    }
+
+                    break;
+                }
 
                 case ContainerTelemetryData containerTelemData:
+                {
+                    if (JsonHelper.TrySerializeObject(containerTelemData, out string jsonPayload))
                     {
-                        if (JsonHelper.TrySerializeObject(containerTelemData, out string jsonPayload))
-                        {
-                            await SendTelemetryAsync(jsonPayload, cancellationToken);
-                        }
-
-                        break;
+                        await SendTelemetryAsync(jsonPayload, cancellationToken);
                     }
+
+                    break;
+                }
 
                 default:
+                {
+                    if (JsonHelper.TrySerializeObject(telemetryData, out string jsonPayload))
                     {
-                        if (JsonHelper.TrySerializeObject(telemetryData, out string jsonPayload))
-                        {
-                            await SendTelemetryAsync(jsonPayload, cancellationToken);
-                        }
-
-                        break;
+                        await SendTelemetryAsync(jsonPayload, cancellationToken);
                     }
+
+                    break;
+                }
             }
         }
 
@@ -285,6 +295,16 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 case SystemServiceTelemetryData systemServiceTelemData:
                 {
                     if (JsonHelper.TrySerializeObject(systemServiceTelemData, out string jsonPayload))
+                    {
+                        await SendTelemetryAsync(jsonPayload, cancellationToken);
+                    }
+
+                    break;
+                }
+
+                case NetworkTelemetryData networkTelemData:
+                {
+                    if (JsonHelper.TrySerializeObject(networkTelemData, out string jsonPayload))
                     {
                         await SendTelemetryAsync(jsonPayload, cancellationToken);
                     }
