@@ -102,8 +102,30 @@ namespace FabricObserver.Observers.Utilities
             {
                 usedPct = (double)(count * 100) / totalEphemeralPorts;
             }
-           
+
             return usedPct;
+        }
+
+        // TODO...
+        /// <summary>
+        /// Not implemented for Linux.
+        /// </summary>
+        /// <param name="processId"></param>
+        /// <returns>0</returns>
+        public override int GetBoundStateEphemeralPortCount(int processId = 0)
+        {
+            return 0;
+        }
+
+        // TODO...
+        /// <summary>
+        /// Not implemented for Linux.
+        /// </summary>
+        /// <param name="processId"></param>
+        /// <returns>0</returns>
+        public override int GetBoundStatePortCount(int processId = 0)
+        {
+            return 0;
         }
 
         public override (int LowPort, int HighPort, int NumberOfPorts) TupleGetDynamicPortRange()

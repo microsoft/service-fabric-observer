@@ -14,7 +14,6 @@ using System.Fabric.Health;
 using System.Fabric.Query;
 using System.IO;
 using System.Linq;
-using System.Reflection.Metadata.Ecma335;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -128,7 +127,7 @@ namespace FabricObserver.Observers
         }
 
         private NativeMethods.SafeObjectHandle handleToProcSnapshot = null;
-        
+
         public NativeMethods.SafeObjectHandle Win32HandleToProcessSnapshot
         {
             get
@@ -205,7 +204,7 @@ namespace FabricObserver.Observers
                 }
             }
             catch (FabricException fe)
-            { 
+            {
                 if (fe.ErrorCode == FabricErrorCode.ApplicationNotFound || fe.ErrorCode == FabricErrorCode.ApplicationTypeNotFound)
                 {
                     // Ignore these. These can happen when some target service was deleted while FO was gathering related data for entity, for example.
@@ -219,7 +218,7 @@ namespace FabricObserver.Observers
                     Environment.FailFast($"FO hit an OOM:{Environment.NewLine}{Environment.StackTrace}");
                 }
 
-                ObserverLogger.LogError( $"InitializeAsync failure: {e.Message}. Exiting AppObsever.");
+                ObserverLogger.LogError($"InitializeAsync failure: {e.Message}. Exiting AppObsever.");
                 throw;
             }
 
@@ -325,7 +324,7 @@ namespace FabricObserver.Observers
                 }
 
                 string appNameOrType = GetAppNameOrType(repOrInst);
-                var id = $"{appNameOrType}:{processName}{processId}";
+                string id = $"{appNameOrType}:{processName}{processId}";
 
                 // Locally Log (csv) CPU/Mem/FileHandles/Ports per app service process.
                 if (EnableCsvLogging)
@@ -696,7 +695,7 @@ namespace FabricObserver.Observers
                                 _ = AllAppEphemeralPortsData.TryRemove(item);
                             }
                         }
-                    
+
                         ProcessResourceDataReportHealth(
                             parentFrud,
                             app.NetworkErrorEphemeralPorts,
@@ -1218,7 +1217,7 @@ namespace FabricObserver.Observers
                         // Legacy support (naming).
                         existingAppConfig[j].ErrorOpenFileHandles = existingAppConfig[j].ErrorOpenFileHandles == 0 && application.ErrorOpenFileHandles > 0 ? application.ErrorOpenFileHandles : existingAppConfig[j].ErrorOpenFileHandles;
                         existingAppConfig[j].WarningOpenFileHandles = existingAppConfig[j].WarningOpenFileHandles == 0 && application.WarningOpenFileHandles > 0 ? application.WarningOpenFileHandles : existingAppConfig[j].WarningOpenFileHandles;
-                        
+
                         // Updated naming.
                         existingAppConfig[j].ErrorHandleCount = existingAppConfig[j].ErrorHandleCount == 0 && application.ErrorHandleCount > 0 ? application.ErrorHandleCount : existingAppConfig[j].ErrorHandleCount;
                         existingAppConfig[j].WarningHandleCount = existingAppConfig[j].WarningHandleCount == 0 && application.WarningHandleCount > 0 ? application.WarningHandleCount : existingAppConfig[j].WarningHandleCount;
@@ -1255,11 +1254,11 @@ namespace FabricObserver.Observers
                         NetworkWarningEphemeralPortsPercent = application.NetworkWarningEphemeralPortsPercent,
                         DumpProcessOnError = application.DumpProcessOnError,
                         DumpProcessOnWarning = application.DumpProcessOnWarning,
-                        
+
                         // Supported Legacy Handle property naming.
                         ErrorOpenFileHandles = application.ErrorOpenFileHandles,
                         WarningOpenFileHandles = application.WarningOpenFileHandles,
-                        
+
                         ErrorHandleCount = application.ErrorHandleCount,
                         WarningHandleCount = application.WarningHandleCount,
                         ErrorThreadCount = application.ErrorThreadCount,
@@ -1682,7 +1681,7 @@ namespace FabricObserver.Observers
             ObserverLogger.LogInfo($"Started ProcessChildProcs.");
             try
             {
-                var (childProcInfo, Sum) = TupleProcessChildFruds(childFruds, repOrInst, appInfo, token);
+                var (childProcInfo, Sum) = TupleProcessChildFruds(ref childFruds, repOrInst, appInfo, token);
 
                 if (childProcInfo == null)
                 {
@@ -1706,7 +1705,7 @@ namespace FabricObserver.Observers
         }
 
         private (ChildProcessTelemetryData childProcInfo, double Sum) TupleProcessChildFruds<T>(
-                    ConcurrentDictionary<string, FabricResourceUsageData<T>> childFruds,
+                    ref ConcurrentDictionary<string, FabricResourceUsageData<T>> childFruds,
                     ReplicaOrInstanceMonitoringInfo repOrInst,
                     ApplicationInfo app,
                     CancellationToken token) where T : struct
@@ -1743,6 +1742,9 @@ namespace FabricObserver.Observers
                 ChildProcessInfo = new List<ChildProcessInfo>()
             };
 
+            string appNameOrType = GetAppNameOrType(repOrInst);
+            string parentKey = $"{appNameOrType}:{repOrInst.HostProcessName}{parentPid}";
+
             for (int i = 0; i < childProcs.Count; ++i)
             {
                 token.ThrowIfCancellationRequested();
@@ -1751,6 +1753,13 @@ namespace FabricObserver.Observers
                 {
                     int childPid = childProcs[i].Pid;
                     string childProcName = childProcs[i].procName;
+                    string frudKey = $"{parentKey}:{childProcName}{childPid}";
+
+                    if (!childFruds.ContainsKey(frudKey))
+                    {
+                        continue;
+                    }
+
                     DateTime startTime = childProcs[i].ProcessStartTime;
 
                     // Is the process the one we think it is?
@@ -1759,24 +1768,19 @@ namespace FabricObserver.Observers
                         continue;
                     }
 
-                    if (!childFruds.Any(x => x.Key.EndsWith($"{childProcName}{childPid}")))
-                    {
-                        continue;
-                    }
-
-                    var frud = childFruds.First(x => x.Key.EndsWith($"{childProcName}{childPid}"));
-                    metric = frud.Value.Property;
-                    double value = frud.Value.AverageDataValue;
+                    var frud = childFruds[frudKey];
+                    metric = frud.Property;
+                    double value = frud.AverageDataValue;
                     sumValues += value;
 
                     if (IsEtwEnabled || IsTelemetryEnabled)
                     {
                         var childProcInfo = new ChildProcessInfo
-                        { 
+                        {
                             ProcessId = childPid,
                             ProcessName = childProcName,
                             ProcessStartTime = startTime.ToString("o"),
-                            Value = value 
+                            Value = value
                         };
                         childProcessInfoData.ChildProcessInfo.Add(childProcInfo);
                     }
@@ -1785,85 +1789,85 @@ namespace FabricObserver.Observers
 
                     if (IsWindows && EnableProcessDumps && (app.DumpProcessOnError || app.DumpProcessOnWarning))
                     {
-                        string prop = frud.Value.Property;
+                        string prop = frud.Property;
                         bool dump = false;
 
                         switch (prop)
                         {
                             case ErrorWarningProperty.CpuTime:
                                 // Test error/warning threshold breach for supplied metric.
-                                if (frud.Value.IsUnhealthy(app.CpuErrorLimitPercent) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.CpuWarningLimitPercent)))
+                                if (frud.IsUnhealthy(app.CpuErrorLimitPercent) || (app.DumpProcessOnWarning && frud.IsUnhealthy(app.CpuWarningLimitPercent)))
                                 {
                                     dump = true;
                                 }
                                 break;
 
                             case ErrorWarningProperty.MemoryConsumptionMb:
-                                if (frud.Value.IsUnhealthy(app.MemoryErrorLimitMb) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.MemoryWarningLimitMb)))
+                                if (frud.IsUnhealthy(app.MemoryErrorLimitMb) || (app.DumpProcessOnWarning && frud.IsUnhealthy(app.MemoryWarningLimitMb)))
                                 {
                                     dump = true;
                                 }
                                 break;
 
                             case ErrorWarningProperty.MemoryConsumptionPercentage:
-                                if (frud.Value.IsUnhealthy(app.MemoryErrorLimitPercent) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.MemoryWarningLimitPercent)))
+                                if (frud.IsUnhealthy(app.MemoryErrorLimitPercent) || (app.DumpProcessOnWarning && frud.IsUnhealthy(app.MemoryWarningLimitPercent)))
                                 {
                                     dump = true;
                                 }
                                 break;
 
                             case ErrorWarningProperty.PrivateBytesMb:
-                                if (frud.Value.IsUnhealthy(app.ErrorPrivateBytesMb) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.WarningPrivateBytesMb)))
+                                if (frud.IsUnhealthy(app.ErrorPrivateBytesMb) || (app.DumpProcessOnWarning && frud.IsUnhealthy(app.WarningPrivateBytesMb)))
                                 {
                                     dump = true;
                                 }
                                 break;
 
                             case ErrorWarningProperty.PrivateBytesPercent:
-                                if (frud.Value.IsUnhealthy(app.ErrorPrivateBytesPercent) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.WarningPrivateBytesPercent)))
+                                if (frud.IsUnhealthy(app.ErrorPrivateBytesPercent) || (app.DumpProcessOnWarning && frud.IsUnhealthy(app.WarningPrivateBytesPercent)))
                                 {
                                     dump = true;
                                 }
                                 break;
 
                             case ErrorWarningProperty.ActiveTcpPorts:
-                                if (frud.Value.IsUnhealthy(app.NetworkErrorActivePorts) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.NetworkWarningActivePorts)))
+                                if (frud.IsUnhealthy(app.NetworkErrorActivePorts) || (app.DumpProcessOnWarning && frud.IsUnhealthy(app.NetworkWarningActivePorts)))
                                 {
                                     dump = true;
                                 }
                                 break;
 
                             case ErrorWarningProperty.ActiveEphemeralPorts:
-                                if (frud.Value.IsUnhealthy(app.NetworkErrorEphemeralPorts) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.NetworkWarningEphemeralPorts)))
+                                if (frud.IsUnhealthy(app.NetworkErrorEphemeralPorts) || (app.DumpProcessOnWarning && frud.IsUnhealthy(app.NetworkWarningEphemeralPorts)))
                                 {
                                     dump = true;
                                 }
                                 break;
 
                             case ErrorWarningProperty.ActiveEphemeralPortsPercentage:
-                                if (frud.Value.IsUnhealthy(app.NetworkErrorEphemeralPortsPercent) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.NetworkWarningEphemeralPortsPercent)))
+                                if (frud.IsUnhealthy(app.NetworkErrorEphemeralPortsPercent) || (app.DumpProcessOnWarning && frud.IsUnhealthy(app.NetworkWarningEphemeralPortsPercent)))
                                 {
                                     dump = true;
                                 }
                                 break;
-                                    
-                                    // Legacy Handle metric name.
+
+                            // Legacy Handle metric name.
                             case ErrorWarningProperty.AllocatedFileHandles:
-                                if (frud.Value.IsUnhealthy(app.ErrorOpenFileHandles) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.WarningOpenFileHandles)))
+                                if (frud.IsUnhealthy(app.ErrorOpenFileHandles) || (app.DumpProcessOnWarning && frud.IsUnhealthy(app.WarningOpenFileHandles)))
                                 {
                                     dump = true;
                                 }
                                 break;
 
                             case ErrorWarningProperty.HandleCount:
-                                if (frud.Value.IsUnhealthy(app.ErrorHandleCount) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.WarningHandleCount)))
+                                if (frud.IsUnhealthy(app.ErrorHandleCount) || (app.DumpProcessOnWarning && frud.IsUnhealthy(app.WarningHandleCount)))
                                 {
                                     dump = true;
                                 }
                                 break;
 
                             case ErrorWarningProperty.ThreadCount:
-                                if (frud.Value.IsUnhealthy(app.ErrorThreadCount) || (app.DumpProcessOnWarning && frud.Value.IsUnhealthy(app.WarningThreadCount)))
+                                if (frud.IsUnhealthy(app.ErrorThreadCount) || (app.DumpProcessOnWarning && frud.IsUnhealthy(app.WarningThreadCount)))
                                 {
                                     dump = true;
                                 }
@@ -1875,7 +1879,7 @@ namespace FabricObserver.Observers
                             if (dump)
                             {
                                 ObserverLogger.LogInfo($"Starting dump code path for {repOrInst.HostProcessName}/{childProcName}/{childPid}.");
-                                        
+
                                 // Make sure the child process is still the one we're looking for.
                                 if (EnsureProcess(childProcName, childPid, startTime))
                                 {
@@ -2299,8 +2303,8 @@ namespace FabricObserver.Observers
                         double rgMemoryPercentThreshold,
                         CancellationToken token)
         {
-            _ = Parallel.For (0, processDictionary.Count, parallelOptions, (i, state) =>
-            {   
+            _ = Parallel.For(0, processDictionary.Count, parallelOptions, (i, state) =>
+            {
                 if (token.IsCancellationRequested)
                 {
                     if (parallelOptions.MaxDegreeOfParallelism == -1 || parallelOptions.MaxDegreeOfParallelism > 1)
@@ -2518,7 +2522,7 @@ namespace FabricObserver.Observers
                         AllAppPrivateBytesDataMb[$"{id}:{procName}{procId}"].AddData(memPb);
                     }
                 }
-               
+
                 // Private Bytes (Percent) - Windows only.
                 if (IsWindows && checkMemPrivateBytesPct)
                 {
@@ -2837,13 +2841,13 @@ namespace FabricObserver.Observers
             //var stopwatch = Stopwatch.StartNew();
             var deployedReplicaList = await FabricClientInstance.QueryManager.GetDeployedReplicaListAsync(
                                                 NodeName,
-                                                appName, 
-                                                null, 
-                                                null, 
-                                                ConfigurationSettings.AsyncTimeout, 
+                                                appName,
+                                                null,
+                                                null,
+                                                ConfigurationSettings.AsyncTimeout,
                                                 Token);
 
-            if (deployedReplicaList == null || !deployedReplicaList.Any()) 
+            if (deployedReplicaList == null || !deployedReplicaList.Any())
             {
                 return null;
             }
@@ -2918,108 +2922,128 @@ namespace FabricObserver.Observers
                 switch (deployedReplica)
                 {
                     case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole is ReplicaRole.Primary or ReplicaRole.ActiveSecondary:
-                    {
-                        if (filterList != null && filterType != ServiceFilterType.None)
                         {
-                            bool isInFilterList = filterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
-
-                            switch (filterType)
+                            if (filterList != null && filterType != ServiceFilterType.None)
                             {
-                                case ServiceFilterType.Include when !isInFilterList:
-                                case ServiceFilterType.Exclude when isInFilterList:
+                                bool isInFilterList = filterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+
+                                switch (filterType)
+                                {
+                                    case ServiceFilterType.Include when !isInFilterList:
+                                    case ServiceFilterType.Exclude when isInFilterList:
+                                        return;
+                                }
+                            }
+
+                            if (IsWindows)
+                            {
+                                // If this is true, then the process is not monitorable (running at higher elevation than FO).
+                                if (GetProcessStartTime((int)statefulReplica.HostProcessId) == DateTime.MinValue)
+                                {
+                                    SendServiceProcessElevatedWarning(appName?.OriginalString, statefulReplica.ServiceName?.OriginalString);
                                     return;
+                                }
                             }
-                        }
 
-                        replicaInfo = new ReplicaOrInstanceMonitoringInfo
-                        {
-                            ApplicationName = appName,
-                            ApplicationTypeName = appTypeName,
-                            HostProcessId = statefulReplica.HostProcessId,
-                            HostProcessStartTime = GetProcessStartTime((int)statefulReplica.HostProcessId),
-                            ReplicaOrInstanceId = statefulReplica.ReplicaId,
-                            PartitionId = statefulReplica.Partitionid,
-                            ReplicaRole = statefulReplica.ReplicaRole,
-                            ServiceKind = statefulReplica.ServiceKind,
-                            ServiceName = statefulReplica.ServiceName,
-                            ServiceManifestName = statefulReplica.ServiceManifestName,
-                            ServiceTypeName = statefulReplica.ServiceTypeName,
-                            ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
-                            ServicePackageActivationMode = string.IsNullOrWhiteSpace(statefulReplica.ServicePackageActivationId) ?
-                                            ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
-                            ReplicaStatus = statefulReplica.ReplicaStatus
-                        };
-
-                        /* In order to provide accurate resource usage of an SF service process we need to also account for
-                        any processes (children) that the service process (parent) created/spawned. */
-
-                        if (EnableChildProcessMonitoring && replicaInfo?.HostProcessId > 0)
-                        {
-                            // DEBUG - Perf
-                            //var sw = Stopwatch.StartNew();
-                            List<(string ProcName, int Pid, DateTime ProcessStartTime)> childPids =
-                                ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, Win32HandleToProcessSnapshot);
-   
-                            if (childPids != null && childPids.Count > 0)
+                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
                             {
-                                replicaInfo.ChildProcesses = childPids;
-                                ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
+                                ApplicationName = appName,
+                                ApplicationTypeName = appTypeName,
+                                HostProcessId = statefulReplica.HostProcessId,
+                                HostProcessStartTime = GetProcessStartTime((int)statefulReplica.HostProcessId),
+                                ReplicaOrInstanceId = statefulReplica.ReplicaId,
+                                PartitionId = statefulReplica.Partitionid,
+                                ReplicaRole = statefulReplica.ReplicaRole,
+                                ServiceKind = statefulReplica.ServiceKind,
+                                ServiceName = statefulReplica.ServiceName,
+                                ServiceManifestName = statefulReplica.ServiceManifestName,
+                                ServiceTypeName = statefulReplica.ServiceTypeName,
+                                ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
+                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(statefulReplica.ServicePackageActivationId) ?
+                                                ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
+                                ReplicaStatus = statefulReplica.ReplicaStatus
+                            };
+
+                            /* In order to provide accurate resource usage of an SF service process we need to also account for
+                            any processes (children) that the service process (parent) created/spawned. */
+
+                            if (EnableChildProcessMonitoring && replicaInfo?.HostProcessId > 0)
+                            {
+                                // DEBUG - Perf
+                                //var sw = Stopwatch.StartNew();
+                                List<(string ProcName, int Pid, DateTime ProcessStartTime)> childPids =
+                                    ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, Win32HandleToProcessSnapshot);
+
+                                if (childPids != null && childPids.Count > 0)
+                                {
+                                    replicaInfo.ChildProcesses = childPids;
+                                    ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
+                                }
+                                //sw.Stop();
+                                //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
                             }
-                            //sw.Stop();
-                            //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
+                            break;
                         }
-                        break;
-                    }
                     case DeployedStatelessServiceInstance statelessInstance:
-                    {
-                        if (filterList != null && filterType != ServiceFilterType.None)
                         {
-                            bool isInFilterList = filterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
-
-                            switch (filterType)
+                            if (filterList != null && filterType != ServiceFilterType.None)
                             {
-                                case ServiceFilterType.Include when !isInFilterList:
-                                case ServiceFilterType.Exclude when isInFilterList:
+                                bool isInFilterList = filterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+
+                                switch (filterType)
+                                {
+                                    case ServiceFilterType.Include when !isInFilterList:
+                                    case ServiceFilterType.Exclude when isInFilterList:
+                                        return;
+                                }
+                            }
+
+                            if (IsWindows)
+                            {
+                                // If this is true, then the process is not monitorable (running at higher elevation than FO).
+                                if (GetProcessStartTime((int)statelessInstance.HostProcessId) == DateTime.MinValue)
+                                {
+                                    SendServiceProcessElevatedWarning(appName?.OriginalString, statelessInstance.ServiceName?.OriginalString);
                                     return;
+                                }
                             }
-                        }
 
-                        replicaInfo = new ReplicaOrInstanceMonitoringInfo
-                        {
-                            ApplicationName = appName,
-                            ApplicationTypeName = appTypeName,
-                            HostProcessId = statelessInstance.HostProcessId,
-                            HostProcessStartTime = GetProcessStartTime((int)statelessInstance.HostProcessId),
-                            ReplicaOrInstanceId = statelessInstance.InstanceId,
-                            PartitionId = statelessInstance.Partitionid,
-                            ReplicaRole = ReplicaRole.None,
-                            ServiceKind = statelessInstance.ServiceKind,
-                            ServiceName = statelessInstance.ServiceName,
-                            ServiceManifestName = statelessInstance.ServiceManifestName,
-                            ServiceTypeName = statelessInstance.ServiceTypeName,
-                            ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
-                            ServicePackageActivationMode = string.IsNullOrWhiteSpace(statelessInstance.ServicePackageActivationId) ?
-                                            ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
-                            ReplicaStatus = statelessInstance.ReplicaStatus
-                        };
-
-                        if (EnableChildProcessMonitoring && replicaInfo?.HostProcessId > 0)
-                        {
-                            // DEBUG - Perf
-                            //var sw = Stopwatch.StartNew();
-                            List<(string ProcName, int Pid, DateTime ProcessStartTime)> childPids =
-                                ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, Win32HandleToProcessSnapshot);
-                            
-                            if (childPids != null && childPids.Count > 0)
+                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
                             {
-                                replicaInfo.ChildProcesses = childPids;
-                                ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
+                                ApplicationName = appName,
+                                ApplicationTypeName = appTypeName,
+                                HostProcessId = statelessInstance.HostProcessId,
+                                HostProcessStartTime = GetProcessStartTime((int)statelessInstance.HostProcessId),
+                                ReplicaOrInstanceId = statelessInstance.InstanceId,
+                                PartitionId = statelessInstance.Partitionid,
+                                ReplicaRole = ReplicaRole.None,
+                                ServiceKind = statelessInstance.ServiceKind,
+                                ServiceName = statelessInstance.ServiceName,
+                                ServiceManifestName = statelessInstance.ServiceManifestName,
+                                ServiceTypeName = statelessInstance.ServiceTypeName,
+                                ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
+                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(statelessInstance.ServicePackageActivationId) ?
+                                                ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
+                                ReplicaStatus = statelessInstance.ReplicaStatus
+                            };
+
+                            if (EnableChildProcessMonitoring && replicaInfo?.HostProcessId > 0)
+                            {
+                                // DEBUG - Perf
+                                //var sw = Stopwatch.StartNew();
+                                List<(string ProcName, int Pid, DateTime ProcessStartTime)> childPids =
+                                    ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, Win32HandleToProcessSnapshot);
+
+                                if (childPids != null && childPids.Count > 0)
+                                {
+                                    replicaInfo.ChildProcesses = childPids;
+                                    ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
+                                }
+                                //sw.Stop();
+                                //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
                             }
-                            //sw.Stop();
-                            //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
+                            break;
                         }
-                        break;
-                    }
                 }
 
                 if (replicaInfo?.HostProcessId > 0 && !ReplicaOrInstanceList.Any(r => r.HostProcessId == replicaInfo.HostProcessId))
@@ -3028,67 +3052,9 @@ namespace FabricObserver.Observers
                     {
                         // This will be null if GetProcessNameFromId fails. It will fail when the target process is inaccessible due to user privilege.
                         replicaInfo.HostProcessName = NativeMethods.GetProcessNameFromId((int)replicaInfo.HostProcessId);
-                        
+
                         if (replicaInfo.HostProcessName == null)
                         {
-                            if (ObserverManager.ObserverFailureHealthStateLevel != HealthState.Unknown)
-                            {
-                                string serviceName = replicaInfo.ServiceName.OriginalString;
-                                string message = $"{serviceName} is running as Admin or System user on Windows and can't be monitored by FabricObserver, which is running as Network Service. " +
-                                                 $"You can configure FabricObserver to run as Admin or System user on Windows to solve this problem. It is best that you first determine if {serviceName} really needs to run as Admin or System user on Windows. " +
-                                                 $"In the meantime, you can easily configure AppObserver to ignore this particular service by adding a config object to AppObserver.config.json:{Environment.NewLine}" +
-                                                 "E.g.," + Environment.NewLine +
-                                                 $"{{" + Environment.NewLine +
-                                                 $"      \"targetApp\": \"{replicaInfo.ApplicationName.OriginalString.Remove(0, "fabric:/".Length)}\"," + Environment.NewLine +
-                                                 $"      \"serviceExcludeList\": \"{serviceName.Remove(0, replicaInfo.ApplicationName.OriginalString.Length + 1)}\"" + Environment.NewLine +
-                                                 $"}}";
-
-                                string property = $"RestrictedAccess({serviceName})";
-                                var healthReport = new Utilities.HealthReport
-                                {
-                                    ServiceName = ServiceName,
-                                    EmitLogEvent = EnableVerboseLogging,
-                                    HealthMessage = message,
-                                    HealthReportTimeToLive = GetHealthReportTTL(),
-                                    Property = property,
-                                    EntityType = EntityType.Service,
-                                    State = ObserverManager.ObserverFailureHealthStateLevel,
-                                    NodeName = NodeName,
-                                    Observer = ObserverName
-                                };
-
-                                // Generate a Service Fabric Health Report.
-                                HealthReporter.ReportHealthToServiceFabric(healthReport);
-
-                                // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
-                                if (IsTelemetryEnabled)
-                                {
-                                    _ = TelemetryClient?.ReportHealthAsync(
-                                            property,
-                                            ObserverManager.ObserverFailureHealthStateLevel,
-                                            message,
-                                            ObserverName,
-                                            Token,
-                                            replicaInfo?.ServiceName?.OriginalString);
-                                }
-
-                                // ETW.
-                                if (IsEtwEnabled)
-                                {
-                                    ObserverLogger.LogEtw(
-                                        ObserverConstants.FabricObserverETWEventName,
-                                        new
-                                        {
-                                            Property = property,
-                                            Level = ObserverManager.ObserverFailureHealthStateLevel.ToString(),
-                                            Message = message,
-                                            ObserverName,
-                                            ServiceName = replicaInfo?.ServiceName?.OriginalString
-                                        });
-                                }
-                            }
-
-                            // Do not add to repOrInst list..
                             return;
                         }
                     }
@@ -3122,6 +3088,69 @@ namespace FabricObserver.Observers
             ObserverLogger.LogInfo("Completed SetInstanceOrReplicaMonitoringList.");
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"SetInstanceOrReplicaMonitoringList for {appName.OriginalString} run duration: {stopwatch.Elapsed}");
+        }
+
+        private void SendServiceProcessElevatedWarning(string appName, string serviceName)
+        {
+            if (string.IsNullOrWhiteSpace(appName) || string.IsNullOrWhiteSpace(serviceName))
+            {
+                return;
+            }
+
+            if (ObserverManager.ObserverFailureHealthStateLevel != HealthState.Unknown)
+            {
+                string message = $"{serviceName} is running as Admin or System user on Windows and can't be monitored by FabricObserver, which is running as Network Service. " +
+                                 $"You can configure FabricObserver to run as Admin or System user on Windows to solve this problem. It is best that you first determine if {serviceName} really needs to run as Admin or System user on Windows. " +
+                                 $"In the meantime, you can easily configure AppObserver to ignore this particular service by adding the following config object to AppObserver.config.json:{Environment.NewLine}" +
+                                 $"{{" + Environment.NewLine +
+                                 $"      \"targetApp\": \"{appName.Remove(0, "fabric:/".Length)}\"," + Environment.NewLine +
+                                 $"      \"serviceExcludeList\": \"{serviceName.Remove(0, appName.Length + 1)}\"" + Environment.NewLine +
+                                 $"}}";
+
+                string property = $"RestrictedAccess({serviceName})";
+                var healthReport = new Utilities.HealthReport
+                {
+                    ServiceName = ServiceName,
+                    EmitLogEvent = EnableVerboseLogging,
+                    HealthMessage = message,
+                    HealthReportTimeToLive = GetHealthReportTTL(),
+                    Property = property,
+                    EntityType = EntityType.Service,
+                    State = ObserverManager.ObserverFailureHealthStateLevel,
+                    NodeName = NodeName,
+                    Observer = ObserverName
+                };
+
+                // Generate a Service Fabric Health Report.
+                HealthReporter.ReportHealthToServiceFabric(healthReport);
+
+                // Send Health Report as Telemetry event (perhaps it signals an Alert from App Insights, for example.).
+                if (IsTelemetryEnabled)
+                {
+                    _ = TelemetryClient?.ReportHealthAsync(
+                            property,
+                            ObserverManager.ObserverFailureHealthStateLevel,
+                            message,
+                            ObserverName,
+                            Token,
+                            serviceName);
+                }
+
+                // ETW.
+                if (IsEtwEnabled)
+                {
+                    ObserverLogger.LogEtw(
+                        ObserverConstants.FabricObserverETWEventName,
+                        new
+                        {
+                            Property = property,
+                            Level = ObserverManager.ObserverFailureHealthStateLevel.ToString(),
+                            Message = message,
+                            ObserverName,
+                            ServiceName = serviceName
+                        });
+                }
+            }
         }
 
         private void ProcessServiceConfiguration(string appTypeName, string codepackageName, ReplicaOrInstanceMonitoringInfo replicaInfo)
