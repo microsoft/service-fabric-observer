@@ -1247,7 +1247,7 @@ namespace FabricObserver.Observers.Utilities
                 Marshal.FreeHGlobal(procInfoBuffer);
                 IntPtr currentHProc = GetCurrentProcess();
                 _ = PssFreeSnapshot(currentHProc, snapShot);
-                hProc.Dispose();
+                hProc?.Dispose();
                 hProc = null;
             }
 
@@ -1344,45 +1344,45 @@ namespace FabricObserver.Observers.Utilities
             {
                 SYSTEM_PROCESS_INFORMATION procInfo = procInfoList[i];
                 
-                if (procInfo.UniqueProcessId != UIntPtr.Zero)
+                if (procInfo.UniqueProcessId != UIntPtr.Zero && procInfo.Reserved2 != UIntPtr.Zero)
                 {
-                    uint pid = procInfo.UniqueProcessId.ToUInt32();
+                    uint childPid = procInfo.UniqueProcessId.ToUInt32();
+                    uint parentPid = procInfo.Reserved2.ToUInt32();
+                    string childProcName = Path.GetFileNameWithoutExtension(procInfo.ImageName.Buffer);
 
-                    // Has a parent process.
-                    if (procInfo.Reserved2 != UIntPtr.Zero)
+                    try
                     {
-                        uint parentPid = procInfo.Reserved2.ToUInt32();
-                        string childProcName = Path.GetFileNameWithoutExtension(procInfo.ImageName.Buffer);
+                        var child = (childProcName, (int)childPid, GetProcessStartTime((int)childPid));
 
-                        try
+                        if (!descendantsDictionary.ContainsKey((int)parentPid))
                         {
-                            if (!descendantsDictionary.ContainsKey((int)parentPid))
+                            List<(string childProcName, int childProcId, DateTime childProcStartTime)> descendants = new()
                             {
-                                List<(string childProcName, int childProcId, DateTime childProcStartTime)> descendants = new()
-                            {
-                                (childProcName, (int)pid, GetProcessStartTime((int)pid))
+                                child
                             };
 
-                                _ = descendantsDictionary.TryAdd((int)parentPid, descendants);
-                            }
-                            else
+                            _ = descendantsDictionary.TryAdd((int)parentPid, descendants);
+                        }
+                        else
+                        {
+                            if (!descendantsDictionary[(int)parentPid].Any(c => c.childProcId == (int)childPid))
                             {
-                                descendantsDictionary[(int)parentPid].Add((childProcName, (int)pid, GetProcessStartTime((int)pid)));
+                                descendantsDictionary[(int)parentPid].Add(child);
                             }
                         }
-                        catch (ArgumentException)
-                        {
+                    }
+                    catch (ArgumentException)
+                    {
 
-                        }
-                        catch (Win32Exception)
-                        {
-                            // process no longer around or not allowed to access its information..
-                        }
+                    }
+                    catch (Win32Exception)
+                    {
+                        // process no longer around or not allowed to access its information..
                     }
                 }
             }
 
-            return true;
+            return descendantsDictionary.Any();
         }
 
         public static void ClearSFUserChildProcessDataCache()
@@ -2071,7 +2071,7 @@ namespace FabricObserver.Observers.Utilities
 
                     string procName = Path.GetFileName(procInfo[i].ImageName.Buffer);
 
-                    if (FindInStringArray(ignoreProcessList, procName))
+                    if (FindInStringArray(ignoreProcessList, procName) || FindInStringArray(ignoreFabricSystemServicesList, procName))
                     {
                         continue;
                     }

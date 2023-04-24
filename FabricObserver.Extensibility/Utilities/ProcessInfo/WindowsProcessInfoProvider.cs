@@ -132,7 +132,7 @@ namespace FabricObserver.Observers.Utilities
             // Get descendant procs.
             List<(string ProcName, int Pid, DateTime ProcessStartTime)> childProcesses = TupleGetChildProcessesWin32(parentPid, handleToSnapshot);
 
-            if (childProcesses == null || childProcesses.Count == 0)
+            if (childProcesses == null || !childProcesses.Any())
             {
                 return null;
             }
@@ -147,7 +147,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 List<(string ProcName, int Pid, DateTime ProcessStartTime)> c1 = TupleGetChildProcessesWin32(childProcesses[i].Pid, handleToSnapshot);
 
-                if (c1 == null || c1.Count <= 0)
+                if (c1 == null || !c1.Any())
                 {
                     continue;
                 }
@@ -163,7 +163,7 @@ namespace FabricObserver.Observers.Utilities
                 {
                     List<(string ProcName, int Pid, DateTime ProcessStartTime)> c2 = TupleGetChildProcessesWin32(c1[j].Pid, handleToSnapshot);
 
-                    if (c2 == null || c2.Count <= 0)
+                    if (c2 == null || !c2.Any())
                     {
                         continue;
                     }
@@ -179,7 +179,7 @@ namespace FabricObserver.Observers.Utilities
                     {
                         List<(string ProcName, int Pid, DateTime ProcessStartTime)> c3 = TupleGetChildProcessesWin32(c2[k].Pid, handleToSnapshot);
 
-                        if (c3 == null || c3.Count <= 0)
+                        if (c3 == null || !c3.Any())
                         {
                             continue;
                         }
@@ -195,7 +195,7 @@ namespace FabricObserver.Observers.Utilities
                         {
                             List<(string ProcName, int Pid, DateTime ProcessStartTime)> c4 = TupleGetChildProcessesWin32(c3[l].Pid, handleToSnapshot);
 
-                            if (c4 == null || c4.Count <= 0)
+                            if (c4 == null || !c4.Any())
                             {
                                 continue;
                             }
@@ -208,6 +208,18 @@ namespace FabricObserver.Observers.Utilities
                             }
                         }
                     }
+                }
+            }
+
+            if (childProcesses != null && childProcesses.Count > 1)
+            {
+                try
+                {
+                    childProcesses = childProcesses.DistinctBy(p => p.Pid).ToList();
+                }
+                catch (ArgumentException)
+                {
+
                 }
             }
 
