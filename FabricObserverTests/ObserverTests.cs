@@ -2108,7 +2108,6 @@ namespace FabricObserverTests
 
                 // This is required since output files are only created if fo api app is also deployed to cluster..
                 IsObserverWebApiAppDeployed = true,
-                MonitorDuration = TimeSpan.FromSeconds(5),
                 IsEtwProviderEnabled = true,
             };
 
