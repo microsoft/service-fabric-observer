@@ -68,21 +68,21 @@ namespace FabricObserver.Observers.Utilities
             return Math.Round(ConvertToSizeUnits(total, sizeUnit), 2);
         }
 
-        public static int GetCurrentDiskSpaceUsedPercent(string driveName)
+        public static double GetCurrentDiskSpaceUsedPercent(string driveName)
         {
             return GetCurrentDiskSpaceUsedPercent(new DriveInfo(driveName));
         }
 
-        public static int GetCurrentDiskSpaceUsedPercent(DriveInfo driveInfo)
+        public static double GetCurrentDiskSpaceUsedPercent(DriveInfo driveInfo)
         {
             long availableMB = driveInfo.AvailableFreeSpace / 1024 / 1024;
             long totalMB = driveInfo.TotalSize / 1024 / 1024;
             double usedPct = ((double)(totalMB - availableMB)) / totalMB;
 
-            return (int)(usedPct * 100);
+            return (double)(usedPct * 100);
         }
 
-        public static List<(string DriveName, double DiskSize, int PercentConsumed)>
+        public static List<(string DriveName, double DiskSize, double PercentConsumed)>
             GetCurrentDiskSpaceTotalAndUsedPercentAllDrives(SizeUnit sizeUnit = SizeUnit.Bytes)
         {
             DriveInfo[] allDrives = DriveInfo.GetDrives();
