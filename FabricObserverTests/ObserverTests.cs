@@ -2573,6 +2573,16 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
+        public void Active_Ephemeral_BOUND_Ports_Machine_Total_Greater_Than_Zero()
+        {
+            int ports = OSInfoProvider.Instance.GetBoundStateEphemeralPortCount();
+
+            // 0 would mean something failed in the impl or that there are no active TCP connections
+            // in the dynamic range that are in BOUND state on the machine (highly unlikely).
+            Assert.IsTrue(ports > 0);
+        }
+
+        [TestMethod]
         public void Active_TCP_Ports_Machine_Greater_Than_Active_Ephemeral_Ports_Machine()
         {
             int total_tcp_ports = OSInfoProvider.Instance.GetActiveTcpPortCount();
