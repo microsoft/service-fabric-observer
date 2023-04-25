@@ -3372,7 +3372,7 @@ namespace FabricObserver.Observers
                         if (childPids != null && childPids.Count > 0)
                         {
                             replicaInfo.ChildProcesses = childPids;
-                            ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}:{Environment.NewLine}Child procs (name, id): {string.Join(" ", replicaInfo.ChildProcesses)}");
+                            ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}({procId}):{Environment.NewLine}Child procs (name, id, startDate): {string.Join(" ", replicaInfo.ChildProcesses)}");
                         }
                         //sw.Stop();
                         //ObserverLogger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
