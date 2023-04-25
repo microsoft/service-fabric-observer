@@ -22,11 +22,17 @@ namespace FabricObserver.Observers.Utilities
         private const int MaxDescendants = 50;
         private const int MaxSameNamedProcesses = 50;
         private const int MaxInstanceNameLengthTruncated = 64;
+        private const string ProcessCategoryName = "Process";
+        private const string ProcessMemoryCounterName = "Working Set - Private";
+        private const string ProcessIDCounterName = "ID Process";
+        private const string WinFabDbCategoryName = "Windows Fabric Database";
+        private const string LvidCounterName = "Long-Value Maximum LID";
         private static readonly object lockObj = new();
-        private readonly object lockUpdate = new();
+        private static readonly object lockUpdate = new();
         private volatile bool hasWarnedProcessNameLength = false;
         private static PerformanceCounter memCounter = null;
         private static PerformanceCounter internalProcNameCounter = null;
+        private static PerformanceCounter lvidCounter = null;
         private static PerformanceCounterCategory performanceCounterCategory = null;
         public readonly static ConcurrentDictionary<int, (string procName, string instanceName, DateTime processStartTime)> InstanceNameDictionary = new();
 
@@ -40,7 +46,7 @@ namespace FabricObserver.Observers.Utilities
                     {
                         if (memCounter == null)
                         {
-                            memCounter = new("Process", "Working Set - Private", true);
+                            memCounter = new(ProcessCategoryName, ProcessMemoryCounterName, true);
                         }
                     }
                 }
@@ -58,11 +64,29 @@ namespace FabricObserver.Observers.Utilities
                     {
                         if (internalProcNameCounter == null)
                         {
-                            internalProcNameCounter = new("Process", "ID Process", true);
+                            internalProcNameCounter = new(ProcessCategoryName, ProcessIDCounterName, true);
                         }
                     }
                 }
                 return internalProcNameCounter;
+            }
+        }
+
+        private static PerformanceCounter LvidCounter
+        {
+            get
+            {
+                if (lvidCounter == null)
+                {
+                    lock (lockObj)
+                    {
+                        if (lvidCounter == null)
+                        {
+                            lvidCounter = new(WinFabDbCategoryName, LvidCounterName, true);
+                        }
+                    }
+                }
+                return lvidCounter;
             }
         }
 
@@ -262,10 +286,7 @@ namespace FabricObserver.Observers.Utilities
                 return -1;
             }
 
-            const string categoryName = "Windows Fabric Database";
-            const string counterName = "Long-Value Maximum LID";
             string internalProcName = procName;
-            PerformanceCounter performanceCounter = null;
 
             try
             {
@@ -300,7 +321,7 @@ namespace FabricObserver.Observers.Utilities
 
                 /* Check to see if the supplied instance (process) exists in the category. */
 
-                if (!PerformanceCounterCategory.InstanceExists(internalProcName, categoryName))
+                if (!PerformanceCounterCategory.InstanceExists(internalProcName, WinFabDbCategoryName))
                 {
                     return -1;
                 }
@@ -312,16 +333,14 @@ namespace FabricObserver.Observers.Utilities
                    categoryName and counterName are never null (they are const strings).
                    Only two possible exceptions can happen here: IOE and Win32Exception. */
 
-                performanceCounter = new PerformanceCounter(
-                                            categoryName,
-                                            counterName,
-                                            instanceName: internalProcName,
-                                            readOnly: true);
+                lock (lockUpdate)
+                {
+                    LvidCounter.InstanceName = internalProcName;
+                    float result = LvidCounter.NextValue();
+                    double usedPct = (double)(result * 100) / int.MaxValue;
 
-                float result = performanceCounter.NextValue();
-                double usedPct = (double)(result * 100) / int.MaxValue;
-
-                return usedPct;
+                    return usedPct;
+                }
             }
             catch (InvalidOperationException ioe)
             {
@@ -332,11 +351,6 @@ namespace FabricObserver.Observers.Utilities
             {
                 // Internal exception querying counter (Win32 code). There is nothing to do here. Log the details. Most likely transient.
                 ProcessInfoLogger.LogWarning($"GetProcessKvsLvidsUsagePercentage: Handled Win32Exception: {we.Message}");
-            }
-            finally
-            {
-                performanceCounter?.Dispose();
-                performanceCounter = null;
             }
 
             return -1;
@@ -548,7 +562,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                lock (lockObj)
+                lock (lockUpdate)
                 {
                     ProcessWorkingSetCounter.InstanceName = internalProcName;
                     _ = ProcessWorkingSetCounter.RawValue;
@@ -672,7 +686,7 @@ namespace FabricObserver.Observers.Utilities
 
                     try
                     {
-                        lock (lockObj)
+                        lock (lockUpdate)
                         {
                             ProcNameCounter.InstanceName = instance;
                             var sample = ProcNameCounter.NextSample();
