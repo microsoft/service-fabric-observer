@@ -792,8 +792,11 @@ namespace FabricObserver.Observers
                     return;
                 }
 
-                timer.Start();
+                // Warm up counter.
+                _ = CpuUtilizationProvider.Instance.GetProcessorTimePercentage();
 
+                timer.Start();
+                
                 while (timer.Elapsed <= duration)
                 {
                     token.ThrowIfCancellationRequested();
@@ -804,7 +807,7 @@ namespace FabricObserver.Observers
                          CpuTimeData.AddData(CpuUtilizationProvider.Instance.GetProcessorTimePercentage());
                     }
 
-                    await Task.Delay(500, Token);
+                    await Task.Delay(1000, Token);
                 }
 
                 timer.Stop();
@@ -894,51 +897,96 @@ namespace FabricObserver.Observers
 
         private void CleanUp()
         {
-            if (ActivePortsData != null && !ActivePortsData.ActiveErrorOrWarning)
+            if (ActivePortsData != null)
             {
-                ActivePortsData = null;
+                ActivePortsData.ClearData();
+
+                if (!ActivePortsData.ActiveErrorOrWarning)
+                {
+                    ActivePortsData = null;
+                }
             }
 
-            if (CpuTimeData != null && !CpuTimeData.ActiveErrorOrWarning)
+            if (CpuTimeData != null)
             {
-                CpuTimeData = null;
+                CpuTimeData.ClearData();
+                
+                if (!CpuTimeData.ActiveErrorOrWarning)
+                {
+                    CpuTimeData = null;
+                }
             }
 
-            if (EphemeralPortsDataPercent != null && !EphemeralPortsDataPercent.ActiveErrorOrWarning)
+            if (EphemeralPortsDataPercent != null)
             {
-                EphemeralPortsDataPercent = null;
+                EphemeralPortsDataPercent.ClearData();
+
+                if (!EphemeralPortsDataPercent.ActiveErrorOrWarning)
+                {
+                    EphemeralPortsDataPercent = null;
+                }
             }
 
-            if (EphemeralPortsDataRaw != null && !EphemeralPortsDataRaw.ActiveErrorOrWarning)
+            if (EphemeralPortsDataRaw != null)
             {
-                EphemeralPortsDataRaw = null;
+                EphemeralPortsDataRaw.ClearData();
+
+                if (!EphemeralPortsDataRaw.ActiveErrorOrWarning)
+                {
+                    EphemeralPortsDataRaw = null;
+                }
             }
 
-            if (MemDataInUse != null && !MemDataInUse.ActiveErrorOrWarning)
+            if (MemDataInUse != null)
             {
-                MemDataInUse = null;
+                MemDataInUse.ClearData();
+
+                if (!MemDataInUse.ActiveErrorOrWarning)
+                {
+                    MemDataInUse = null;
+                }
             }
 
-            if (MemDataPercent != null && !MemDataPercent.ActiveErrorOrWarning)
+            if (MemDataPercent != null)
             {
-                MemDataPercent = null;
+                MemDataPercent.ClearData();
+
+                if (!MemDataPercent.ActiveErrorOrWarning)
+                {
+                    MemDataPercent = null;
+                }
             }
 
-            if (IsWindows && FirewallData != null && !FirewallData.ActiveErrorOrWarning)
+            if (IsWindows && FirewallData != null)
             {
-                FirewallData = null;
+                FirewallData.ClearData();
+
+                if (!FirewallData.ActiveErrorOrWarning)
+                {
+                    FirewallData = null;
+                }    
             }
 
             if (!IsWindows)
             {
-                if (LinuxFileHandlesDataPercentAllocated != null && !LinuxFileHandlesDataPercentAllocated.ActiveErrorOrWarning)
+                if (LinuxFileHandlesDataPercentAllocated != null)
                 {
-                    LinuxFileHandlesDataPercentAllocated = null;
+                    LinuxFileHandlesDataPercentAllocated.ClearData();
+
+                    if (!LinuxFileHandlesDataPercentAllocated.ActiveErrorOrWarning)
+                    {
+                        LinuxFileHandlesDataPercentAllocated = null;
+                    }
                 }
 
-                if (LinuxFileHandlesDataTotalAllocated != null && !LinuxFileHandlesDataTotalAllocated.ActiveErrorOrWarning)
+                if (LinuxFileHandlesDataTotalAllocated != null)
                 {
-                    LinuxFileHandlesDataTotalAllocated = null;
+                    LinuxFileHandlesDataTotalAllocated.ClearData();
+
+                    if (!LinuxFileHandlesDataTotalAllocated.ActiveErrorOrWarning)
+                    {
+                        LinuxFileHandlesDataTotalAllocated = null;
+                    }
                 }
             }
         }

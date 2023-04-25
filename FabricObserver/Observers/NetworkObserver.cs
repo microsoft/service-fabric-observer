@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
+using FabricObserver.TelemetryLib;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
@@ -137,17 +138,20 @@ namespace FabricObserver.Observers
 
                         // Send Health Telemetry (perhaps it signals an Alert in AppInsights or LogAnalytics).
                         // This will also be serialized into the health event Description.
-                        var telemetryData = new ServiceTelemetryData()
+                        var telemetryData = new NetworkTelemetryData()
                         {
                             ApplicationName = conn.TargetApp,
+                            ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                             Code = FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
                             EntityType = EntityType.Application,
                             HealthState = HealthState.Warning,
                             Description = healthMessage,
+                            NodeType = FabricServiceContext.NodeContext.NodeType,
                             ObserverName = ObserverName,
                             Metric = ErrorWarningProperty.InternetConnectionFailure,
                             NodeName = NodeName,
-                            Source = ObserverConstants.FabricObserverName
+                            Source = ObserverConstants.FabricObserverName,
+                            Property = $"EndpointUnreachable({conn.HostName})"
                         };
 
                         if (IsTelemetryEnabled)
@@ -212,13 +216,15 @@ namespace FabricObserver.Observers
 
                         HealthReporter.ReportHealthToServiceFabric(report);
 
-                        var telemetryData = new ServiceTelemetryData()
+                        var telemetryData = new NetworkTelemetryData()
                         {
                             ApplicationName = conn.TargetApp,
+                            ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                             Code = FOErrorWarningCodes.Ok,
                             EntityType = EntityType.Application,
                             HealthState = HealthState.Ok,
                             Description = healthMessage,
+                            NodeType = FabricServiceContext.NodeContext.NodeType,
                             ObserverName = ObserverName,
                             Metric = "Internet Connection State",
                             NodeName = NodeName,

@@ -4,10 +4,10 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.7</version>
 		<releaseNotes>
-This is library is required for observer plugins that target FabricObserver 3.2.7.
-Added new telemetry data types (SystemServiceTelemetryData and ContainerTelemetryData).
-Added new handlers for OOM (FailFast).
-Updated public API for creating process snapshots.
+Note: This is library is required for observer plugins that target FabricObserver 3.2.7. 
+
+- Performance and Code improvements.
+- Bug fixes.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

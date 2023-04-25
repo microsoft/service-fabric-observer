@@ -26,13 +26,7 @@ namespace FabricObserver.Observers.Utilities
 
         public override float GetProcessorTimePercentage()
         {
-            //_ = GetProcessorTimePercentageWin32();
-            _ = SystemCpuPerfCtr.NextValue();
-            Thread.Sleep(1000);
-            //float usage = GetProcessorTimePercentageWin32();
-            float usage = SystemCpuPerfCtr.NextValue();
-
-            return usage;
+            return SystemCpuPerfCtr.NextValue();
         }
 
         private float GetProcessorTimePercentageWin32()
