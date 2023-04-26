@@ -841,7 +841,10 @@ namespace FabricObserver.Utilities.ServiceFabric
                                         TimeSpan.FromSeconds(90),
                                         cancellationToken);
 
-                            if (appHealth.ServiceHealthStates != null && appHealth.ServiceHealthStates.Count > 0)
+
+                            if (appHealth.ServiceHealthStates != null && 
+                                appHealth.ServiceHealthStates.Any(
+                                    s => s.AggregatedHealthState == HealthState.Error || s.AggregatedHealthState == HealthState.Warning))
                             {
                                 foreach (var service in appHealth.ServiceHealthStates)
                                 {
@@ -853,10 +856,10 @@ namespace FabricObserver.Utilities.ServiceFabric
                                     await RemoveServiceHealthReportsAsync(service, ignoreDefaultQueryTimeout, cancellationToken);
                                 }
                             }
-                            else
-                            {
-                                await RemoveApplicationHealthReportsAsync(app, ignoreDefaultQueryTimeout, cancellationToken);
-                            }
+                            
+                            // NetworkObserver/FSO.
+                            await RemoveApplicationHealthReportsAsync(app, ignoreDefaultQueryTimeout, cancellationToken);
+                            
                         }
                         catch (Exception e) when (e is FabricException or TimeoutException)
                         {
@@ -934,15 +937,13 @@ namespace FabricObserver.Utilities.ServiceFabric
             };
             ObserverHealthReporter healthReporter = new(logger);
 
-            foreach (HealthEvent healthEvent in serviceHealthEvents.OrderByDescending(f => f.SourceUtcTimestamp))
+            foreach (HealthEvent healthEvent in serviceHealthEvents)
             {
                 try
                 {
                     healthReport.Property = healthEvent.HealthInformation.Property;
                     healthReport.SourceId = healthEvent.HealthInformation.SourceId;
                     healthReporter.ReportHealthToServiceFabric(healthReport);
-
-                    await Task.Delay(150);
                 }
                 catch (FabricException)
                 {
@@ -988,15 +989,13 @@ namespace FabricObserver.Utilities.ServiceFabric
             };
             ObserverHealthReporter healthReporter = new(logger);
 
-            foreach (HealthEvent healthEvent in appHealthEvents.OrderByDescending(f => f.SourceUtcTimestamp))
+            foreach (HealthEvent healthEvent in appHealthEvents)
             {
                 try
                 {
                     healthReport.Property = healthEvent.HealthInformation.Property;
                     healthReport.SourceId = healthEvent.HealthInformation.SourceId;
                     healthReporter.ReportHealthToServiceFabric(healthReport);
-
-                    await Task.Delay(150);
                 }
                 catch (FabricException)
                 {
@@ -1052,8 +1051,6 @@ namespace FabricObserver.Utilities.ServiceFabric
                         healthReport.Property = healthEvent.HealthInformation.Property;
                         healthReport.SourceId = healthEvent.HealthInformation.SourceId;
                         healthReporter.ReportHealthToServiceFabric(healthReport);
-
-                        await Task.Delay(150);
                     }
                     catch (FabricException)
                     {

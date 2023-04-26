@@ -31,6 +31,7 @@ namespace FabricObserver.Observers
         private readonly string[] processNameWatchList;
         private Stopwatch stopwatch;
         private bool checkPrivateWorkingSet;
+        private List<(string procName, int procId)> fabricSystemProcInfo = new();
 
         // Health Report data container - For use in analysis to determine health state.
         private Dictionary<string, FabricResourceUsageData<double>> allCpuData;
@@ -73,6 +74,7 @@ namespace FabricObserver.Observers
                 // Windows
                 processNameWatchList = new[]
                 {
+                    "EventStore.Service",
                     "Fabric",
                     "FabricApplicationGateway",
                     "FabricCAS",
@@ -239,8 +241,6 @@ namespace FabricObserver.Observers
             }
         }
 
-#pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning restore IDE0079 // Remove unnecessary suppression
         public override Task ReportAsync(CancellationToken token)
         {
             try
@@ -575,6 +575,11 @@ namespace FabricObserver.Observers
         {
             Token.ThrowIfCancellationRequested();
 
+            if (IsWindows)
+            {
+                fabricSystemProcInfo = NativeMethods.NtGetSFSystemServiceProcessInfo();
+            }
+
             // fabric:/System
             MonitoredAppCount = 1;
             MonitoredServiceProcessCount = processNameWatchList.Length;
@@ -881,7 +886,7 @@ namespace FabricObserver.Observers
 
             token.ThrowIfCancellationRequested();
 
-            int procId;
+            int procId = 0;
 
             if (!IsWindows)
             {
@@ -901,7 +906,16 @@ namespace FabricObserver.Observers
             }
             else
             {
-                procId = NativeMethods.GetProcessIdFromName(procName);
+                // This means the more efficient approach to acquire this info failed.
+                if (fabricSystemProcInfo == null) 
+                { 
+                    // This employs EnumProcesses.
+                    procId = NativeMethods.GetProcessIdFromName(procName);
+                }
+                else if (fabricSystemProcInfo.Any(s => s.procName == procName))
+                {
+                    procId = fabricSystemProcInfo.First(s => s.procName == procName).procId;
+                }
             }
 
             try
@@ -1156,13 +1170,6 @@ namespace FabricObserver.Observers
                 fileName = $"FabricSystemServices{(CsvWriteFormat == CsvFileWriteFormat.MultipleFilesNoArchives ? "_" + DateTime.UtcNow.ToString("o") : string.Empty)}";
             }
 
-            List<(string ProcName, int ProcId)> sfSysProcInfoList = new();
-
-            if (IsWindows)
-            {
-                sfSysProcInfoList = NativeMethods.TupleGetSFSystemServiceProcessInfo();
-            }
-
             foreach (var item in data)
             {
                 Token.ThrowIfCancellationRequested();
@@ -1181,12 +1188,17 @@ namespace FabricObserver.Observers
                 {
                     if (IsWindows)
                     {
-                        if (sfSysProcInfoList.Any(s => s.ProcName == procName))
+                        // This means the more efficient approach to acquire this info failed.
+                        if (fabricSystemProcInfo == null)
                         {
-                            procId = sfSysProcInfoList.First(s => s.ProcName == procName).ProcId;
+                            procId = NativeMethods.GetProcessIdFromName(procName);
+                        }
+                        else if (fabricSystemProcInfo.Any(s => s.procName == procName))
+                        {
+                            procId = fabricSystemProcInfo.First(s => s.procName == procName).procId;
                         }
 
-                        // No longer running.
+                        // No longer running or not allowed to monitor the proc..
                         if (procId == 0)
                         {
                             continue;
