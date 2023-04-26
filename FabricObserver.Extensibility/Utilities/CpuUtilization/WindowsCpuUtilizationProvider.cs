@@ -9,14 +9,30 @@ namespace FabricObserver.Observers.Utilities
 {
     public class WindowsCpuUtilizationProvider : CpuUtilizationProvider
     {
+        private const string ProcessorCategoryName = "Processor";
+        private const string ProcessorTimePct = "% Processor Time";
+        private const string ProcessorTimeInstanceName = "_Total";
+
         // \Processor(_Total)\% Processor Time
         // This counter includes all processors on the system. The value range is 0 - 100.
-        private static PerformanceCounter systemCpuPerfCtr = new("Processor", "% Processor Time", "_Total");
+        private static PerformanceCounter systemCpuPerfCtr = null;
+        
+        private static PerformanceCounter SystemMemoryPerfCtr
+        {
+            get 
+            { 
+                if (systemCpuPerfCtr == null) 
+                {
+                    systemCpuPerfCtr = new(ProcessorCategoryName, ProcessorTimePct, ProcessorTimeInstanceName);
+                }
+
+                return systemCpuPerfCtr;
+            }
+        }
 
         public override float GetProcessorTimePercentage()
         {
-            systemCpuPerfCtr ??= new("Processor", "% Processor Time", "_Total");
-            return systemCpuPerfCtr.NextValue();
+            return SystemMemoryPerfCtr.NextValue();
         }
 
         public override void Dispose()
