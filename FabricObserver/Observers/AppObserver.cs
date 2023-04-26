@@ -2940,7 +2940,6 @@ namespace FabricObserver.Observers
                             ApplicationName = appName,
                             ApplicationTypeName = appTypeName,
                             HostProcessId = statefulReplica.HostProcessId,
-                            HostProcessStartTime = GetProcessStartTime((int)statefulReplica.HostProcessId),
                             ReplicaOrInstanceId = statefulReplica.ReplicaId,
                             PartitionId = statefulReplica.Partitionid,
                             ReplicaRole = statefulReplica.ReplicaRole,
@@ -2993,7 +2992,6 @@ namespace FabricObserver.Observers
                             ApplicationName = appName,
                             ApplicationTypeName = appTypeName,
                             HostProcessId = statelessInstance.HostProcessId,
-                            HostProcessStartTime = GetProcessStartTime((int)statelessInstance.HostProcessId),
                             ReplicaOrInstanceId = statelessInstance.InstanceId,
                             PartitionId = statelessInstance.Partitionid,
                             ReplicaRole = ReplicaRole.None,
@@ -3028,12 +3026,15 @@ namespace FabricObserver.Observers
 
                 if (replicaInfo != null && replicaInfo.HostProcessId > 0 && !ReplicaOrInstanceList.Any(r => r.HostProcessId == replicaInfo.HostProcessId))
                 {
+                    // This will be DateTime.MinValue when the target process is inaccessible due to user privilege.
+                    replicaInfo.HostProcessStartTime = GetProcessStartTime((int)replicaInfo.HostProcessId);
+
                     if (IsWindows)
                     {
                         // This will be null if GetProcessNameFromId fails. It will fail when the target process is inaccessible due to user privilege.
                         replicaInfo.HostProcessName = NativeMethods.GetProcessNameFromId((int)replicaInfo.HostProcessId);
 
-                        if (replicaInfo.HostProcessName == null)
+                        if (replicaInfo.HostProcessName == null || replicaInfo.HostProcessStartTime == DateTime.MinValue)
                         {
                             SendServiceProcessElevatedWarning(replicaInfo.ApplicationName.OriginalString, replicaInfo.ServiceName.OriginalString);
                             return;

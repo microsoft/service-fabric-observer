@@ -2052,8 +2052,15 @@ namespace FabricObserver.Observers.Utilities
                     }
 
                     uint pid = procInfo[i].UniqueProcessId.ToUInt32();
+                    UIntPtr parentPid = procInfo[i].Reserved2;
 
-                    using (SafeProcessHandle safeProcessHandle = GetSafeProcessHandle((int)pid))
+                    // No parent, then not an SF user service.
+                    if (parentPid == UIntPtr.Zero)
+                    {
+                        continue;
+                    }
+
+                    /*using (SafeProcessHandle safeProcessHandle = GetSafeProcessHandle((int)pid))
                     {
                         // Failure in OpenProcess, ignore.
                         if (safeProcessHandle.IsInvalid)
@@ -2067,7 +2074,7 @@ namespace FabricObserver.Observers.Utilities
                         {
                             continue;
                         }
-                    }
+                    }*/
 
                     string procName = Path.GetFileName(procInfo[i].ImageName.Buffer);
 
@@ -2086,6 +2093,15 @@ namespace FabricObserver.Observers.Utilities
                 {
 
                 }
+            }
+
+            List<SYSTEM_PROCESS_INFORMATION> userServiceProcList = new();
+
+            for (int i = 0; i < procInfoList.Count; ++i)
+            {
+                var pInfo = procInfoList[i];
+                uint procId = procInfoList[i].UniqueProcessId.ToUInt32();
+                uint parentProcId = procInfoList[i].Reserved2.ToUInt32();
             }
 
             return procInfoList;
