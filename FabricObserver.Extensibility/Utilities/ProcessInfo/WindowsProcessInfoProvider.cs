@@ -100,7 +100,7 @@ namespace FabricObserver.Observers.Utilities
                     {
                         if (performanceCounterCategory == null)
                         {
-                            performanceCounterCategory = new("Process");
+                            performanceCounterCategory = new(ProcessCategoryName);
                         }
                     }
                 }
@@ -614,6 +614,7 @@ namespace FabricObserver.Observers.Utilities
                     return null;
                 }
 
+                // TODO: Don't use Process here. Consider caching SF user service proc list in AppObserver. Pass a ref to the list to this function..
                 int procCount = Process.GetProcessesByName(procName).Length;
 
                 if (procCount == 1)
