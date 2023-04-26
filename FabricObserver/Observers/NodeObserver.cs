@@ -799,7 +799,7 @@ namespace FabricObserver.Observers
 
                 // Warm up counter.
                 _ = CpuUtilizationProvider.Instance.GetProcessorTimePercentage();
-                await Task.Delay(500, Token);
+                await Task.Delay(1000, Token);
 
                 timer.Start();
                 
@@ -813,7 +813,7 @@ namespace FabricObserver.Observers
                          CpuTimeData.AddData(CpuUtilizationProvider.Instance.GetProcessorTimePercentage());
                     }
 
-                    await Task.Delay(500, Token);
+                    await Task.Delay(1000, Token);
                 }
 
                 timer.Stop();
