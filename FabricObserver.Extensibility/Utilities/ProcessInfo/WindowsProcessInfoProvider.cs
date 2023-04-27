@@ -484,7 +484,7 @@ namespace FabricObserver.Observers.Utilities
                     return 0F;
                 }
             }
-            catch (Win32Exception ex) 
+            catch (Win32Exception ex) // Doesn't throw this anymore. Change this in (3.2.8).
             {
                 // The related Observer will have logged any privilege related failure.
                 if (ex.NativeErrorCode != 5)
@@ -614,7 +614,7 @@ namespace FabricObserver.Observers.Utilities
                     return null;
                 }
 
-                // TODO: Don't use Process here. Consider caching SF user service proc list in AppObserver. Pass a ref to the list to this function..
+                // TODO: Don't use .net Process here. Write a new NativeMethods function to do this with less overhead, with less CPU. (3.2.8)
                 int procCount = Process.GetProcessesByName(procName).Length;
 
                 if (procCount == 1)
@@ -659,17 +659,7 @@ namespace FabricObserver.Observers.Utilities
                     string instanceName = InstanceNameDictionary[pid].instanceName;
                     DateTime processStartTime = InstanceNameDictionary[pid].processStartTime;
 
-                    string pName = NativeMethods.GetProcessNameFromId(pid);
-
-                    if (pName == null)
-                    {
-                        _ = InstanceNameDictionary.TryRemove(pid, out _);
-                        return null;
-                    }
-
-                    if (InstanceNameDictionary[pid].procName == procName && 
-                        pName == procName && 
-                        NativeMethods.GetProcessStartTime(pid).Equals(processStartTime)) 
+                    if (InstanceNameDictionary[pid].procName == procName && NativeMethods.GetProcessStartTime(pid).Equals(processStartTime)) 
                     { 
                         return InstanceNameDictionary[pid].instanceName;
                     }
