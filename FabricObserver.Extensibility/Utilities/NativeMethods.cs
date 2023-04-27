@@ -48,7 +48,6 @@ namespace FabricObserver.Observers.Utilities
             "FabricDCA.exe", "FabricDnsService.exe", "FabricFAS.exe", "FabricGateway.exe",
             "FabricHost.exe", "FabricIS.exe", "FabricRM.exe", "FabricUS.exe"
         };
-        private static object lockObj = new object();
 
         [Flags]
         public enum CreateToolhelp32SnapshotFlags : uint
@@ -1637,7 +1636,7 @@ namespace FabricObserver.Observers.Utilities
             }
             finally
             {
-                sbProcName.Clear();
+                _ = sbProcName?.Clear();
                 sbProcName = null;
                 hProc?.Dispose();
                 hProc = null;
