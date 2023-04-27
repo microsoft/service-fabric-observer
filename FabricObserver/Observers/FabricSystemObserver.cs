@@ -1330,6 +1330,12 @@ namespace FabricObserver.Observers
                     activeTcpPortData.Value?.ClearData();
                 }
             }
+
+            if (fabricSystemProcInfo != null)
+            {
+                fabricSystemProcInfo.Clear();
+                fabricSystemProcInfo = null;
+            }
         }
     }
 }

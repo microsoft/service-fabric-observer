@@ -31,8 +31,8 @@
     <!-- Note: You must run FO as System or Admin user on Windows in order to run ContainerObserver on Windows. -->
     <Parameter Name="ContainerObserverEnabled" DefaultValue="false" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
-    <Parameter Name="NetworkObserverEnabled" DefaultValue="false" />
+    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="true" />
+    <Parameter Name="NetworkObserverEnabled" DefaultValue="true" />
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
     <!-- Deprecated: SFConfigurationObserver is only useful if you deploy the now-obsolete (and unsupported) FabricObserverWebApi application. -->
@@ -119,7 +119,7 @@
          Note: This will only add real value (substantial) on machines with capable hardware (>= 8 logical processors). FO will not attempt to do anything concurrently if
          the number of logical processors is less than 4, even if this is set to true. If you do run on capable hardware and want AppObserver to complete a run much faster than at sequential speed, then keep this enabled.
          You can control the level of concurrency by setting the AppObserverMaxConcurrentTasks setting. -->
-    <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="false" />
+    <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
     <!-- The default value is 1/4 of detected logical processors (LPs). This would mean given 20 LPs, the number of threads that will be created will be at least 5 (and seldom more than that), if possible.
          You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
          eating some additional CPU and Memory to complete the parallelized monitoring on a node with lots of services (>= 100). The impact of parallelization on nodes with less than 100 services is minimal.
@@ -415,7 +415,7 @@
       <!-- NOTE: On Windows and Linux, FO runs custom Setup scripts that must be run as elevated user. Do not remove this policy or change EntryPointType to Main, for example. 
            Either leave EntryPointType as Setup and run FO as a restricted user, or set EntryPointType to All or remove EntryPointType attribute altogether to run everything 
            as elevated user (Setup and FO service process). -->
-      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
+      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="All" />
     </Policies>
   </ServiceManifestImport>
   <Principals>

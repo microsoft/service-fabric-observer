@@ -34,7 +34,7 @@ namespace FabricObserver.Observers.Utilities
         private static PerformanceCounter internalProcNameCounter = null;
         private static PerformanceCounter lvidCounter = null;
         private static PerformanceCounterCategory performanceCounterCategory = null;
-        public readonly static ConcurrentDictionary<int, (string procName, string instanceName, DateTime processStartTime)> InstanceNameDictionary = new();
+        public readonly static ConcurrentDictionary<string, (string procName, int procId, DateTime processStartTime)> InstanceNameDictionary = new();
 
         private static PerformanceCounter ProcessWorkingSetCounter
         {
@@ -566,7 +566,7 @@ namespace FabricObserver.Observers.Utilities
                 {
                     ProcessWorkingSetCounter.InstanceName = internalProcName;
                     _ = ProcessWorkingSetCounter.RawValue;
-                    Thread.Sleep(150);
+                    Thread.Sleep(1000);
 
                     return ProcessWorkingSetCounter.NextValue() / 1024 / 1024;
                 }
@@ -614,8 +614,13 @@ namespace FabricObserver.Observers.Utilities
                     return null;
                 }
 
-                // TODO: Don't use Process here. Consider caching SF user service proc list in AppObserver. Pass a ref to the list to this function..
-                int procCount = Process.GetProcessesByName(procName).Length;
+                int procCount = NativeMethods.GetSFUserServiceProcessCountByName(procName);
+
+                if (procCount == 0)
+                {
+                    ProcessInfoLogger.LogInfo($"GetInternalProcessName: Process Name ({procName}) is no longer mapped to supplied ID ({pid}).");
+                    return null;
+                }
 
                 if (procCount == 1)
                 {
@@ -654,28 +659,39 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                if (InstanceNameDictionary != null && InstanceNameDictionary.ContainsKey(pid))
+                if (InstanceNameDictionary != null && InstanceNameDictionary.Any(p => p.Value.procName == procName))
                 {
-                    string instanceName = InstanceNameDictionary[pid].instanceName;
-                    DateTime processStartTime = InstanceNameDictionary[pid].processStartTime;
+                    var instanceData = InstanceNameDictionary.Where(p => p.Value.procName == procName).ToArray();
 
-                    string pName = NativeMethods.GetProcessNameFromId(pid);
-
-                    if (pName == null)
+                    if (instanceData.Any(p => p.Value.procId == pid))
                     {
-                        _ = InstanceNameDictionary.TryRemove(pid, out _);
-                        return null;
+                        for (int i = 0; i < instanceData.Length; ++i)
+                        {
+                            var instance = instanceData[i];
+                            DateTime processStartTime = instance.Value.processStartTime;
+                            string processName = instance.Value.procName;
+                            string key = instance.Key;
+
+                            if (instance.Value.procId == pid)
+                            {
+                                // Same process?
+                                if (NativeMethods.GetProcessNameFromId(pid) == processName && NativeMethods.GetProcessStartTime(pid) == processStartTime)
+                                {
+                                    return instance.Key;
+                                }
+
+                                // Remove from cache.
+                                _ = InstanceNameDictionary.TryRemove(key, out _);
+                            }
+                        }
                     }
 
-                    if (InstanceNameDictionary[pid].procName == procName && 
-                        pName == procName && 
-                        NativeMethods.GetProcessStartTime(pid).Equals(processStartTime)) 
-                    { 
-                        return InstanceNameDictionary[pid].instanceName;
-                    }
-                    else
+                    // If we get here, then none of the related processes are current. Remove all related existing instance names from the cache.
+                    for (int i = 0; i < instanceData.Length; ++i)
                     {
-                        _ = InstanceNameDictionary.TryRemove(pid, out _);
+                        var instance = instanceData[i];
+                        string key = instance.Key;
+                        _ = InstanceNameDictionary.TryRemove(key, out _);
                     }
                 }
 
@@ -697,7 +713,7 @@ namespace FabricObserver.Observers.Utilities
                                 continue;
                             }
 
-                            _ = InstanceNameDictionary.TryAdd(pid, (procName, instance, NativeMethods.GetProcessStartTime(pid)));
+                            _ = InstanceNameDictionary.TryAdd(instance, (procName, pid, NativeMethods.GetProcessStartTime(pid)));
                             return instance;
                         }
                     }
