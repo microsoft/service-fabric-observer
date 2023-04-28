@@ -184,7 +184,7 @@ namespace FabricObserver.Observers
 
                     if (DiskSpacePercentErrorThreshold > 0 || DiskSpacePercentWarningThreshold > 0)
                     {
-                        DiskSpaceUsagePercentageData.Find(x => x.Id == id)?.AddData(DiskUsage.GetCurrentDiskSpaceUsedPercent(id));
+                        DiskSpaceUsagePercentageData.Find(x => x.Id == id)?.AddData(Math.Round(DiskUsage.GetCurrentDiskSpaceUsedPercent(id), 2));
                     }
 
                     DiskSpaceAvailableMbData.Find(x => x.Id == id)?.AddData(DiskUsage.GetAvailableDiskSpace(id, SizeUnit.Megabytes));

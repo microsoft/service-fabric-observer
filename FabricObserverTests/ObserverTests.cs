@@ -2247,7 +2247,6 @@ namespace FabricObserverTests
 
                 // This is required since output files are only created if fo api app is also deployed to cluster..
                 IsObserverWebApiAppDeployed = true,
-                MonitorDuration = TimeSpan.FromSeconds(5),
                 IsEtwProviderEnabled = true,
             };
 
@@ -2708,6 +2707,16 @@ namespace FabricObserverTests
             int ports = OSInfoProvider.Instance.GetActiveEphemeralPortCount();
 
             // 0 would mean something failed in the impl or that there are no active TCP connections in the dynamic range on the machine (highly unlikely).
+            Assert.IsTrue(ports > 0);
+        }
+
+        [TestMethod]
+        public void Active_Ephemeral_BOUND_Ports_Machine_Total_Greater_Than_Zero()
+        {
+            int ports = OSInfoProvider.Instance.GetBoundStateEphemeralPortCount();
+
+            // 0 would mean something failed in the impl or that there are no active TCP connections
+            // in the dynamic range that are in BOUND state on the machine (highly unlikely).
             Assert.IsTrue(ports > 0);
         }
 

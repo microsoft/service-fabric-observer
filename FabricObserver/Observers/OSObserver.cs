@@ -523,6 +523,7 @@ namespace FabricObserver.Observers
                     Token.ThrowIfCancellationRequested();
 
                     string drvSize;
+                    double usedPct = Math.Round(percentConsumed, 2);
 
                     if (IsWindows)
                     {
@@ -533,11 +534,11 @@ namespace FabricObserver.Observers
                             systemDrv = "System";
                         }
 
-                        drvSize = $"Drive {driveName} ({systemDrv}) Size: {diskSize} GB, Consumed*: {percentConsumed}%";
+                        drvSize = $"Drive {driveName} ({systemDrv}) Size: {diskSize} GB, Consumed*: {usedPct}%";
                     }
                     else
                     {
-                        drvSize = $"Mount point: {driveName}, Size: {diskSize} GB, Consumed*: {percentConsumed}%";
+                        drvSize = $"Mount point: {driveName}, Size: {diskSize} GB, Consumed*: {usedPct}%";
                     }
 
                     _ = sb.AppendLine(drvSize);

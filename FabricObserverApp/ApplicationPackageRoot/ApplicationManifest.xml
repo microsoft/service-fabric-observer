@@ -78,9 +78,9 @@
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
     <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00): How long an observer should monitor CPU usage per target (process or machine).
          This setting only applies to 3 observers.  -->
-    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:05" />
+    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:02" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:05" />
-    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:10" />
+    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:05" />
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00): How often an enabled observer should run. -->
     <Parameter Name="AppObserverRunInterval" DefaultValue="" />
     <Parameter Name="AzureStorageUploadObserverRunInterval" DefaultValue="00:05:00" />
