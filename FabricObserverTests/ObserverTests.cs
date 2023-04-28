@@ -1072,7 +1072,7 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
+                MonitorDuration = TimeSpan.FromSeconds(10),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
                 EnableConcurrentMonitoring = true,
                 IsEtwProviderEnabled = true,
@@ -1104,7 +1104,7 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
+                MonitorDuration = TimeSpan.FromSeconds(10),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_warnings.config.json"),
                 EnableConcurrentMonitoring = true,
                 CheckPrivateWorkingSet = true,

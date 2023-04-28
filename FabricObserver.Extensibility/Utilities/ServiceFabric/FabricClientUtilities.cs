@@ -40,6 +40,7 @@ namespace FabricObserver.Utilities.ServiceFabric
         private readonly bool isWindows;
         private readonly Logger logger;
         private static readonly XmlSerializer applicationManifestSerializer = new (typeof(ApplicationManifestType));
+        private static readonly XmlSerializer serviceManifestSerializer = new (typeof(ServiceManifestType));
 
         /// <summary>
         /// The singleton FabricClient instance that is used throughout FabricObserver.
@@ -684,7 +685,7 @@ namespace FabricObserver.Utilities.ServiceFabric
 
 
             // Parse XML to find the necessary policies
-            var applicationManifestSerializer = new XmlSerializer(typeof(ApplicationManifestType));
+
             ApplicationManifestType applicationManifest = null;
 
             using (var sreader = new StringReader(appManifestXml))
@@ -693,7 +694,7 @@ namespace FabricObserver.Utilities.ServiceFabric
             }
 
             // We need the service manifest to get the code package count
-            var serviceManifestSerializer = new XmlSerializer(typeof(ServiceManifestType));
+
             ServiceManifestType serviceManifest = null;
 
             using (var sreader = new StringReader(svcManifestXml))

@@ -1205,7 +1205,6 @@ namespace FabricObserver.Observers
                 var healthMessage = new StringBuilder();
                 string childProcMsg = string.Empty;
                 string rgInfo = string.Empty;
-                string rgCpuInfo = string.Empty;
                 string drive = string.Empty;
 
                 if (replicaOrInstance != null && replicaOrInstance.ChildProcesses != null)
