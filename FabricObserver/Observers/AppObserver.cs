@@ -75,7 +75,7 @@ namespace FabricObserver.Observers
         private string fileName;
         private int appCount;
         private int serviceCount;
-        private bool createDescendantProcCacheSucceeded;
+        private bool createSFUserProcCacheSucceeded;
 
         // ReplicaOrInstanceList is the List of all replicas or instances that will be monitored during the current run.
         // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
@@ -139,7 +139,7 @@ namespace FabricObserver.Observers
                 }
 
                 // If the more performant approach (see NativeMethods.cs) for getting child processes succeeded, then don't proceed.
-                if (createDescendantProcCacheSucceeded)
+                if (createSFUserProcCacheSucceeded)
                 {
                     return null;
                 }
@@ -927,10 +927,10 @@ namespace FabricObserver.Observers
             // Set properties with Application Parameter settings (housed in ApplicationManifest.xml) for this run.
             SetPropertiesFromApplicationSettings();
 
-            if (IsWindows && EnableChildProcessMonitoring)
+            if (IsWindows)
             {
-                // RefreshSFUserChildProcessDataCache returns false it means the internal impl failed.
-                createDescendantProcCacheSucceeded = NativeMethods.RefreshSFUserChildProcessDataCache();
+                // RefreshSFUserProcessDataCache returns false it means the internal impl failed.
+                createSFUserProcCacheSucceeded = NativeMethods.RefreshSFUserProcessDataCache();
             }
 
             // Process JSON object configuration settings (housed in [AppObserver.config].json) for this run.
@@ -3687,9 +3687,9 @@ namespace FabricObserver.Observers
                     handleToProcSnapshot = null;
                 }
 
-                if (createDescendantProcCacheSucceeded)
+                if (createSFUserProcCacheSucceeded)
                 {
-                    NativeMethods.ClearSFUserChildProcessDataCache();
+                    NativeMethods.ClearSFUserProcessDataCache();
                 }
             }
             ObserverLogger.LogInfo("Completed CleanUp...");

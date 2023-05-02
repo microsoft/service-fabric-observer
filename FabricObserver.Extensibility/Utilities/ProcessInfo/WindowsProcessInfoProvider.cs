@@ -250,12 +250,14 @@ namespace FabricObserver.Observers.Utilities
             return childProcesses;
         }
 
-        private static List<(string procName, int pid, DateTime ProcessStartTime)> TupleGetChildProcessesWin32(int processId, NativeMethods.SafeObjectHandle handleToSnapshot)
+        private static List<(string procName, int pid, DateTime ProcessStartTime)> 
+            TupleGetChildProcessesWin32(int processId, NativeMethods.SafeObjectHandle handleToSnapshot)
         {
             try
             {
                 string parentProcName = NativeMethods.GetProcessNameFromId(processId);
-                List<(string procName, int procId, DateTime ProcessStartTime)> childProcs = NativeMethods.GetChildProcesses(processId, parentProcName, handleToSnapshot);
+                List<(string procName, int procId, DateTime ProcessStartTime)> childProcs =
+                    NativeMethods.GetChildProcesses(processId, parentProcName, handleToSnapshot);
 
                 if (childProcs == null || childProcs.Count == 0)
                 {
@@ -267,7 +269,8 @@ namespace FabricObserver.Observers.Utilities
 
             catch (Win32Exception we) // e.g., process is no longer running.
             {
-                ProcessInfoLogger.LogWarning($"Handled Exception in TupleGetChildProcessesWin32: {we.Message}. Error code: {we.NativeErrorCode}. Process Id: {processId}");
+                ProcessInfoLogger.LogWarning($"Handled Exception in TupleGetChildProcessesWin32: {we.Message}. " +
+                                             $"Error code: {we.NativeErrorCode}. Process Id: {processId}");
             }
             catch (Exception e)
             {
@@ -293,7 +296,7 @@ namespace FabricObserver.Observers.Utilities
                 // This is the case when the caller expects there could be multiple instances of the same process.
                 if (procId > 0)
                 {
-                    int procCount = Process.GetProcessesByName(procName).Length;
+                    int procCount = NativeMethods.GetSFUserServiceProcessCountByName(procName);
 
                     if (procCount == 0)
                     {

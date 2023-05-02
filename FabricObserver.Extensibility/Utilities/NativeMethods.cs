@@ -11,7 +11,6 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Security;
@@ -49,7 +48,6 @@ namespace FabricObserver.Observers.Utilities
             "FabricDCA.exe", "FabricDnsService.exe", "FabricFAS.exe", "FabricGateway.exe",
             "FabricHost.exe", "FabricIS.exe", "FabricRM.exe", "FabricUS.exe"
         };
-        private static readonly object lockObj = new ();
         private static Dictionary<int, List<(string childProcName, int childProcId, DateTime childProcStartTime)>> descendantsDictionary;
         private static Dictionary<int, string> currentSFUserServiceProcCache;
 
@@ -1262,6 +1260,15 @@ namespace FabricObserver.Observers.Utilities
         {
             int count = 0;
 
+            if (currentSFUserServiceProcCache == null || !currentSFUserServiceProcCache.Any())
+            {
+                if (!RefreshSFUserProcessDataCache())
+                {
+                    logger.LogWarning("GetSFUserServiceProcessCountByName: Failure updating cache.");
+                    return count;
+                }
+            }
+
             foreach (string pName in currentSFUserServiceProcCache.Values)
             {
                 if (pName == procName)
@@ -1273,11 +1280,11 @@ namespace FabricObserver.Observers.Utilities
             return count;
         }
 
-        public static bool RefreshSFUserChildProcessDataCache()
+        public static bool RefreshSFUserProcessDataCache()
         {
             try
             {
-                return NtSetSFUserServiceDescendantCache();
+                return NtSetSFUserServiceCaches();
             }
             catch (Win32Exception)
             {
@@ -1344,7 +1351,7 @@ namespace FabricObserver.Observers.Utilities
             return result;
         }
 
-        private static bool NtSetSFUserServiceDescendantCache()
+        private static bool NtSetSFUserServiceCaches()
         {
             List<SYSTEM_PROCESS_INFORMATION> procInfoList = NtGetFilteredProcessInfo();
 
@@ -1410,7 +1417,7 @@ namespace FabricObserver.Observers.Utilities
             return descendantsDictionary.Any();
         }
 
-        public static void ClearSFUserChildProcessDataCache()
+        public static void ClearSFUserProcessDataCache()
         {
             try
             {
