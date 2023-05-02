@@ -28,7 +28,7 @@
 		<!-- OR -->
 		
 		<!-- Build with *just* the FabricObserver.Extensibility library. There will be no FabricObserverPkg folder in outdir.. -->
-		<PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" Version="3.2.6" />
+		<PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" Version="3.2.7" />
 		
 		<!-- This is an external nupkg that this plugin sample requires. This is unrelated to the above FO-related reference choices. -->
 		<PackageReference Include="Polly" Version="7.2.3" />
