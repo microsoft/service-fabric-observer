@@ -22,6 +22,7 @@ using System.Fabric.Health;
 using System.Fabric.Query;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -58,6 +59,9 @@ namespace FabricObserverTests
             {
                 throw new Exception("Can't run these tests without a local dev cluster");
             }
+
+            // Remove orphaned health reports.
+            await CleanupTestHealthReportsAsync();
 
             /* SF runtime mocking care of ServiceFabric.Mocks by loekd.
                https://github.com/loekd/ServiceFabric.Mocks */
@@ -96,6 +100,7 @@ namespace FabricObserverTests
             await DeployHealthMetricsAppAsync();
             await DeployTestApp42Async();
             await DeployVotingAppAsync();
+            await DeployCpuStressAppAsync();
         }
 
         [ClassCleanup]
@@ -389,22 +394,6 @@ namespace FabricObserverTests
                 // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
                 // You may need to increase this value depending upon your dev machine? You'll find out..
                 await Task.Delay(TimeSpan.FromSeconds(15));
-
-                ApplicationUpgradeDescription appUpgradeDescription = new ApplicationUpgradeDescription()
-                {
-                    ApplicationName = new Uri("fabric:/Voting"),
-                    TargetApplicationTypeVersion = "1.0.0",
-                    UpgradePolicyDescription = new RollingUpgradePolicyDescription() { UpgradeMode = RollingUpgradeMode.UnmonitoredAuto }
-                };
-
-                appUpgradeDescription.ApplicationParameters.Add("VotingWeb_RGMemoryInMbLimit", "2400");
-
-                await FabricClient.ApplicationManager.UpgradeApplicationAsync(
-                    appUpgradeDescription,
-                    TimeSpan.FromSeconds(60),
-                    Token);
-
-                await Task.Delay(TimeSpan.FromSeconds(15));
             }
             catch (FabricException fe)
             {
@@ -422,6 +411,71 @@ namespace FabricObserverTests
                     }
                     await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
                     await DeployVotingAppAsync();
+                }
+            }
+        }
+
+        private static async Task DeployCpuStressAppAsync()
+        {
+            string appName = "fabric:/CpuStress";
+
+            // If fabric:/Voting is already installed, exit.
+            var deployedTestApp =
+                    await FabricClient.QueryManager.GetDeployedApplicationListAsync(
+                            NodeName,
+                            new Uri(appName),
+                            TimeSpan.FromSeconds(30),
+                            Token);
+
+            if (deployedTestApp?.Count > 0)
+            {
+                return;
+            }
+
+            string appType = "CpuStressType";
+            string appVersion = "1.0.0";
+
+            // Change this to suit your configuration (so, if you are on Windows and you installed SF on a different drive, for example).
+            string imageStoreConnectionString = @"file:C:\SfDevCluster\Data\ImageStoreShare";
+            string packagePathInImageStore = "CpuStressApp";
+            string packagePathZip = Path.Combine(Environment.CurrentDirectory, "CpuStressApp.zip");
+            string packagePath = Path.Combine(Environment.CurrentDirectory, "CpuStressApp");
+
+            try
+            {
+                // Unzip the compressed HealthMetrics app package.
+                System.IO.Compression.ZipFile.ExtractToDirectory(packagePathZip, "CpuStressApp", true);
+
+                // Copy the HealthMetrics app package to a location in the image store.
+                FabricClient.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
+
+                // Provision the HealthMetrics application.          
+                await FabricClient.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
+
+                // Create HealthMetrics app instance.
+                ApplicationDescription appDesc = new(new Uri(appName), appType, appVersion);
+                await FabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
+
+                // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
+                // You may need to increase this value depending upon your dev machine? You'll find out..
+                await Task.Delay(TimeSpan.FromSeconds(15));
+            }
+            catch (FabricException fe)
+            {
+                if (fe.ErrorCode == FabricErrorCode.ApplicationAlreadyExists)
+                {
+                    await FabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
+                    await DeployCpuStressAppAsync();
+                }
+                else if (fe.ErrorCode == FabricErrorCode.ApplicationTypeAlreadyExists)
+                {
+                    var appList = await FabricClient.QueryManager.GetApplicationListAsync(new Uri(appName));
+                    if (appList.Count > 0)
+                    {
+                        await FabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
+                    }
+                    await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+                    await DeployCpuStressAppAsync();
                 }
             }
         }
@@ -484,10 +538,9 @@ namespace FabricObserverTests
         private static async Task RemoveTestApplicationsAsync()
         {
             // HealthMetrics \\
-            var fabricClient = new FabricClient();
             string imageStoreConnectionString = @"file:C:\SfDevCluster\Data\ImageStoreShare";
 
-            if (await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
+            if (await EnsureTestServicesExistAsync("fabric:/HealthMetrics", 2))
             {
                 string appName = "fabric:/HealthMetrics";
                 string appType = "HealthMetricsType";
@@ -497,20 +550,20 @@ namespace FabricObserverTests
                 string packagePathInImageStore = "HealthMetrics";
 
                 // Clean up the unzipped directory.
-                fabricClient.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
+                FabricClient.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
 
                 // Delete services.
                 DeleteServiceDescription deleteServiceDescription1 = new(new Uri(serviceName1));
                 DeleteServiceDescription deleteServiceDescription2 = new(new Uri(serviceName2));
-                await fabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription1);
-                await fabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription2);
+                await FabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription1);
+                await FabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription2);
 
                 // Delete an application instance from the application type.
                 DeleteApplicationDescription deleteApplicationDescription = new(new Uri(appName));
-                await fabricClient.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
+                await FabricClient.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
 
                 // Un-provision the application type.
-                await fabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+                await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
             }
 
             // TestApp42 \\
@@ -524,23 +577,23 @@ namespace FabricObserverTests
                 string packagePathInImageStore = "TestApp42";
 
                 // Clean up the unzipped directory.
-                fabricClient.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
+                FabricClient.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
 
                 // Delete services.
                 var deleteServiceDescription1 = new DeleteServiceDescription(new Uri(serviceName1));
-                await fabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription1);
+                await FabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription1);
 
                 // Delete an application instance from the application type.
                 var deleteApplicationDescription = new DeleteApplicationDescription(new Uri(appName));
-                await fabricClient.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
+                await FabricClient.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
 
                 // Un-provision the application type.
-                await fabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+                await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
             }
 
             // Voting \\
 
-            if (await EnsureTestServicesExistAsync("fabric:/Voting"))
+            if (await EnsureTestServicesExistAsync("fabric:/Voting", 2))
             {
                 string appName = "fabric:/Voting";
                 string appType = "VotingType";
@@ -550,29 +603,56 @@ namespace FabricObserverTests
                 string packagePathInImageStore = "VotingApp";
 
                 // Clean up the unzipped directory.
-                fabricClient.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
+                FabricClient.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
 
                 // Delete services.
                 var deleteServiceDescription1 = new DeleteServiceDescription(new Uri(serviceName1));
                 var deleteServiceDescription2 = new DeleteServiceDescription(new Uri(serviceName2));
-                await fabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription1);
-                await fabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription2);
+                await FabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription1);
+                await FabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription2);
 
                 // Delete an application instance from the application type.
                 var deleteApplicationDescription = new DeleteApplicationDescription(new Uri(appName));
-                await fabricClient.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
+                await FabricClient.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
 
                 // Un-provision the application type.
-                await fabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+                await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+            }
+
+            // CpuStress \\
+
+            // Voting \\
+
+            if (await EnsureTestServicesExistAsync("fabric:/CpuStress"))
+            {
+                string appName = "fabric:/CpuStress";
+                string appType = "CpuStressType";
+                string appVersion = "1.0.0";
+                string serviceName = "fabric:/CpuStress/CpuMemStressor";
+                string packagePathInImageStore = "CpuStressApp";
+
+                // Clean up the unzipped directory.
+                FabricClient.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
+
+                // Delete services.
+                var deleteServiceDescription = new DeleteServiceDescription(new Uri(serviceName));
+                await FabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription);
+
+                // Delete an application instance from the application type.
+                var deleteApplicationDescription = new DeleteApplicationDescription(new Uri(appName));
+                await FabricClient.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
+
+                // Un-provision the application type.
+                await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
             }
         }
 
-        private static async Task<bool> EnsureTestServicesExistAsync(string appName)
+        private static async Task<bool> EnsureTestServicesExistAsync(string appName, int numServices = 0)
         {
             try
             {
                 var services = await FabricClient.QueryManager.GetServiceListAsync(new Uri(appName));
-                return services?.Count > 0;
+                return numServices > 0 ? services?.Count == numServices : services.Count > 0;
             }
             catch (FabricElementNotFoundException)
             {
@@ -804,11 +884,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetAppType_ServiceExcludeList_EnsureExcluded()
         {
-            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
-            {
-                await DeployHealthMetricsAppAsync();
-            }
-
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
@@ -829,11 +904,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetApp_ServiceExcludeList_EnsureExcluded()
         {
-            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
-            {
-                await DeployHealthMetricsAppAsync();
-            }
-
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
@@ -854,11 +924,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetAppType_ServiceIncludeList_EnsureIncluded()
         {
-            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
-            {
-                await DeployHealthMetricsAppAsync();
-            }
-
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
@@ -879,11 +944,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetApp_ServiceIncludeList_EnsureIncluded()
         {
-            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
-            {
-                await DeployHealthMetricsAppAsync();
-            }
-
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
@@ -906,11 +966,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetAppType_MultiServiceExcludeList_EnsureNotExcluded()
         {
-            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
-            {
-                await DeployHealthMetricsAppAsync();
-            }
-
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
@@ -936,11 +991,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetApp_MultiServiceExcludeList_EnsureNotExcluded()
         {
-            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
-            {
-                await DeployHealthMetricsAppAsync();
-            }
-
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
@@ -966,11 +1016,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetAppType_MultiServiceIncludeList_EnsureIncluded()
         {
-            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
-            {
-                await DeployHealthMetricsAppAsync();
-            }
-
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
@@ -991,11 +1036,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetApp_MultiServiceIncludeList_EnsureIncluded()
         {
-            if (!await EnsureTestServicesExistAsync("fabric:/HealthMetrics"))
-            {
-                await DeployHealthMetricsAppAsync();
-            }
-
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
@@ -1032,7 +1072,7 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
+                MonitorDuration = TimeSpan.FromSeconds(10),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
                 EnableConcurrentMonitoring = true,
                 IsEtwProviderEnabled = true,
@@ -1064,7 +1104,7 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
+                MonitorDuration = TimeSpan.FromSeconds(10),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_warnings.config.json"),
                 EnableConcurrentMonitoring = true,
                 CheckPrivateWorkingSet = true,
@@ -1114,7 +1154,7 @@ namespace FabricObserverTests
         // RG \\
 
         [TestMethod]
-        public async Task AppObserver_ObserveAsync_Successful_RGLimitWarningGenerated()
+        public async Task AppObserver_ObserveAsync_Successful_RGMemoryLimitWarningGenerated()
         {
             var startDateTime = DateTime.Now;
 
@@ -1125,7 +1165,7 @@ namespace FabricObserverTests
             using var obs = new AppObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_rg_warning.config.json"),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_rg_memory_warning.config.json"),
             };
 
             await obs.ObserveAsync(Token);
@@ -1140,8 +1180,33 @@ namespace FabricObserverTests
             Assert.IsFalse(obs.IsUnhealthy);
         }
 
-        // NOTE: RG CPU monitoring will not ship until 3.2.8. This is a test of the partial impl, which is not exposed
-        // via configuration today.
+        [TestMethod]
+        public async Task AppObserver_ObserveAsync_Successful_RGCpuLimitWarningGenerated()
+        {
+            var startDateTime = DateTime.Now;
+
+            ObserverManager.FabricServiceContext = TestServiceContext;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            using var obs = new AppObserver(TestServiceContext)
+            {
+                MonitorDuration = TimeSpan.FromSeconds(1),
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_rg_cpu_warning.config.json"),
+            };
+
+            await obs.ObserveAsync(Token);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected warning conditions.
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+        }
+
         [TestMethod]
         public async Task AppObserver_ObserveAsync_Successful_RGLimit_Validate_Multiple_Memory_Cpu_Specification()
         {
@@ -1167,16 +1232,83 @@ namespace FabricObserverTests
                         TimeSpan.FromSeconds(60),
                         Token);
 
-            ApplicationList appList = await FabricClient.QueryManager.GetApplicationListAsync();
+            string svcManifest =
+                await FabricClient.ServiceManager.GetServiceManifestAsync(
+                        "VotingType", "1.0.0",
+                        "VotingWebPkg",
+                        TimeSpan.FromSeconds(60),
+                        Token);
 
+            string svcManifestData =
+                await FabricClient.ServiceManager.GetServiceManifestAsync(
+                        "VotingType", "1.0.0",
+                        "VotingDataPkg",
+                        TimeSpan.FromSeconds(60),
+                        Token);
+
+            // Validate behavior with nulls.
+            FabricClientUtilities.AddParametersIfNotExists(null, null);
+            var (RGMemoryEnabled1, RGMemoryLimit1) = clientUtilities.TupleGetMemoryResourceGovernanceInfo(null, "VotingWebPkg", "Code", null);
+            Assert.IsFalse(RGMemoryEnabled1);
+            Assert.IsTrue(RGMemoryLimit1 == 0);
+
+            // CPU RG is not implemented fully. This is for the next version.
+            var (RGCpuEnabled1, RGCpuLimit1) = clientUtilities.TupleGetCpuResourceGovernanceInfo(null, null, "VotingWebPkg", "Code", null);
+            Assert.IsFalse(RGCpuEnabled1);
+            Assert.IsTrue(RGCpuLimit1 == 0);
+
+            // Upgrade app RG memory App parameter.
+            ApplicationUpgradeDescription appUpgradeDescription = new()
+            {
+                ApplicationName = new Uri("fabric:/Voting"),
+                TargetApplicationTypeVersion = "1.0.0",
+                UpgradePolicyDescription = new RollingUpgradePolicyDescription() { UpgradeMode = RollingUpgradeMode.UnmonitoredAuto }
+            };
+
+            appUpgradeDescription.ApplicationParameters.Add("VotingWeb_RGMemoryInMbLimit", "2400");
+
+            try
+            {
+                await FabricClient.ApplicationManager.UpgradeApplicationAsync(
+                        appUpgradeDescription,
+                        TimeSpan.FromSeconds(60),
+                        Token);
+            }
+            catch (FabricException)
+            {
+                // This can happen if the parameter value is the same/already in place. Ignore it.
+                // If it is for some other reason, then this test function will naturally fail.
+            }
+
+            Stopwatch stopwatch = Stopwatch.StartNew();
+
+            // Wait for the upgrade to complete.
+            while (stopwatch.Elapsed <= TimeSpan.FromSeconds(30))
+            {
+                var progress = await FabricClient.ApplicationManager.GetApplicationUpgradeProgressAsync(new Uri("fabric:/Voting"));
+
+                if (progress.UpgradeState == ApplicationUpgradeState.RollingForwardCompleted)
+                {
+                    break;
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(3));
+            }
+
+            // Query for latest application information (which will include the app parameter added in the above upgrade).
+            ApplicationList appList = await FabricClient.QueryManager.GetApplicationListAsync(new Uri("fabric:/Voting"));
             ApplicationTypeList applicationTypeList =
                 await FabricClient.QueryManager.GetApplicationTypeListAsync("VotingType", TimeSpan.FromSeconds(60), Token);
 
             var appParameters = appList.First(app => app.ApplicationTypeName == "VotingType").ApplicationParameters;
+            Assert.IsTrue(appParameters.Any(a => a.Name == "VotingWeb_RGMemoryInMbLimit"));
+
             var defaultParameters = applicationTypeList.First(a => a.ApplicationTypeVersion == "1.0.0").DefaultParameters;
+            Assert.IsTrue(defaultParameters.Any());
 
             ApplicationParameterList parameters = new();
 
+            // Fill parameter list with app and default parameters. The position of these matters (first add app parameters. Then, add default parameters).
             FabricClientUtilities.AddParametersIfNotExists(parameters, appParameters);
             FabricClientUtilities.AddParametersIfNotExists(parameters, defaultParameters);
 
@@ -1185,12 +1317,19 @@ namespace FabricObserverTests
             // This also test application parameter upgrades, because the default parameter for MemoryInMbLimit is 2048 (per the application manifest).
             var (RGMemoryEnabled, RGMemoryLimit) = clientUtilities.TupleGetMemoryResourceGovernanceInfo(appManifest, "VotingWebPkg", "Code", parameters);
             Assert.IsTrue(RGMemoryEnabled);
+
+            // App parameter upgrade value.
             Assert.IsTrue(RGMemoryLimit == 2400);
 
+            // CPU RG is not implemented fully. This is for the next version.
             // A similar thing is tested here, without upgraded app parameters.
-            var (RGCpuEnabled, RGCpuLimit) = clientUtilities.TupleGetCpuResourceGovernanceInfo(appManifest, "VotingWebPkg", "Code", parameters);
+            var (RGCpuEnabled, RGCpuLimit) = clientUtilities.TupleGetCpuResourceGovernanceInfo(appManifest, svcManifest, "VotingWebPkg", "Code", parameters);
             Assert.IsTrue(RGCpuEnabled);
             Assert.IsTrue(RGCpuLimit == 3.5);
+
+            var (RGCpuEnabledData, RGCpuLimitData) = clientUtilities.TupleGetCpuResourceGovernanceInfo(appManifest, svcManifestData, "VotingDataPkg", "HelperExe2", parameters);
+            Assert.IsTrue(RGCpuEnabledData);
+            Assert.IsTrue(RGCpuLimitData == 0.6);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -1239,8 +1378,7 @@ namespace FabricObserverTests
             using var obs = new AppObserver(TestServiceContext)
             {
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.oldstyle_nowarnings.json"),
-                EnableConcurrentMonitoring = true
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.oldstyle_nowarnings.json")
             };
 
             await obs.ObserveAsync(Token);
@@ -1628,12 +1766,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task ClusterObserver_ObserveAsync_AppMonitor_Successful_IsHealthy_Detects_Warning()
         {
-            if (!await EnsureTestServicesExistAsync("fabric:/Voting"))
-            {
-                await DeployVotingAppAsync();
-                await Task.Delay(TimeSpan.FromSeconds(15));
-            }
-
             var serviceTelemetryData = new ServiceTelemetryData
             {
                 ApplicationName = "fabric:/Voting",
@@ -2115,7 +2247,6 @@ namespace FabricObserverTests
 
                 // This is required since output files are only created if fo api app is also deployed to cluster..
                 IsObserverWebApiAppDeployed = true,
-                MonitorDuration = TimeSpan.FromSeconds(5),
                 IsEtwProviderEnabled = true,
             };
 
@@ -2163,8 +2294,6 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
 
             using var obs = new NetworkObserver(TestServiceContext);
             await obs.ObserveAsync(Token);
@@ -2183,8 +2312,6 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
 
             using var obs = new NetworkObserver(TestServiceContext)
             {
@@ -2315,14 +2442,10 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors()
         {
-            using var client = new FabricClient();
-            var nodeList = await client.QueryManager.GetNodeListAsync();
+            var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
-            if (nodeList?.Count > 1)
-            {
-                return;
-            }
+            Assert.IsTrue(nodeList?.Count == 1);
 
             var startDateTime = DateTime.Now;
 
@@ -2332,7 +2455,6 @@ namespace FabricObserverTests
 
             using var obs = new FabricSystemObserver(TestServiceContext)
             {
-                IsEnabled = true,
                 DataCapacity = 5,
                 MonitorDuration = TimeSpan.FromSeconds(1),
                 IsEtwProviderEnabled = true,
@@ -2358,6 +2480,11 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_MemoryWarningsOrErrorsDetected()
         {
+            var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
+
+            // This is meant to be run on your dev machine's one node test cluster.
+            Assert.IsTrue(nodeList?.Count == 1);
+
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -2366,10 +2493,8 @@ namespace FabricObserverTests
 
             using var obs = new FabricSystemObserver(TestServiceContext)
             {
-                IsEnabled = true,
                 MonitorDuration = TimeSpan.FromSeconds(1),
-                MemWarnUsageThresholdMb = 5,
-                IsEtwProviderEnabled = true
+                MemWarnUsageThresholdMb = 5
             };
 
             await obs.ObserveAsync(Token);
@@ -2390,10 +2515,7 @@ namespace FabricObserverTests
             var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
-            if (nodeList?.Count > 1)
-            {
-                return;
-            }
+            Assert.IsTrue(nodeList?.Count == 1);
 
             var startDateTime = DateTime.Now;
 
@@ -2426,10 +2548,7 @@ namespace FabricObserverTests
             var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
-            if (nodeList?.Count > 1)
-            {
-                return;
-            }
+            Assert.IsTrue(nodeList?.Count == 1);
 
             var startDateTime = DateTime.Now;
 
@@ -2462,10 +2581,7 @@ namespace FabricObserverTests
             var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
-            if (nodeList?.Count > 1)
-            {
-                return;
-            }
+            Assert.IsTrue(nodeList?.Count == 1);
 
             var startDateTime = DateTime.Now;
 
@@ -2495,14 +2611,10 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_Negative_Integer_CPU_Warn_Threshold_No_Unhandled_Exception()
         {
-            using var client = new FabricClient();
-            var nodeList = await client.QueryManager.GetNodeListAsync();
+            var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
-            if (nodeList?.Count > 1)
-            {
-                return;
-            }
+            Assert.IsTrue(nodeList?.Count == 1);
 
             var startDateTime = DateTime.Now;
 
@@ -2535,10 +2647,7 @@ namespace FabricObserverTests
             var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
-            if (nodeList?.Count > 1)
-            {
-                return;
-            }
+            Assert.IsTrue(nodeList?.Count == 1);
 
             var startDateTime = DateTime.Now;
 
@@ -2598,6 +2707,16 @@ namespace FabricObserverTests
             int ports = OSInfoProvider.Instance.GetActiveEphemeralPortCount();
 
             // 0 would mean something failed in the impl or that there are no active TCP connections in the dynamic range on the machine (highly unlikely).
+            Assert.IsTrue(ports > 0);
+        }
+
+        [TestMethod]
+        public void Active_Ephemeral_BOUND_Ports_Machine_Total_Greater_Than_Zero()
+        {
+            int ports = OSInfoProvider.Instance.GetBoundStateEphemeralPortCount();
+
+            // 0 would mean something failed in the impl or that there are no active TCP connections
+            // in the dynamic range that are in BOUND state on the machine (highly unlikely).
             Assert.IsTrue(ports > 0);
         }
 
@@ -2794,10 +2913,8 @@ namespace FabricObserverTests
                     Assert.IsTrue(data.RGMemoryEnabled && data.RGAppliedMemoryLimitMb > 0);     
                 }
 
-                // NOTE: RG CPU monitoring will not ship until 3.2.8. This is a test of the partial impl, which is not exposed
-                // via configuration today.
-                if (data.ProcessName == "VotingData" || data.ProcessName == "VotingWeb")
-                {
+                if (data.ProcessName is "VotingData" or "VotingWeb" or "ConsoleApp6" or "ConsoleApp7")
+                { 
                     Assert.IsTrue(data.RGCpuEnabled && data.RGAppliedCpuLimitCores > 0);
                 }
 
@@ -2862,7 +2979,7 @@ namespace FabricObserverTests
         public async Task AppObserver_ETW_RGMemoryLimitPercent_Warning()
         {
             using var foEtwListener = new FabricObserverEtwListener(_logger);
-            await AppObserver_ObserveAsync_Successful_RGLimitWarningGenerated();
+            await AppObserver_ObserveAsync_Successful_RGMemoryLimitWarningGenerated();
             List<ServiceTelemetryData> telemData = foEtwListener.foEtwConverter.ServiceTelemetryData;
 
             Assert.IsNotNull(telemData);
@@ -2873,6 +2990,24 @@ namespace FabricObserverTests
 
             // 2 service code packages + 2 helper code packages (VotingData) * 1 metric = 4 warnings...
             Assert.IsTrue(telemData.All(t => t.Metric == ErrorWarningProperty.RGMemoryUsagePercent && telemData.Count == 4));
+        }
+
+        // RG - warningRGCpuLimitPercent
+        [TestMethod]
+        public async Task AppObserver_ETW_RGCpuLimitPercent_Warning()
+        {
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+            await AppObserver_ObserveAsync_Successful_RGCpuLimitWarningGenerated();
+            List<ServiceTelemetryData> telemData = foEtwListener.foEtwConverter.ServiceTelemetryData;
+
+            Assert.IsNotNull(telemData);
+            Assert.IsTrue(telemData.Count > 0);
+
+            telemData = telemData.Where(
+                t => t.ApplicationName == "fabric:/CpuStress" && t.HealthState == HealthState.Warning).ToList();
+
+            // 2 service code packages + 2 helper code packages (VotingData) * 1 metric = 4 warnings...
+            Assert.IsTrue(telemData.All(t => t.Metric == ErrorWarningProperty.RGCpuUsagePercent && telemData.Count == 1));
         }
 
         // DiskObserver: TelemetryData \\
@@ -3029,6 +3164,36 @@ namespace FabricObserverTests
                 Assert.IsTrue(data.Property != null);
                 Assert.IsTrue(data.Source == $"{data.ObserverName}({data.Code})");
                 Assert.IsTrue(data.Value > 0.0);
+            }
+        }
+
+        [TestMethod]
+        public async Task NetworkObserver_ETW_EventData_IsTelemetryData_Warnings()
+        {
+            using var foEtwListener = new FabricObserverEtwListener(_logger);
+
+            await NetworkObserver_ObserveAsync_Successful_Warnings();
+
+            List<NetworkTelemetryData> telemData = foEtwListener.foEtwConverter.NetworkTelemetryData;
+
+            Assert.IsNotNull(telemData);
+            Assert.IsTrue(telemData.Count > 0);
+
+            foreach (var data in telemData)
+            {
+                Assert.IsTrue(data.EntityType == EntityType.Application);
+                Assert.IsTrue(data.HealthState == HealthState.Warning);
+                Assert.IsTrue(data.ObserverName == ObserverConstants.NetworkObserverName);
+
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.NodeName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.NodeType));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ClusterId));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.Metric));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.ObserverName));
+                Assert.IsFalse(string.IsNullOrWhiteSpace(data.OS));
+                Assert.IsFalse(data.Code == null);
+                Assert.IsFalse(data.Description == null);
+                Assert.IsFalse(data.Property == null);
             }
         }
 
@@ -3212,7 +3377,7 @@ namespace FabricObserverTests
 
             // fabric:/Voting application has 2 default services (that create service types) and 2 extra CodePackages (specified in VotingData manifest)
             // that contain helper binaries, ConsoleApp6.exe and ConsoleApp7.exe. Therefore, Console6App7 and ConsoleApp7 processes should be added to ReplicaOrInstanceList
-            // and therefore will be treated like any service that AppObserver monitors.
+            // and therefore will be treated like any process that AppObserver monitors.
             Assert.IsTrue(obs.ReplicaOrInstanceList.Any(r => r.HostProcessName == "ConsoleApp6"));
             Assert.IsTrue(obs.ReplicaOrInstanceList.Any(r => r.HostProcessName == "ConsoleApp7"));
             

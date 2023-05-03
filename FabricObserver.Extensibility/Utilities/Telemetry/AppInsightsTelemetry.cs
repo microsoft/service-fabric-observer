@@ -160,13 +160,13 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
             catch (Exception e)
             {
-                if (e is not OutOfMemoryException) // Since this can be handled, don't handle it.
+                logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e.Message}");
+                
+                if (e is OutOfMemoryException)
                 {
-                    logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e.Message}");
-                    return Task.CompletedTask;
-                }
-
-                throw;
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
+                };
             }
 
             return Task.CompletedTask;
@@ -275,11 +275,26 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                         { "HealthState", systemServiceTelemData.HealthState.ToString() },
                         { "Description", systemServiceTelemData.Description },
                         { "NodeName", systemServiceTelemData.NodeName },
+                        { "NodeType", systemServiceTelemData.NodeType },
                         { "ObserverName", systemServiceTelemData.ObserverName },
                         { "ProcessId", systemServiceTelemData.ProcessId.ToString() },
                         { "ProcessName", systemServiceTelemData.ProcessName },
                         { "ProcessStartTime", systemServiceTelemData.ProcessStartTime },
                         { "OS", systemServiceTelemData.OS }
+                    };
+                }
+                else if (telemetryData is NetworkTelemetryData networkTelemData)
+                {
+                    properties = new Dictionary<string, string>
+                    {
+                        { "ApplicationName", networkTelemData.ApplicationName },
+                        { "ClusterId", networkTelemData.ClusterId },
+                        { "EntityType", EntityType.Cluster.ToString() },
+                        { "HealthState", networkTelemData.HealthState.ToString() },
+                        { "Description", networkTelemData.Description },
+                        { "NodeName", networkTelemData.NodeName },
+                        { "ObserverName", networkTelemData.ObserverName },
+                        { "OS", networkTelemData.OS }
                     };
                 }
                 else if (telemetryData is ContainerTelemetryData containerTelemData)
@@ -333,10 +348,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             catch (Exception e)
             {
                 logger.LogWarning($"Unhandled exception in AppInsights ReportHealthAsync: {e.Message}");
-                
-                if (e is OutOfMemoryException) // Since this can be handled, don't handle it.
+
+                if (e is OutOfMemoryException)
                 {
-                    throw;
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
                 }
             }
 
@@ -476,6 +492,20 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                         { "OS", systemServiceTelemData.OS }
                     };
                 }
+                else if (telemetryData is NetworkTelemetryData networkTelemData)
+                {
+                    properties = new Dictionary<string, string>
+                    {
+                        { "ApplicationName", networkTelemData.ApplicationName },
+                        { "ClusterId", networkTelemData.ClusterId },
+                        { "EntityType", EntityType.Cluster.ToString() },
+                        { "HealthState", networkTelemData.HealthState.ToString() },
+                        { "Description", networkTelemData.Description },
+                        { "NodeName", networkTelemData.NodeName },
+                        { "ObserverName", networkTelemData.ObserverName },
+                        { "OS", networkTelemData.OS }
+                    };
+                }
                 else if (telemetryData is ContainerTelemetryData containerTelemData)
                 {
                     properties = new Dictionary<string, string>
@@ -527,9 +557,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             {
                 logger.LogWarning($"Unhandled exception in AppInsights ReportMetricAsync impl: {e.Message}");
 
-                if (e is OutOfMemoryException) // Since this can be handled, don't handle it.
+                if (e is OutOfMemoryException)
                 {
-                    throw;
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
                 }
             }
 
@@ -582,9 +613,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 {
                     logger.LogWarning($"Unhandled exception in TelemetryClient.ReportMetricAsync: {e.Message}");
 
-                    if (e is OutOfMemoryException) // Since this can be handled, don't handle it.
+                    if (e is OutOfMemoryException)
                     {
-                        throw;
+                        // Terminate now.
+                        Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
                     }
                 }
             }
@@ -652,9 +684,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             {
                 logger.LogWarning($"Unhandled exception in TelemetryClient.ReportMetricAsync:{Environment.NewLine}{e.Message}");
 
-                if (e is OutOfMemoryException) // Since this can be handled, don't handle it.
+                if (e is OutOfMemoryException)
                 {
-                    throw;
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
                 }
             }
 
@@ -726,9 +759,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 // Telemetry is non-critical and should not take down FH.
                 logger.LogWarning($"Failure in ReportClusterUpgradeStatus:{Environment.NewLine}{e.Message}");
 
-                if (e is OutOfMemoryException) // Since this can be handled, don't handle it.
+                if (e is OutOfMemoryException)
                 {
-                    throw;
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
                 }
             }
 
@@ -776,9 +810,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 // Telemetry is non-critical and should not take down FH.
                 logger.LogWarning($"Failure in ReportApplicationUpgradeStatus:{Environment.NewLine}{e}");
 
-                if (e is OutOfMemoryException) // Since this can be handled, don't handle it.
+                if (e is OutOfMemoryException)
                 {
-                    throw;
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
                 }
             }
 
@@ -825,9 +860,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             {
                 logger.LogWarning($"Unhandled exception in AppInsights impl: ReportNodeSnapshotAsync:{Environment.NewLine}{e.Message}");
 
-                if (e is OutOfMemoryException) // Since this can be handled, don't handle it.
+                if (e is OutOfMemoryException)
                 {
-                    throw;
+                    // Terminate now.
+                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
                 }
             }
 

@@ -51,6 +51,8 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (Exception e) when (e is ArgumentException or Win32Exception or InvalidOperationException or NotSupportedException)
             {
+                ProcessInfoProvider.ProcessInfoLogger.LogWarning($"GetCurrentCpuUsagePercentage(NET6 Process impl) failure ({procId},{procName}): {e.Message}");
+
                 // Caller should ignore this result. Don't want to use an Exception here.
                 return -1;
             }

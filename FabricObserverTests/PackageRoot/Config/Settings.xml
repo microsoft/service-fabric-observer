@@ -33,7 +33,7 @@
 		<Parameter Name="EnableCSVDataLogging" Value="false" />
 		<Parameter Name="EnableKvsLvidMonitoring" Value="false" />
 		<Parameter Name="EnableVerboseLogging" Value="false" />
-		<Parameter Name="MonitorDuration" Value="00:00:01" />
+		<Parameter Name="MonitorDuration" Value="00:00:10" />
 		<Parameter Name="RunInterval" Value="" />
 		<Parameter Name="ConfigurationFileName" Value="AppObserver.config.json" />
 		<Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
@@ -82,12 +82,12 @@
 		<Parameter Name="EnableVerboseLogging" Value="" />
 		<Parameter Name="MonitorDuration" Value="" />
 		<Parameter Name="RunInterval" Value="" />
-		<Parameter Name="MonitorPrivateWorkingSet" Value="" />
+		<Parameter Name="MonitorPrivateWorkingSet" Value="true" />
 		<Parameter Name="UseCircularBuffer" Value="" />
 		<Parameter Name="ResourceUsageDataCapacity" Value=""/>
 		<Parameter Name="MonitorWindowsEventLog" Value="" />
 		<Parameter Name="CpuErrorLimitPercent" Value="" />
-		<Parameter Name="CpuWarningLimitPercent" Value="90" />
+		<Parameter Name="CpuWarningLimitPercent" Value="" />
 		<Parameter Name="MemoryErrorLimitMb" Value="" />
 		<Parameter Name="MemoryWarningLimitMb" Value="" />
 		<Parameter Name="NetworkErrorActivePorts" Value=""  />
@@ -102,9 +102,9 @@
 	</Section>
 	<Section Name="NetworkObserverConfiguration">
 		<Parameter Name="Enabled" Value="true" />
-		<Parameter Name="EnableTelemetry" Value="" />
-		<Parameter Name="EnableEtw" Value="" />
-		<Parameter Name="EnableVerboseLogging" Value="" />
+		<Parameter Name="EnableTelemetry" Value="false" />
+		<Parameter Name="EnableEtw" Value="true" />
+		<Parameter Name="EnableVerboseLogging" Value="false" />
 		<Parameter Name="RunInterval" Value="" />
 		<Parameter Name="ConfigurationFileName" Value="NetworkObserver.config.json" />
 	</Section>
@@ -189,19 +189,4 @@
 		<Parameter Name="EnableVerboseLogging" Value="" />
 		<Parameter Name="RunInterval" Value="" />
 	</Section>
-	<!-- Plugin model sample. Just add the configuration info here that your observer needs.
-       **NOTE**: You must name these Sections in the following way: [ObserverName]Configuration.
-       Example: SampleNewObserverConfiguration, where SampleNewObserver is the type name of the observer plugin.
-       See the SampleObserverPlugin project for a complete example of implementing an observer plugin. If you want to
-       enable versionless application parameter updates, then add MustOverride to the Parameters you want to be able to change without
-       redeploying FO and add them to ApplicationManifest.xml like all the other observers.
-  <Section Name="SampleNewObserverConfiguration">
-    <Parameter Name="Enabled" Value="" />
-    <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
-    <Parameter Name="EnableCSVDataLogging" Value="" />
-    <Parameter Name="EnableEtw" Value=""/>
-    <Parameter Name="EnableTelemetry" Value="" />
-    <Parameter Name="EnableVerboseLogging" Value="" />
-    <Parameter Name="RunInterval" Value="" />
-  </Section> -->
 </Settings>

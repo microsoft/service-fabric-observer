@@ -67,11 +67,11 @@ namespace FabricObserver.Observers.Utilities
 
         public abstract float GetProcessPrivateBytesMb(int processId);
 
-        public abstract List<(string ProcName, int Pid)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot = null);
+        public abstract List<(string ProcName, int Pid, DateTime ProcessStartTime)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot = null);
 
         public abstract float GetProcessAllocatedHandles(int processId, string configPath = null);
 
-        public abstract double GetProcessKvsLvidsUsagePercentage(string procName, CancellationToken token, int procId = -1);
+        public abstract double GetProcessKvsLvidsUsagePercentage(string procName, CancellationToken token, int procId = 0);
 
         /// <summary>
         /// Gets the number of execution threads owned by the process of supplied process id.

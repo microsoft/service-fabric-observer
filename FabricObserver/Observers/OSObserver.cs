@@ -281,18 +281,15 @@ namespace FabricObserver.Observers
             try
             {
                 var allSystemServices =
-                        await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricClientInstance.QueryManager.GetServiceListAsync(
-                                                new Uri(ObserverConstants.SystemAppName),
-                                                null,
-                                                AsyncClusterOperationTimeoutSeconds,
-                                                Token), 
-                                    Token);
+                        await FabricClientInstance.QueryManager.GetServiceListAsync(
+                                new Uri(ObserverConstants.SystemAppName),
+                                null, 
+                                AsyncClusterOperationTimeoutSeconds, Token);
 
-                return allSystemServices.Count > 0 && allSystemServices.Count(
-                                service => service.ServiceTypeName.Equals(
-                                            ObserverConstants.InfrastructureServiceType,
-                                            StringComparison.InvariantCultureIgnoreCase)) > 0;
+                return allSystemServices.Count > 0 && allSystemServices.Any(
+                                                        service => service.ServiceTypeName.Equals(
+                                                            ObserverConstants.InfrastructureServiceType,
+                                                            StringComparison.InvariantCultureIgnoreCase));
             }
             catch (Exception e) when (e is FabricException or TimeoutException)
             {
@@ -526,6 +523,7 @@ namespace FabricObserver.Observers
                     Token.ThrowIfCancellationRequested();
 
                     string drvSize;
+                    double usedPct = Math.Round(percentConsumed, 2);
 
                     if (IsWindows)
                     {
@@ -536,11 +534,11 @@ namespace FabricObserver.Observers
                             systemDrv = "System";
                         }
 
-                        drvSize = $"Drive {driveName} ({systemDrv}) Size: {diskSize} GB, Consumed*: {percentConsumed}%";
+                        drvSize = $"Drive {driveName} ({systemDrv}) Size: {diskSize} GB, Consumed*: {usedPct}%";
                     }
                     else
                     {
-                        drvSize = $"Mount point: {driveName}, Size: {diskSize} GB, Consumed*: {percentConsumed}%";
+                        drvSize = $"Mount point: {driveName}, Size: {diskSize} GB, Consumed*: {usedPct}%";
                     }
 
                     _ = sb.AppendLine(drvSize);

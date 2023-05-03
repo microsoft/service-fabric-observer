@@ -300,55 +300,55 @@ namespace FabricObserver.Observers
                 if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
                 {
                     ProcessResourceDataReportHealth(
-                            CpuTimeData,
-                            CpuErrorUsageThresholdPct,
-                            CpuWarningUsageThresholdPct,
-                            timeToLiveWarning,
-                            EntityType.Machine);
+                        CpuTimeData,
+                        CpuErrorUsageThresholdPct,
+                        CpuWarningUsageThresholdPct,
+                        timeToLiveWarning,
+                        EntityType.Machine);
                 }
 
                 // Memory - MB in use.
                 if (MemDataInUse != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
                 {
                     ProcessResourceDataReportHealth(
-                            MemDataInUse,
-                            MemErrorUsageThresholdMb,
-                            MemWarningUsageThresholdMb,
-                            timeToLiveWarning,
-                            EntityType.Machine);
+                        MemDataInUse,
+                        MemErrorUsageThresholdMb,
+                        MemWarningUsageThresholdMb,
+                        timeToLiveWarning,
+                        EntityType.Machine);
                 }
 
                 // Memory - Percent in use.
                 if (MemDataPercent != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
                 {
                     ProcessResourceDataReportHealth(
-                            MemDataPercent,
-                            MemoryErrorLimitPercent,
-                            MemoryWarningLimitPercent,
-                            timeToLiveWarning,
-                            EntityType.Machine);
+                        MemDataPercent,
+                        MemoryErrorLimitPercent,
+                        MemoryWarningLimitPercent,
+                        timeToLiveWarning,
+                        EntityType.Machine);
                 }
 
                 // Windows Firewall Rules - Total number of rules in use.
                 if (FirewallData != null && IsWindows && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
                 {
                     ProcessResourceDataReportHealth(
-                            FirewallData,
-                            FirewallRulesErrorThreshold,
-                            FirewallRulesWarningThreshold,
-                            timeToLiveWarning,
-                            EntityType.Machine);
+                        FirewallData,
+                        FirewallRulesErrorThreshold,
+                        FirewallRulesWarningThreshold,
+                        timeToLiveWarning,
+                        EntityType.Machine);
                 }
 
                 // Active TCP - Total number of TCP ports in use.
                 if (ActivePortsData != null && (ActivePortsErrorThreshold > 0 || ActivePortsWarningThreshold > 0))
                 {
                     ProcessResourceDataReportHealth(
-                            ActivePortsData,
-                            ActivePortsErrorThreshold,
-                            ActivePortsWarningThreshold,
-                            timeToLiveWarning,
-                            EntityType.Machine);
+                        ActivePortsData,
+                        ActivePortsErrorThreshold,
+                        ActivePortsWarningThreshold,
+                        timeToLiveWarning,
+                        EntityType.Machine);
                 }
 
                 /* TCP Ports - Active Ephemeral */
@@ -357,22 +357,22 @@ namespace FabricObserver.Observers
                 if (EphemeralPortsDataRaw != null && (EphemeralPortsRawErrorThreshold > 0 || EphemeralPortsRawWarningThreshold > 0))
                 {
                     ProcessResourceDataReportHealth(
-                            EphemeralPortsDataRaw,
-                            EphemeralPortsRawErrorThreshold,
-                            EphemeralPortsRawWarningThreshold,
-                            timeToLiveWarning,
-                            EntityType.Machine);
+                        EphemeralPortsDataRaw,
+                        EphemeralPortsRawErrorThreshold,
+                        EphemeralPortsRawWarningThreshold,
+                        timeToLiveWarning,
+                        EntityType.Machine);
                 }
 
                 // Percent - Percentage of available ephemeral ports in use.
                 if (EphemeralPortsDataPercent != null && (EphemeralPortsPercentErrorThreshold > 0 || EphemeralPortsPercentWarningThreshold > 0))
                 {
                     ProcessResourceDataReportHealth(
-                            EphemeralPortsDataPercent,
-                            EphemeralPortsPercentErrorThreshold,
-                            EphemeralPortsPercentWarningThreshold,
-                            timeToLiveWarning,
-                            EntityType.Machine);
+                        EphemeralPortsDataPercent,
+                        EphemeralPortsPercentErrorThreshold,
+                        EphemeralPortsPercentWarningThreshold,
+                        timeToLiveWarning,
+                        EntityType.Machine);
                 }
 
                 // Total Open File Handles % (Linux-only) - Total Percentage Allocated (in use) of the configured Maximum number of File Handles the linux kernel will allocate.
@@ -381,21 +381,21 @@ namespace FabricObserver.Observers
                     if (LinuxFileHandlesDataPercentAllocated != null && (LinuxFileHandlesErrorPercent > 0 || LinuxFileHandlesWarningPercent > 0))
                     {
                         ProcessResourceDataReportHealth(
-                                LinuxFileHandlesDataPercentAllocated,
-                                LinuxFileHandlesErrorPercent,
-                                LinuxFileHandlesWarningPercent,
-                                timeToLiveWarning,
-                                EntityType.Machine);
+                            LinuxFileHandlesDataPercentAllocated,
+                            LinuxFileHandlesErrorPercent,
+                            LinuxFileHandlesWarningPercent,
+                            timeToLiveWarning,
+                            EntityType.Machine);
                     }
 
                     if (LinuxFileHandlesDataTotalAllocated != null && (LinuxFileHandlesErrorTotalAllocated > 0 || LinuxFileHandlesWarningTotalAllocated > 0))
                     {
                         ProcessResourceDataReportHealth(
-                                LinuxFileHandlesDataTotalAllocated,
-                                LinuxFileHandlesErrorTotalAllocated,
-                                LinuxFileHandlesWarningTotalAllocated,
-                                timeToLiveWarning,
-                                EntityType.Machine);
+                            LinuxFileHandlesDataTotalAllocated,
+                            LinuxFileHandlesErrorTotalAllocated,
+                            LinuxFileHandlesWarningTotalAllocated,
+                            timeToLiveWarning,
+                            EntityType.Machine);
                     }
                 }
 
@@ -407,6 +407,11 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
+                if (e is OutOfMemoryException)
+                {
+                    Environment.FailFast($"OOM encountered in NodeObserver.", e);
+                }
+
                 ObserverLogger.LogWarning($"Unhandled exception re-thrown:{Environment.NewLine}{e}");
 
                 // Fix the bug..
@@ -770,35 +775,45 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                timer.Start();
+                // Memory
+                if (MemDataInUse != null || MemDataPercent != null)
+                {
+                    var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetSystemPhysicalMemoryInfo();
 
+                    if (MemDataInUse != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
+                    {
+                        MemDataInUse.AddData(MemoryInUseMb);
+                    }
+
+                    if (MemDataPercent != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
+                    {
+                        MemDataPercent.AddData(PercentInUse);
+                    }
+                }
+
+                // No need to proceed.
+                if (CpuTimeData == null)
+                {
+                    return;
+                }
+
+                // Warm up counter.
+                _ = CpuUtilizationProvider.Instance.GetProcessorTimePercentage();
+                await Task.Delay(1000, Token);
+
+                timer.Start();
+                
                 while (timer.Elapsed <= duration)
                 {
                     token.ThrowIfCancellationRequested();
 
                     // CPU
-                    if (CpuTimeData != null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
+                    if (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0)
                     {
                          CpuTimeData.AddData(CpuUtilizationProvider.Instance.GetProcessorTimePercentage());
                     }
 
-                    // Memory
-                    if (MemDataInUse != null || MemDataPercent != null)
-                    {
-                        var (TotalMemoryGb, MemoryInUseMb, PercentInUse) = OSInfoProvider.Instance.TupleGetSystemPhysicalMemoryInfo();
-
-                        if (MemDataInUse != null && (MemErrorUsageThresholdMb > 0 || MemWarningUsageThresholdMb > 0))
-                        {
-                            MemDataInUse.AddData(MemoryInUseMb);
-                        }
-
-                        if (MemDataPercent != null && (MemoryErrorLimitPercent > 0 || MemoryWarningLimitPercent > 0))
-                        {
-                            MemDataPercent.AddData(PercentInUse);
-                        }
-                    }
-
-                    await Task.Delay(250, Token);
+                    await Task.Delay(1000, Token);
                 }
 
                 timer.Stop();
@@ -806,6 +821,11 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
+                if (e is OutOfMemoryException)
+                {
+                    Environment.FailFast($"OOM encountered in NodeObserver.", e);
+                }
+
                 ObserverLogger.LogWarning($"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}");
 
                 // Fix the bug..
@@ -827,11 +847,10 @@ namespace FabricObserver.Observers
 
             try
             {
-                NodeList nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricClientInstance.QueryManager.GetNodeListAsync(
-                                            this.NodeName,
-                                            ConfigurationSettings.AsyncTimeout,
-                                            Token), Token);
+                NodeList nodes = await FabricClientInstance.QueryManager.GetNodeListAsync(
+                                        this.NodeName,
+                                        ConfigurationSettings.AsyncTimeout,
+                                        Token);
 
                 if (nodes?.Count == 0)
                 {
@@ -882,58 +901,103 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (e is FabricException or TaskCanceledException or TimeoutException)
             {
-                ObserverLogger.LogWarning($"Failed to generate node stats:{Environment.NewLine}{e.Message}");
+                ObserverLogger.LogWarning($"Failed to generate node stats: {e.Message}");
                 // Retry or try again later..
             }
         }
 
         private void CleanUp()
         {
-            if (ActivePortsData != null && !ActivePortsData.ActiveErrorOrWarning)
+            if (ActivePortsData != null)
             {
-                ActivePortsData = null;
+                ActivePortsData.ClearData();
+
+                if (!ActivePortsData.ActiveErrorOrWarning)
+                {
+                    ActivePortsData = null;
+                }
             }
 
-            if (CpuTimeData != null && !CpuTimeData.ActiveErrorOrWarning)
+            if (CpuTimeData != null)
             {
-                CpuTimeData = null;
+                CpuTimeData.ClearData();
+                
+                if (!CpuTimeData.ActiveErrorOrWarning)
+                {
+                    CpuTimeData = null;
+                }
             }
 
-            if (EphemeralPortsDataPercent != null && !EphemeralPortsDataPercent.ActiveErrorOrWarning)
+            if (EphemeralPortsDataPercent != null)
             {
-                EphemeralPortsDataPercent = null;
+                EphemeralPortsDataPercent.ClearData();
+
+                if (!EphemeralPortsDataPercent.ActiveErrorOrWarning)
+                {
+                    EphemeralPortsDataPercent = null;
+                }
             }
 
-            if (EphemeralPortsDataRaw != null && !EphemeralPortsDataRaw.ActiveErrorOrWarning)
+            if (EphemeralPortsDataRaw != null)
             {
-                EphemeralPortsDataRaw = null;
+                EphemeralPortsDataRaw.ClearData();
+
+                if (!EphemeralPortsDataRaw.ActiveErrorOrWarning)
+                {
+                    EphemeralPortsDataRaw = null;
+                }
             }
 
-            if (MemDataInUse != null && !MemDataInUse.ActiveErrorOrWarning)
+            if (MemDataInUse != null)
             {
-                MemDataInUse = null;
+                MemDataInUse.ClearData();
+
+                if (!MemDataInUse.ActiveErrorOrWarning)
+                {
+                    MemDataInUse = null;
+                }
             }
 
-            if (MemDataPercent != null && !MemDataPercent.ActiveErrorOrWarning)
+            if (MemDataPercent != null)
             {
-                MemDataPercent = null;
+                MemDataPercent.ClearData();
+
+                if (!MemDataPercent.ActiveErrorOrWarning)
+                {
+                    MemDataPercent = null;
+                }
             }
 
-            if (IsWindows && FirewallData != null && !FirewallData.ActiveErrorOrWarning)
+            if (IsWindows && FirewallData != null)
             {
-                FirewallData = null;
+                FirewallData.ClearData();
+
+                if (!FirewallData.ActiveErrorOrWarning)
+                {
+                    FirewallData = null;
+                }    
             }
 
             if (!IsWindows)
             {
-                if (LinuxFileHandlesDataPercentAllocated != null && !LinuxFileHandlesDataPercentAllocated.ActiveErrorOrWarning)
+                if (LinuxFileHandlesDataPercentAllocated != null)
                 {
-                    LinuxFileHandlesDataPercentAllocated = null;
+                    LinuxFileHandlesDataPercentAllocated.ClearData();
+
+                    if (!LinuxFileHandlesDataPercentAllocated.ActiveErrorOrWarning)
+                    {
+                        LinuxFileHandlesDataPercentAllocated = null;
+                    }
                 }
 
-                if (LinuxFileHandlesDataTotalAllocated != null && !LinuxFileHandlesDataTotalAllocated.ActiveErrorOrWarning)
+                if (LinuxFileHandlesDataTotalAllocated != null)
                 {
-                    LinuxFileHandlesDataTotalAllocated = null;
+                    LinuxFileHandlesDataTotalAllocated.ClearData();
+
+                    if (!LinuxFileHandlesDataTotalAllocated.ActiveErrorOrWarning)
+                    {
+                        LinuxFileHandlesDataTotalAllocated = null;
+                    }
                 }
             }
         }

@@ -4,7 +4,7 @@
 		<id>%PACKAGE_ID%</id>
 		<version>2.2.4</version>
 		<releaseNotes>
-
+- Performance and Code improvements.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

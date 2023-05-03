@@ -54,7 +54,10 @@
 	<None Update="PackageRoot\Config\AppObserver_PrivateBytes_warning.config.json">
 	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	</None>
-	<None Update="PackageRoot\Config\AppObserver_rg_warning.config.json">
+	<None Update="PackageRoot\Config\AppObserver_rg_memory_warning.config.json">
+	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</None>
+	<None Update="PackageRoot\Config\AppObserver_rg_cpu_warning.config.json">
 	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	</None>
 	<None Update="PackageRoot\Config\AppObserver_warnings_dmps.config.json">
@@ -109,6 +112,9 @@
 		<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	</None>
 	<None Update="VotingApp.zip">
+	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</None>
+	<None Update="CpuStressApp.zip">
 	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	</None>
   </ItemGroup>

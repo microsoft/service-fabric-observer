@@ -65,13 +65,13 @@ namespace FabricObserver.Observers.Utilities
             */
         }
 
-        public override int GetActiveTcpPortCount(int processId = -1, string configPath = null)
+        public override int GetActiveTcpPortCount(int processId = 0, string configPath = null)
         {
             int count = GetPortCount(processId, predicate: line => true, configPath);
             return count;
         }
 
-        public override int GetActiveEphemeralPortCount(int processId = -1, string configPath = null)
+        public override int GetActiveEphemeralPortCount(int processId = 0, string configPath = null)
         {
             (int lowPort, int highPort, _) = TupleGetDynamicPortRange();
 
@@ -84,7 +84,7 @@ namespace FabricObserver.Observers.Utilities
             return count;
         }
 
-        public override double GetActiveEphemeralPortCountPercentage(int processId = -1, string configPath = null)
+        public override double GetActiveEphemeralPortCountPercentage(int processId = 0, string configPath = null)
         {
             double usedPct = 0.0;
             int count = GetActiveEphemeralPortCount(processId, configPath);
@@ -102,16 +102,38 @@ namespace FabricObserver.Observers.Utilities
             {
                 usedPct = (double)(count * 100) / totalEphemeralPorts;
             }
-           
+
             return usedPct;
+        }
+
+        // TODO...
+        /// <summary>
+        /// Not implemented for Linux.
+        /// </summary>
+        /// <param name="processId"></param>
+        /// <returns>0</returns>
+        public override int GetBoundStateEphemeralPortCount(int processId = 0)
+        {
+            return 0;
+        }
+
+        // TODO...
+        /// <summary>
+        /// Not implemented for Linux.
+        /// </summary>
+        /// <param name="processId"></param>
+        /// <returns>0</returns>
+        public override int GetBoundStatePortCount(int processId = 0)
+        {
+            return 0;
         }
 
         public override (int LowPort, int HighPort, int NumberOfPorts) TupleGetDynamicPortRange()
         {
             string text = File.ReadAllText("/proc/sys/net/ipv4/ip_local_port_range");
             int tabIndex = text.IndexOf('\t');
-            int lowPort = int.Parse(text.Substring(0, tabIndex));
-            int highPort = int.Parse(text.Substring(tabIndex + 1));
+            int lowPort = int.Parse(text[..tabIndex]);
+            int highPort = int.Parse(text[(tabIndex + 1)..]);
             return (LowPort: lowPort, HighPort: highPort, NumberOfPorts: highPort - lowPort);
         }
 
@@ -167,7 +189,7 @@ namespace FabricObserver.Observers.Utilities
 
         private static int GetPortCount(int processId, Predicate<string> predicate, string configPath = null)
         {
-            string processIdStr = processId == -1 ? string.Empty : " " + processId + "/";
+            string processIdStr = processId == 0 ? string.Empty : " " + processId + "/";
 
             /*
             ** -t - tcp
@@ -178,7 +200,7 @@ namespace FabricObserver.Observers.Utilities
             string arg = "-tna";
             string bin = "netstat";
 
-            if (processId > -1)
+            if (processId > 0)
             {
                 if (string.IsNullOrWhiteSpace(configPath))
                 {
@@ -231,7 +253,7 @@ namespace FabricObserver.Observers.Utilities
                         continue;
                     }
 
-                    if (processId != -1 && !line.Contains(processIdStr))
+                    if (processId > 0 && !line.Contains(processIdStr))
                     {
                         continue;
                     }

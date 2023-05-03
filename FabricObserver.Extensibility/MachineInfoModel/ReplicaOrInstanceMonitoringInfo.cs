@@ -46,6 +46,11 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
+        public DateTime HostProcessStartTime
+        {
+            get; set;
+        }
+
         public Guid PartitionId
         {
             get; set;
@@ -91,7 +96,7 @@ namespace FabricObserver.Observers.MachineInfoModel
             get; set;
         }
 
-        public List<(string procName, int Pid)> ChildProcesses
+        public List<(string procName, int Pid, DateTime ProcessStartTime)> ChildProcesses
         {
             get; set;
         }

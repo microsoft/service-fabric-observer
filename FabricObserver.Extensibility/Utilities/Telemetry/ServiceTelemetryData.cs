@@ -31,7 +31,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             get; set;
         }
 
-        public long ProcessId
+        public int ProcessId
         {
             get; set;
         }
@@ -70,16 +70,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         {
             get; set;
         }
-
-        // NOTE: RG CPU monitoring will not ship until 3.2.8. It is a partial impl, which is not exposed
-        // via configuration today.
         public bool RGCpuEnabled
         {
             get; set;
         }
-
-        // NOTE: RG CPU monitoring will not ship until 3.2.8. It is a partial impl, which is not exposed
-        // via configuration today.
         public double RGAppliedCpuLimitCores
         {
             get; set;

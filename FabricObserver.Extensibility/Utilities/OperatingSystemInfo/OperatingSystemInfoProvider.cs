@@ -71,27 +71,27 @@ namespace FabricObserver.Observers.Utilities
         public abstract (long TotalCommitGb, long CommittedInUseMb) TupleGetSystemCommittedMemoryInfo();
 
         /// <summary>
-        /// Compute count of active TCP ports.
+        /// Gets current count of active TCP ports.
         /// </summary>
         /// <param name="processId">Optional: If supplied, then return the number of tcp ports in use by the process.</param>
         /// <param name="configPath">Optional (this is used by Linux callers only - see LinuxInfoProvider.cs): 
         /// If supplied, will use the path to find the Linux Capabilities binary to run this command.</param>
-        /// <returns>Number of active TCP ports in use as integer value.</returns>
-        public abstract int GetActiveTcpPortCount(int processId = -1, string configPath = null);
+        /// <returns>Current number of TCP ports in use as integer value.</returns>
+        public abstract int GetActiveTcpPortCount(int processId = 0, string configPath = null);
 
         /// <summary>
-        /// Compute count of active TCP ports in the dynamic range.
+        /// Gets count of current active TCP ports in the dynamic range.
         /// </summary>
         /// <param name="processId">Optional: If supplied, then return the number of tcp ports in use by the process.</param>
         /// <param name="configPath">Optional (this is used by Linux callers only - see LinuxInfoProvider.cs): 
         /// If supplied, will use the path to find the Linux Capabilities binary to run this command.</param>
-        /// <returns>Number of active TCP ports in use as integer value.</returns>
-        public abstract int GetActiveEphemeralPortCount(int processId = -1, string configPath = null);
+        /// <returns>Current number of TCP ports in use as integer value.</returns>
+        public abstract int GetActiveEphemeralPortCount(int processId = 0, string configPath = null);
 
         /// <summary>
-        /// 
+        /// Gets current dynamic port range information.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Tuple (int LowPort, int HighPort, int NumberOfPorts) containing current port range (low to high) and total number of ports in the dynamic range.</returns>
         public abstract (int LowPort, int HighPort, int NumberOfPorts) TupleGetDynamicPortRange();
 
         /// <summary>
@@ -108,17 +108,31 @@ namespace FabricObserver.Observers.Utilities
         public abstract int GetMaximumConfiguredFileHandlesCount();
 
         /// <summary>
-        /// Returns the Total number of allocated Linux File Handles. Note: This is not implemented for Windows.
+        /// Returns the current Total number of allocated Linux File Handles. Note: This is not implemented for Windows.
         /// </summary>
         /// <returns>int value representing total number of allocated file handles/fds on host OS. For Windows, this always returns -1.</returns>
         public abstract int GetTotalAllocatedFileHandlesCount();
 
         /// <summary>
-        /// Gets the percentage (of total in range) of ephemeral ports currently in use on the machine or by process of supplied pid.
+        /// Gets the percentage (of total in range) of current ephemeral ports currently in use on the machine or by process of supplied pid.
         /// </summary>
         /// <param name="processId">Id of process.</param>
         /// <param name="configPath">Configuration Settings path. This is required by the Linux impl. Ignored for Windows.</param>
-        /// <returns>Percentage of ephemeral ports in use as a double.</returns>
-        public abstract double GetActiveEphemeralPortCountPercentage(int processId = -1, string configPath = null);
+        /// <returns>Percentage of ephemeral TCP ports in use as a double.</returns>
+        public abstract double GetActiveEphemeralPortCountPercentage(int processId = 0, string configPath = null);
+
+        /// <summary>
+        /// Gets total number of current BOUND state TCP ports in the dynamic range (ephemeral ports).
+        /// </summary>
+        /// <param name="processId">Optional: Process identifier.</param>
+        /// <returns>Count of current BOUND state ephemeral TCP ports as an integer.</returns>
+        public abstract int GetBoundStateEphemeralPortCount(int processId = 0);
+
+        /// <summary>
+        /// Gets total number of current BOUND state TCP ports.
+        /// </summary>
+        /// <param name="processId">Optional: Process identifier.</param>
+        /// <returns>Count of current BOUND state TCP ports as an integer.</returns>
+        public abstract int GetBoundStatePortCount(int processId = 0);
     }
 }

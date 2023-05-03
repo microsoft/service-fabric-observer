@@ -302,9 +302,9 @@ namespace FabricObserver.Observers
 
                                 // Get established port count per service.
                                 int procId = (int)rep.HostProcessId;
-                                int ports = -1, ephemeralPorts = -1;
+                                int ports = 0, ephemeralPorts = 0;
 
-                                if (procId > -1)
+                                if (procId > 0)
                                 {
                                     ports = OSInfoProvider.Instance.GetActiveTcpPortCount(procId, OperatingSystem.IsLinux() ? ConfigPackage.Path : null);
                                     ephemeralPorts = OSInfoProvider.Instance.GetActiveEphemeralPortCount(procId, OperatingSystem.IsLinux() ? ConfigPackage.Path : null);
@@ -316,12 +316,12 @@ namespace FabricObserver.Observers
                                 _ = sb.AppendLine("\tProcessModel: " + processModel);
                                 _ = sb.AppendLine("\tServiceManifest Version: " + serviceManifestVersion);
 
-                                if (ports > -1)
+                                if (ports > 0)
                                 {
                                     _ = sb.AppendLine("\tActive Ports: " + ports);
                                 }
 
-                                if (ephemeralPorts > -1)
+                                if (ephemeralPorts > 0)
                                 {
                                     _ = sb.AppendLine("\tActive Ephemeral Ports: " + ephemeralPorts);
                                 }

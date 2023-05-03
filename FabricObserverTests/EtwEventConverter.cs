@@ -33,6 +33,11 @@ namespace FabricObserverTests
             get; private set;
         }
 
+        internal List<NetworkTelemetryData> NetworkTelemetryData
+        {
+            get; private set;
+        }
+
         internal List<NodeTelemetryData> NodeTelemetryData
         {
             get; private set;
@@ -153,6 +158,15 @@ namespace FabricObserverTests
                             {
                                 SystemServiceTelemetryData ??= new List<SystemServiceTelemetryData>();
                                 SystemServiceTelemetryData.Add(sysServiceTelemetryData);
+                            }
+                            break;
+
+                        case ObserverConstants.NetworkObserverName:
+
+                            if (JsonHelper.TryDeserializeObject(json, out NetworkTelemetryData networkTelemetryData))
+                            {
+                                NetworkTelemetryData ??= new List<NetworkTelemetryData>();
+                                NetworkTelemetryData.Add(networkTelemetryData);
                             }
                             break;
 

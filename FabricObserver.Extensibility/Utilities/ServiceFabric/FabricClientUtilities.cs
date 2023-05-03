@@ -39,6 +39,8 @@ namespace FabricObserver.Utilities.ServiceFabric
         private static readonly object lockObj = new();
         private readonly bool isWindows;
         private readonly Logger logger;
+        private static readonly XmlSerializer applicationManifestSerializer = new (typeof(ApplicationManifestType));
+        private static readonly XmlSerializer serviceManifestSerializer = new (typeof(ServiceManifestType));
 
         /// <summary>
         /// The singleton FabricClient instance that is used throughout FabricObserver.
@@ -131,12 +133,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                 ApplicationNameFilter = appNameFilter
             };
 
-            var appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricClientSingleton.QueryManager.GetDeployedApplicationPagedListAsync(
-                                            deployedAppQueryDesc,
-                                            TimeSpan.FromSeconds(120),
-                                            token),
-                                    token);
+            var appList = await FabricClientSingleton.QueryManager.GetDeployedApplicationPagedListAsync(deployedAppQueryDesc, TimeSpan.FromSeconds(120), token);
 
             // DeployedApplicationList is a wrapper around List, but does not support AddRange.. Thus, cast it ToList and add to the temp list, then iterate through it.
             // In reality, this list will never be greater than, say, 1000 apps deployed to a node, but it's a good idea to be prepared since AppObserver supports
@@ -150,12 +147,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                 token.ThrowIfCancellationRequested();
 
                 deployedAppQueryDesc.ContinuationToken = appList.ContinuationToken;
-                appList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricClientSingleton.QueryManager.GetDeployedApplicationPagedListAsync(
-                                            deployedAppQueryDesc,
-                                            TimeSpan.FromSeconds(120),
-                                            token),
-                                    token);
+                appList = await FabricClientSingleton.QueryManager.GetDeployedApplicationPagedListAsync(deployedAppQueryDesc, TimeSpan.FromSeconds(120), token);
 
                 apps.AddRange(appList.ToList());
                 await Task.Delay(250, token);
@@ -180,8 +172,22 @@ namespace FabricObserver.Utilities.ServiceFabric
             if (isWindows && includeChildProcesses)
             {
                 handleToSnapshot = NativeMethods.CreateProcessSnapshot();
-            }
 
+                if (handleToSnapshot.IsInvalid)
+                {
+                    string message = "Can't observe child processes. Failure getting process ids on the system (CreateProcessSnapshot).";
+                    logger.LogWarning(message);
+                    logger.LogEtw(
+                        ObserverConstants.FabricObserverETWEventName,
+                        new
+                        {
+                            Level = "Warning",
+                            Message = message,
+                            Source = "FabricClientUtilities::GetAllDeployedReplicasOrInstances"
+                        });
+                }
+            }
+            
             try
             {
                 foreach (DeployedApplication app in appList)
@@ -190,19 +196,35 @@ namespace FabricObserver.Utilities.ServiceFabric
                     {
                         token.ThrowIfCancellationRequested();
 
-                        var deployedReplicaList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                                           () => FabricClientSingleton.QueryManager.GetDeployedReplicaListAsync(
-                                                                    !string.IsNullOrWhiteSpace(nodeName) ? nodeName : this.nodeName, app.ApplicationName),
-                                                           token);
+                        var deployedReplicaList = 
+                            await FabricClientSingleton.QueryManager.GetDeployedReplicaListAsync(nodeName ?? this.nodeName, app.ApplicationName, null, null, TimeSpan.FromSeconds(60), token);
 
-                        repList.AddRange(
-                                GetInstanceOrReplicaMonitoringList(
+                        if (deployedReplicaList == null || !deployedReplicaList.Any())
+                        {
+                            return null;
+                        }
+
+                        List<DeployedServiceReplica> deployedReplicas;
+
+                        try
+                        {
+                            deployedReplicas = deployedReplicaList.DistinctBy(x => x.HostProcessId).ToList();
+                        }
+                        catch (Exception e) when (e is ArgumentException)
+                        {
+                            return null;
+                        }
+
+                        var repOrInstances = 
+                            GetInstanceOrReplicaMonitoringList(
                                     app.ApplicationName,
                                     app.ApplicationTypeName ?? appList.First(a => a.ApplicationName == app.ApplicationName).ApplicationTypeName,
-                                    deployedReplicaList,
+                                    deployedReplicas,
                                     includeChildProcesses,
                                     handleToSnapshot,
-                                    token));
+                                    token);
+
+                        repList.AddRange(repOrInstances);
                     }
                     catch (Exception e) when (e is ArgumentException or InvalidOperationException)
                     {
@@ -210,14 +232,14 @@ namespace FabricObserver.Utilities.ServiceFabric
                     }
                 }
 
-                return repList.Count > 0 ? repList.Distinct().ToList() : repList;
+                return repList;
             }
             finally
             {
                 if (isWindows && includeChildProcesses)
                 {
-                    handleToSnapshot?.Dispose();
                     GC.KeepAlive(handleToSnapshot);
+                    handleToSnapshot.Dispose();
                     handleToSnapshot = null;
                 }
             }
@@ -235,7 +257,7 @@ namespace FabricObserver.Utilities.ServiceFabric
         private List<ReplicaOrInstanceMonitoringInfo> GetInstanceOrReplicaMonitoringList(
                                                         Uri appName,
                                                         string applicationTypeName,
-                                                        DeployedServiceReplicaList deployedReplicaList,
+                                                        List<DeployedServiceReplica> deployedReplicaList,
                                                         bool includeChildProcesses,
                                                         NativeMethods.SafeObjectHandle handleToSnapshot,
                                                         CancellationToken token)
@@ -256,70 +278,72 @@ namespace FabricObserver.Utilities.ServiceFabric
                 switch (deployedReplica)
                 {
                     case DeployedStatefulServiceReplica statefulReplica when statefulReplica.ReplicaRole is ReplicaRole.Primary or ReplicaRole.ActiveSecondary:
+                    {
+                        replicaInfo = new ReplicaOrInstanceMonitoringInfo
                         {
-                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
-                            {
-                                ApplicationName = appName,
-                                ApplicationTypeName = applicationTypeName,
-                                HostProcessId = statefulReplica.HostProcessId,
-                                ReplicaOrInstanceId = statefulReplica.ReplicaId,
-                                PartitionId = statefulReplica.Partitionid,
-                                ReplicaRole = statefulReplica.ReplicaRole,
-                                ServiceKind = statefulReplica.ServiceKind,
-                                ServiceName = statefulReplica.ServiceName,
-                                ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
-                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(statefulReplica.ServicePackageActivationId) ?
-                                    ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
-                                ReplicaStatus = statefulReplica.ReplicaStatus
-                            };
+                            ApplicationName = appName,
+                            ApplicationTypeName = applicationTypeName,
+                            HostProcessId = statefulReplica.HostProcessId,
+                            ReplicaOrInstanceId = statefulReplica.ReplicaId,
+                            PartitionId = statefulReplica.Partitionid,
+                            ReplicaRole = statefulReplica.ReplicaRole,
+                            ServiceKind = statefulReplica.ServiceKind,
+                            ServiceName = statefulReplica.ServiceName,
+                            ServicePackageActivationId = statefulReplica.ServicePackageActivationId,
+                            ServicePackageActivationMode = string.IsNullOrWhiteSpace(statefulReplica.ServicePackageActivationId) ?
+                                ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
+                            ReplicaStatus = statefulReplica.ReplicaStatus
+                        };
 
-                            /* In order to provide accurate resource usage of an SF service process we need to also account for
-                            any processes (children) that the service process (parent) created/spawned. */
-                            if (includeChildProcesses && !handleToSnapshot.IsInvalid)
-                            {
-                                List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, handleToSnapshot);
+                        /* In order to provide accurate resource usage of an SF service process we need to also account for
+                        any processes (children) that the service process (parent) created/spawned. */
+                        if (includeChildProcesses)
+                        {
+                            List<(string ProcName, int Pid, DateTime ProcessStartTime)> childPids = null;
+                            childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, handleToSnapshot);
 
-                                if (childPids != null && childPids.Count > 0)
-                                {
-                                    replicaInfo.ChildProcesses = childPids;
-                                }
+                            if (childPids != null && childPids.Count > 0)
+                            {
+                                replicaInfo.ChildProcesses = childPids;
                             }
-
-                            break;
                         }
+
+                        break;
+                    }
                     case DeployedStatelessServiceInstance statelessInstance:
+                    {
+                        replicaInfo = new ReplicaOrInstanceMonitoringInfo
                         {
-                            replicaInfo = new ReplicaOrInstanceMonitoringInfo
-                            {
-                                ApplicationName = appName,
-                                ApplicationTypeName = applicationTypeName,
-                                HostProcessId = statelessInstance.HostProcessId,
-                                ReplicaOrInstanceId = statelessInstance.InstanceId,
-                                PartitionId = statelessInstance.Partitionid,
-                                ReplicaRole = ReplicaRole.None,
-                                ServiceKind = statelessInstance.ServiceKind,
-                                ServiceName = statelessInstance.ServiceName,
-                                ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
-                                ServicePackageActivationMode = string.IsNullOrWhiteSpace(statelessInstance.ServicePackageActivationId) ?
-                                    ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
-                                ReplicaStatus = statelessInstance.ReplicaStatus
-                            };
+                            ApplicationName = appName,
+                            ApplicationTypeName = applicationTypeName,
+                            HostProcessId = statelessInstance.HostProcessId,
+                            ReplicaOrInstanceId = statelessInstance.InstanceId,
+                            PartitionId = statelessInstance.Partitionid,
+                            ReplicaRole = ReplicaRole.None,
+                            ServiceKind = statelessInstance.ServiceKind,
+                            ServiceName = statelessInstance.ServiceName,
+                            ServicePackageActivationId = statelessInstance.ServicePackageActivationId,
+                            ServicePackageActivationMode = string.IsNullOrWhiteSpace(statelessInstance.ServicePackageActivationId) ?
+                                ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
+                            ReplicaStatus = statelessInstance.ReplicaStatus
+                        };
 
-                            if (includeChildProcesses && !handleToSnapshot.IsInvalid)
-                            {
-                                List<(string ProcName, int Pid)> childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, handleToSnapshot);
+                        if (includeChildProcesses)
+                        {
+                            List<(string ProcName, int Pid, DateTime ProcessStartTime)> childPids = null;
+                            childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, handleToSnapshot);
 
-                                if (childPids != null && childPids.Count > 0)
-                                {
-                                    replicaInfo.ChildProcesses = childPids;
-                                }
+                            if (childPids != null && childPids.Count > 0)
+                            {
+                                replicaInfo.ChildProcesses = childPids;
                             }
-
-                            break;
                         }
+
+                        break;
+                    }
                 }
 
-                if (replicaInfo?.HostProcessId > 0)
+                if (replicaInfo?.HostProcessId > 0 && !replicaMonitoringList.Any(r => r.HostProcessId == replicaInfo.HostProcessId))
                 {
                     if (isWindows)
                     {
@@ -352,9 +376,9 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// </summary>
         /// <param name="repOrInsts">List of ReplicaOrInstanceMonitoringInfo</param>
         /// <returns>A List of tuple (string ServiceName, string ProcName, int Pid) representing all services supplied in the ReplicaOrInstanceMonitoringInfo instance, including child processes of each service, if any.</returns>
-        public List<(string ServiceName, string ProcName, int Pid)> GetServiceProcessInfo(List<ReplicaOrInstanceMonitoringInfo> repOrInsts)
+        public List<(string ServiceName, string ProcName, int Pid, DateTime ProcessStartTime)> GetServiceProcessInfo(List<ReplicaOrInstanceMonitoringInfo> repOrInsts)
         {
-            List<(string ServiceName, string ProcName, int Pid)> pids = new();
+            List<(string ServiceName, string ProcName, int Pid, DateTime ProcessStartTime)> pids = new();
 
             foreach (var repOrInst in repOrInsts)
             {
@@ -363,22 +387,22 @@ namespace FabricObserver.Utilities.ServiceFabric
                     if (isWindows)
                     {
                         string procName = NativeMethods.GetProcessNameFromId((int)repOrInst.HostProcessId);
-                        pids.Add((repOrInst.ServiceName.OriginalString, procName, (int)repOrInst.HostProcessId));
+                        pids.Add((repOrInst.ServiceName.OriginalString, procName, (int)repOrInst.HostProcessId, NativeMethods.GetProcessStartTime((int)repOrInst.HostProcessId)));
                     }
                     else
                     {
                         using (var proc = Process.GetProcessById((int)repOrInst.HostProcessId))
                         {
-                            pids.Add((repOrInst.ServiceName.OriginalString, proc.ProcessName, (int)repOrInst.HostProcessId));
+                            pids.Add((repOrInst.ServiceName.OriginalString, proc.ProcessName, (int)repOrInst.HostProcessId, proc.StartTime));
                         }
                     }
 
                     // Child processes?
                     if (repOrInst.ChildProcesses != null && repOrInst.ChildProcesses.Count > 0)
                     {
-                        foreach (var (procName, Pid) in repOrInst.ChildProcesses)
+                        foreach (var (procName, Pid, processStartTime) in repOrInst.ChildProcesses)
                         {
-                            pids.Add((repOrInst.ServiceName.OriginalString, procName, Pid));
+                            pids.Add((repOrInst.ServiceName.OriginalString, procName, Pid, processStartTime));
                         }
                     }
                 }
@@ -464,7 +488,7 @@ namespace FabricObserver.Utilities.ServiceFabric
 
         /// <summary>
         /// Processes values for application parameters, returning the specified value in use for application parameter variables.
-        /// If the appParamValue is not a variable name, then the function just returns the supplied appParamValue.
+        /// If the appParamValue is not a variable name or the supplied ApplicationParameterList is null, then the function just returns the supplied appParamValue.
         /// </summary>
         /// <param name="appParamValue">The value of an Application parameter.</param>
         /// <param name="parameters">ApplicationParameterList instance that contains all app parameter values.</param>
@@ -472,23 +496,22 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// else the value specified in appParamValue.</returns>
         public static string ParseAppParameterValue(string appParamValue, ApplicationParameterList parameters)
         {
-            if (!string.IsNullOrWhiteSpace(appParamValue))
+            if (parameters == null || string.IsNullOrWhiteSpace(appParamValue))
             {
-                // Application parameter value specified as a Service Fabric Application Manifest variable.
-                if (appParamValue.StartsWith("["))
-                {
-                    appParamValue = appParamValue.Replace("[", string.Empty).Replace("]", string.Empty);
+                return appParamValue;
+            }
 
-                    if (parameters.TryGetValue(appParamValue, out ApplicationParameter parameter))
-                    {
-                        return parameter.Value;
-                    }
-                    else
-                    {
-                        appParamValue = "0";
-                    }
+            // Application parameter value specified as a Service Fabric Application Manifest variable.
+            if (appParamValue.StartsWith("["))
+            {
+                appParamValue = appParamValue.Replace("[", string.Empty).Replace("]", string.Empty);
+
+                if (parameters.TryGetValue(appParamValue, out ApplicationParameter parameter))
+                {
+                    return parameter.Value;
                 }
             }
+            
             return appParamValue;
         }
 
@@ -499,13 +522,23 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// <param name="fromParameters">ApplicationParameterList to be used</param>
         public static void AddParametersIfNotExists(ApplicationParameterList toParameters, ApplicationParameterList fromParameters)
         {
+            // If toParameters is passed in as null, then make it a new instance.
+            toParameters ??= new ApplicationParameterList();
+
             if (fromParameters != null)
             {
                 foreach (var parameter in fromParameters)
                 {
-                    if (!toParameters.Contains(parameter.Name))
+                    try
                     {
-                        toParameters.Add(new ApplicationParameter() { Name = parameter.Name, Value = parameter.Value });
+                        if (!toParameters.Contains(parameter.Name))
+                        {
+                            toParameters.Add(new ApplicationParameter() { Name = parameter.Name, Value = parameter.Value });
+                        }
+                    }
+                    catch (ArgumentException)
+                    {
+
                     }
                 }
             }
@@ -554,7 +587,7 @@ namespace FabricObserver.Utilities.ServiceFabric
             }
 
             // Parse XML to find the necessary policy
-            var applicationManifestSerializer = new XmlSerializer(typeof(ApplicationManifestType));
+            
             ApplicationManifestType applicationManifest = null;
 
             using (var sreader = new StringReader(appManifestXml))
@@ -609,7 +642,7 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// <param name="codepackageName">Code Package name</param>
         /// <param name="parameters">Application Parameter List, populated with both application and default parameters</param>
         /// <returns>A Tuple containing a boolean value (whether or not RG cpu is enabled) and a double value (the absolute limit in cores)</returns>
-        public (bool IsCpuRGEnabled, double CpuLimitCores) TupleGetCpuResourceGovernanceInfo(string appManifestXml, string servicePkgName, string codepackageName, ApplicationParameterList parameters)
+        public (bool IsCpuRGEnabled, double CpuLimitCores) TupleGetCpuResourceGovernanceInfo(string appManifestXml, string svcManifestXml, string servicePkgName, string codepackageName, ApplicationParameterList parameters)
         {
             logger.LogInfo("Starting TupleGetCpuResourceGovernanceInfo.");
 
@@ -622,6 +655,12 @@ namespace FabricObserver.Utilities.ServiceFabric
             if (string.IsNullOrWhiteSpace(appManifestXml))
             {
                 logger.LogInfo($"Invalid value for {nameof(appManifestXml)}: {appManifestXml}. Exiting TupleGetCpuResourceGovernanceInfo.");
+                return (false, 0);
+            }
+
+            if (string.IsNullOrWhiteSpace(svcManifestXml))
+            {
+                logger.LogInfo($"Invalid value for {nameof(svcManifestXml)}: {svcManifestXml}. Exiting TupleGetCpuResourceGovernanceInfo.");
                 return (false, 0);
             }
 
@@ -639,14 +678,14 @@ namespace FabricObserver.Utilities.ServiceFabric
 
             // TOTHINK: Shouldn't this also contain a check for "ServicePackageResourceGovernancePolicy" node?
             // Don't waste cycles with XML parsing if you can easily get a hint first..
-            if (!appManifestXml.Contains($"<{ObserverConstants.RGPolicyNodeName} "))
+            if (!appManifestXml.Contains($"<{ObserverConstants.RGPolicyNodeName} ") && !appManifestXml.Contains($"<{ObserverConstants.RGSvcPkgPolicyNodeName} "))
             {
                 return (false, 0);
             }
 
 
             // Parse XML to find the necessary policies
-            var applicationManifestSerializer = new XmlSerializer(typeof(ApplicationManifestType));
+
             ApplicationManifestType applicationManifest = null;
 
             using (var sreader = new StringReader(appManifestXml))
@@ -654,6 +693,15 @@ namespace FabricObserver.Utilities.ServiceFabric
                 applicationManifest = (ApplicationManifestType)applicationManifestSerializer.Deserialize(sreader);
             }
 
+            // We need the service manifest to get the code package count
+
+            ServiceManifestType serviceManifest = null;
+
+            using (var sreader = new StringReader(svcManifestXml))
+            {
+                serviceManifest = (ServiceManifestType)serviceManifestSerializer.Deserialize(sreader);
+            }
+                
             foreach (var import in applicationManifest.ServiceManifestImport)
             {
                 if (import.ServiceManifestRef.ServiceManifestName == servicePkgName)
@@ -663,6 +711,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                         double TotalCpuCores = 0;
                         double CpuShares = 0;
                         double CpuSharesSum = 0;
+                        int RGPoliciesCount = 0;
 
                         for (int policyIndex = 0; policyIndex < import.Policies.Length; policyIndex++)
                         {
@@ -670,6 +719,7 @@ namespace FabricObserver.Utilities.ServiceFabric
 
                             if (policy is ResourceGovernancePolicyType resourceGovernancePolicy)
                             {
+                                RGPoliciesCount++;
                                 resourceGovernancePolicy.CpuShares = ParseAppParameterValue(resourceGovernancePolicy.CpuShares, parameters);
 
                                 if (string.IsNullOrWhiteSpace(resourceGovernancePolicy.CpuShares))
@@ -728,6 +778,15 @@ namespace FabricObserver.Utilities.ServiceFabric
                         }
                         else
                         {
+                            // If we didn't find the RG policy for the required CodePackage, we assign it the default.
+                            if (CpuShares == 0)
+                            {
+                                CpuShares = 1;
+                            }
+
+                            // We need to count all CodePackages which don't have an RG policy defined. 
+                            CpuSharesSum += serviceManifest.CodePackage.Length - RGPoliciesCount; 
+
                             double CpuLimitCores = TotalCpuCores * CpuShares / CpuSharesSum;
                             return (true, CpuLimitCores);
                         }
@@ -765,13 +824,10 @@ namespace FabricObserver.Utilities.ServiceFabric
                 };
 
                 ClusterHealth clusterHealth =
-                    await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                            () =>
-                                FabricClientSingleton.HealthManager.GetClusterHealthAsync(
-                                    clusterQueryDesc,
-                                    TimeSpan.FromSeconds(90),
-                                    cancellationToken),
-                             cancellationToken);
+                        await FabricClientSingleton.HealthManager.GetClusterHealthAsync(
+                                clusterQueryDesc,
+                                TimeSpan.FromSeconds(90),
+                                cancellationToken);
 
                 // Cluster is healthy. Nothing to do here.
                 if (clusterHealth.AggregatedHealthState == HealthState.Ok)
@@ -789,7 +845,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                     catch (Exception e) when (e is FabricException or TimeoutException)
                     {
 #if DEBUG
-                        logger.LogInfo($"Handled Exception in ReportClusterHealthAsync::Node:{Environment.NewLine}{e.Message}");
+                        logger.LogInfo($"Handled Exception in ReportClusterHealthAsync::Node: {e.Message}");
 #endif
                     }
                 }
@@ -812,7 +868,10 @@ namespace FabricObserver.Utilities.ServiceFabric
                                         TimeSpan.FromSeconds(90),
                                         cancellationToken);
 
-                            if (appHealth.ServiceHealthStates != null && appHealth.ServiceHealthStates.Count > 0)
+
+                            if (appHealth.ServiceHealthStates != null && 
+                                appHealth.ServiceHealthStates.Any(
+                                    s => s.AggregatedHealthState == HealthState.Error || s.AggregatedHealthState == HealthState.Warning))
                             {
                                 foreach (var service in appHealth.ServiceHealthStates)
                                 {
@@ -824,15 +883,15 @@ namespace FabricObserver.Utilities.ServiceFabric
                                     await RemoveServiceHealthReportsAsync(service, ignoreDefaultQueryTimeout, cancellationToken);
                                 }
                             }
-                            else
-                            {
-                                await RemoveApplicationHealthReportsAsync(app, ignoreDefaultQueryTimeout, cancellationToken);
-                            }
+                            
+                            // NetworkObserver/FSO.
+                            await RemoveApplicationHealthReportsAsync(app, ignoreDefaultQueryTimeout, cancellationToken);
+                            
                         }
                         catch (Exception e) when (e is FabricException or TimeoutException)
                         {
 #if DEBUG
-                            logger.LogInfo($"Handled Exception in ReportClusterHealthAsync::Application:{Environment.NewLine}{e.Message}");
+                            logger.LogInfo($"Handled Exception in ReportClusterHealthAsync::Application: {e.Message}");
 #endif
                         }
                     }
@@ -840,14 +899,14 @@ namespace FabricObserver.Utilities.ServiceFabric
             }
             catch (Exception e) when (e is FabricException or TimeoutException)
             {
-                string msg = $"Handled transient exception in ReportClusterHealthAsync:{Environment.NewLine}{e}";
+                string msg = $"Handled transient exception in ClearFabricObserverHealthReportsAsync: {e.Message}";
 
                 // Log it locally.
                 logger.LogWarning(msg);
             }
             catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
-                string msg = $"Unhandled exception in ReportClusterHealthAsync:{Environment.NewLine}{e}";
+                string msg = $"Unhandled exception in ClearFabricObserverHealthReportsAsync:{Environment.NewLine}{e}";
 
                 // Log it locally.
                 logger.LogError(msg);
@@ -871,14 +930,12 @@ namespace FabricObserver.Utilities.ServiceFabric
                     ExcludeHealthStatistics = false
                 }
             };
-            var serviceHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricClientSingleton.HealthManager.GetServiceHealthAsync(
-                                            serviceHealthQueryDescription,
-                                            ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(90),
-                                            cancellationToken),
-                                    cancellationToken);
+            var serviceHealth = await FabricClientSingleton.HealthManager.GetServiceHealthAsync(
+                                        serviceHealthQueryDescription,
+                                        ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(90),
+                                        cancellationToken);
 
-            if (serviceHealth == null)
+            if (serviceHealth == null || serviceHealth.AggregatedHealthState == HealthState.Ok)
             {
                 return;
             }
@@ -907,15 +964,13 @@ namespace FabricObserver.Utilities.ServiceFabric
             };
             ObserverHealthReporter healthReporter = new(logger);
 
-            foreach (HealthEvent healthEvent in serviceHealthEvents.OrderByDescending(f => f.SourceUtcTimestamp))
+            foreach (HealthEvent healthEvent in serviceHealthEvents)
             {
                 try
                 {
                     healthReport.Property = healthEvent.HealthInformation.Property;
                     healthReport.SourceId = healthEvent.HealthInformation.SourceId;
                     healthReporter.ReportHealthToServiceFabric(healthReport);
-
-                    await Task.Delay(150);
                 }
                 catch (FabricException)
                 {
@@ -926,14 +981,12 @@ namespace FabricObserver.Utilities.ServiceFabric
 
         private async Task RemoveApplicationHealthReportsAsync(ApplicationHealthState app, bool ignoreDefaultQueryTimeout, CancellationToken cancellationToken)
         {
-            var appHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                    () => FabricClientSingleton.HealthManager.GetApplicationHealthAsync(
-                                            app.ApplicationName,
-                                            ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(90),
-                                            cancellationToken),
+            var appHealth = await FabricClientSingleton.HealthManager.GetApplicationHealthAsync(
+                                    app.ApplicationName,
+                                    ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(90),
                                     cancellationToken);
 
-            if (appHealth == null)
+            if (appHealth == null || appHealth.AggregatedHealthState == HealthState.Ok)
             {
                 return;
             }
@@ -963,15 +1016,13 @@ namespace FabricObserver.Utilities.ServiceFabric
             };
             ObserverHealthReporter healthReporter = new(logger);
 
-            foreach (HealthEvent healthEvent in appHealthEvents.OrderByDescending(f => f.SourceUtcTimestamp))
+            foreach (HealthEvent healthEvent in appHealthEvents)
             {
                 try
                 {
                     healthReport.Property = healthEvent.HealthInformation.Property;
                     healthReport.SourceId = healthEvent.HealthInformation.SourceId;
                     healthReporter.ReportHealthToServiceFabric(healthReport);
-
-                    await Task.Delay(150);
                 }
                 catch (FabricException)
                 {
@@ -987,14 +1038,12 @@ namespace FabricObserver.Utilities.ServiceFabric
 
             foreach (var nodeHealthState in nodeHealthStates)
             {
-                var nodeHealth = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                        () => FabricClientSingleton.HealthManager.GetNodeHealthAsync(
-                                                nodeHealthState.NodeName,
-                                                ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(90),
-                                                cancellationToken),
+                var nodeHealth = await FabricClientSingleton.HealthManager.GetNodeHealthAsync(
+                                        nodeHealthState.NodeName,
+                                        ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : TimeSpan.FromSeconds(90), 
                                         cancellationToken);
 
-                if (nodeHealth == null)
+                if (nodeHealth == null || nodeHealth.AggregatedHealthState == HealthState.Ok)
                 {
                     return;
                 }
@@ -1029,8 +1078,6 @@ namespace FabricObserver.Utilities.ServiceFabric
                         healthReport.Property = healthEvent.HealthInformation.Property;
                         healthReport.SourceId = healthEvent.HealthInformation.SourceId;
                         healthReporter.ReportHealthToServiceFabric(healthReport);
-
-                        await Task.Delay(150);
                     }
                     catch (FabricException)
                     {
