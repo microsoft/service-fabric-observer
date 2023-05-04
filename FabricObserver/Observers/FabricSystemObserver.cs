@@ -1048,10 +1048,16 @@ namespace FabricObserver.Observers
                     }
 
                     TimeSpan duration = TimeSpan.FromSeconds(1);
+                    TimeSpan sleep = TimeSpan.FromMilliseconds(150);
 
                     if (MonitorDuration > TimeSpan.MinValue)
                     {
                         duration = MonitorDuration;
+                    }
+
+                    if(MonitorSleepDuration > TimeSpan.MinValue)
+                    {
+                        sleep = MonitorSleepDuration;
                     }
 
                     Stopwatch timer = Stopwatch.StartNew();
@@ -1073,7 +1079,7 @@ namespace FabricObserver.Observers
                                 }
                             }
 
-                            await Task.Delay(150, Token);
+                            await Task.Delay(sleep, Token);
                         }
                         catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
                         {

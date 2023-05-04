@@ -78,9 +78,14 @@
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
     <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00): How long an observer should monitor CPU usage per target (process or machine).
          This setting only applies to 3 observers.  -->
-    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:02" />
+    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:10" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:05" />
     <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:05" />
+    <!-- Monitor Sleep Durations (Milliseconds, e.g. 50): How long an observer should wait between consecutive CPU usage collection for the same target (process or machine).
+         This setting only applies to 3 observers.  -->
+    <Parameter Name="AppObserverMonitorSleepDurationMilliseconds" DefaultValue="50" />
+    <Parameter Name="FabricSystemObserverMonitorSleepDurationMilliseconds" DefaultValue="150" />
+    <Parameter Name="NodeObserverMonitorSleepDurationMilliseconds" DefaultValue="1000" />
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00): How often an enabled observer should run. -->
     <Parameter Name="AppObserverRunInterval" DefaultValue="" />
     <Parameter Name="AzureStorageUploadObserverRunInterval" DefaultValue="00:05:00" />
@@ -244,6 +249,7 @@
             <Parameter Name="EnableTelemetry" Value="[AppObserverEnableTelemetry]" />
             <Parameter Name="EnableVerboseLogging" Value="[AppObserverEnableVerboseLogging]" />
             <Parameter Name="MonitorDuration" Value="[AppObserverMonitorDuration]" />
+            <Parameter Name="MonitorSleepDurationMilliseconds" Value="[AppObserverMonitorSleepDurationMilliseconds]" />
             <Parameter Name="RunInterval" Value="[AppObserverRunInterval]" />
             <Parameter Name="ConfigurationFileName" Value="[AppObserverConfigurationFile]" />
             <Parameter Name="MonitorPrivateWorkingSet" Value="[AppObserverMonitorPrivateWorkingSet]" />
@@ -293,6 +299,7 @@
             <Parameter Name="EnableTelemetry" Value="[FabricSystemObserverEnableTelemetry]" />
             <Parameter Name="EnableVerboseLogging" Value="[FabricSystemObserverEnableVerboseLogging]" />
             <Parameter Name="MonitorDuration" Value="[FabricSystemObserverMonitorDuration]" />
+            <Parameter Name="MonitorSleepDurationMilliseconds" Value="[FabricSystemObserverMonitorSleepDurationMilliseconds]" />
             <Parameter Name="RunInterval" Value="[FabricSystemObserverRunInterval]" />
             <Parameter Name="MonitorPrivateWorkingSet" Value="[FabricSystemObserverMonitorPrivateWorkingSet]" />
             <Parameter Name="UseCircularBuffer" Value="[FabricSystemObserverUseCircularBuffer]" />
@@ -331,6 +338,7 @@
             <Parameter Name="EnableNodeSnapshot" Value="[NodeObserverEnableNodeSnapshot]" />
             <Parameter Name="EnableVerboseLogging" Value="[NodeObserverEnableVerboseLogging]" />
             <Parameter Name="MonitorDuration" Value="[NodeObserverMonitorDuration]" />
+            <Parameter Name="MonitorSleepDurationMilliseconds" Value="[NodeObserverMonitorSleepDurationMilliseconds]" />
             <Parameter Name="RunInterval" Value="[NodeObserverRunInterval]" />
             <Parameter Name="UseCircularBuffer" Value="[NodeObserverUseCircularBuffer]" />
             <!-- Required-If UseCircularBuffer = True -->

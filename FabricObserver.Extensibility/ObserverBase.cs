@@ -332,6 +332,18 @@ namespace FabricObserver.Observers
             }
         }
 
+        public TimeSpan MonitorSleepDuration
+        {
+            get => ConfigurationSettings?.MonitorSleepDuration ?? TimeSpan.MinValue;
+            set
+            {
+                if (ConfigurationSettings != null)
+                {
+                    ConfigurationSettings.MonitorSleepDuration = value;
+                }
+            }
+        }
+
         protected bool IsTelemetryProviderEnabled
         {
             get; set;
