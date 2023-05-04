@@ -34,7 +34,7 @@ namespace FabricObserver.Observers.Utilities
         private static PerformanceCounter internalProcNameCounter = null;
         private static PerformanceCounter lvidCounter = null;
         private static PerformanceCounterCategory performanceCounterCategory = null;
-        public readonly static ConcurrentDictionary<int, (string procName, string instanceName, DateTime processStartTime)> InstanceNameDictionary = new();
+        public readonly static ConcurrentDictionary<string, (string procName, int procId, DateTime processStartTime)> InstanceNameDictionary = new();
 
         private static PerformanceCounter ProcessWorkingSetCounter
         {
@@ -250,12 +250,14 @@ namespace FabricObserver.Observers.Utilities
             return childProcesses;
         }
 
-        private static List<(string procName, int pid, DateTime ProcessStartTime)> TupleGetChildProcessesWin32(int processId, NativeMethods.SafeObjectHandle handleToSnapshot)
+        private static List<(string procName, int pid, DateTime ProcessStartTime)> 
+            TupleGetChildProcessesWin32(int processId, NativeMethods.SafeObjectHandle handleToSnapshot)
         {
             try
             {
                 string parentProcName = NativeMethods.GetProcessNameFromId(processId);
-                List<(string procName, int procId, DateTime ProcessStartTime)> childProcs = NativeMethods.GetChildProcesses(processId, parentProcName, handleToSnapshot);
+                List<(string procName, int procId, DateTime ProcessStartTime)> childProcs =
+                    NativeMethods.GetChildProcesses(processId, parentProcName, handleToSnapshot);
 
                 if (childProcs == null || childProcs.Count == 0)
                 {
@@ -267,7 +269,8 @@ namespace FabricObserver.Observers.Utilities
 
             catch (Win32Exception we) // e.g., process is no longer running.
             {
-                ProcessInfoLogger.LogWarning($"Handled Exception in TupleGetChildProcessesWin32: {we.Message}. Error code: {we.NativeErrorCode}. Process Id: {processId}");
+                ProcessInfoLogger.LogWarning($"Handled Exception in TupleGetChildProcessesWin32: {we.Message}. " +
+                                             $"Error code: {we.NativeErrorCode}. Process Id: {processId}");
             }
             catch (Exception e)
             {
@@ -293,7 +296,7 @@ namespace FabricObserver.Observers.Utilities
                 // This is the case when the caller expects there could be multiple instances of the same process.
                 if (procId > 0)
                 {
-                    int procCount = Process.GetProcessesByName(procName).Length;
+                    int procCount = NativeMethods.GetSFUserServiceProcessCountByName(procName);
 
                     if (procCount == 0)
                     {
@@ -484,7 +487,7 @@ namespace FabricObserver.Observers.Utilities
                     return 0F;
                 }
             }
-            catch (Win32Exception ex) // Doesn't throw this anymore. Change this in (3.2.8).
+            catch (Win32Exception ex) 
             {
                 // The related Observer will have logged any privilege related failure.
                 if (ex.NativeErrorCode != 5)
@@ -566,7 +569,7 @@ namespace FabricObserver.Observers.Utilities
                 {
                     ProcessWorkingSetCounter.InstanceName = internalProcName;
                     _ = ProcessWorkingSetCounter.RawValue;
-                    Thread.Sleep(150);
+                    Thread.Sleep(1000);
 
                     return ProcessWorkingSetCounter.NextValue() / 1024 / 1024;
                 }
@@ -614,8 +617,13 @@ namespace FabricObserver.Observers.Utilities
                     return null;
                 }
 
-                // TODO: Don't use .net Process here. Write a new NativeMethods function to do this with less overhead, with less CPU. (3.2.8)
-                int procCount = Process.GetProcessesByName(procName).Length;
+                int procCount = NativeMethods.GetSFUserServiceProcessCountByName(procName);
+
+                if (procCount == 0)
+                {
+                    ProcessInfoLogger.LogInfo($"GetInternalProcessName: Process Name ({procName}) is no longer mapped to supplied ID ({pid}).");
+                    return null;
+                }
 
                 if (procCount == 1)
                 {
@@ -654,18 +662,39 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                if (InstanceNameDictionary != null && InstanceNameDictionary.ContainsKey(pid))
+                if (InstanceNameDictionary != null && InstanceNameDictionary.Any(p => p.Value.procName == procName))
                 {
-                    string instanceName = InstanceNameDictionary[pid].instanceName;
-                    DateTime processStartTime = InstanceNameDictionary[pid].processStartTime;
+                    var instanceData = InstanceNameDictionary.Where(p => p.Value.procName == procName).ToArray();
 
-                    if (InstanceNameDictionary[pid].procName == procName && NativeMethods.GetProcessStartTime(pid).Equals(processStartTime)) 
-                    { 
-                        return InstanceNameDictionary[pid].instanceName;
-                    }
-                    else
+                    if (instanceData.Any(p => p.Value.procId == pid))
                     {
-                        _ = InstanceNameDictionary.TryRemove(pid, out _);
+                        for (int i = 0; i < instanceData.Length; ++i)
+                        {
+                            var instance = instanceData[i];
+                            DateTime processStartTime = instance.Value.processStartTime;
+                            string processName = instance.Value.procName;
+                            string key = instance.Key;
+
+                            if (instance.Value.procId == pid)
+                            {
+                                // Same process?
+                                if (NativeMethods.GetProcessNameFromId(pid) == processName && NativeMethods.GetProcessStartTime(pid) == processStartTime)
+                                {
+                                    return instance.Key;
+                                }
+
+                                // Remove from cache.
+                                _ = InstanceNameDictionary.TryRemove(key, out _);
+                            }
+                        }
+                    }
+
+                    // If we get here, then none of the related processes are current. Remove all related existing instance names from the cache.
+                    for (int i = 0; i < instanceData.Length; ++i)
+                    {
+                        var instance = instanceData[i];
+                        string key = instance.Key;
+                        _ = InstanceNameDictionary.TryRemove(key, out _);
                     }
                 }
 
@@ -687,7 +716,7 @@ namespace FabricObserver.Observers.Utilities
                                 continue;
                             }
 
-                            _ = InstanceNameDictionary.TryAdd(pid, (procName, instance, NativeMethods.GetProcessStartTime(pid)));
+                            _ = InstanceNameDictionary.TryAdd(instance, (procName, pid, NativeMethods.GetProcessStartTime(pid)));
                             return instance;
                         }
                     }

@@ -77,7 +77,7 @@ namespace FabricObserver.Observers
         private string fileName;
         private int appCount;
         private int serviceCount;
-        private bool createDescendantProcCacheSucceeded;
+        private bool createSFUserProcCacheSucceeded;
 
         // ReplicaOrInstanceList is the List of all replicas or instances that will be monitored during the current run.
         // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
@@ -141,7 +141,7 @@ namespace FabricObserver.Observers
                 }
 
                 // If the more performant approach (see NativeMethods.cs) for getting child processes succeeded, then don't proceed.
-                if (createDescendantProcCacheSucceeded)
+                if (createSFUserProcCacheSucceeded)
                 {
                     return null;
                 }
@@ -972,10 +972,10 @@ namespace FabricObserver.Observers
             // Set properties with Application Parameter settings (housed in ApplicationManifest.xml) for this run.
             SetPropertiesFromApplicationSettings();
 
-            if (IsWindows && EnableChildProcessMonitoring)
+            if (IsWindows)
             {
-                // RefreshSFUserChildProcessDataCache returns false it means the internal impl failed.
-                createDescendantProcCacheSucceeded = NativeMethods.RefreshSFUserChildProcessDataCache();
+                // RefreshSFUserProcessDataCache returns false it means the internal impl failed.
+                createSFUserProcCacheSucceeded = NativeMethods.RefreshSFUserProcessDataCache();
             }
 
             // Process JSON object configuration settings (housed in [AppObserver.config].json) for this run.
@@ -3049,7 +3049,6 @@ namespace FabricObserver.Observers
                             ApplicationName = appName,
                             ApplicationTypeName = appTypeName,
                             HostProcessId = statefulReplica.HostProcessId,
-                            HostProcessStartTime = GetProcessStartTime((int)statefulReplica.HostProcessId),
                             ReplicaOrInstanceId = statefulReplica.ReplicaId,
                             PartitionId = statefulReplica.Partitionid,
                             ReplicaRole = statefulReplica.ReplicaRole,
@@ -3102,7 +3101,6 @@ namespace FabricObserver.Observers
                             ApplicationName = appName,
                             ApplicationTypeName = appTypeName,
                             HostProcessId = statelessInstance.HostProcessId,
-                            HostProcessStartTime = GetProcessStartTime((int)statelessInstance.HostProcessId),
                             ReplicaOrInstanceId = statelessInstance.InstanceId,
                             PartitionId = statelessInstance.Partitionid,
                             ReplicaRole = ReplicaRole.None,
@@ -3137,12 +3135,15 @@ namespace FabricObserver.Observers
 
                 if (replicaInfo != null && replicaInfo.HostProcessId > 0 && !ReplicaOrInstanceList.Any(r => r.HostProcessId == replicaInfo.HostProcessId))
                 {
+                    // This will be DateTime.MinValue when the target process is inaccessible due to user privilege.
+                    replicaInfo.HostProcessStartTime = GetProcessStartTime((int)replicaInfo.HostProcessId);
+
                     if (IsWindows)
                     {
                         // This will be null if GetProcessNameFromId fails. It will fail when the target process is inaccessible due to user privilege.
                         replicaInfo.HostProcessName = NativeMethods.GetProcessNameFromId((int)replicaInfo.HostProcessId);
 
-                        if (replicaInfo.HostProcessName == null)
+                        if (replicaInfo.HostProcessName == null || replicaInfo.HostProcessStartTime == DateTime.MinValue)
                         {
                             SendServiceProcessElevatedWarning(replicaInfo.ApplicationName.OriginalString, replicaInfo.ServiceName.OriginalString);
                             return;
@@ -3808,9 +3809,9 @@ namespace FabricObserver.Observers
                     handleToProcSnapshot = null;
                 }
 
-                if (createDescendantProcCacheSucceeded)
+                if (createSFUserProcCacheSucceeded)
                 {
-                    NativeMethods.ClearSFUserChildProcessDataCache();
+                    NativeMethods.ClearSFUserProcessDataCache();
                 }
             }
             ObserverLogger.LogInfo("Completed CleanUp...");
