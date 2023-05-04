@@ -22,7 +22,6 @@ using System.Fabric.Health;
 using System.Fabric.Query;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
