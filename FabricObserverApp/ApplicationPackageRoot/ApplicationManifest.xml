@@ -91,8 +91,8 @@
     <Parameter Name="AzureStorageUploadObserverRunInterval" DefaultValue="00:05:00" />
     <Parameter Name="CertificateObserverRunInterval" DefaultValue="1.00:00:00" />
     <Parameter Name="ContainerObserverRunInterval" DefaultValue="" />
-    <Parameter Name="DiskObserverRunInterval" DefaultValue="" />
-    <Parameter Name="FabricSystemObserverRunInterval" DefaultValue="" />
+    <Parameter Name="DiskObserverRunInterval" DefaultValue="00:15:00" />
+    <Parameter Name="FabricSystemObserverRunInterval" DefaultValue="00:15:00" />
     <Parameter Name="NetworkObserverRunInterval" DefaultValue="" />
     <Parameter Name="NodeObserverRunInterval" DefaultValue="" />
     <Parameter Name="OSObserverRunInterval" DefaultValue="00:15:00" />
@@ -133,15 +133,15 @@
     <!-- KVS LVID Usage Monitoring - Windows-only.
          NOTE: If you monitor stateful Actor services, then you should set this to true.
          This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
-    <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="true" />
+    <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
     <!-- Windows-only: Process Working Set type for AppObserver to monitor. 
          Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). 
          NOTE: If you have *several* service processes of the **same name**, setting this to true will add *significant* time-to-completion and increased CPU usage (small, but more than necessary) to AppObserver. 
-         FO will automatically compute Shared + Private memory usage if it detects 50 or more same-named service processes, regardless of this setting.-->
-    <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="false" />
+         FO will automatically compute Shared + Private memory usage if it detects 50 or more same-named service processes, regardless of this setting. -->
+    <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
     <!-- Windows-only. AppObserver can monitor services with resource governance limits set and put related services into Warning if they reach 90% of the specified limit (only Memory limit is supported in this release). 
          If you set RG Memory limits for your service code packages, then you should consider enabling this feature. Else, don't. -->
-    <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="true" />
+    <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="false" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
