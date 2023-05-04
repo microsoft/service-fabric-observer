@@ -697,10 +697,16 @@ namespace FabricObserver.Observers
                 }
 
                 TimeSpan duration = TimeSpan.FromSeconds(10);
+                TimeSpan sleep = TimeSpan.FromMilliseconds(1000);
 
                 if (MonitorDuration > TimeSpan.MinValue)
                 {
                     duration = MonitorDuration;
+                }
+
+                if (MonitorSleepDuration > TimeSpan.MinValue)
+                {
+                    sleep = MonitorSleepDuration;
                 }
 
                 // OS-level file handle monitoring only makes sense for Linux, where the Maximum system-wide number of handles the kernel will allocate is a user-configurable setting.
@@ -799,7 +805,7 @@ namespace FabricObserver.Observers
 
                 // Warm up counter.
                 _ = CpuUtilizationProvider.Instance.GetProcessorTimePercentage();
-                await Task.Delay(1000, Token);
+                await Task.Delay(sleep, Token);
 
                 timer.Start();
                 
@@ -813,7 +819,7 @@ namespace FabricObserver.Observers
                          CpuTimeData.AddData(CpuUtilizationProvider.Instance.GetProcessorTimePercentage());
                     }
 
-                    await Task.Delay(1000, Token);
+                    await Task.Delay(sleep, Token);
                 }
 
                 timer.Stop();

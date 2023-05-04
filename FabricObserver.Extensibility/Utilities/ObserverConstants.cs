@@ -51,6 +51,7 @@ namespace FabricObserver.Observers.Utilities
         public const string DataCapacityParameter = "ResourceUsageDataCapacity";
         public const string UseCircularBufferParameter = "UseCircularBuffer";
         public const string MonitorDurationParameter = "MonitorDuration";
+        public const string MonitorSleepDurationParameter = "MonitorSleepDurationMilliseconds";
         public const string MaxArchivedCsvFileLifetimeDaysParameter = "MaxArchivedCsvFileLifetimeDays";
         public const string MaxArchivedLogFileLifetimeDaysParameter = "MaxArchivedLogFileLifetimeDays";
         public const string CsvFileWriteFormatParameter = "CsvFileWriteFormat";

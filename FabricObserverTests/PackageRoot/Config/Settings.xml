@@ -34,6 +34,7 @@
 		<Parameter Name="EnableKvsLvidMonitoring" Value="false" />
 		<Parameter Name="EnableVerboseLogging" Value="false" />
 		<Parameter Name="MonitorDuration" Value="00:00:10" />
+    <Parameter Name="MonitorSleepDurationMilliseconds" Value="500"/>
 		<Parameter Name="RunInterval" Value="" />
 		<Parameter Name="ConfigurationFileName" Value="AppObserver.config.json" />
 		<Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
@@ -81,6 +82,7 @@
 		<Parameter Name="EnableCSVDataLogging" Value="" />
 		<Parameter Name="EnableVerboseLogging" Value="" />
 		<Parameter Name="MonitorDuration" Value="" />
+		<Parameter Name="MonitorSleepDurationMilliseconds" Value="" />
 		<Parameter Name="RunInterval" Value="" />
 		<Parameter Name="MonitorPrivateWorkingSet" Value="true" />
 		<Parameter Name="UseCircularBuffer" Value="" />
@@ -116,6 +118,7 @@
 		<Parameter Name="EnableNodeSnapshot" Value="true" />
 		<Parameter Name="EnableVerboseLogging" Value="" />
 		<Parameter Name="MonitorDuration" Value="" />
+		<Parameter Name="MonitorSleepDurationMilliseconds" Value="" />
 		<Parameter Name="RunInterval" Value="" />
 		<Parameter Name="UseCircularBuffer" Value="" />
 		<Parameter Name="ResourceUsageDataCapacity" Value=""/>

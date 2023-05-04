@@ -23,6 +23,11 @@ namespace FabricObserver.Observers.Utilities
             get; set;
         }
 
+        public TimeSpan MonitorSleepDuration
+        {
+            get; set;
+        }
+
         // Default enablement for any observer is enabled (true).
         public bool IsEnabled
         {
@@ -146,6 +151,15 @@ namespace FabricObserver.Observers.Utilities
                 MonitorDuration = monitorDuration;
             }
 
+            // Monitor sleep duration.
+            if (int.TryParse(
+                    GetConfigSettingValue(
+                    ObserverConstants.MonitorSleepDurationParameter),
+                    out int monitorSleepDuration))
+            {
+                MonitorSleepDuration = TimeSpan.FromMilliseconds(monitorSleepDuration);
+            }
+
             // Async cluster operation timeout setting..
             if (int.TryParse(
                     GetConfigSettingValue(
@@ -223,6 +237,15 @@ namespace FabricObserver.Observers.Utilities
                     if (TimeSpan.TryParse(prop.Value, out TimeSpan monitorDuration))
                     {
                         MonitorDuration = monitorDuration;
+                    }
+                }
+
+                // Monitor sleep duration.
+                else if (prop.Name == ObserverConstants.MonitorSleepDurationParameter)
+                {
+                    if (TimeSpan.TryParse(prop.Value, out TimeSpan monitorSleepDuration))
+                    {
+                        MonitorSleepDuration = monitorSleepDuration;
                     }
                 }
 

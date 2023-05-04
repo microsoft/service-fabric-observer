@@ -2404,11 +2404,17 @@ namespace FabricObserver.Observers
                     return;
                 }
 
-                TimeSpan maxDuration = TimeSpan.FromSeconds(1);
+                TimeSpan duration = TimeSpan.FromSeconds(1);
+                TimeSpan sleep = TimeSpan.FromMilliseconds(50);
 
                 if (MonitorDuration > TimeSpan.MinValue)
                 {
-                    maxDuration = MonitorDuration;
+                    duration = MonitorDuration;
+                }
+
+                if (MonitorSleepDuration > TimeSpan.MinValue)
+                {
+                    sleep = MonitorSleepDuration;
                 }
 
                 // Handles/FDs
@@ -2735,7 +2741,7 @@ namespace FabricObserver.Observers
 
                 Stopwatch timer = Stopwatch.StartNew();
 
-                while (timer.Elapsed <= maxDuration)
+                while (timer.Elapsed <= duration)
                 {
                     if (token.IsCancellationRequested)
                     {
@@ -2811,7 +2817,7 @@ namespace FabricObserver.Observers
                         }
                     }
 
-                    Thread.Sleep(500);
+                    Thread.Sleep(sleep);
                 }
 
                 timer.Stop();

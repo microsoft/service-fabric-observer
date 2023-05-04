@@ -153,6 +153,11 @@
          the time spent monitoring for each service you specify in configuration. -->
     <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
 
+    <!-- Optional: The amount of time this observer waits between consecutive resource usage probing. 
+         Each observer has a default value set, but you should override by setting this
+         parameter to what makes sense for your service(s).  -->
+    <Parameter Name="MonitorSleepDurationMilliseconds" Value="" MustOverride="true" />
+
     <!-- Optional: How often does the observer run? For example, CertificateObserver's RunInterval is set to 1 day 
          in ApplicationManifest.xml, which means it won't run more than once a day (where day = 24 hours.). All observers support a RunInterval parameter. -->
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
@@ -246,6 +251,7 @@
     <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
+    <Parameter Name="MonitorSleepDurationMilliseconds" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
 	
     <!-- Optional: monitor private working set only for target service processes (versus full working set, which is private + shared). The default setting in ApplicationManifest.xml is true. -->
@@ -298,6 +304,7 @@
 	<Parameter Name="EnableNodeSnapshot" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="MonitorDuration" Value="" MustOverride="true" />
+    <Parameter Name="MonitorSleepDurationMilliseconds" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
     <Parameter Name="UseCircularBuffer" Value="" MustOverride="true" />
     
