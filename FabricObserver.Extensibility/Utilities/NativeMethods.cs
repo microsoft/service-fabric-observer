@@ -2113,7 +2113,7 @@ namespace FabricObserver.Observers.Utilities
 
                     string procName = Path.GetFileName(procInfo[i].ImageName.Buffer);
 
-                    if (FindInStringArray(ignoreProcessList, procName) || FindInStringArray(ignoreFabricSystemServicesList, procName))
+                    if (FindInStringArray(ignoreProcessList, procName))
                     {
                         continue;
                     }
