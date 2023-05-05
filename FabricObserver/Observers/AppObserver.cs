@@ -77,7 +77,7 @@ namespace FabricObserver.Observers
         private string fileName;
         private int appCount;
         private int serviceCount;
-        private bool createSFUserProcCacheSucceeded;
+        private bool hasSFUserProcCache;
 
         // ReplicaOrInstanceList is the List of all replicas or instances that will be monitored during the current run.
         // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
@@ -141,7 +141,7 @@ namespace FabricObserver.Observers
                 }
 
                 // If the more performant approach (see NativeMethods.cs) for getting child processes succeeded, then don't proceed.
-                if (createSFUserProcCacheSucceeded)
+                if (hasSFUserProcCache)
                 {
                     return null;
                 }
@@ -975,7 +975,7 @@ namespace FabricObserver.Observers
             if (IsWindows)
             {
                 // RefreshSFUserProcessDataCache returns false it means the internal impl failed.
-                createSFUserProcCacheSucceeded = NativeMethods.RefreshSFUserProcessDataCache();
+                hasSFUserProcCache = NativeMethods.RefreshSFUserProcessDataCache(getChildProcesses: EnableChildProcessMonitoring);
             }
 
             // Process JSON object configuration settings (housed in [AppObserver.config].json) for this run.
@@ -3809,7 +3809,7 @@ namespace FabricObserver.Observers
                     handleToProcSnapshot = null;
                 }
 
-                if (createSFUserProcCacheSucceeded)
+                if (hasSFUserProcCache)
                 {
                     NativeMethods.ClearSFUserProcessDataCache();
                 }

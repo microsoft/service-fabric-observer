@@ -37,7 +37,8 @@ namespace FabricObserver.Observers.Utilities
         {
             "AggregatorHost.exe", "backgroundTaskHost.exe", "CcmExec.exe", "com.docker.service",
             "conhost.exe", "csrss.exe", "dwm.exe", "esif_uf.exe", "fontdrvhost.exe",
-            "lsass.exe", "LsaIso.exe", "services.exe", "smss.exe", "svchost.exe",
+            "lsass.exe", "LsaIso.exe", "msedge.exe", "SearchFilterHost.exe", "RuntimeBroker.exe",
+            "SearchProtocolHost.exe", "services.exe", "smss.exe", "svchost.exe",
             "System", "System interrupts", "Secure System", "Registry",
             "taskhostw.exe", "TextInputHost.exe", "wininit.exe", "winlogon.exe",
             "WmiPrvSE.exe", "WUDFHost.exe", "vmcompute.exe", "vmms.exe", "vmwp.exe", "vmmem"
@@ -48,6 +49,8 @@ namespace FabricObserver.Observers.Utilities
             "FabricDCA.exe", "FabricDnsService.exe", "FabricFAS.exe", "FabricGateway.exe",
             "FabricHost.exe", "FabricIS.exe", "FabricRM.exe", "FabricUS.exe"
         };
+
+        // These are only read from concurrently. These do not need to be ConcurrentDictionaries.
         private static Dictionary<int, List<(string childProcName, int childProcId, DateTime childProcStartTime)>> descendantsDictionary;
         private static Dictionary<int, string> currentSFUserServiceProcCache;
 
@@ -1280,11 +1283,11 @@ namespace FabricObserver.Observers.Utilities
             return count;
         }
 
-        public static bool RefreshSFUserProcessDataCache()
+        public static bool RefreshSFUserProcessDataCache(bool getChildProcesses = false)
         {
             try
             {
-                return NtSetSFUserServiceCaches();
+                return NtSetSFUserServiceCaches(getChildProcesses);
             }
             catch (Win32Exception)
             {
@@ -1351,7 +1354,7 @@ namespace FabricObserver.Observers.Utilities
             return result;
         }
 
-        private static bool NtSetSFUserServiceCaches()
+        private static bool NtSetSFUserServiceCaches(bool getChildProcesses = false)
         {
             List<SYSTEM_PROCESS_INFORMATION> procInfoList = NtGetFilteredProcessInfo();
 
@@ -1375,6 +1378,12 @@ namespace FabricObserver.Observers.Utilities
                 if (!currentSFUserServiceProcCache.ContainsKey((int)pid))
                 {
                     currentSFUserServiceProcCache.Add((int)pid, procName);
+                }
+
+                // Don't waste cycles if caller doesn't care about descendants cache.
+                if (!getChildProcesses)
+                {
+                    continue;
                 }
 
                 // Has parent?
@@ -1414,7 +1423,7 @@ namespace FabricObserver.Observers.Utilities
                 }
             }
 
-            return descendantsDictionary.Any();
+            return descendantsDictionary.Any() || currentSFUserServiceProcCache.Any();
         }
 
         public static void ClearSFUserProcessDataCache()
@@ -2061,9 +2070,9 @@ namespace FabricObserver.Observers.Utilities
         }
 
         /// <summary>
-        /// Gets a filtered list of process information that includes all, but not limited to, executing SF user services and their descendants.
+        /// Gets a filtered list of process information that includes all, but not limited to, executing SF user services and their descendants, if any.
         /// </summary>
-        /// <returns>An array of uint values that are process identifiers of all currently running SF user service host processes (and descendants) on the system. 
+        /// <returns>A List of SYSTEM_PROCESS_INFORMATION structures that will at least include all SF user service processes and descendants, if any.
         /// If the function fails, then it will return null.</returns>
         private static List<SYSTEM_PROCESS_INFORMATION> NtGetFilteredProcessInfo()
         {
@@ -2076,6 +2085,7 @@ namespace FabricObserver.Observers.Utilities
             }
 
             List<SYSTEM_PROCESS_INFORMATION> procInfoList = new();
+            UIntPtr winInitPtr = UIntPtr.Zero;
 
             for (int i = 0; i < procInfo.Length; ++i)
             {
@@ -2087,10 +2097,24 @@ namespace FabricObserver.Observers.Utilities
                     }
 
                     uint pid = procInfo[i].UniqueProcessId.ToUInt32();
-                    UIntPtr parentPid = procInfo[i].Reserved2;
+                    UIntPtr parent = procInfo[i].Reserved2;
 
-                    // No parent, then not an SF user service.
-                    if (parentPid == UIntPtr.Zero)
+                    // No parent, then not an SF user service. If a descendant of services.exe, ignore.
+                    if (parent == UIntPtr.Zero || parent == winInitPtr)
+                    {
+                        continue;
+                    }
+
+                    string procName = Path.GetFileName(procInfo[i].ImageName.Buffer);
+
+                    // This is for the case when FO is running as System user. Just ignore as much system-related stuff as possible.
+                    if (procName == "wininit.exe")
+                    {
+                        winInitPtr = procInfo[i].UniqueProcessId;
+                        continue;
+                    }
+
+                    if (FindInStringArray(ignoreProcessList, procName))
                     {
                         continue;
                     }
@@ -2109,13 +2133,6 @@ namespace FabricObserver.Observers.Utilities
                         {
                             continue;
                         }
-                    }
-
-                    string procName = Path.GetFileName(procInfo[i].ImageName.Buffer);
-
-                    if (FindInStringArray(ignoreProcessList, procName))
-                    {
-                        continue;
                     }
 
                     procInfoList.Add(procInfo[i]);
