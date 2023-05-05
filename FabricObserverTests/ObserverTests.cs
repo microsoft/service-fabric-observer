@@ -1265,6 +1265,7 @@ namespace FabricObserverTests
             };
 
             appUpgradeDescription.ApplicationParameters.Add("VotingWeb_RGMemoryInMbLimit", "2400");
+            appUpgradeDescription.ApplicationParameters.Add("VotingWeb_RGCpuInCoresLimit", "4");
 
             try
             {
@@ -1301,6 +1302,7 @@ namespace FabricObserverTests
 
             var appParameters = appList.First(app => app.ApplicationTypeName == "VotingType").ApplicationParameters;
             Assert.IsTrue(appParameters.Any(a => a.Name == "VotingWeb_RGMemoryInMbLimit"));
+            Assert.IsTrue(appParameters.Any(a => a.Name == "VotingWeb_RGCpuInCoresLimit"));
 
             var defaultParameters = applicationTypeList.First(a => a.ApplicationTypeVersion == "1.0.0").DefaultParameters;
             Assert.IsTrue(defaultParameters.Any());
@@ -1321,11 +1323,13 @@ namespace FabricObserverTests
             Assert.IsTrue(RGMemoryLimit == 2400);
 
             // CPU RG is not implemented fully. This is for the next version.
-            // A similar thing is tested here, without upgraded app parameters.
             var (RGCpuEnabled, RGCpuLimit) = clientUtilities.TupleGetCpuResourceGovernanceInfo(appManifest, svcManifest, "VotingWebPkg", "Code", parameters);
             Assert.IsTrue(RGCpuEnabled);
-            Assert.IsTrue(RGCpuLimit == 3.5);
 
+            // App parameter upgrade value.
+            Assert.IsTrue(RGCpuLimit == 4);
+
+            // A similar thing is tested here, without upgraded app parameters.
             var (RGCpuEnabledData, RGCpuLimitData) = clientUtilities.TupleGetCpuResourceGovernanceInfo(appManifest, svcManifestData, "VotingDataPkg", "HelperExe2", parameters);
             Assert.IsTrue(RGCpuEnabledData);
             Assert.IsTrue(RGCpuLimitData == 0.6);
@@ -3364,7 +3368,7 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
+                MonitorDuration = TimeSpan.FromSeconds(10),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
                 EnableConcurrentMonitoring = true,
                 EnableChildProcessMonitoring = true
