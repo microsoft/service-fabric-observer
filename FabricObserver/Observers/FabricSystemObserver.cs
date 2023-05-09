@@ -440,11 +440,6 @@ namespace FabricObserver.Observers
             return Task.CompletedTask;
         }
 
-        /// <summary>
-        /// ReadServiceFabricWindowsEventLog().
-        /// </summary>
-#pragma warning disable IDE0079 // Remove unnecessary suppression
-#pragma warning restore IDE0079 // Remove unnecessary suppression
         private void ReadServiceFabricWindowsEventLog()
         {
             if (!IsWindows)
