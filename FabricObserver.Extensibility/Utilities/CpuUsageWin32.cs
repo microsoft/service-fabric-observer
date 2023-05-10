@@ -20,58 +20,51 @@ namespace FabricObserver.Observers.Utilities
         /// This function computes the total percentage of all cpus that the supplied process is currently using.
         /// </summary>
         /// <param name="procId">The target process identifier.</param>
-        /// <param name="procName">The name of the process.</param>
+        /// <param name="procName">Optional process name.</param>
+        /// <param name="procHandle">Optional (Windows only) safe process handle.</param>
         /// <returns>CPU Time percentage for the process as double value. If the supplied procName is no longer mapped to the supplied procId,
         /// then the result will be -1. Any Win32 failure will result in -1.</returns>
-        public double GetCurrentCpuUsagePercentage(int procId, string procName)
+        public double GetCurrentCpuUsagePercentage(int procId, string procName = null, SafeProcessHandle procHandle = null)
         {
-            SafeProcessHandle sProcHandle = NativeMethods.GetSafeProcessHandle(procId);
+            procHandle ??= NativeMethods.GetSafeProcessHandle(procId);
 
-            if (sProcHandle.IsInvalid)
+            if (procHandle.IsInvalid)
             {
                 // Caller should ignore this result. Don't want to use an Exception here.
                 return -1;
             }
 
-            try
+            if (!NativeMethods.GetProcessTimes(procHandle, out _, out _, out FILETIME processTimesRawKernelTime, out FILETIME processTimesRawUserTime))
             {
-                if (!NativeMethods.GetProcessTimes(sProcHandle, out _, out _, out FILETIME processTimesRawKernelTime, out FILETIME processTimesRawUserTime))
-                {
-                    ProcessInfoProvider.ProcessInfoLogger.LogWarning($"GetProcessTimes failed with error code {Marshal.GetLastWin32Error()}.");
+                ProcessInfoProvider.ProcessInfoLogger.LogWarning($"GetProcessTimes failed with error code {Marshal.GetLastWin32Error()}.");
 
-                    // Caller should ignore this result. Don't want to use an Exception here.
-                    return -1;
-                }
+                // Caller should ignore this result. Don't want to use an Exception here.
+                return -1;
+            }
 
-                if (!NativeMethods.GetSystemTimes(out _, out FILETIME systemTimesRawKernelTime, out FILETIME systemTimesRawUserTime))
-                {
-                    ProcessInfoProvider.ProcessInfoLogger.LogWarning($"GetSystemTimes failed with error code {Marshal.GetLastWin32Error()}.");
+            if (!NativeMethods.GetSystemTimes(out _, out FILETIME systemTimesRawKernelTime, out FILETIME systemTimesRawUserTime))
+            {
+                ProcessInfoProvider.ProcessInfoLogger.LogWarning($"GetSystemTimes failed with error code {Marshal.GetLastWin32Error()}.");
 
-                    // Caller should ignore this result. Don't want to use an Exception here.
-                    return -1;
-                }
+                // Caller should ignore this result. Don't want to use an Exception here.
+                return -1;
+            }
 
-                ulong processTimesDelta =
-                    SubtractTimes(processTimesRawUserTime, processTimesLastUserTime) + SubtractTimes(processTimesRawKernelTime, processTimesLastKernelTime);
-                ulong systemTimesDelta =
-                    SubtractTimes(systemTimesRawUserTime, systemTimesLastUserTime) + SubtractTimes(systemTimesRawKernelTime, systemTimesLastKernelTime);
-                double cpuUsage = (double)systemTimesDelta == 0 ? 0 : processTimesDelta * 100 / (double)systemTimesDelta;
-                UpdateTimes(processTimesRawUserTime, processTimesRawKernelTime, systemTimesRawUserTime, systemTimesRawKernelTime);
+            ulong processTimesDelta =
+                SubtractTimes(processTimesRawUserTime, processTimesLastUserTime) + SubtractTimes(processTimesRawKernelTime, processTimesLastKernelTime);
+            ulong systemTimesDelta =
+                SubtractTimes(systemTimesRawUserTime, systemTimesLastUserTime) + SubtractTimes(systemTimesRawKernelTime, systemTimesLastKernelTime);
+            double cpuUsage = (double)systemTimesDelta == 0 ? 0 : processTimesDelta * 100 / (double)systemTimesDelta;
+            UpdateTimes(processTimesRawUserTime, processTimesRawKernelTime, systemTimesRawUserTime, systemTimesRawKernelTime);
 
-                if (!hasRunOnce)
-                {
-                    Thread.Sleep(100);
-                    hasRunOnce = true;
-                    return GetCurrentCpuUsagePercentage(procId, procName);
-                }
+            if (!hasRunOnce)
+            {
+                Thread.Sleep(100);
+                hasRunOnce = true;
+                return GetCurrentCpuUsagePercentage(procId, procName, procHandle);
+            }
     
-                return cpuUsage;
-            }
-            finally
-            {
-                sProcHandle?.Dispose();
-                sProcHandle = null;
-            }
+            return cpuUsage;
         }
 
         private void UpdateTimes(FILETIME processTimesRawUserTime, FILETIME processTimesRawKernelTime, FILETIME systemTimesRawUserTime, FILETIME systemTimesRawKernelTime)

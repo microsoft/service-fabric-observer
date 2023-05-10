@@ -3,6 +3,8 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using Microsoft.Win32.SafeHandles;
+
 namespace FabricObserver.Interfaces
 {
     /// <summary>
@@ -16,6 +18,6 @@ namespace FabricObserver.Interfaces
         /// <param name="procId">Process identifier.</param>
         /// <param name="procName">Optional: Process name.</param>
         /// <returns>Percentage of usage across all cores.</returns>
-        double GetCurrentCpuUsagePercentage(int procId, string procName = null);
+        double GetCurrentCpuUsagePercentage(int procId, string procName = null, SafeProcessHandle procHandle = null);
     }
 }

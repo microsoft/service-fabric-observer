@@ -52,7 +52,7 @@ namespace FabricObserver.Observers.Utilities
 
         // These are only read from concurrently. These do not need to be ConcurrentDictionaries.
         private static Dictionary<int, List<(string childProcName, int childProcId, DateTime childProcStartTime)>> descendantsDictionary;
-        private static Dictionary<int, string> currentSFUserServiceProcCache;
+        private static Dictionary<int, string> currentSFServiceProcCache;
 
 
         [Flags]
@@ -1263,7 +1263,7 @@ namespace FabricObserver.Observers.Utilities
         {
             int count = 0;
 
-            if (currentSFUserServiceProcCache == null || !currentSFUserServiceProcCache.Any())
+            if (currentSFServiceProcCache == null || !currentSFServiceProcCache.Any())
             {
                 if (!RefreshSFUserProcessDataCache())
                 {
@@ -1272,7 +1272,7 @@ namespace FabricObserver.Observers.Utilities
                 }
             }
 
-            foreach (string pName in currentSFUserServiceProcCache.Values)
+            foreach (string pName in currentSFServiceProcCache.Values)
             {
                 if (pName == procName)
                 {
@@ -1360,13 +1360,30 @@ namespace FabricObserver.Observers.Utilities
 
             // This will be the case if NtGetSysProcInfo fails. End here. AppObserver accounts for this and will
             // try something else (process snapshot will be taken and its cached handle will be passed to GetChildProcesses).
-            if (procInfoList == null) 
+            if (procInfoList == null || procInfoList.Count == 0) 
             { 
                 return false; 
             }
+
+            // Get FabricHost pointer.
+            UIntPtr fabHostPtr = UIntPtr.Zero;
+
+            try
+            {
+                // The parent of Fabric.exe is FabricHost, which is also the parent of ALL SF services, user or system.
+                // We don't care about this relationship for the child process dictionary (see below). It's fine for currentSFServiceProcCache, though.
+                if (procInfoList.Any(p => Path.GetFileName(p.ImageName.Buffer) == "Fabric.exe"))
+                {
+                    fabHostPtr = procInfoList.First(p => Path.GetFileName(p.ImageName.Buffer) == "Fabric.exe").Reserved2;
+                }
+            }
+            catch (Exception e) when (e is ArgumentException or InvalidOperationException)
+            {
+
+            }
             
             descendantsDictionary = new();
-            currentSFUserServiceProcCache = new();
+            currentSFServiceProcCache = new();
 
             for (int i = 0; i < procInfoList.Count; ++i)
             {
@@ -1375,9 +1392,9 @@ namespace FabricObserver.Observers.Utilities
                 string procName = Path.GetFileNameWithoutExtension(procInfo.ImageName.Buffer);
 
                 // Fill SF user service (and descendants) proc cache. It doesn't matter if the parent has children for this cache.
-                if (!currentSFUserServiceProcCache.ContainsKey((int)pid))
+                if (!currentSFServiceProcCache.ContainsKey((int)pid))
                 {
-                    currentSFUserServiceProcCache.Add((int)pid, procName);
+                    currentSFServiceProcCache.Add((int)pid, procName);
                 }
 
                 // Don't waste cycles if caller doesn't care about descendants cache.
@@ -1386,8 +1403,8 @@ namespace FabricObserver.Observers.Utilities
                     continue;
                 }
 
-                // Has parent?
-                if (procInfo.Reserved2 != UIntPtr.Zero)
+                // Has parent that is not FabricHost?
+                if (procInfo.Reserved2 != UIntPtr.Zero && procInfo.Reserved2 != fabHostPtr)
                 {
                     uint parentPid = procInfo.Reserved2.ToUInt32();
 
@@ -1423,7 +1440,7 @@ namespace FabricObserver.Observers.Utilities
                 }
             }
 
-            return descendantsDictionary.Any() || currentSFUserServiceProcCache.Any();
+            return true;
         }
 
         public static void ClearSFUserProcessDataCache()
@@ -1433,8 +1450,8 @@ namespace FabricObserver.Observers.Utilities
                 descendantsDictionary?.Clear();
                 descendantsDictionary = null;
 
-                currentSFUserServiceProcCache?.Clear();
-                currentSFUserServiceProcCache = null;
+                currentSFServiceProcCache?.Clear();
+                currentSFServiceProcCache = null;
             }
             catch (ArgumentException)
             {
@@ -1457,7 +1474,7 @@ namespace FabricObserver.Observers.Utilities
                 return null;
             }
 
-            if (descendantsDictionary != null && descendantsDictionary.Any())
+            if (descendantsDictionary != null)
             {
                 if (descendantsDictionary.ContainsKey(parentPid))
                 {
@@ -1541,7 +1558,7 @@ namespace FabricObserver.Observers.Utilities
                     }
                     catch (Win32Exception)
                     {
-                        // From GetProcessNameFromId.
+                        // From GetProcessStartTime.
                     }
 
                 } while (Process32Next(handleToSnapshot, ref procEntry));

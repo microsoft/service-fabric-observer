@@ -8,6 +8,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading;
 using FabricObserver.Interfaces;
+using Microsoft.Win32.SafeHandles;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -24,8 +25,10 @@ namespace FabricObserver.Observers.Utilities
         /// Windows. In the latter case, use CpuUsageWin32.GetCurrentCpuUsagePercentage instead.
         /// </summary>
         /// <param name="procId">Target Process object</param>
+        /// <param name="procName">Optional process name.</param>
+        /// <param name="procHandle">Optional (Windows only) safe process handle.</param>
         /// <returns>CPU Time percentage for supplied procId. If the process is no longer running, then -1 will be returned.</returns>
-        public double GetCurrentCpuUsagePercentage(int procId, string procName = null)
+        public double GetCurrentCpuUsagePercentage(int procId, string procName = null, SafeProcessHandle procHandle = null)
         {
             try
             {

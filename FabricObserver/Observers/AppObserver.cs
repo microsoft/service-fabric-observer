@@ -23,6 +23,7 @@ using FabricObserver.Observers.MachineInfoModel;
 using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 using FabricObserver.Utilities.ServiceFabric;
+using Microsoft.Win32.SafeHandles;
 
 namespace FabricObserver.Observers
 {
@@ -237,7 +238,7 @@ namespace FabricObserver.Observers
             if (EnableVerboseLogging)
             {
                 ObserverLogger.LogInfo($"Run Duration ({ReplicaOrInstanceList?.Count} service processes observed) {(parallelOptions.MaxDegreeOfParallelism == 1 ? "without" : "with")} " +
-                                       $"Parallel Processing (Processors: {Environment.ProcessorCount} MaxDegreeOfParallelism: {parallelOptions.MaxDegreeOfParallelism}): {RunDuration}.");
+                                       $"Parallel Processing (Logical Processors: {Environment.ProcessorCount}, MaxDegreeOfParallelism: {parallelOptions.MaxDegreeOfParallelism}): {RunDuration}.");
             }
 
             CleanUp();
@@ -974,7 +975,8 @@ namespace FabricObserver.Observers
 
             if (IsWindows)
             {
-                // RefreshSFUserProcessDataCache returns false it means the internal impl failed.
+                // If RefreshSFUserProcessDataCache returns false, then it means the internal impl failed. In this case, a different API will be used 
+                // to get child processes, if enabled (see Win32HandleToProcessSnapshot property impl).
                 hasSFUserProcCache = NativeMethods.RefreshSFUserProcessDataCache(getChildProcesses: EnableChildProcessMonitoring);
             }
 
@@ -2033,7 +2035,7 @@ namespace FabricObserver.Observers
             }
 
             // DEBUG - Perf
-            //var threadData = new ConcurrentQueue<int>();
+            ConcurrentQueue<int> threadData = new();
 
             ParallelLoopResult result = Parallel.For(0, ReplicaOrInstanceList.Count, parallelOptions, (i, state) =>
             {
@@ -2043,7 +2045,7 @@ namespace FabricObserver.Observers
                 }
 
                 // DEBUG - Perf
-                //threadData.Enqueue(Thread.CurrentThread.ManagedThreadId);
+                threadData.Enqueue(Environment.CurrentManagedThreadId);
                 var repOrInst = ReplicaOrInstanceList[i];
                 var timer = new Stopwatch();
                 int parentPid = (int)repOrInst.HostProcessId;
@@ -2352,9 +2354,11 @@ namespace FabricObserver.Observers
             }
 
             // DEBUG - Perf 
-            //int threadcount = threadData.Distinct().Count();
+            int threadcount = threadData.Distinct().Count();
+            threadData.Clear();
+            threadData = null;
             ObserverLogger.LogInfo("Completed MonitorDeployedAppsAsync.");
-            ObserverLogger.LogInfo($"MonitorDeployedAppsAsync Execution time: {execTimer.Elapsed}"); //Threads: {threadcount}");
+            ObserverLogger.LogInfo($"MonitorDeployedAppsAsync Execution time: {execTimer.Elapsed}, Threads: {threadcount}");
             return Task.FromResult(result);
         }
 
@@ -2740,6 +2744,12 @@ namespace FabricObserver.Observers
                 }
 
                 Stopwatch timer = Stopwatch.StartNew();
+                SafeProcessHandle procHandle = null;
+                
+                if (IsWindows)
+                {
+                    procHandle = NativeMethods.GetSafeProcessHandle(procId);
+                }
 
                 while (timer.Elapsed <= duration)
                 {
@@ -2751,7 +2761,7 @@ namespace FabricObserver.Observers
                     if (checkCpu || (MonitorResourceGovernanceLimits && repOrInst.RGCpuEnabled && rgCpuPercentThreshold > 0))
                     {
                         double cpu = 0;
-                        cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, IsWindows ? procName : null);
+                        cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, IsWindows ? procName : null, procHandle);
 
                         // Process's id is no longer mapped to expected process name or some internal error that is non-retryable. End here.
                         // See CpuUsageProcess.cs/CpuUsageWin32.cs impls.
@@ -2818,6 +2828,12 @@ namespace FabricObserver.Observers
                     }
 
                     Thread.Sleep(sleep);
+                }
+
+                if (IsWindows)
+                {
+                    procHandle?.Dispose();
+                    procHandle = null;
                 }
 
                 timer.Stop();
@@ -3322,7 +3338,7 @@ namespace FabricObserver.Observers
                                 (replicaInfo.RGMemoryEnabled, replicaInfo.RGAppliedMemoryLimitMb) =
                                     fabricClientUtilities.TupleGetMemoryResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName, parameters);
 
-                                // RG Cpu - NOTE: Not fully integrated yet. Will ship in 3.2.8. Here for unit testing of base functionality.
+                                // RG Cpu
                                 (replicaInfo.RGCpuEnabled, replicaInfo.RGAppliedCpuLimitCores) =
                                     fabricClientUtilities.TupleGetCpuResourceGovernanceInfo(appManifest, svcManifest, replicaInfo.ServiceManifestName, codepackageName, parameters);
                             }
@@ -3357,7 +3373,10 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (e is AggregateException or FabricException or TaskCanceledException or TimeoutException or XmlException)
             {
-                ObserverLogger.LogWarning($"Handled: Failed to process Service configuration for {replicaInfo.ServiceName.OriginalString} with exception '{e.Message}'");
+                if (e is not TaskCanceledException)
+                {
+                    ObserverLogger.LogWarning($"Handled: Failed to process Service configuration for {replicaInfo.ServiceName.OriginalString} with exception '{e.Message}'");
+                }
                 // move along
             }
             ObserverLogger.LogInfo($"Completed ProcessServiceConfiguration for {replicaInfo.ServiceName.OriginalString}.");

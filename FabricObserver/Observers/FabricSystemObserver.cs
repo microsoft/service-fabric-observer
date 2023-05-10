@@ -20,6 +20,7 @@ using FabricObserver.Observers.Utilities;
 using FabricObserver.Observers.Utilities.Telemetry;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 using FabricObserver.Interfaces;
+using Microsoft.Win32.SafeHandles;
 
 namespace FabricObserver.Observers
 {
@@ -865,6 +866,7 @@ namespace FabricObserver.Observers
             // Default value is what Windows expects for proc name. In linux, the procname is an argument (typically) of a dotnet command.
             string dotnetArg = procName;
             Process process = null;
+            SafeProcessHandle procHandle = null;
 
             if (!IsWindows && procName.Contains("dotnet"))
             {
@@ -1056,6 +1058,11 @@ namespace FabricObserver.Observers
                     }
 
                     Stopwatch timer = Stopwatch.StartNew();
+                    
+                    if (IsWindows)
+                    {
+                        procHandle = NativeMethods.GetSafeProcessHandle(procId);
+                    }
 
                     while (timer.Elapsed <= duration)
                     {
@@ -1063,9 +1070,9 @@ namespace FabricObserver.Observers
 
                         try
                         {
-                            double cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, IsWindows ? dotnetArg : null);
+                            double cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, IsWindows ? dotnetArg : null, procHandle);
 
-                            // process is no longer mapped to process name.
+                            // process is no longer running if cpu == -1.
                             if (cpu > 0)
                             {
                                 if (allCpuData.ContainsKey(dotnetArg))
@@ -1103,6 +1110,12 @@ namespace FabricObserver.Observers
             {
                 process?.Dispose();
                 process = null;
+
+                if (IsWindows)
+                {
+                    procHandle?.Dispose();
+                    procHandle = null;
+                }
             }
         }
 
