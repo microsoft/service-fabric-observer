@@ -2767,20 +2767,11 @@ namespace FabricObserver.Observers
                         // See CpuUsageProcess.cs/CpuUsageWin32.cs impls.
                         if (cpu == -1)
                         {
-                            try
-                            {
-                                continue;
-                            }
-                            catch (ArgumentException)
-                            {
-
-                            }
-
-                            break;
+                            continue;
                         }
 
                         // CPU (all cores) \\
-                        if(checkCpu)
+                        if (checkCpu)
                         {
                             if (procId == parentPid)
                             {
@@ -2801,7 +2792,8 @@ namespace FabricObserver.Observers
                                 AllAppCpuData[$"{id}:{procName}{procId}"].AddData(cpu);
                             }
                         }
-                        if(MonitorResourceGovernanceLimits && repOrInst.RGCpuEnabled && repOrInst.RGAppliedCpuLimitCores > 0  && rgCpuPercentThreshold > 0)
+
+                        if (MonitorResourceGovernanceLimits && repOrInst.RGCpuEnabled && repOrInst.RGAppliedCpuLimitCores > 0  && rgCpuPercentThreshold > 0)
                         {
                             double pct = 0;
                             pct = cpu * Environment.ProcessorCount / repOrInst.RGAppliedCpuLimitCores;

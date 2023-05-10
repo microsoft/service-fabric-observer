@@ -1071,7 +1071,6 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(10),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
                 EnableConcurrentMonitoring = true,
                 IsEtwProviderEnabled = true,
@@ -1103,7 +1102,6 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(10),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_warnings.config.json"),
                 EnableConcurrentMonitoring = true,
                 CheckPrivateWorkingSet = true,
@@ -1133,7 +1131,6 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_PrivateBytes_warning.config.json"),
                 IsEtwProviderEnabled = true
             };
@@ -1163,7 +1160,6 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_rg_memory_warning.config.json"),
             };
 
@@ -1190,7 +1186,6 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_rg_cpu_warning.config.json"),
             };
 
@@ -1215,10 +1210,7 @@ namespace FabricObserverTests
             ObserverManager.TelemetryEnabled = false;
             ObserverManager.EtwEnabled = false;
 
-            using var obs = new AppObserver(TestServiceContext)
-            {
-                MonitorDuration = TimeSpan.FromSeconds(1)
-            };
+            using var obs = new AppObserver(TestServiceContext);
 
             await obs.ObserveAsync(Token);
 
@@ -1352,7 +1344,6 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.oldstyle_warnings.json"),
                 EnableConcurrentMonitoring = true
             };
@@ -1380,7 +1371,6 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.oldstyle_nowarnings.json")
             };
 
@@ -1416,7 +1406,7 @@ namespace FabricObserverTests
                 TaskScheduler = TaskScheduler.Default
             };
 
-            _ = Parallel.For(0, services.Count, parallelOptions, (i, state) =>
+            _ = Parallel.For (0, services.Count, parallelOptions, (i, state) =>
             {
                 var service = services[i];
                 string procName = NativeMethods.GetProcessNameFromId((int)service.HostProcessId);
@@ -1436,7 +1426,7 @@ namespace FabricObserverTests
 
             TimeSpan duration = TimeSpan.FromSeconds(3);
 
-            _ = Parallel.For(0, serviceProcs.Count, parallelOptions, (i, state) =>
+            _ = Parallel.For (0, serviceProcs.Count, parallelOptions, (i, state) =>
             {
                 Stopwatch sw = Stopwatch.StartNew();
                 int procId = serviceProcs.ElementAt(i);
@@ -1479,7 +1469,7 @@ namespace FabricObserverTests
                 TaskScheduler = TaskScheduler.Default
             };
 
-            _ = Parallel.For(0, services.Count, parallelOptions, (i, state) =>
+            _ = Parallel.For (0, services.Count, parallelOptions, (i, state) =>
             {
                 var service = services[i];
                 string procName = NativeMethods.GetProcessNameFromId((int)service.HostProcessId);
@@ -3368,7 +3358,6 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(10),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
                 EnableConcurrentMonitoring = true,
                 EnableChildProcessMonitoring = true
