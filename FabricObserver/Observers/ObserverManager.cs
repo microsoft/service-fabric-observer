@@ -201,7 +201,7 @@ namespace FabricObserver.Observers
             try
             {
                 // Clear out any orphaned health reports left behind when FO ungracefully exits.
-                FabricClientUtilities fabricClientUtilities = new();
+                FabricClientUtilities fabricClientUtilities = new(nodeName);
                 await fabricClientUtilities.ClearFabricObserverHealthReportsAsync(true, CancellationToken.None);
 
                 // Nothing to do here.
@@ -1386,27 +1386,6 @@ namespace FabricObserver.Observers
 
             // DEBUG
             Logger.LogInfo("IsLVIDPerfCounterEnabled: Running check since a supported observer is enabled for LVID monitoring.");
-            
-            /* This counter will be enabled by default in a future version of SF (probably an 8.2 CU release).
-
-                SF Version scheme: 
-                
-                8.2.1363.9590
-
-                Major = 8
-                Minor = 2
-                Revision = 1363 (this is what is interesting for CUs)
-                Build = 9590 (a Windows release build)
-            */
-
-            //var currentSFRuntimeVersion = ServiceFabricConfiguration.Instance.FabricVersion;
-            //Version version = new Version(currentSFRuntimeVersion);
-            // Windows 8.2 CUx with the fix.
-            //if (version.Major == 8 && version.Minor == 2 && version.Revision >= 1365 /* This is not the right revision number. This is just placeholder code. */)
-            //{
-            //  return true;
-            //}
-
             const string categoryName = "Windows Fabric Database";
             const string counterName = "Long-Value Maximum LID";
 
@@ -1417,12 +1396,6 @@ namespace FabricObserver.Observers
             // cause issues (not FO crashes necessarily, but inaccurate data related to the metrics they represent (like, you will always see 0 or -1 measurement values)).
             try
             {
-                // This is a pretty expensive call.
-                if (!PerformanceCounterCategory.Exists(categoryName))
-                {
-                    return false;
-                }
-                
                 return PerformanceCounterCategory.CounterExists(counterName, categoryName);
             }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or UnauthorizedAccessException or Win32Exception)

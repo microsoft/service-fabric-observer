@@ -66,7 +66,7 @@
     <Parameter Name="FabricSystemObserverEnableCSVDataLogging" DefaultValue="false" />
     <Parameter Name="NodeObserverEnableCSVDataLogging" DefaultValue="false" />
     <!-- Verbose Logging -->
-    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="true" />
     <Parameter Name="AzureStorageUploadObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="ContainerObserverEnableVerboseLogging" DefaultValue="false" />
@@ -83,7 +83,7 @@
     <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:05" />
     <!-- Monitor Sleep Durations (Milliseconds, e.g. 50): How long an observer should wait between consecutive CPU usage collection for the same target (process or machine).
          This setting only applies to 3 observers.  -->
-    <Parameter Name="AppObserverMonitorSleepDurationMilliseconds" DefaultValue="500" />
+    <Parameter Name="AppObserverMonitorSleepDurationMilliseconds" DefaultValue="150" />
     <Parameter Name="FabricSystemObserverMonitorSleepDurationMilliseconds" DefaultValue="500" />
     <Parameter Name="NodeObserverMonitorSleepDurationMilliseconds" DefaultValue="500" />
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00): How often an enabled observer should run. -->
@@ -133,12 +133,12 @@
     <!-- KVS LVID Usage Monitoring - Windows-only.
          NOTE: If you monitor stateful Actor services, then you should set this to true.
          This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
-    <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="true" />
+    <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
     <!-- Windows-only: Process Working Set type for AppObserver to monitor. 
          Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). 
          NOTE: If you have *several* service processes of the **same name**, setting this to true will add *significant* time-to-completion and increased CPU usage (small, but more than necessary) to AppObserver. 
          FO will automatically compute Shared + Private memory usage if it detects 50 or more same-named service processes, regardless of this setting. -->
-    <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
+    <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="false" />
     <!-- Windows-only. AppObserver can monitor services with resource governance limits set and put related services into Warning if they reach 90% of the specified limit (only Memory limit is supported in this release). 
          If you set RG Memory limits for your service code packages, then you should consider enabling this feature. Else, don't. -->
     <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="true" />
@@ -230,6 +230,8 @@
     <Parameter Name="AzureStorageUploadObserverStorageAccountKey" DefaultValue="" />
     <!-- Zip file compression level to use: Optimal, Fastest or NoCompression. Default is Optimal if this is not set. We do not recommend NoCompression. -->
     <Parameter Name="AzureStorageUploadObserverZipFileCompressionLevel" DefaultValue="Optimal" />
+    <!-- RG (Windows-only). FO should never reach this threshold. If so, it will not be allowed to allocate memory and will crash with an OOM (it will fail fast in this scenario, by design). -->
+    <Parameter Name="RGMemoryInMb" DefaultValue="500" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
@@ -424,6 +426,7 @@
            Either leave EntryPointType as Setup and run FO as a restricted user, or set EntryPointType to All or remove EntryPointType attribute altogether to run everything 
            as elevated user (Setup and FO service process). -->
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
+      <ResourceGovernancePolicy CodePackageRef="Code" MemoryInMB="[RGMemoryInMb]" />
     </Policies>
   </ServiceManifestImport>
   <Principals>

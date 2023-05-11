@@ -12,7 +12,7 @@ using Microsoft.Win32.SafeHandles;
 
 namespace FabricObserver.Observers.Utilities
 {
-    // Cross plaform impl, but used only for Linux. For Windows, Utilities.CpuUsageWin32 employs a much more efficient impl than .NET's Process class.
+    // Cross plaform impl.
     public class CpuUsageProcess : ICpuUsage
     {
         private DateTime prevTime = DateTime.MinValue;
@@ -21,8 +21,7 @@ namespace FabricObserver.Observers.Utilities
         private TimeSpan currentTotalProcessorTime;
 
         /// <summary>
-        /// This function computes process CPU time as a percentage of all processors. It employs .NET core's Process object, which is efficient on Linux, but not
-        /// Windows. In the latter case, use CpuUsageWin32.GetCurrentCpuUsagePercentage instead.
+        /// This function computes process CPU time as a percentage of all processors. 
         /// </summary>
         /// <param name="procId">Target Process object</param>
         /// <param name="procName">Optional process name.</param>
@@ -32,32 +31,40 @@ namespace FabricObserver.Observers.Utilities
         {
             try
             {
-                using (Process p = Process.GetProcessById(procId))
-                {
-                    // First run.
-                    if (prevTime == DateTime.MinValue)
-                    {
-                        prevTime = DateTime.Now;
-                        prevTotalProcessorTime = p.TotalProcessorTime;
-                        Thread.Sleep(50);
-                    }
-                    
-                    currentTimeTime = DateTime.Now;
-                    currentTotalProcessorTime = p.TotalProcessorTime;
-                    double currentUsage = (currentTotalProcessorTime.TotalMilliseconds - prevTotalProcessorTime.TotalMilliseconds) / currentTimeTime.Subtract(prevTime).TotalMilliseconds;
-                    double cpuUsage = currentUsage / Environment.ProcessorCount;
-                    prevTime = currentTimeTime;
-                    prevTotalProcessorTime = currentTotalProcessorTime;
+                using Process p = Process.GetProcessById(procId);
 
-                    return cpuUsage * 100.0;
+                // First run.
+                if (prevTime == DateTime.MinValue)
+                {
+                    prevTime = DateTime.Now;
+                    prevTotalProcessorTime = p.TotalProcessorTime;
+                    Thread.Sleep(50);
                 }
+
+                currentTimeTime = DateTime.Now;
+                currentTotalProcessorTime = p.TotalProcessorTime;
+                double currentUsage = (currentTotalProcessorTime.TotalMilliseconds - prevTotalProcessorTime.TotalMilliseconds) / currentTimeTime.Subtract(prevTime).TotalMilliseconds;
+                double cpuUsage = currentUsage / Environment.ProcessorCount;
+                prevTime = currentTimeTime;
+                prevTotalProcessorTime = currentTotalProcessorTime;
+
+                return cpuUsage * 100.0;
             }
             catch (Exception e) when (e is ArgumentException or Win32Exception or InvalidOperationException or NotSupportedException)
             {
-                ProcessInfoProvider.ProcessInfoLogger.LogWarning($"GetCurrentCpuUsagePercentage(NET6 Process impl) failure ({procId},{procName}): {e.Message}");
-
                 // Caller should ignore this result. Don't want to use an Exception here.
                 return -1;
+            }
+            catch (Exception e)
+            {
+                if (e is OutOfMemoryException)
+                {
+                    // immediately crash..
+                    Environment.FailFast($"FO hit an OOM:{Environment.NewLine}{Environment.StackTrace}");
+                }
+
+                ProcessInfoProvider.ProcessInfoLogger.LogWarning($"GetCurrentCpuUsagePercentage(NET6 Process impl) failure (pid = {procId}): {e.Message}");
+                throw;
             }
         }
     }

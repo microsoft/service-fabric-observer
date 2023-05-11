@@ -2891,8 +2891,7 @@ namespace FabricObserverTests
                     && startDate > DateTime.MinValue);
 
                 Assert.IsTrue(data.EntityType is EntityType.Service or EntityType.Process);
-                Assert.IsTrue(data.ServicePackageActivationMode is "ExclusiveProcess"
-                              or "SharedProcess");
+                Assert.IsTrue(data.ServicePackageActivationMode is "ExclusiveProcess" or "SharedProcess");
                 Assert.IsTrue(data.HealthState == HealthState.Invalid);
                 Assert.IsTrue(data.ProcessId > 0);
                 Assert.IsTrue(data.ObserverName == ObserverConstants.AppObserverName);
@@ -2999,7 +2998,6 @@ namespace FabricObserverTests
             telemData = telemData.Where(
                 t => t.ApplicationName == "fabric:/CpuStress" && t.HealthState == HealthState.Warning).ToList();
 
-            // 2 service code packages + 2 helper code packages (VotingData) * 1 metric = 4 warnings...
             Assert.IsTrue(telemData.All(t => t.Metric == ErrorWarningProperty.RGCpuUsagePercent && telemData.Count == 1));
         }
 
@@ -3249,7 +3247,6 @@ namespace FabricObserverTests
                 Assert.IsFalse(string.IsNullOrWhiteSpace(data.Code));
                 Assert.IsFalse(string.IsNullOrWhiteSpace(data.Property));
                 Assert.IsFalse(string.IsNullOrWhiteSpace(data.Description));
-
 
                 Assert.IsTrue(data.EntityType == EntityType.Machine);
                 Assert.IsTrue(data.ObserverName == ObserverConstants.NodeObserverName);
