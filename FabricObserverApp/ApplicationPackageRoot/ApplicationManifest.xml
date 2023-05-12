@@ -3,7 +3,7 @@
 <ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.8" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- ObserverManager Configuration -->
-    <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="" />
+    <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
     <Parameter Name="ObserverManagerObserverExecutionTimeoutSeconds" DefaultValue="3600" />
     <Parameter Name="ObserverManagerEnableVerboseLogging" DefaultValue="false" />
     <!-- If you want to transmit ETW events to Kusto, for example, then enable this setting. Otherwise, set this to false. Please see ETW.md for related documentation. -->
@@ -31,8 +31,8 @@
     <!-- Note: You must run FO as System or Admin user on Windows in order to run ContainerObserver on Windows. -->
     <Parameter Name="ContainerObserverEnabled" DefaultValue="false" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="true" />
-    <Parameter Name="NetworkObserverEnabled" DefaultValue="true" />
+    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
+    <Parameter Name="NetworkObserverEnabled" DefaultValue="false" />
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
     <!-- Deprecated: SFConfigurationObserver is only useful if you deploy the now-obsolete (and unsupported) FabricObserverWebApi application. -->
@@ -66,7 +66,7 @@
     <Parameter Name="FabricSystemObserverEnableCSVDataLogging" DefaultValue="false" />
     <Parameter Name="NodeObserverEnableCSVDataLogging" DefaultValue="false" />
     <!-- Verbose Logging -->
-    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="true" />
+    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="AzureStorageUploadObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="ContainerObserverEnableVerboseLogging" DefaultValue="false" />
@@ -78,12 +78,12 @@
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
     <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00): How long an observer should monitor CPU usage per target (process or machine).
          This setting only applies to 3 observers.  -->
-    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:10" />
+    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:05" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:05" />
     <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:05" />
     <!-- Monitor Sleep Durations (Milliseconds, e.g. 50): How long an observer should wait between consecutive CPU usage collection for the same target (process or machine).
          This setting only applies to 3 observers.  -->
-    <Parameter Name="AppObserverMonitorSleepDurationMilliseconds" DefaultValue="150" />
+    <Parameter Name="AppObserverMonitorSleepDurationMilliseconds" DefaultValue="500" />
     <Parameter Name="FabricSystemObserverMonitorSleepDurationMilliseconds" DefaultValue="500" />
     <Parameter Name="NodeObserverMonitorSleepDurationMilliseconds" DefaultValue="500" />
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00): How often an enabled observer should run. -->
@@ -121,27 +121,25 @@
     <!-- Time window in which max dumps per process, per observed metric can occur. See AppObserverMaxProcessDumps. -->
     <Parameter Name="AppObserverMaxDumpsTimeWindow" DefaultValue="04:00:00" />
     <!-- Concurrency/Parallelism Support.
-         Note: This will only add real value (substantial) on machines with capable hardware (>= 8 logical processors). FO will not attempt to do anything concurrently if
-         the number of logical processors is less than 4, even if this is set to true. If you do run on capable hardware and want AppObserver to complete a run much faster than at sequential speed, then keep this enabled.
+         Note: This will only add real value (substantial) on machines with capable hardware (>= 4 logical processors). FO will not attempt to do anything concurrently if
+         the number of logical processors is less than 4, even if this is set to true.
          You can control the level of concurrency by setting the AppObserverMaxConcurrentTasks setting. -->
     <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
-    <!-- The default value is 1/4 of detected logical processors (LPs). This would mean given 20 LPs, the number of threads that will be created will be at least 5 (and seldom more than that), if possible.
-         You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
-         eating some additional CPU and Memory to complete the parallelized monitoring on a node with lots of services (>= 100). The impact of parallelization on nodes with less than 100 services is minimal.
-         Please test and choose a value that suits your needs or simply leave this unset and go with the default. Please see Observers.md for more information. -->
-    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="-1" />
-    <!-- KVS LVID Usage Monitoring - Windows-only.
-         NOTE: If you monitor stateful Actor services, then you should set this to true.
-         This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
+    <!-- Max number of concurrent Tasks available to parallel loops (0 or 1 = sequential (no concurrency), -1 = maximum concurrency). The default value is 1/4 of detected logical processors (LPs). 
+         Set to this to -1 if you want to take advantage of all LPs. This setting roughly maps to the number of threads that will be available for use by Task-parallel loops. If you have 20 LPs, then setting this
+         to 10 means use up to 10 threads, if possible, at the time of parallel loop execution. -->
+    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
+    <!-- Windows-only: KVS LVID Usage Monitoring.
+         NOTE: If you monitor stateful Actor services, then you should set this to true. -->
     <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
-    <!-- Windows-only: Process Working Set type for AppObserver to monitor. 
+    <!-- Windows-only: Process Working Set type for AppObserver to monitor.
+         Note: You should consider monitoring process commit (warningPrivateBytesMb threshold setting) instead of Private Working Set for tracking potential leaks. 
          Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). 
-         NOTE: If you have *several* service processes of the **same name**, setting this to true will add *significant* time-to-completion and increased CPU usage (small, but more than necessary) to AppObserver. 
          FO will automatically compute Shared + Private memory usage if it detects 50 or more same-named service processes, regardless of this setting. -->
     <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="false" />
-    <!-- Windows-only. AppObserver can monitor services with resource governance limits set and put related services into Warning if they reach 90% of the specified limit (only Memory limit is supported in this release). 
-         If you set RG Memory limits for your service code packages, then you should consider enabling this feature. Else, don't. -->
-    <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="true" />
+    <!-- Windows-only. AppObserver can monitor services with Service Fabric Resource Governance limits set (CPU and Memory) and put related services into Warning if they reach 90% of the specified limit. 
+         If you do set Memory or CPU Resource Governance limits for your service code packages, then you should enable this feature. -->
+    <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="false" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
@@ -230,8 +228,6 @@
     <Parameter Name="AzureStorageUploadObserverStorageAccountKey" DefaultValue="" />
     <!-- Zip file compression level to use: Optimal, Fastest or NoCompression. Default is Optimal if this is not set. We do not recommend NoCompression. -->
     <Parameter Name="AzureStorageUploadObserverZipFileCompressionLevel" DefaultValue="Optimal" />
-    <!-- RG (Windows-only). FO should never reach this threshold. If so, it will not be allowed to allocate memory and will crash with an OOM (it will fail fast in this scenario, by design). -->
-    <Parameter Name="RGMemoryInMb" DefaultValue="500" />
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
@@ -426,7 +422,6 @@
            Either leave EntryPointType as Setup and run FO as a restricted user, or set EntryPointType to All or remove EntryPointType attribute altogether to run everything 
            as elevated user (Setup and FO service process). -->
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
-      <ResourceGovernancePolicy CodePackageRef="Code" MemoryInMB="[RGMemoryInMb]" />
     </Policies>
   </ServiceManifestImport>
   <Principals>

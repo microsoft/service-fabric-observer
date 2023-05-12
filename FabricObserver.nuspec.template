@@ -4,7 +4,8 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.8</version>
 		<releaseNotes>
-			Bug fixes, several performance and code improvements.
+- Added support for CPU Resource Governance monitoring (Windows-only).
+- Performance and code improvements.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

@@ -81,8 +81,8 @@
 		<Parameter Name="EnableEtw" Value="true" />
 		<Parameter Name="EnableCSVDataLogging" Value="" />
 		<Parameter Name="EnableVerboseLogging" Value="" />
-		<Parameter Name="MonitorDuration" Value="" />
-		<Parameter Name="MonitorSleepDurationMilliseconds" Value="" />
+		<Parameter Name="MonitorDuration" Value="00:00:01" />
+		<Parameter Name="MonitorSleepDurationMilliseconds" Value="500" />
 		<Parameter Name="RunInterval" Value="" />
 		<Parameter Name="MonitorPrivateWorkingSet" Value="true" />
 		<Parameter Name="UseCircularBuffer" Value="" />

@@ -825,9 +825,7 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.targetAppMalformed.json"),
-                EnableConcurrentMonitoring = true
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.targetAppMalformed.json")
             };
 
             await obs.InitializeAsync();
@@ -845,10 +843,7 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.invalid.json"),
-                EnableConcurrentMonitoring = true,
-                EnableChildProcessMonitoring = true
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.invalid.json")
             };
 
             await obs.InitializeAsync();
@@ -866,10 +861,7 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.empty.json"),
-                EnableConcurrentMonitoring = true,
-                EnableChildProcessMonitoring = true
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.empty.json")
             };
 
             await obs.InitializeAsync();
@@ -889,9 +881,7 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.apptype.exclude.json"),
-                EnableConcurrentMonitoring = true
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.apptype.exclude.json")
             };
 
             await obs.InitializeAsync();
@@ -909,9 +899,7 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.app.exclude.json"),
-                EnableConcurrentMonitoring = true
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.app.exclude.json")
             };
 
             await obs.InitializeAsync();
@@ -929,9 +917,7 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.apptype.include.json"),
-                EnableConcurrentMonitoring = true
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.apptype.include.json")
             };
 
             await obs.InitializeAsync();
@@ -949,9 +935,7 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.app.include.json"),
-                EnableConcurrentMonitoring = true
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.app.include.json")
             };
 
             await obs.InitializeAsync();
@@ -971,9 +955,7 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.apptype.multi-exclude.json"),
-                EnableConcurrentMonitoring = true
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.apptype.multi-exclude.json")
             };
 
             await obs.InitializeAsync();
@@ -996,9 +978,7 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.app.multi-exclude.json"),
-                EnableConcurrentMonitoring = true
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.app.multi-exclude.json")
             };
 
             await obs.InitializeAsync();
@@ -1021,9 +1001,7 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.apptype.multi-include.json"),
-                EnableConcurrentMonitoring = true
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.apptype.multi-include.json")
             };
 
             await obs.InitializeAsync();
@@ -1041,9 +1019,7 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.app.multi-include.json"),
-                EnableConcurrentMonitoring = true
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.app.multi-include.json")
             };
 
             await obs.InitializeAsync();
@@ -1071,12 +1047,7 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
-                EnableConcurrentMonitoring = true,
-                IsEtwProviderEnabled = true,
-                EnableChildProcessMonitoring = true,
-                MaxChildProcTelemetryDataCount = 25,
-                MonitorResourceGovernanceLimits = true
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json")
             };
 
             await obs.ObserveAsync(Token);
@@ -1102,10 +1073,7 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_warnings.config.json"),
-                EnableConcurrentMonitoring = true,
-                CheckPrivateWorkingSet = true,
-                IsEtwProviderEnabled = true
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_warnings.config.json")
             };
 
             await obs.ObserveAsync(Token);
@@ -1131,8 +1099,7 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_PrivateBytes_warning.config.json"),
-                IsEtwProviderEnabled = true
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_PrivateBytes_warning.config.json")
             };
 
             await obs.ObserveAsync(Token);
@@ -1182,7 +1149,7 @@ namespace FabricObserverTests
 
             ObserverManager.FabricServiceContext = TestServiceContext;
             ObserverManager.TelemetryEnabled = false;
-            ObserverManager.EtwEnabled = false;
+            ObserverManager.EtwEnabled = true;
 
             using var obs = new AppObserver(TestServiceContext)
             {
@@ -1344,8 +1311,7 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.oldstyle_warnings.json"),
-                EnableConcurrentMonitoring = true
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.oldstyle_warnings.json")
             };
 
             await obs.ObserveAsync(Token);
@@ -1655,7 +1621,6 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_warnings_dmps.config.json"),
                 DumpsPath = Path.Combine(_logger.LogFolderBasePath, "AppObserver", "MemoryDumps")
             };
@@ -1697,7 +1662,6 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_errors_dmps.config.json"),
                 DumpsPath = Path.Combine(_logger.LogFolderBasePath, "AppObserver", "MemoryDumps")
             };
@@ -1740,8 +1704,7 @@ namespace FabricObserverTests
 
             using var obs = new ContainerObserver(TestServiceContext)
             {
-                ConfigurationFilePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "ContainerObserver.config.json"),
-                EnableConcurrentMonitoring = true
+                ConfigurationFilePath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "ContainerObserver.config.json")
             };
 
             await obs.ObserveAsync(Token);
@@ -2448,9 +2411,6 @@ namespace FabricObserverTests
 
             using var obs = new FabricSystemObserver(TestServiceContext)
             {
-                DataCapacity = 5,
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                IsEtwProviderEnabled = true,
                 MemWarnUsageThresholdMb = 10000,
                 CpuWarnUsageThresholdPct = 90,
                 ActiveEphemeralPortCountWarning = 20000
@@ -2486,8 +2446,7 @@ namespace FabricObserverTests
 
             using var obs = new FabricSystemObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
-                MemWarnUsageThresholdMb = 5
+                MemWarnUsageThresholdMb = 1
             };
 
             await obs.ObserveAsync(Token);

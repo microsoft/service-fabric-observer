@@ -5,9 +5,7 @@
 		<version>3.2.8</version>
 		<releaseNotes>
 Note: This is library is required for observer plugins that target FabricObserver 3.2.8. 
-
 - Performance and Code improvements.
-- Bug fixes.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
