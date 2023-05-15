@@ -1052,7 +1052,7 @@ namespace FabricObserver.Observers
                         duration = MonitorDuration;
                     }
 
-                    if(MonitorSleepDuration > TimeSpan.MinValue)
+                    if (MonitorSleepDuration > TimeSpan.MinValue)
                     {
                         sleep = MonitorSleepDuration;
                     }
@@ -1073,7 +1073,7 @@ namespace FabricObserver.Observers
                             double cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, IsWindows ? dotnetArg : null, procHandle);
 
                             // process is no longer running if cpu == -1.
-                            if (cpu > 0)
+                            if (cpu >= 0)
                             {
                                 if (allCpuData.ContainsKey(dotnetArg))
                                 {

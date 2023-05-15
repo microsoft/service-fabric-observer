@@ -79,6 +79,50 @@ namespace FabricObserver.Observers
         private int appCount;
         private int serviceCount;
         private bool hasSFUserProcCache;
+        private NativeMethods.SafeObjectHandle handleToProcSnapshot = null;
+
+        private NativeMethods.SafeObjectHandle Win32HandleToProcessSnapshot
+        {
+            get
+            {
+                if (!EnableChildProcessMonitoring)
+                {
+                    return null;
+                }
+
+                // This is only useful for Windows.
+                if (!IsWindows)
+                {
+                    return null;
+                }
+
+                // If the more performant approach (see NativeMethods.cs) for getting child processes succeeded, then don't proceed.
+                if (hasSFUserProcCache)
+                {
+                    return null;
+                }
+
+                if (handleToProcSnapshot == null)
+                {
+                    lock (lockObj)
+                    {
+                        if (handleToProcSnapshot == null)
+                        {
+                            handleToProcSnapshot = NativeMethods.CreateProcessSnapshot();
+
+                            if (handleToProcSnapshot.IsInvalid)
+                            {
+                                string message = $"HandleToProcessSnapshot: Failed to get process snapshot with error code {Marshal.GetLastWin32Error()}";
+                                ObserverLogger.LogWarning(message);
+                                throw new Win32Exception(message);
+                            }
+                        }
+                    }
+                }
+
+                return handleToProcSnapshot;
+            }
+        }
 
         // ReplicaOrInstanceList is the List of all replicas or instances that will be monitored during the current run.
         // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
@@ -127,46 +171,6 @@ namespace FabricObserver.Observers
         public bool MonitorResourceGovernanceLimits
         {
             get; set;
-        }
-
-        private NativeMethods.SafeObjectHandle handleToProcSnapshot = null;
-
-        public NativeMethods.SafeObjectHandle Win32HandleToProcessSnapshot
-        {
-            get
-            {
-                // This is only useful for Windows.
-                if (!IsWindows)
-                {
-                    return null;
-                }
-
-                // If the more performant approach (see NativeMethods.cs) for getting child processes succeeded, then don't proceed.
-                if (hasSFUserProcCache)
-                {
-                    return null;
-                }
-
-                if (handleToProcSnapshot == null)
-                {
-                    lock (lockObj)
-                    {
-                        if (handleToProcSnapshot == null)
-                        {
-                            handleToProcSnapshot = NativeMethods.CreateProcessSnapshot();
-
-                            if (handleToProcSnapshot.IsInvalid)
-                            {
-                                string message = $"HandleToProcessSnapshot: Failed to get process snapshot with error code {Marshal.GetLastWin32Error()}";
-                                ObserverLogger.LogWarning(message);
-                                throw new Win32Exception(message);
-                            }
-                        }
-                    }
-                }
-
-                return handleToProcSnapshot;
-            }
         }
 
         /// <summary>
@@ -976,7 +980,8 @@ namespace FabricObserver.Observers
             if (IsWindows)
             {
                 // If RefreshSFUserProcessDataCache returns false, then it means the internal impl failed. In this case, a different API will be used 
-                // to get child processes, if enabled (see Win32HandleToProcessSnapshot property impl).
+                // to get child processes, if enabled (see Win32HandleToProcessSnapshot property impl). This function refreshes 2 caches. It is not
+                // only related to child process detection.
                 hasSFUserProcCache = NativeMethods.RefreshSFUserProcessDataCache(getChildProcesses: EnableChildProcessMonitoring);
             }
 
@@ -1137,7 +1142,6 @@ namespace FabricObserver.Observers
 
             //stopwatch.Stop();
             //ObserverLogger.LogInfo($"InitializeAsync run duration: {stopwatch.Elapsed}");
-
             return true;
         }
 
