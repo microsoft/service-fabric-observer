@@ -107,7 +107,7 @@
     <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
     <!-- Process family tree monitoring: AppObserver monitors the resource usage by child processes of target services.
          NOTE: If you already know that your target services do *not* spawn child processes, then you should not enable this feature. -->
-    <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="true" />
+    <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="false" />
     <!-- The maximum number of child process data items to include in a sorted list of top n consumers for some metric, where n is the value of this setting. -->
     <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
     <!-- Service process dumps (dumpProcessOnError/dumpProcessOnWarning setting).
