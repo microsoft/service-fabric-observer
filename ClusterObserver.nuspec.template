@@ -13,14 +13,14 @@
 		<icon>icon.png</icon>
 		<readme>conuget.md</readme>
 		<language>en-US</language>
-		<description>This package contains the Service Fabric ClusterObserver(CO) Application - built for .NET 6.0 and SF Runtime 9.x. CO is a highly configurable and extensible Service Fabric stateless service that monitors aggregated cluster health and emits SF entity-specific telemetry. It is designed to be run in Service Fabric Windows and Linux clusters. This package contains the entire application and can be used to build .NET Standard 2.0 observer plugins. NOTE: If you want to target .NET 6 for your plugins, then you must use Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.8 nuget package to build them.</description>
+		<description>This package contains the Service Fabric ClusterObserver(CO) Application - built for .NET 6.0 and SF Runtime 9.x. CO is a highly configurable and extensible Service Fabric stateless service that monitors aggregated cluster health and emits SF entity-specific telemetry. It is designed to be run in Service Fabric Windows and Linux clusters. This package contains the entire application and can be used to build .NET Standard 2.0 observer plugins. NOTE: If you want to target .NET 6 for your plugins, then you must use Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.9 nuget package to build them.</description>
 		<contentFiles>
 			<files include="**" buildAction="None" copyToOutput="true" />
 		</contentFiles>
 		<dependencies>
 			<group targetFramework="net6.0">
 				<dependency id="Microsoft.ServiceFabric.Services" version="6.0.1017" />
-				<dependency id="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" version="3.2.8" />
+				<dependency id="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" version="3.2.9" />
 			</group>
 		</dependencies>
 		<projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>

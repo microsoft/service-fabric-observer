@@ -51,7 +51,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.2.8";
+        private const string InternalVersionNumber = "3.2.9";
 
         private bool RuntimeTokenCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;
@@ -250,11 +250,6 @@ namespace FabricObserver.Observers
                         {
                             // Telemetry is non-critical and should *not* take down FO.
                             Logger.LogWarning($"Unable to send internal diagnostic telemetry: {ex.Message}");
-                            
-                            if (ex is OutOfMemoryException) // Since this can be handled, don't handle it.
-                            {
-                                Environment.FailFast(string.Format("Out of Memory: {0}", ex.Message));
-                            }
                         }
                     }
 
@@ -352,11 +347,6 @@ namespace FabricObserver.Observers
                     {
                         // Telemetry is non-critical and should not take down FO.
                         Logger.LogWarning($"Unable to send internal diagnostic telemetry:{Environment.NewLine}{ex.Message}");
-
-                        if (ex is OutOfMemoryException) // Since this can be handled, don't handle it.
-                        {
-                            Environment.FailFast(string.Format("Out of Memory: {0}", ex.Message));
-                        }
                     }
                 }
 
@@ -1265,13 +1255,6 @@ namespace FabricObserver.Observers
                 catch (Exception e) when (e is not LinuxPermissionException)
                 {
                     Logger.LogError($"Unhandled Exception from {observer.ObserverName}:{Environment.NewLine}{e}");
-                    
-                    if (e is OutOfMemoryException)
-                    {
-                        // Terminate now.
-                        Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
-                    }
-
                     throw;
                 }
             }
@@ -1345,12 +1328,6 @@ namespace FabricObserver.Observers
             {
                 // Don't take down FO due to error in version check.
                 Logger.LogWarning($"Failure checking Github for latest FO version: {e.Message}");
-
-                if (e is OutOfMemoryException)
-                {
-                    // Terminate now.
-                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
-                }
             }
         }
 

@@ -57,12 +57,6 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (Exception e)
             {
-                if (e is OutOfMemoryException)
-                {
-                    // immediately crash..
-                    Environment.FailFast($"FO hit an OOM:{Environment.NewLine}{Environment.StackTrace}");
-                }
-
                 ProcessInfoProvider.ProcessInfoLogger.LogWarning($"GetCurrentCpuUsagePercentage(NET6 Process impl) failure (pid = {procId}): {e.Message}");
                 throw;
             }

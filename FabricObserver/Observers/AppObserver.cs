@@ -216,15 +216,13 @@ namespace FabricObserver.Observers
                 {
                     // Ignore these. These can happen when some target service was deleted while FO was gathering related data for entity, for example.
                 }
-                throw;
+                else
+                {
+                    throw;
+                }
             }
             catch (Exception e)
             {
-                if (e is OutOfMemoryException)
-                {
-                    Environment.FailFast($"FO hit an OOM:{Environment.NewLine}{Environment.StackTrace}");
-                }
-
                 ObserverLogger.LogError($"InitializeAsync failure: {e.Message}. Exiting AppObsever.");
                 throw;
             }
@@ -1955,11 +1953,6 @@ namespace FabricObserver.Observers
                 }
                 catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
                 {
-                    if (e is OutOfMemoryException)
-                    {
-                        Environment.FailFast($"FO hit OOM:{Environment.NewLine}{Environment.StackTrace}");
-                    }
-
                     ObserverLogger.LogWarning($"Failure processing descendant information: {e.Message}");
                     continue;
                 }

@@ -93,13 +93,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 logger.LogWarning($"Exception sending telemetry to LogAnalytics service:{Environment.NewLine}{e}");
 #else
                 logger.LogWarning($"Exception sending telemetry to LogAnalytics service: {e.Message}");
-#endif
-                if (e is OutOfMemoryException)
-                {
-                    // Terminate now.
-                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
-                }
             }
+#endif
         }
 
         private string GetSignature(
@@ -412,12 +407,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             {
                 // Telemetry is non-critical and should not take down FH.
                 logger.LogWarning($"Failure in ReportClusterUpgradeStatus:{Environment.NewLine}{e.Message}");
-
-                if (e is OutOfMemoryException)
-                {
-                    // Terminate now.
-                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
-                }
             }
         }
 
@@ -451,12 +440,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             {
                 // Telemetry is non-critical and should not take down FH.
                 logger.LogWarning($"Failure in ReportClusterUpgradeStatus:{Environment.NewLine}{e.Message}");
-
-                if (e is OutOfMemoryException)
-                {
-                    // Terminate now.
-                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
-                }
             }
         }
 

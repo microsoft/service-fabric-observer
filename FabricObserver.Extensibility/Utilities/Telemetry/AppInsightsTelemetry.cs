@@ -161,12 +161,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             catch (Exception e)
             {
                 logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e.Message}");
-                
-                if (e is OutOfMemoryException)
-                {
-                    // Terminate now.
-                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
-                };
             }
 
             return Task.CompletedTask;
@@ -348,12 +342,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             catch (Exception e)
             {
                 logger.LogWarning($"Unhandled exception in AppInsights ReportHealthAsync: {e.Message}");
-
-                if (e is OutOfMemoryException)
-                {
-                    // Terminate now.
-                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
-                }
             }
 
             return Task.CompletedTask;
@@ -556,12 +544,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             catch (Exception e)
             {
                 logger.LogWarning($"Unhandled exception in AppInsights ReportMetricAsync impl: {e.Message}");
-
-                if (e is OutOfMemoryException)
-                {
-                    // Terminate now.
-                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
-                }
             }
 
             return Task.CompletedTask;
@@ -612,12 +594,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 catch (Exception e)
                 {
                     logger.LogWarning($"Unhandled exception in TelemetryClient.ReportMetricAsync: {e.Message}");
-
-                    if (e is OutOfMemoryException)
-                    {
-                        // Terminate now.
-                        Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
-                    }
                 }
             }
             
@@ -683,12 +659,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             catch (Exception e)
             {
                 logger.LogWarning($"Unhandled exception in TelemetryClient.ReportMetricAsync:{Environment.NewLine}{e.Message}");
-
-                if (e is OutOfMemoryException)
-                {
-                    // Terminate now.
-                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
-                }
             }
 
             return Task.CompletedTask;
@@ -758,12 +728,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             {
                 // Telemetry is non-critical and should not take down FH.
                 logger.LogWarning($"Failure in ReportClusterUpgradeStatus:{Environment.NewLine}{e.Message}");
-
-                if (e is OutOfMemoryException)
-                {
-                    // Terminate now.
-                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
-                }
             }
 
             return Task.CompletedTask;
@@ -809,12 +773,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             {
                 // Telemetry is non-critical and should not take down FH.
                 logger.LogWarning($"Failure in ReportApplicationUpgradeStatus:{Environment.NewLine}{e}");
-
-                if (e is OutOfMemoryException)
-                {
-                    // Terminate now.
-                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
-                }
             }
 
             return Task.CompletedTask;
@@ -859,12 +817,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             catch (Exception e)
             {
                 logger.LogWarning($"Unhandled exception in AppInsights impl: ReportNodeSnapshotAsync:{Environment.NewLine}{e.Message}");
-
-                if (e is OutOfMemoryException)
-                {
-                    // Terminate now.
-                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
-                }
             }
 
             return Task.CompletedTask;
