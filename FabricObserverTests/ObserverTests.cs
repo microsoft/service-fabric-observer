@@ -3161,7 +3161,7 @@ namespace FabricObserverTests
         // NodeObserver: TelemetryData \\
 
         [TestMethod]
-        public async Task NodeObserver_ETW_EventData_IsTelemetryData()
+        public async Task NodeObserver_ETW_EventData_IsNodeTelemetryData()
         {
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
@@ -3192,7 +3192,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task NodeObserver_ETW_EventData_IsTelemetryData_Warnings()
+        public async Task NodeObserver_ETW_EventData_IsNodeTelemetryData_Warnings()
         {
             using var foEtwListener = new FabricObserverEtwListener(_logger);
 
