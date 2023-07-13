@@ -158,7 +158,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
                 telemetryClient.TrackTrace(tt);
             }
-            catch (Exception e)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 logger.LogWarning($"Unhandled exception in TelemetryClient.ReportHealthAsync:{Environment.NewLine}{e.Message}");
             }
@@ -339,7 +339,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     telemetryClient.TrackEvent("FabricObserver.EntityHealthData", properties, metric);
                 }
             }
-            catch (Exception e)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 logger.LogWarning($"Unhandled exception in AppInsights ReportHealthAsync: {e.Message}");
             }
@@ -541,7 +541,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     telemetryClient.TrackEvent("FabricObserver.EntityMetricData", properties, metric);
                 }
             }
-            catch (Exception e)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 logger.LogWarning($"Unhandled exception in AppInsights ReportMetricAsync impl: {e.Message}");
             }
@@ -591,7 +591,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
                     telemetryClient.TrackEvent("FabricObserver.ChildProcessTelemetryData", properties, metrics);
                 }
-                catch (Exception e)
+                catch (Exception e) when (e is not OutOfMemoryException)
                 {
                     logger.LogWarning($"Unhandled exception in TelemetryClient.ReportMetricAsync: {e.Message}");
                 }
@@ -656,7 +656,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
                 telemetryClient.TrackEvent("FabricObserver.MachineTelemetryData", properties);
             }
-            catch (Exception e)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 logger.LogWarning($"Unhandled exception in TelemetryClient.ReportMetricAsync:{Environment.NewLine}{e.Message}");
             }
@@ -724,7 +724,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
                 return Task.CompletedTask;
             }
-            catch (Exception e)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 // Telemetry is non-critical and should not take down FH.
                 logger.LogWarning($"Failure in ReportClusterUpgradeStatus:{Environment.NewLine}{e.Message}");
@@ -769,7 +769,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
                 return Task.CompletedTask;
             }
-            catch (Exception e)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 // Telemetry is non-critical and should not take down FH.
                 logger.LogWarning($"Failure in ReportApplicationUpgradeStatus:{Environment.NewLine}{e}");
@@ -814,7 +814,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
                 telemetryClient.TrackEvent("FabricObserver.NodeSnapshotData", properties);
             }
-            catch (Exception e)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 logger.LogWarning($"Unhandled exception in AppInsights impl: ReportNodeSnapshotAsync:{Environment.NewLine}{e.Message}");
             }

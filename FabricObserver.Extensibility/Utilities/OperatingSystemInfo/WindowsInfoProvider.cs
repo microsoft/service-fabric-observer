@@ -635,7 +635,7 @@ namespace FabricObserver.Observers.Utilities
                 {
                     ++iKey;
 
-                    if (outputLine.Data != null && outputLine.Data.Contains(":"))
+                    if (outputLine.Data != null && outputLine.Data.Contains(':'))
                     {
                         if (!string.IsNullOrWhiteSpace(outputLine.Data))
                         {

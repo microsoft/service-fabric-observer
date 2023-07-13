@@ -3,7 +3,7 @@
 		<TargetFramework>net6.0</TargetFramework>
 		<Platforms>x64</Platforms>
 		<RootNamespace>FabricObserver</RootNamespace>
-		<Copyright>Copyright © 2022</Copyright>
+		<Copyright>Copyright © 2023</Copyright>
 		<Product>FabricObserver</Product>
 		<Version>3.2.9</Version>
 		<FileVersion>3.2.9</FileVersion>
@@ -27,7 +27,7 @@
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="NLog" Version="5.2.0" />
 		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="7.0.0" />
-		<PackageReference Include="System.Management" Version="7.0.1" />
+		<PackageReference Include="System.Management" Version="7.0.2" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />

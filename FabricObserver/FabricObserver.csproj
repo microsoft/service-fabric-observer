@@ -9,7 +9,7 @@
 	<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
 	<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
 	<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
-    <Copyright>Copyright © 2022</Copyright>
+    <Copyright>Copyright © 2023</Copyright>
     <Product>FabricObserver</Product>
     <Version>3.2.9</Version>
 	<FileVersion>3.2.9</FileVersion>
@@ -31,7 +31,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Azure.Storage.Blobs" Version="12.16.0" />
-    <PackageReference Include="Octokit" Version="6.0.0" />
+    <PackageReference Include="Octokit" Version="6.2.1" />
     <PackageReference Include="System.Diagnostics.EventLog" Version="7.0.0" />
     <PackageReference Include="McMaster.NETCore.Plugins" Version="1.4.0" />
     <Reference Include="..\Interop\Interop.WUApiLib.dll" />

@@ -482,7 +482,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                if (NativeMethods.GetProcessNameFromId(procId) != procName)
+                if (!NativeMethods.GetProcessNameFromId(procId).Equals(procName, StringComparison.OrdinalIgnoreCase))
                 {
                     return 0F;
                 }
@@ -610,7 +610,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 string pName = NativeMethods.GetProcessNameFromId(pid);
 
-                if (pName == null || pName != procName)
+                if (pName == null || !pName.Equals(procName, StringComparison.OrdinalIgnoreCase))
                 {
                     // The related Observer will have logged any privilege related failure.
                     ProcessInfoLogger.LogInfo($"GetInternalProcessName: Process Name ({procName}) is no longer mapped to supplied ID ({pid}).");
@@ -662,7 +662,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                if (InstanceNameDictionary != null && InstanceNameDictionary.Any(p => p.Value.procName == procName))
+                if (InstanceNameDictionary != null && InstanceNameDictionary.Any(p => p.Value.procName.Equals(procName, StringComparison.OrdinalIgnoreCase)))
                 {
                     var instanceData = InstanceNameDictionary.Where(p => p.Value.procName == procName).ToArray();
 
@@ -678,7 +678,8 @@ namespace FabricObserver.Observers.Utilities
                             if (instance.Value.procId == pid)
                             {
                                 // Same process?
-                                if (NativeMethods.GetProcessNameFromId(pid) == processName && NativeMethods.GetProcessStartTime(pid) == processStartTime)
+                                if (NativeMethods.GetProcessNameFromId(pid).Equals(processName, StringComparison.OrdinalIgnoreCase)
+                                    && NativeMethods.GetProcessStartTime(pid) == processStartTime)
                                 {
                                     return instance.Key;
                                 }
@@ -698,7 +699,10 @@ namespace FabricObserver.Observers.Utilities
                     }
                 }
 
-                var instances = PerfCounterProcessCategory.GetInstanceNames().Where(inst => inst == procName || inst.StartsWith($"{procName}#"));
+                var instances =
+                    PerfCounterProcessCategory.GetInstanceNames().Where(
+                        inst => inst.Equals(procName, StringComparison.OrdinalIgnoreCase)
+                             || inst.StartsWith($"{procName}#", StringComparison.OrdinalIgnoreCase));
 
                 foreach (string instance in instances)
                 {

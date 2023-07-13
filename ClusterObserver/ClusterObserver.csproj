@@ -9,7 +9,7 @@
 	<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
 	<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
 	<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
-	<Copyright>Copyright © 2022</Copyright>
+	<Copyright>Copyright © 2023</Copyright>
 	<Product>ClusterObserver</Product>
 	<Version>2.2.4</Version>
 	<FileVersion>2.2.4</FileVersion>

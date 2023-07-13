@@ -143,7 +143,7 @@
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
-    <!-- Required: These are JSON-style lists of strings, empty should be "[]", full should be "['mythumb1', 'mythumb2', etc...] or ['mycommon'1, 'mycommon2', etc...]" -->
+    <!-- Required: These are JSON-style lists of strings, empty should be "[]", full should be "['1fda27a2923505e47de37db48ff685b049642c25', '3gda29a2923505e77de37cb48ff685b049642c89', etc...] or ['mycommon'1, 'mycommon2', etc...]" -->
     <Parameter Name="AppCertThumbprintsToObserve" DefaultValue="[]" />
     <Parameter Name="AppCertCommonNamesToObserve" DefaultValue="[]" />
     <!-- ContainerObserver -->

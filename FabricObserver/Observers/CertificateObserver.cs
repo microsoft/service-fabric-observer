@@ -121,7 +121,7 @@ namespace FabricObserver.Observers
                     CheckByThumbprint(store, SecurityConfiguration.ClusterCertThumbprintOrCommonName, DaysUntilClusterExpireWarningThreshold);
                 }
 
-                if (AppCertificateCommonNamesToObserve != null)
+                if (AppCertificateCommonNamesToObserve != null && AppCertificateCommonNamesToObserve.Any())
                 {
                     // App certificates
                     foreach (string commonName in AppCertificateCommonNamesToObserve)
@@ -131,8 +131,9 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                if (AppCertificateThumbprintsToObserve != null)
+                if (AppCertificateThumbprintsToObserve != null && AppCertificateThumbprintsToObserve.Any())
                 {
+                    // App certificates
                     foreach (string thumbprint in AppCertificateThumbprintsToObserve)
                     {
                         token.ThrowIfCancellationRequested();

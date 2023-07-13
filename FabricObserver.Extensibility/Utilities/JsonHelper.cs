@@ -82,7 +82,7 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                var jsonSerializerSettings = new JsonSerializerSettings
+                JsonSerializerSettings jsonSerializerSettings = new()
                 {
                     MissingMemberHandling = treatMissingMembersAsError ? MissingMemberHandling.Error : MissingMemberHandling.Ignore
                 };
@@ -101,35 +101,31 @@ namespace FabricObserver.Observers.Utilities
 
         public static T ReadFromJsonStream<T>(Stream stream)
         {
-            using (StreamReader r = new(stream))
+            using StreamReader r = new(stream);
+            string json = r.ReadToEnd();
+
+            if (TryDeserializeObject(json, out T data))
             {
-                string json = r.ReadToEnd();
-
-                if (TryDeserializeObject(json, out T data))
-                {
-                    return data;
-                }
-
-                return default;
+                return data;
             }
+
+            return default;
         }
 
         public static T ConvertFromString<T>(string jsonInput)
         {
-            using (var stream = CreateStreamFromString(jsonInput))
-            {
-                return ReadFromJsonStream<T>(stream);
-            }
+            Stream stream = CreateStreamFromString(jsonInput);
+            return ReadFromJsonStream<T>(stream);  
         }
 
-        private static Stream CreateStreamFromString(string s)
+        private static Stream CreateStreamFromString(string input)
         {
-            var stream = new MemoryStream();
-            var writer = new StreamWriter(stream, Encoding.UTF8);
-            writer.Write(s);
-            writer.Flush();
-            stream.Position = 0;
-            return stream;
+            MemoryStream memoryStream = new();
+            StreamWriter streamWriter = new(memoryStream, Encoding.UTF8);
+            streamWriter.Write(input);
+            streamWriter.Flush();
+            memoryStream.Position = 0;
+            return memoryStream;
         }
     }
 }

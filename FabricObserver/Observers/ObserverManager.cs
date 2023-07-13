@@ -246,7 +246,7 @@ namespace FabricObserver.Observers
                                 }
                             }
                         }
-                        catch (Exception ex)
+                        catch (Exception ex) when (ex is not OutOfMemoryException)
                         {
                             // Telemetry is non-critical and should *not* take down FO.
                             Logger.LogWarning($"Unable to send internal diagnostic telemetry: {ex.Message}");
@@ -326,7 +326,7 @@ namespace FabricObserver.Observers
                             });
                 }
 
-                // Operational telemetry sent to FO developer for use in understanding generic behavior of FO in the real world (no PII)
+                // Operational telemetry sent to FO developer for use in understanding generic behavior of FO in the real world (no PII).
                 if (FabricObserverOperationalTelemetryEnabled)
                 {
                     try
@@ -346,7 +346,7 @@ namespace FabricObserver.Observers
                     catch (Exception ex)
                     {
                         // Telemetry is non-critical and should not take down FO.
-                        Logger.LogWarning($"Unable to send internal diagnostic telemetry:{Environment.NewLine}{ex.Message}");
+                        Logger.LogWarning($"Unable to send internal diagnostic telemetry: {ex.Message}");
                     }
                 }
 
@@ -737,7 +737,7 @@ namespace FabricObserver.Observers
                     ObserverData = GetObserverData(),
                 };
             }
-            catch (Exception e) when (e is ArgumentException)
+            catch (ArgumentException)
             {
 
             }
@@ -869,14 +869,14 @@ namespace FabricObserver.Observers
                 // ObserverManager settings.
                 SetPropertiesFromConfigurationParameters(e.NewPackage.Settings);
             }
-            catch (Exception err)
+            catch (Exception ex) when (ex is not OutOfMemoryException)
             {
                 var healthReport = new HealthReport
                 {
                     AppName = new Uri(FabricServiceContext.CodePackageActivationContext.ApplicationName),
                     Code = FOErrorWarningCodes.Ok,
                     EntityType = EntityType.Application,
-                    HealthMessage = $"Error updating FabricObserver with new configuration settings:{Environment.NewLine}{err}",
+                    HealthMessage = $"Error updating FabricObserver with new configuration settings:{Environment.NewLine}{ex}",
                     NodeName = FabricServiceContext.NodeContext.NodeName,
                     State = HealthState.Ok,
                     Property = "Configuration_Upate_Error",
@@ -1324,7 +1324,7 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-            catch (Exception e)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 // Don't take down FO due to error in version check.
                 Logger.LogWarning($"Failure checking Github for latest FO version: {e.Message}");

@@ -30,14 +30,14 @@ using System.Xml;
 using static ServiceFabric.Mocks.MockConfigurationPackage;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
-/***PLEASE RUN ALL OF THESE TESTS ON YOUR LOCAL DEV MACHINE WITH A RUNNING SF CLUSTER BEFORE SUBMITTING A PULL REQUEST***/
+/***PLEASE RUN ALL OF THESE TESTS ON YOUR LOCAL DEV MACHINE WITH A RUNNING SF CLUSTER (*1-Node configuration, not 5*) BEFORE SUBMITTING A PULL REQUEST***/
 
 namespace FabricObserverTests
 {
     [TestClass]
     public class ObserverTests
     {
-        // Change this to suit your test env.
+        // Change this to suit your test env. These tests must be run on a 1-node dev cluster.
         private const string NodeName = "_Node_0";
         private static readonly Uri TestServiceName = new("fabric:/app/service");
         private static readonly CancellationToken Token = new();
@@ -49,14 +49,19 @@ namespace FabricObserverTests
             EnableVerboseLogging = true,
         };
 
-        private static FabricClient FabricClient => FabricClientUtilities.FabricClientSingleton;
+        private static FabricClient FabricClientSingleton => FabricClientUtilities.FabricClientSingleton;
 
         [ClassInitialize]
         public static async Task TestClassStartUp(TestContext testContext)
         {
             if (!IsLocalSFRuntimePresent())
             {
-                throw new Exception("Can't run these tests without a local dev cluster");
+                throw new Exception("Can't run these tests without a local dev cluster.");
+            }
+
+            if (!await IsOneNodeClusterAsync())
+            {
+                throw new Exception("These tests need to be run in a 1-node SF dev cluster (one box) setup.");
             }
 
             // Remove orphaned health reports.
@@ -128,6 +133,12 @@ namespace FabricObserverTests
 
         /* Helpers */
 
+        private static async Task<bool> IsOneNodeClusterAsync()
+        {
+            var nodeList = await FabricClientSingleton.QueryManager.GetNodeListAsync();
+            return nodeList.Count == 1;
+        }
+
         private static ConfigurationPackage BuildConfigurationPackageFromSettingsFile(string configPath)
         {
             StringReader sreader = null;
@@ -192,7 +203,7 @@ namespace FabricObserverTests
 
             // If fabric:/HealthMetrics is already installed, exit.
             var deployedTestApp =
-                    await FabricClient.QueryManager.GetDeployedApplicationListAsync(
+                    await FabricClientSingleton.QueryManager.GetDeployedApplicationListAsync(
                             NodeName,
                             new Uri(appName),
                             TimeSpan.FromSeconds(30),
@@ -223,10 +234,10 @@ namespace FabricObserverTests
                 System.IO.Compression.ZipFile.ExtractToDirectory(packagePathZip, "HealthMetricsApp", true);
 
                 // Copy the HealthMetrics app package to a location in the image store.
-                FabricClient.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
+                FabricClientSingleton.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
 
                 // Provision the HealthMetrics application.          
-                await FabricClient.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
+                await FabricClientSingleton.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
 
                 // Create HealthMetrics app instance.
                 /* override app params..
@@ -234,7 +245,7 @@ namespace FabricObserverTests
                 nameValueCollection.Add("foo", "bar");
                 */
                 ApplicationDescription appDesc = new(new Uri(appName), appType, appVersion/*, nameValueCollection */);
-                await FabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
+                await FabricClientSingleton.ApplicationManager.CreateApplicationAsync(appDesc);
 
                 // Create the HealthMetrics service descriptions.
                 StatefulServiceDescription serviceDescription1 = new()
@@ -257,8 +268,8 @@ namespace FabricObserverTests
 
                 // Create the HealthMetrics app services. If any of the services are declared as a default service in the ApplicationManifest.xml,
                 // then the service instance is already running and this call will fail..
-                await FabricClient.ServiceManager.CreateServiceAsync(serviceDescription1);
-                await FabricClient.ServiceManager.CreateServiceAsync(serviceDescription2);
+                await FabricClientSingleton.ServiceManager.CreateServiceAsync(serviceDescription1);
+                await FabricClientSingleton.ServiceManager.CreateServiceAsync(serviceDescription2);
 
                 // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
                 // You may need to increase this value depending upon your dev machine? You'll find out..
@@ -268,17 +279,17 @@ namespace FabricObserverTests
             {
                 if (fe.ErrorCode == FabricErrorCode.ApplicationAlreadyExists)
                 {
-                    await FabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true});
+                    await FabricClientSingleton.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true});
                     await DeployHealthMetricsAppAsync();
                 }
                 else if (fe.ErrorCode == FabricErrorCode.ApplicationTypeAlreadyExists)
                 {
-                    var appList = await FabricClient.QueryManager.GetApplicationListAsync(new Uri(appName));
+                    var appList = await FabricClientSingleton.QueryManager.GetApplicationListAsync(new Uri(appName));
                     if (appList.Count > 0)
                     {
-                        await FabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
+                        await FabricClientSingleton.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
                     }
-                    await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+                    await FabricClientSingleton.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
                     await DeployHealthMetricsAppAsync();
                 }
             }
@@ -290,7 +301,7 @@ namespace FabricObserverTests
 
             // If fabric:/TestApp42 is already installed, exit.
             var deployedTestApp =
-                    await FabricClient.QueryManager.GetDeployedApplicationListAsync(
+                    await FabricClientSingleton.QueryManager.GetDeployedApplicationListAsync(
                             NodeName,
                             new Uri(appName),
                             TimeSpan.FromSeconds(30),
@@ -316,14 +327,14 @@ namespace FabricObserverTests
                 System.IO.Compression.ZipFile.ExtractToDirectory(packagePathZip, "TestApp42", true);
 
                 // Copy the HealthMetrics app package to a location in the image store.
-                FabricClient.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
+                FabricClientSingleton.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
 
                 // Provision the HealthMetrics application.          
-                await FabricClient.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
+                await FabricClientSingleton.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
 
                 // Create HealthMetrics app instance.
                 ApplicationDescription appDesc = new(new Uri(appName), appType, appVersion);
-                await FabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
+                await FabricClientSingleton.ApplicationManager.CreateApplicationAsync(appDesc);
 
                 // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
                 // You may need to increase this value depending upon your dev machine? You'll find out..
@@ -333,17 +344,17 @@ namespace FabricObserverTests
             {
                 if (fe.ErrorCode == FabricErrorCode.ApplicationAlreadyExists)
                 {
-                    await FabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
+                    await FabricClientSingleton.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
                     await DeployTestApp42Async();
                 }
                 else if (fe.ErrorCode == FabricErrorCode.ApplicationTypeAlreadyExists)
                 {
-                    var appList = await FabricClient.QueryManager.GetApplicationListAsync(new Uri(appName));
+                    var appList = await FabricClientSingleton.QueryManager.GetApplicationListAsync(new Uri(appName));
                     if (appList.Count > 0)
                     {
-                        await FabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
+                        await FabricClientSingleton.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
                     }
-                    await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+                    await FabricClientSingleton.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
                     await DeployTestApp42Async();
                 }
             }
@@ -355,7 +366,7 @@ namespace FabricObserverTests
 
             // If fabric:/Voting is already installed, exit.
             var deployedTestApp =
-                    await FabricClient.QueryManager.GetDeployedApplicationListAsync(
+                    await FabricClientSingleton.QueryManager.GetDeployedApplicationListAsync(
                             NodeName,
                             new Uri(appName),
                             TimeSpan.FromSeconds(30),
@@ -381,14 +392,14 @@ namespace FabricObserverTests
                 System.IO.Compression.ZipFile.ExtractToDirectory(packagePathZip, "VotingApp", true);
 
                 // Copy the HealthMetrics app package to a location in the image store.
-                FabricClient.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
+                FabricClientSingleton.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
 
                 // Provision the HealthMetrics application.          
-                await FabricClient.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
+                await FabricClientSingleton.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
 
                 // Create HealthMetrics app instance.
                 ApplicationDescription appDesc = new(new Uri(appName), appType, appVersion);
-                await FabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
+                await FabricClientSingleton.ApplicationManager.CreateApplicationAsync(appDesc);
 
                 // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
                 // You may need to increase this value depending upon your dev machine? You'll find out..
@@ -398,17 +409,17 @@ namespace FabricObserverTests
             {
                 if (fe.ErrorCode == FabricErrorCode.ApplicationAlreadyExists)
                 {
-                    await FabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
+                    await FabricClientSingleton.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
                     await DeployVotingAppAsync();
                 }
                 else if (fe.ErrorCode == FabricErrorCode.ApplicationTypeAlreadyExists)
                 {
-                    var appList = await FabricClient.QueryManager.GetApplicationListAsync(new Uri(appName));
+                    var appList = await FabricClientSingleton.QueryManager.GetApplicationListAsync(new Uri(appName));
                     if (appList.Count > 0)
                     {
-                        await FabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
+                        await FabricClientSingleton.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
                     }
-                    await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+                    await FabricClientSingleton.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
                     await DeployVotingAppAsync();
                 }
             }
@@ -420,7 +431,7 @@ namespace FabricObserverTests
 
             // If fabric:/Voting is already installed, exit.
             var deployedTestApp =
-                    await FabricClient.QueryManager.GetDeployedApplicationListAsync(
+                    await FabricClientSingleton.QueryManager.GetDeployedApplicationListAsync(
                             NodeName,
                             new Uri(appName),
                             TimeSpan.FromSeconds(30),
@@ -446,14 +457,14 @@ namespace FabricObserverTests
                 System.IO.Compression.ZipFile.ExtractToDirectory(packagePathZip, "CpuStressApp", true);
 
                 // Copy the HealthMetrics app package to a location in the image store.
-                FabricClient.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
+                FabricClientSingleton.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
 
                 // Provision the HealthMetrics application.          
-                await FabricClient.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
+                await FabricClientSingleton.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
 
                 // Create HealthMetrics app instance.
                 ApplicationDescription appDesc = new(new Uri(appName), appType, appVersion);
-                await FabricClient.ApplicationManager.CreateApplicationAsync(appDesc);
+                await FabricClientSingleton.ApplicationManager.CreateApplicationAsync(appDesc);
 
                 // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
                 // You may need to increase this value depending upon your dev machine? You'll find out..
@@ -463,17 +474,17 @@ namespace FabricObserverTests
             {
                 if (fe.ErrorCode == FabricErrorCode.ApplicationAlreadyExists)
                 {
-                    await FabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
+                    await FabricClientSingleton.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
                     await DeployCpuStressAppAsync();
                 }
                 else if (fe.ErrorCode == FabricErrorCode.ApplicationTypeAlreadyExists)
                 {
-                    var appList = await FabricClient.QueryManager.GetApplicationListAsync(new Uri(appName));
+                    var appList = await FabricClientSingleton.QueryManager.GetApplicationListAsync(new Uri(appName));
                     if (appList.Count > 0)
                     {
-                        await FabricClient.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
+                        await FabricClientSingleton.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
                     }
-                    await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+                    await FabricClientSingleton.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
                     await DeployCpuStressAppAsync();
                 }
             }
@@ -549,20 +560,20 @@ namespace FabricObserverTests
                 string packagePathInImageStore = "HealthMetrics";
 
                 // Clean up the unzipped directory.
-                FabricClient.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
+                FabricClientSingleton.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
 
                 // Delete services.
                 DeleteServiceDescription deleteServiceDescription1 = new(new Uri(serviceName1));
                 DeleteServiceDescription deleteServiceDescription2 = new(new Uri(serviceName2));
-                await FabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription1);
-                await FabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription2);
+                await FabricClientSingleton.ServiceManager.DeleteServiceAsync(deleteServiceDescription1);
+                await FabricClientSingleton.ServiceManager.DeleteServiceAsync(deleteServiceDescription2);
 
                 // Delete an application instance from the application type.
                 DeleteApplicationDescription deleteApplicationDescription = new(new Uri(appName));
-                await FabricClient.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
+                await FabricClientSingleton.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
 
                 // Un-provision the application type.
-                await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+                await FabricClientSingleton.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
             }
 
             // TestApp42 \\
@@ -576,18 +587,18 @@ namespace FabricObserverTests
                 string packagePathInImageStore = "TestApp42";
 
                 // Clean up the unzipped directory.
-                FabricClient.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
+                FabricClientSingleton.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
 
                 // Delete services.
                 var deleteServiceDescription1 = new DeleteServiceDescription(new Uri(serviceName1));
-                await FabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription1);
+                await FabricClientSingleton.ServiceManager.DeleteServiceAsync(deleteServiceDescription1);
 
                 // Delete an application instance from the application type.
                 var deleteApplicationDescription = new DeleteApplicationDescription(new Uri(appName));
-                await FabricClient.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
+                await FabricClientSingleton.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
 
                 // Un-provision the application type.
-                await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+                await FabricClientSingleton.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
             }
 
             // Voting \\
@@ -602,20 +613,20 @@ namespace FabricObserverTests
                 string packagePathInImageStore = "VotingApp";
 
                 // Clean up the unzipped directory.
-                FabricClient.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
+                FabricClientSingleton.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
 
                 // Delete services.
                 var deleteServiceDescription1 = new DeleteServiceDescription(new Uri(serviceName1));
                 var deleteServiceDescription2 = new DeleteServiceDescription(new Uri(serviceName2));
-                await FabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription1);
-                await FabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription2);
+                await FabricClientSingleton.ServiceManager.DeleteServiceAsync(deleteServiceDescription1);
+                await FabricClientSingleton.ServiceManager.DeleteServiceAsync(deleteServiceDescription2);
 
                 // Delete an application instance from the application type.
                 var deleteApplicationDescription = new DeleteApplicationDescription(new Uri(appName));
-                await FabricClient.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
+                await FabricClientSingleton.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
 
                 // Un-provision the application type.
-                await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+                await FabricClientSingleton.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
             }
 
             // CpuStress \\
@@ -631,18 +642,18 @@ namespace FabricObserverTests
                 string packagePathInImageStore = "CpuStressApp";
 
                 // Clean up the unzipped directory.
-                FabricClient.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
+                FabricClientSingleton.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
 
                 // Delete services.
                 var deleteServiceDescription = new DeleteServiceDescription(new Uri(serviceName));
-                await FabricClient.ServiceManager.DeleteServiceAsync(deleteServiceDescription);
+                await FabricClientSingleton.ServiceManager.DeleteServiceAsync(deleteServiceDescription);
 
                 // Delete an application instance from the application type.
                 var deleteApplicationDescription = new DeleteApplicationDescription(new Uri(appName));
-                await FabricClient.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
+                await FabricClientSingleton.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
 
                 // Un-provision the application type.
-                await FabricClient.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+                await FabricClientSingleton.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
             }
         }
 
@@ -650,7 +661,7 @@ namespace FabricObserverTests
         {
             try
             {
-                var services = await FabricClient.QueryManager.GetServiceListAsync(new Uri(appName));
+                var services = await FabricClientSingleton.QueryManager.GetServiceListAsync(new Uri(appName));
                 return numServices > 0 ? services?.Count == numServices : services.Count > 0;
             }
             catch (FabricElementNotFoundException)
@@ -1185,20 +1196,20 @@ namespace FabricObserverTests
 
             var clientUtilities = new FabricClientUtilities(NodeName);
             string appManifest =
-                await FabricClient.ApplicationManager.GetApplicationManifestAsync(
+                await FabricClientSingleton.ApplicationManager.GetApplicationManifestAsync(
                         "VotingType", "1.0.0",
                         TimeSpan.FromSeconds(60),
                         Token);
 
             string svcManifest =
-                await FabricClient.ServiceManager.GetServiceManifestAsync(
+                await FabricClientSingleton.ServiceManager.GetServiceManifestAsync(
                         "VotingType", "1.0.0",
                         "VotingWebPkg",
                         TimeSpan.FromSeconds(60),
                         Token);
 
             string svcManifestData =
-                await FabricClient.ServiceManager.GetServiceManifestAsync(
+                await FabricClientSingleton.ServiceManager.GetServiceManifestAsync(
                         "VotingType", "1.0.0",
                         "VotingDataPkg",
                         TimeSpan.FromSeconds(60),
@@ -1228,7 +1239,7 @@ namespace FabricObserverTests
 
             try
             {
-                await FabricClient.ApplicationManager.UpgradeApplicationAsync(
+                await FabricClientSingleton.ApplicationManager.UpgradeApplicationAsync(
                         appUpgradeDescription,
                         TimeSpan.FromSeconds(60),
                         Token);
@@ -1244,7 +1255,7 @@ namespace FabricObserverTests
             // Wait for the upgrade to complete.
             while (stopwatch.Elapsed <= TimeSpan.FromSeconds(30))
             {
-                var progress = await FabricClient.ApplicationManager.GetApplicationUpgradeProgressAsync(new Uri("fabric:/Voting"));
+                var progress = await FabricClientSingleton.ApplicationManager.GetApplicationUpgradeProgressAsync(new Uri("fabric:/Voting"));
 
                 if (progress.UpgradeState == ApplicationUpgradeState.RollingForwardCompleted)
                 {
@@ -1255,9 +1266,9 @@ namespace FabricObserverTests
             }
 
             // Query for latest application information (which will include the app parameter added in the above upgrade).
-            ApplicationList appList = await FabricClient.QueryManager.GetApplicationListAsync(new Uri("fabric:/Voting"));
+            ApplicationList appList = await FabricClientSingleton.QueryManager.GetApplicationListAsync(new Uri("fabric:/Voting"));
             ApplicationTypeList applicationTypeList =
-                await FabricClient.QueryManager.GetApplicationTypeListAsync("VotingType", TimeSpan.FromSeconds(60), Token);
+                await FabricClientSingleton.QueryManager.GetApplicationTypeListAsync("VotingType", TimeSpan.FromSeconds(60), Token);
 
             var appParameters = appList.First(app => app.ApplicationTypeName == "VotingType").ApplicationParameters;
             Assert.IsTrue(appParameters.Any(a => a.Name == "VotingWeb_RGMemoryInMbLimit"));
@@ -2398,7 +2409,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors()
         {
-            var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
+            var nodeList = await FabricClientSingleton.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
             Assert.IsTrue(nodeList?.Count == 1);
@@ -2433,7 +2444,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_MemoryWarningsOrErrorsDetected()
         {
-            var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
+            var nodeList = await FabricClientSingleton.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
             Assert.IsTrue(nodeList?.Count == 1);
@@ -2464,7 +2475,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_ActiveTcpPortsWarningsOrErrorsDetected()
         {
-            var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
+            var nodeList = await FabricClientSingleton.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
             Assert.IsTrue(nodeList?.Count == 1);
@@ -2497,7 +2508,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_EphemeralPortsWarningsOrErrorsDetected()
         {
-            var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
+            var nodeList = await FabricClientSingleton.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
             Assert.IsTrue(nodeList?.Count == 1);
@@ -2530,7 +2541,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_HandlesWarningsOrErrorsDetected()
         {
-            var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
+            var nodeList = await FabricClientSingleton.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
             Assert.IsTrue(nodeList?.Count == 1);
@@ -2563,7 +2574,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_Negative_Integer_CPU_Warn_Threshold_No_Unhandled_Exception()
         {
-            var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
+            var nodeList = await FabricClientSingleton.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
             Assert.IsTrue(nodeList?.Count == 1);
@@ -2596,7 +2607,7 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_Integer_Greater_Than_100_CPU_Warn_Threshold_No_Unhandled_Exception()
         {
-            var nodeList = await FabricClient.QueryManager.GetNodeListAsync();
+            var nodeList = await FabricClientSingleton.QueryManager.GetNodeListAsync();
 
             // This is meant to be run on your dev machine's one node test cluster.
             Assert.IsTrue(nodeList?.Count == 1);
