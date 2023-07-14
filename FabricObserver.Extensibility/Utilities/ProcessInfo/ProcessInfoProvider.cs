@@ -56,6 +56,8 @@ namespace FabricObserver.Observers.Utilities
                     lock (loggerLock)
                     {
                         logger ??= new Logger("ProcessInfoProvider");
+                        logger.EnableVerboseLogging = true;
+                        logger.EnableETWLogging = true;
                     }
                 }
 

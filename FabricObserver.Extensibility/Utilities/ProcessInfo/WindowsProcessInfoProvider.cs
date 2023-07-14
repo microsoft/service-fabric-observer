@@ -28,67 +28,9 @@ namespace FabricObserver.Observers.Utilities
         private const string WinFabDbCategoryName = "Windows Fabric Database";
         private const string LvidCounterName = "Long-Value Maximum LID";
         private static readonly object lockObj = new();
-        private static readonly object lockUpdate = new();
         private volatile bool hasWarnedProcessNameLength = false;
-        private static PerformanceCounter memCounter = null;
-        private static PerformanceCounter internalProcNameCounter = null;
-        private static PerformanceCounter lvidCounter = null;
         private static PerformanceCounterCategory performanceCounterCategory = null;
         public readonly static ConcurrentDictionary<string, (string procName, int procId, DateTime processStartTime)> InstanceNameDictionary = new();
-
-        private static PerformanceCounter ProcessWorkingSetCounter
-        {
-            get
-            {
-                if (memCounter == null)
-                {
-                    lock (lockObj)
-                    {
-                        if (memCounter == null)
-                        {
-                            memCounter = new(ProcessCategoryName, ProcessMemoryCounterName, true);
-                        }
-                    }
-                }
-                return memCounter;
-            }
-        }
-
-        private static PerformanceCounter ProcNameCounter
-        {
-            get
-            {
-                if (internalProcNameCounter == null)
-                {
-                    lock (lockObj)
-                    {
-                        if (internalProcNameCounter == null)
-                        {
-                            internalProcNameCounter = new(ProcessCategoryName, ProcessIDCounterName, true);
-                        }
-                    }
-                }
-                return internalProcNameCounter;
-            }
-        }
-
-        private static PerformanceCounter LvidCounter
-        {
-            get
-            {
-                if (lvidCounter == null)
-                {
-                    lock (lockObj)
-                    {
-                        if (lvidCounter == null)
-                        {
-                            lvidCounter = new(WinFabDbCategoryName, LvidCounterName, true);
-                        }
-                    }
-                }
-                return lvidCounter;
-            }
-        }
 
         private static PerformanceCounterCategory PerfCounterProcessCategory
         {
@@ -336,14 +278,10 @@ namespace FabricObserver.Observers.Utilities
                    categoryName and counterName are never null (they are const strings).
                    Only two possible exceptions can happen here: IOE and Win32Exception. */
 
-                lock (lockUpdate)
-                {
-                    LvidCounter.InstanceName = internalProcName;
-                    float result = LvidCounter.NextValue();
-                    double usedPct = (double)(result * 100) / int.MaxValue;
-
-                    return usedPct;
-                }
+                using PerformanceCounter LvidCounter = new(WinFabDbCategoryName, LvidCounterName, internalProcName, true);
+                float result = LvidCounter.NextValue();
+                double usedPct = (double)(result * 100) / int.MaxValue;
+                return usedPct;
             }
             catch (InvalidOperationException ioe)
             {
@@ -460,8 +398,12 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        private float GetProcessMemoryMbPerfCounter(string procName, int procId, CancellationToken token, string perfCounterName = "Working Set - Private")
+        private float GetProcessMemoryMbPerfCounter(string procName, int procId, CancellationToken token)
         {
+#if DEBUG
+            // For DEBUG - Perf.
+            Stopwatch stopwatch = Stopwatch.StartNew();
+#endif
             if (string.IsNullOrWhiteSpace(procName) || procId < 1)
             {
                 string message = $"GetProcessMemoryMbPerfCounter: Unsupported process information provided ({procName ?? "null"}, {procId})";
@@ -565,14 +507,15 @@ namespace FabricObserver.Observers.Utilities
 
             try
             {
-                lock (lockUpdate)
-                {
-                    ProcessWorkingSetCounter.InstanceName = internalProcName;
-                    _ = ProcessWorkingSetCounter.RawValue;
-                    Thread.Sleep(1000);
-
-                    return ProcessWorkingSetCounter.NextValue() / 1024 / 1024;
-                }
+                using PerformanceCounter memCounter = new(ProcessCategoryName, ProcessMemoryCounterName, internalProcName, true);
+                _ = memCounter.NextValue();
+                float memMb = (float)(memCounter.NextValue() / 1024 / 1024);
+#if DEBUG
+                stopwatch.Stop();
+                ProcessInfoLogger.LogInfo($"GetProcessMemoryMbPerfCounter run time for {internalProcName} (private WS = {memMb}): {stopwatch.ElapsedMilliseconds} ms.");
+                stopwatch = null;
+#endif
+                return memMb;
             }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or UnauthorizedAccessException or Win32Exception)
             {
@@ -710,19 +653,18 @@ namespace FabricObserver.Observers.Utilities
 
                     try
                     {
-                        lock (lockUpdate)
+                        using (PerformanceCounter nameCounter = new(ProcessCategoryName, ProcessIDCounterName, instance, true))
                         {
-                            ProcNameCounter.InstanceName = instance;
-                            var sample = ProcNameCounter.NextSample();
+                            var sample = nameCounter.NextSample();
 
                             if (pid != (int)sample.RawValue)
                             {
                                 continue;
                             }
-
-                            _ = InstanceNameDictionary.TryAdd(instance, (procName, pid, NativeMethods.GetProcessStartTime(pid)));
-                            return instance;
                         }
+
+                        _ = InstanceNameDictionary.TryAdd(instance, (procName, pid, NativeMethods.GetProcessStartTime(pid)));
+                        return instance;
                     }
                     catch (Exception e) when (e is InvalidOperationException or UnauthorizedAccessException or Win32Exception)
                     {

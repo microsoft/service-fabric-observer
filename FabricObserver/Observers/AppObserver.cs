@@ -585,90 +585,94 @@ namespace FabricObserver.Observers
                         }
                     }
 
-                    // RG Memory Monitoring (Private Bytes Percent)
-                    if (AllAppRGMemoryUsagePercent != null && AllAppRGMemoryUsagePercent.ContainsKey(id))
+                    // FO's RG support is Windows-only for now.
+                    if (MonitorResourceGovernanceLimits)
                     {
-                        var parentFrud = AllAppRGMemoryUsagePercent[id];
-
-                        if (hasChildProcs)
+                        // RG Memory Monitoring (Private Bytes Percent)
+                        if (repOrInst.RGMemoryEnabled && AllAppRGMemoryUsagePercent != null && AllAppRGMemoryUsagePercent.ContainsKey(id))
                         {
-                            var targetFruds = AllAppRGMemoryUsagePercent.Where(f => f.Key.StartsWith(id));
-                            ConcurrentDictionary<string, FabricResourceUsageData<double>> childProcDictionary = new();
+                            var parentFrud = AllAppRGMemoryUsagePercent[id];
 
-                            foreach (var frud in targetFruds)
+                            if (hasChildProcs)
                             {
-                                // Parent.
-                                if (frud.Key == id)
+                                var targetFruds = AllAppRGMemoryUsagePercent.Where(f => f.Key.StartsWith(id));
+                                ConcurrentDictionary<string, FabricResourceUsageData<double>> childProcDictionary = new();
+
+                                foreach (var frud in targetFruds)
                                 {
-                                    continue;
+                                    // Parent.
+                                    if (frud.Key == id)
+                                    {
+                                        continue;
+                                    }
+
+                                    _ = childProcDictionary.TryAdd(frud.Key, frud.Value);
                                 }
 
-                                _ = childProcDictionary.TryAdd(frud.Key, frud.Value);
+                                ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
+
+                                // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
+                                foreach (var item in childProcDictionary)
+                                {
+                                    _ = AllAppRGMemoryUsagePercent.TryRemove(item);
+                                }
                             }
 
-                            ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
-
-                            // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
-                            foreach (var item in childProcDictionary)
-                            {
-                                _ = AllAppRGMemoryUsagePercent.TryRemove(item);
-                            }
+                            ProcessResourceDataReportHealth(
+                                parentFrud,
+                                thresholdError: 0, // Only Warning Threshold is supported for RG reporting.
+                                thresholdWarning: app.WarningRGMemoryLimitPercent > 0 ? app.WarningRGMemoryLimitPercent : MaxRGMemoryInUsePercent, // Default: 90%
+                                healthReportTtl,
+                                EntityType.Service,
+                                processName,
+                                repOrInst,
+                                dumpOnError: false, // Not supported
+                                dumpOnWarning: false, // Not supported
+                                processId);
                         }
 
-                        ProcessResourceDataReportHealth(
-                            parentFrud,
-                            thresholdError: 0, // Only Warning Threshold is supported for RG reporting.
-                            thresholdWarning: app.WarningRGMemoryLimitPercent > 0 ? app.WarningRGMemoryLimitPercent : MaxRGMemoryInUsePercent, // Default: 90%
-                            healthReportTtl,
-                            EntityType.Service,
-                            processName,
-                            repOrInst,
-                            dumpOnError: false, // Not supported
-                            dumpOnWarning: false, // Not supported
-                            processId);
-                    }
-
-                    // RG CPU Monitoring (CPU Time Percent)
-                    if (AllAppRGCpuUsagePercent.ContainsKey(id))
-                    {
-                        var parentFrud = AllAppRGCpuUsagePercent[id];
-
-                        if (hasChildProcs)
+                        // RG CPU Monitoring (CPU Time Percent)
+                        if (repOrInst.RGCpuEnabled && AllAppRGCpuUsagePercent != null && AllAppRGCpuUsagePercent.ContainsKey(id))
                         {
-                            var targetFruds = AllAppRGCpuUsagePercent.Where(f => f.Key.StartsWith(id));
-                            ConcurrentDictionary<string, FabricResourceUsageData<double>> childProcDictionary = new();
+                            var parentFrud = AllAppRGCpuUsagePercent[id];
 
-                            foreach (var frud in targetFruds)
+                            if (hasChildProcs)
                             {
-                                // Parent.
-                                if (frud.Key == id)
+                                var targetFruds = AllAppRGCpuUsagePercent.Where(f => f.Key.StartsWith(id));
+                                ConcurrentDictionary<string, FabricResourceUsageData<double>> childProcDictionary = new();
+
+                                foreach (var frud in targetFruds)
                                 {
-                                    continue;
+                                    // Parent.
+                                    if (frud.Key == id)
+                                    {
+                                        continue;
+                                    }
+
+                                    _ = childProcDictionary.TryAdd(frud.Key, frud.Value);
                                 }
 
-                                _ = childProcDictionary.TryAdd(frud.Key, frud.Value);
+                                ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
+
+                                // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
+                                foreach (var item in childProcDictionary)
+                                {
+                                    _ = AllAppRGMemoryUsagePercent.TryRemove(item);
+                                }
                             }
 
-                            ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
-
-                            // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
-                            foreach (var item in childProcDictionary)
-                            {
-                                _ = AllAppRGMemoryUsagePercent.TryRemove(item);
-                            }
+                            ProcessResourceDataReportHealth(
+                                parentFrud,
+                                thresholdError: 0, // Only Warning Threshold is supported for RG reporting.
+                                thresholdWarning: app.WarningRGCpuLimitPercent > 0 ? app.WarningRGCpuLimitPercent : MaxRGCpuInUsePercent, // Default: 90%
+                                healthReportTtl,
+                                EntityType.Service,
+                                processName,
+                                repOrInst,
+                                dumpOnError: false, // Not supported
+                                dumpOnWarning: false, // Not supported
+                                processId);
                         }
-
-                        ProcessResourceDataReportHealth(
-                            parentFrud,
-                            thresholdError: 0, // Only Warning Threshold is supported for RG reporting.
-                            thresholdWarning: app.WarningRGCpuLimitPercent > 0 ? app.WarningRGCpuLimitPercent : MaxRGCpuInUsePercent, // Default: 90%
-                            healthReportTtl,
-                            EntityType.Service,
-                            processName,
-                            repOrInst,
-                            dumpOnError: false, // Not supported
-                            dumpOnWarning: false, // Not supported
-                            processId);
                     }
 
                     // TCP Ports - Active
@@ -3329,7 +3333,7 @@ namespace FabricObserver.Observers
                     if (!string.IsNullOrWhiteSpace(appTypeVersion))
                     {
                         // RG - Windows-only. Linux is not supported yet.
-                        if (IsWindows)
+                        if (MonitorResourceGovernanceLimits)
                         {
                             string appManifest =
                                       FabricClientInstance.ApplicationManager.GetApplicationManifestAsync(

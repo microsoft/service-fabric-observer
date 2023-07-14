@@ -128,7 +128,7 @@
     <!-- Max number of concurrent Tasks available to parallel loops (0 or 1 = sequential (no concurrency), -1 = maximum concurrency). The default value is 1/4 of detected logical processors (LPs). 
          Set to this to -1 if you want to take advantage of all LPs. This setting roughly maps to the number of threads that will be available for use by Task-parallel loops. If you have 20 LPs, then setting this
          to 10 means use up to 10 threads, if possible, at the time of parallel loop execution. -->
-    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
+    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="-1" />
     <!-- Windows-only: KVS LVID Usage Monitoring.
          NOTE: If you monitor stateful Actor services, then you should set this to true. -->
     <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
@@ -136,7 +136,7 @@
          Note: You should consider monitoring process commit (warningPrivateBytesMb threshold setting) instead of Private Working Set for tracking potential leaks. 
          Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). 
          FO will automatically compute Shared + Private memory usage if it detects 50 or more same-named service processes, regardless of this setting. -->
-    <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="false" />
+    <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
     <!-- Windows-only. AppObserver can monitor services with Service Fabric Resource Governance limits set (CPU and Memory) and put related services into Warning if they reach 90% of the specified limit. 
          If you do set Memory or CPU Resource Governance limits for your service code packages, then you should enable this feature. -->
     <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="false" />
@@ -228,6 +228,9 @@
     <Parameter Name="AzureStorageUploadObserverStorageAccountKey" DefaultValue="" />
     <!-- Zip file compression level to use: Optimal, Fastest or NoCompression. Default is Optimal if this is not set. We do not recommend NoCompression. -->
     <Parameter Name="AzureStorageUploadObserverZipFileCompressionLevel" DefaultValue="Optimal" />
+    <!-- RG - TEST ONLY
+    <Parameter Name="RGCPUCoresRequest" DefaultValue="20" />
+    <Parameter Name="RGMemoryInMBLimit" DefaultValue="500" /> -->
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
@@ -418,10 +421,12 @@
       </ConfigOverride>
     </ConfigOverrides>
     <Policies>
-      <!-- NOTE: On Windows and Linux, FO runs custom Setup scripts that must be run as elevated user. Do not remove this policy or change EntryPointType to Main, for example. 
-           Either leave EntryPointType as Setup and run FO as a restricted user, or set EntryPointType to All or remove EntryPointType attribute altogether to run everything 
-           as elevated user (Setup and FO service process). -->
+      <!-- FabricObserver runs a setup script during activation (Linux and Windows). It must be run as System user. 
+           Thus the below policy, which only impacts the Setup phase. The FabricObserver process itself runs as NetworkService on Windows and SFAppsUser on Linux. -->
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
+      <!-- RG - TEST ONLY 
+      <ServicePackageResourceGovernancePolicy CpuCoresLimit="[RGCPUCoresRequest]" />
+      <ResourceGovernancePolicy CodePackageRef="Code" MemoryInMBLimit="[RGMemoryInMBLimit]" /> -->
     </Policies>
   </ServiceManifestImport>
   <Principals>
