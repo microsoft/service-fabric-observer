@@ -83,7 +83,7 @@
     <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:05" />
     <!-- Monitor Sleep Durations (Milliseconds, e.g. 50): How long an observer should wait between consecutive CPU usage collection for the same target (process or machine).
          This setting only applies to 3 observers.  -->
-    <Parameter Name="AppObserverMonitorSleepDurationMilliseconds" DefaultValue="500" />
+    <Parameter Name="AppObserverMonitorSleepDurationMilliseconds" DefaultValue="100" />
     <Parameter Name="FabricSystemObserverMonitorSleepDurationMilliseconds" DefaultValue="500" />
     <Parameter Name="NodeObserverMonitorSleepDurationMilliseconds" DefaultValue="500" />
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00): How often an enabled observer should run. -->
@@ -128,7 +128,7 @@
     <!-- Max number of concurrent Tasks available to parallel loops (0 or 1 = sequential (no concurrency), -1 = maximum concurrency). The default value is 1/4 of detected logical processors (LPs). 
          Set to this to -1 if you want to take advantage of all LPs. This setting roughly maps to the number of threads that will be available for use by Task-parallel loops. If you have 20 LPs, then setting this
          to 10 means use up to 10 threads, if possible, at the time of parallel loop execution. -->
-    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="-1" />
+    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
     <!-- Windows-only: KVS LVID Usage Monitoring.
          NOTE: If you monitor stateful Actor services, then you should set this to true. -->
     <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
@@ -229,7 +229,7 @@
     <!-- Zip file compression level to use: Optimal, Fastest or NoCompression. Default is Optimal if this is not set. We do not recommend NoCompression. -->
     <Parameter Name="AzureStorageUploadObserverZipFileCompressionLevel" DefaultValue="Optimal" />
     <!-- RG - TEST ONLY
-    <Parameter Name="RGCPUCoresRequest" DefaultValue="20" />
+    <Parameter Name="RGCPUCoresRequest" DefaultValue="10" />
     <Parameter Name="RGMemoryInMBLimit" DefaultValue="500" /> -->
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
@@ -424,7 +424,7 @@
       <!-- FabricObserver runs a setup script during activation (Linux and Windows). It must be run as System user. 
            Thus the below policy, which only impacts the Setup phase. The FabricObserver process itself runs as NetworkService on Windows and SFAppsUser on Linux. -->
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
-      <!-- RG - TEST ONLY 
+      <!-- RG - TEST ONLY
       <ServicePackageResourceGovernancePolicy CpuCoresLimit="[RGCPUCoresRequest]" />
       <ResourceGovernancePolicy CodePackageRef="Code" MemoryInMBLimit="[RGMemoryInMBLimit]" /> -->
     </Policies>

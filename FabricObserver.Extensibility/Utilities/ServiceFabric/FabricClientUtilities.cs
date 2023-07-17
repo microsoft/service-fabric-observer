@@ -167,25 +167,19 @@ namespace FabricObserver.Utilities.ServiceFabric
         {
             List<ReplicaOrInstanceMonitoringInfo> repList = new();
             List<DeployedApplication> appList = await GetAllDeployedAppsAsync(token);
-            NativeMethods.SafeObjectHandle handleToSnapshot = null;
 
-            if (isWindows && includeChildProcesses)
+            if (isWindows && !NativeMethods.RefreshSFUserProcessDataCache(getChildProcesses: includeChildProcesses))
             {
-                handleToSnapshot = NativeMethods.CreateProcessSnapshot();
-
-                if (handleToSnapshot.IsInvalid)
-                {
-                    string message = "Can't observe child processes. Failure getting process ids on the system (CreateProcessSnapshot).";
-                    logger.LogWarning(message);
-                    logger.LogEtw(
-                        ObserverConstants.FabricObserverETWEventName,
-                        new
-                        {
-                            Level = "Warning",
-                            Message = message,
-                            Source = "FabricClientUtilities::GetAllDeployedReplicasOrInstances"
-                        });
-                }
+                string message = "Can't observe child processes. Failure getting process ids on the system.";
+                logger.LogWarning(message);
+                logger.LogEtw(
+                    ObserverConstants.FabricObserverETWEventName,
+                    new
+                    {
+                        Level = "Warning",
+                        Message = message,
+                        Source = "FabricClientUtilities::GetAllDeployedReplicasOrInstances"
+                    });
             }
             
             try
@@ -201,7 +195,8 @@ namespace FabricObserver.Utilities.ServiceFabric
 
                         if (deployedReplicaList == null || !deployedReplicaList.Any())
                         {
-                            return null;
+                            // Application has no deployed replicas.
+                            continue;
                         }
 
                         List<DeployedServiceReplica> deployedReplicas;
@@ -212,7 +207,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                         }
                         catch (Exception e) when (e is ArgumentException)
                         {
-                            return null;
+                            continue;
                         }
 
                         var repOrInstances = 
@@ -221,7 +216,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                                     app.ApplicationTypeName ?? appList.First(a => a.ApplicationName == app.ApplicationName).ApplicationTypeName,
                                     deployedReplicas,
                                     includeChildProcesses,
-                                    handleToSnapshot,
+                                    null,
                                     token);
 
                         repList.AddRange(repOrInstances);
@@ -231,18 +226,16 @@ namespace FabricObserver.Utilities.ServiceFabric
 
                     }
                 }
-
-                return repList;
             }
             finally
             {
                 if (isWindows && includeChildProcesses)
                 {
-                    GC.KeepAlive(handleToSnapshot);
-                    handleToSnapshot.Dispose();
-                    handleToSnapshot = null;
+                    NativeMethods.ClearSFUserProcessDataCache();
                 }
             }
+
+            return repList;
         }
 
         /// <summary>

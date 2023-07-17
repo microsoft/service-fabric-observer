@@ -2042,7 +2042,14 @@ namespace FabricObserver.Observers
             {
                 if (token.IsCancellationRequested)
                 {
-                    state.Stop();
+                    if (parallelOptions.MaxDegreeOfParallelism == -1 || parallelOptions.MaxDegreeOfParallelism > 1)
+                    {
+                        state.Stop();
+                    }
+                    else
+                    {
+                        token.ThrowIfCancellationRequested();
+                    }
                 }
 
                 // DEBUG - Perf

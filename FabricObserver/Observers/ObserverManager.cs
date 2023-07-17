@@ -44,6 +44,7 @@ namespace FabricObserver.Observers
         private readonly CancellationToken token;
         private readonly string sfVersion;
         private readonly bool isWindows;
+        private readonly object updateLock = new();
         private volatile bool shutdownSignaled;
         private DateTime StartDateTime;
         private bool isConfigurationUpdateInProgress;
@@ -147,7 +148,7 @@ namespace FabricObserver.Observers
         {
             this.token = token;
             cts = new CancellationTokenSource();
-            linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, this.token);
+            linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, token);
             FabricServiceContext ??= serviceProvider.GetRequiredService<StatelessServiceContext>();
             nodeName = FabricServiceContext.NodeContext.NodeName;
             FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
@@ -857,14 +858,25 @@ namespace FabricObserver.Observers
                 if (!isWindows)
                 {
                     // Graceful stop.
-                    await StopObserversAsync(true, true);
+                    await StopObserversAsync(true, true).ConfigureAwait(false);
 
                     // Bye.
                     Environment.Exit(42);
                 }
 
                 isConfigurationUpdateInProgress = true;
-                await StopObserversAsync(false);
+                await StopObserversAsync(false).ConfigureAwait(false);
+
+                foreach (var observer in Observers)
+                {
+                    string configSectionName = observer.ConfigurationSettings.ConfigSection.Name;
+                    observer.ConfigPackage = e.NewPackage;
+                    observer.ConfigurationSettings = new ConfigSettings(e.NewPackage.Settings, configSectionName);
+                    observer.ObserverLogger.EnableVerboseLogging = observer.ConfigurationSettings.EnableVerboseLogging;
+
+                    // Reset last run time so the observer restarts (if enabled) after the app parameter update completes.
+                    observer.LastRunDateTime = DateTime.MinValue;
+                }
 
                 // ObserverManager settings.
                 SetPropertiesFromConfigurationParameters(e.NewPackage.Settings);
@@ -886,14 +898,13 @@ namespace FabricObserver.Observers
                 HealthReporter.ReportHealthToServiceFabric(healthReport);
             }
 
-            isConfigurationUpdateInProgress = false;
-
             // Refresh FO CancellationTokenSources.
             cts?.Dispose();
             linkedSFRuntimeObserverTokenSource?.Dispose();
             cts = new CancellationTokenSource();
             linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, token);
             Logger.LogWarning("Application Parameter upgrade completed...");
+            isConfigurationUpdateInProgress = false;
         }
 
         /// <summary>
@@ -1225,8 +1236,8 @@ namespace FabricObserver.Observers
                         }
                         else if (e is FabricException or TimeoutException or Win32Exception)
                         {
-                            // These are transient and will have been logged by related observer when they happened.
-                            Logger.LogWarning($"Handled error from {observer.ObserverName}{Environment.NewLine}{e}");
+                            // These are transient and details will have been logged by related observer when they happened.
+                            Logger.LogWarning($"Handled error from {observer.ObserverName}: {e.Message}");
                         }
                     }
                 }

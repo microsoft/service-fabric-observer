@@ -1391,11 +1391,26 @@ namespace FabricObserverTests
                 _ = AllAppCpuData.TryAdd($"{procName}:{service.HostProcessId}", new FabricResourceUsageData<double>(
                         property: ErrorWarningProperty.CpuTime,
                         id: $"{procName}:{service.HostProcessId}",
-                        dataCapacity: 8,
+                        dataCapacity: 20,
                         useCircularBuffer: false,
                         isParallel: true));
 
                 serviceProcs.Enqueue((int)service.HostProcessId);
+
+                if (service.ChildProcesses != null)
+                {
+                    foreach (var child in service.ChildProcesses)
+                    {
+                        _ = AllAppCpuData.TryAdd($"{child.procName}:{child.Pid}", new FabricResourceUsageData<double>(
+                            property: ErrorWarningProperty.CpuTime,
+                            id: $"{child.procName}:{child.Pid}",
+                            dataCapacity: 20,
+                            useCircularBuffer: false,
+                            isParallel: true));
+
+                        serviceProcs.Enqueue(child.Pid);
+                    }
+                }
             });
 
             Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
@@ -1454,11 +1469,26 @@ namespace FabricObserverTests
                 _ = AllAppCpuData.TryAdd($"{procName}:{service.HostProcessId}", new FabricResourceUsageData<double>(
                         property: ErrorWarningProperty.CpuTime,
                         id: $"{procName}:{service.HostProcessId}",
-                        dataCapacity: 8,
+                        dataCapacity: 20,
                         useCircularBuffer: false,
                         isParallel: true));
 
                 serviceProcs.Enqueue((int)service.HostProcessId);
+
+                if (service.ChildProcesses != null)
+                {
+                    foreach (var child in service.ChildProcesses)
+                    {
+                        _ = AllAppCpuData.TryAdd($"{child.procName}:{child.Pid}", new FabricResourceUsageData<double>(
+                                property: ErrorWarningProperty.CpuTime,
+                                id: $"{child.procName}:{child.Pid}",
+                                dataCapacity: 20,
+                                useCircularBuffer: false,
+                                isParallel: true));
+
+                        serviceProcs.Enqueue(child.Pid);
+                    }
+                }
             });
 
             Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
@@ -1517,11 +1547,26 @@ namespace FabricObserverTests
                 _ = AllAppCpuData.TryAdd($"{procName}:{service.HostProcessId}", new FabricResourceUsageData<double>(
                         property: ErrorWarningProperty.CpuTime,
                         id: $"{procName}:{service.HostProcessId}",
-                        dataCapacity: 10,
+                        dataCapacity: 20,
                         useCircularBuffer: true,
                         isParallel: true));
 
                 serviceProcs.Enqueue((int)service.HostProcessId);
+
+                if (service.ChildProcesses != null)
+                {
+                    foreach (var child in service.ChildProcesses)
+                    {
+                        _ = AllAppCpuData.TryAdd($"{child.procName}:{child.Pid}", new FabricResourceUsageData<double>(
+                            property: ErrorWarningProperty.CpuTime,
+                            id: $"{child.procName}:{child.Pid}",
+                            dataCapacity: 20,
+                            useCircularBuffer: false,
+                            isParallel: true));
+
+                        serviceProcs.Enqueue(child.Pid);
+                    }
+                }
             });
 
             Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
@@ -1580,11 +1625,26 @@ namespace FabricObserverTests
                 _ = AllAppCpuData.TryAdd($"{procName}:{service.HostProcessId}", new FabricResourceUsageData<double>(
                         property: ErrorWarningProperty.CpuTime,
                         id: $"{procName}:{service.HostProcessId}",
-                        dataCapacity: 10,
+                        dataCapacity: 20,
                         useCircularBuffer: true,
                         isParallel: true));
 
                 serviceProcs.Enqueue((int)service.HostProcessId);
+
+                if (service.ChildProcesses != null)
+                {
+                    foreach (var child in service.ChildProcesses)
+                    {
+                        _ = AllAppCpuData.TryAdd($"{child.procName}:{child.Pid}", new FabricResourceUsageData<double>(
+                            property: ErrorWarningProperty.CpuTime,
+                            id: $"{child.procName}:{child.Pid}",
+                            dataCapacity: 20,
+                            useCircularBuffer: false,
+                            isParallel: true));
+
+                        serviceProcs.Enqueue(child.Pid);
+                    }
+                }
             });
 
             Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
