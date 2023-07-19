@@ -126,7 +126,7 @@
          You can control the level of concurrency by setting the AppObserverMaxConcurrentTasks setting. -->
     <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
     <!-- Max number of concurrent Tasks available to parallel loops (0 or 1 = sequential (no concurrency), -1 = maximum concurrency). The default value is 1/4 of detected logical processors (LPs). 
-         Set to this to -1 if you want to take advantage of all LPs. This setting roughly maps to the number of threads that will be available for use by Task-parallel loops. If you have 20 LPs, then setting this
+         Set to this to -1 if you want to take advantage of number of LPs - 1 (ex. For 20 LPs, 19 max concurrent tasks). This setting roughly maps to the number of threads that will be available for use by Task-parallel loops. If you have 20 LPs, then setting this
          to 10 means use up to 10 threads, if possible, at the time of parallel loop execution. -->
     <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
     <!-- Windows-only: KVS LVID Usage Monitoring.

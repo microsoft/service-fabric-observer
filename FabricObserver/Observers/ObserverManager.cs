@@ -41,10 +41,9 @@ namespace FabricObserver.Observers
 
         private readonly string nodeName;
         private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
-        private readonly CancellationToken token;
+        private readonly CancellationToken runAsyncToken;
         private readonly string sfVersion;
         private readonly bool isWindows;
-        private readonly object updateLock = new();
         private volatile bool shutdownSignaled;
         private DateTime StartDateTime;
         private bool isConfigurationUpdateInProgress;
@@ -55,7 +54,7 @@ namespace FabricObserver.Observers
         private const string InternalVersionNumber = "3.2.9";
 
         private bool RuntimeTokenCancelled =>
-            linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? token.IsCancellationRequested;
+            linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? runAsyncToken.IsCancellationRequested;
 
         private int ObserverExecutionLoopSleepSeconds
         {
@@ -146,12 +145,17 @@ namespace FabricObserver.Observers
         /// <param name="token">Cancellation token.</param>
         public ObserverManager(IServiceProvider serviceProvider, CancellationToken token)
         {
-            this.token = token;
-            cts = new CancellationTokenSource();
-            linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, token);
             FabricServiceContext ??= serviceProvider.GetRequiredService<StatelessServiceContext>();
-            nodeName = FabricServiceContext.NodeContext.NodeName;
             FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
+            runAsyncToken = token;
+            runAsyncToken.Register(() => Logger.LogWarning("FabricObserver.RunAsync token cancellation signalled.")); 
+
+            cts = new CancellationTokenSource();
+            linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, runAsyncToken);
+            cts.Token.Register(() => Logger.LogWarning("cts.Token token cancellation signalled."));
+            linkedSFRuntimeObserverTokenSource.Token.Register(() => Logger.LogWarning("linkedSFRuntimeObserverTokenSource.Token token cancellation signalled."));
+            
+            nodeName = FabricServiceContext.NodeContext.NodeName;
             isWindows = OperatingSystem.IsWindows();
             sfVersion = GetServiceFabricRuntimeVersion();
 
@@ -217,7 +221,7 @@ namespace FabricObserver.Observers
                 // Observers run sequentially. See RunObservers impl.
                 while (true)
                 {
-                    if (!isConfigurationUpdateInProgress && (shutdownSignaled || token.IsCancellationRequested))
+                    if (!isConfigurationUpdateInProgress && (shutdownSignaled || runAsyncToken.IsCancellationRequested))
                     {
                         await ShutDownAsync();
                         break;
@@ -228,7 +232,7 @@ namespace FabricObserver.Observers
                     // Identity-agnostic internal operational telemetry sent to Service Fabric team (only) for use in
                     // understanding generic behavior of FH in the real world (no PII). This data is sent once a day and will be retained for no more
                     // than 90 days.
-                    if (FabricObserverOperationalTelemetryEnabled && !(shutdownSignaled || token.IsCancellationRequested)
+                    if (FabricObserverOperationalTelemetryEnabled && !(shutdownSignaled || runAsyncToken.IsCancellationRequested)
                         && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
                     {
                         try
@@ -255,7 +259,7 @@ namespace FabricObserver.Observers
                     }
 
                     // Check for new version once a day.
-                    if (!(shutdownSignaled || token.IsCancellationRequested) && DateTime.UtcNow.Subtract(LastVersionCheckDateTime) >= OperationalTelemetryRunInterval)
+                    if (!(shutdownSignaled || runAsyncToken.IsCancellationRequested) && DateTime.UtcNow.Subtract(LastVersionCheckDateTime) >= OperationalTelemetryRunInterval)
                     {
                         await CheckGithubForNewVersionAsync();
                         LastVersionCheckDateTime = DateTime.UtcNow;
@@ -263,23 +267,23 @@ namespace FabricObserver.Observers
 
                     if (ObserverExecutionLoopSleepSeconds > 0)
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds), token);
+                        await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds), runAsyncToken);
                     }
                     else if (Observers.Count == 1)
                     {
                         // This protects against loop spinning when you run FO with one observer enabled and no sleep time set.
-                        await Task.Delay(TimeSpan.FromSeconds(5), token);
+                        await Task.Delay(TimeSpan.FromSeconds(5), runAsyncToken);
                     }
 
                     // All observers have run at this point. Try and empty the trash now.
                     GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
                     GC.Collect(2, GCCollectionMode.Forced, true, true);
-                    await Task.Delay(TimeSpan.FromSeconds(5), token);
+                    await Task.Delay(TimeSpan.FromSeconds(5), runAsyncToken);
                 }
             }
             catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
             {
-                if (!isConfigurationUpdateInProgress && (shutdownSignaled || token.IsCancellationRequested))
+                if (!isConfigurationUpdateInProgress && (shutdownSignaled || runAsyncToken.IsCancellationRequested))
                 {
                     await ShutDownAsync();
                 }
@@ -308,7 +312,7 @@ namespace FabricObserver.Observers
                         Source = ObserverConstants.ObserverManagerName
                     };
 
-                    await TelemetryClient.ReportHealthAsync(telemetryData, token);
+                    await TelemetryClient.ReportHealthAsync(telemetryData, runAsyncToken);
                 }
 
                 // ETW.
@@ -642,7 +646,7 @@ namespace FabricObserver.Observers
                             nodeName,
                             new Uri("fabric:/FabricObserverWebApi"),
                             TimeSpan.FromSeconds(30),
-                            token).GetAwaiter().GetResult();
+                            runAsyncToken).GetAwaiter().GetResult();
 
                 return deployedObsWebApps?.Count > 0;
             }
@@ -692,7 +696,6 @@ namespace FabricObserver.Observers
             DataTableFileLogger.Flush();
             Logger.ShutDown();
             DataTableFileLogger.ShutDown();
-            FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent -= CodePackageActivationContext_ConfigurationPackageModifiedEvent;
         }
 
         /// <summary>
@@ -866,12 +869,14 @@ namespace FabricObserver.Observers
 
                 isConfigurationUpdateInProgress = true;
                 await StopObserversAsync(false).ConfigureAwait(false);
+                var newSettings = e.NewPackage.Settings;
 
+                // Observer settings.
                 foreach (var observer in Observers)
                 {
                     string configSectionName = observer.ConfigurationSettings.ConfigSection.Name;
                     observer.ConfigPackage = e.NewPackage;
-                    observer.ConfigurationSettings = new ConfigSettings(e.NewPackage.Settings, configSectionName);
+                    observer.ConfigurationSettings = new ConfigSettings(newSettings, configSectionName);
                     observer.ObserverLogger.EnableVerboseLogging = observer.ConfigurationSettings.EnableVerboseLogging;
 
                     // Reset last run time so the observer restarts (if enabled) after the app parameter update completes.
@@ -879,7 +884,7 @@ namespace FabricObserver.Observers
                 }
 
                 // ObserverManager settings.
-                SetPropertiesFromConfigurationParameters(e.NewPackage.Settings);
+                SetPropertiesFromConfigurationParameters(newSettings);
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
@@ -902,7 +907,7 @@ namespace FabricObserver.Observers
             cts?.Dispose();
             linkedSFRuntimeObserverTokenSource?.Dispose();
             cts = new CancellationTokenSource();
-            linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, token);
+            linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, runAsyncToken);
             Logger.LogWarning("Application Parameter upgrade completed...");
             isConfigurationUpdateInProgress = false;
         }
@@ -1106,8 +1111,8 @@ namespace FabricObserver.Observers
                     // Synchronous call.
                     bool isCompleted = 
                         observer.ObserveAsync(
-                            linkedSFRuntimeObserverTokenSource?.Token ?? token).Wait(
-                                (int)ObserverExecutionTimeout.TotalMilliseconds, linkedSFRuntimeObserverTokenSource?.Token ?? token);
+                            linkedSFRuntimeObserverTokenSource?.Token ?? runAsyncToken).Wait(
+                                (int)ObserverExecutionTimeout.TotalMilliseconds, linkedSFRuntimeObserverTokenSource?.Token ?? runAsyncToken);
 
                     // The observer is taking too long. Abort the run. Move on to next observer.
                     if (!isCompleted && !(RuntimeTokenCancelled || shutdownSignaled || isConfigurationUpdateInProgress))
@@ -1120,7 +1125,7 @@ namespace FabricObserver.Observers
                         cts?.Dispose();
                         linkedSFRuntimeObserverTokenSource?.Dispose();
                         cts = new CancellationTokenSource();
-                        linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, token);
+                        linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, runAsyncToken);
 
                         // Telemetry.
                         if (TelemetryEnabled)
@@ -1135,7 +1140,7 @@ namespace FabricObserver.Observers
                                 Source = ObserverConstants.FabricObserverName
                             };
 
-                            await TelemetryClient?.ReportHealthAsync(telemetryData, token);
+                            await TelemetryClient?.ReportHealthAsync(telemetryData, runAsyncToken);
                         }
 
                         // ETW.
@@ -1202,7 +1207,7 @@ namespace FabricObserver.Observers
                                 await File.WriteAllLinesAsync(
                                             Logger.FilePath,
                                             File.ReadLines(Logger.FilePath)
-                                                .Where(line => !line.Contains(observer.ObserverName)).ToList(), token);
+                                                .Where(line => !line.Contains(observer.ObserverName)).ToList(), runAsyncToken);
                             }
                         }
                         catch (IOException)
@@ -1325,7 +1330,7 @@ namespace FabricObserver.Observers
                     // Telemetry.
                     if (TelemetryEnabled)
                     {
-                        await TelemetryClient?.ReportHealthAsync(telemetryData, token);
+                        await TelemetryClient?.ReportHealthAsync(telemetryData, runAsyncToken);
                     }
 
                     // ETW.

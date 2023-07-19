@@ -1,48 +1,32 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <ProjectGuid>{51AC2A69-B952-4766-8A1E-2C7752BC011A}</ProjectGuid>
-    <RootNamespace>FabricObserver</RootNamespace>
-    <AssemblyName>FabricObserver</AssemblyName>
-	<OutputType>Exe</OutputType>
-	<TargetFramework>net6.0</TargetFramework>
-	<Nullable>disable</Nullable>
-	<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
-	<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
-	<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
-    <Copyright>Copyright © 2023</Copyright>
-    <Product>FabricObserver</Product>
-    <Version>3.2.9</Version>
-	<FileVersion>3.2.9</FileVersion>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <IsServiceFabricServiceProject>true</IsServiceFabricServiceProject>
-    <StartupObject>FabricObserver.Program</StartupObject>
-    <NoWarn>CA1822;$(NoWarn)</NoWarn>
-    <ResolveComReferenceSilent>true</ResolveComReferenceSilent>
-	<Platforms>x64</Platforms>
-	<NoWarn>CA1416</NoWarn>
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net6.0</TargetFramework>
+		<RootNamespace>FabricObserver</RootNamespace>
+		<AssemblyName>FabricObserver</AssemblyName>
+		<ImplicitUsings>disable</ImplicitUsings>
+		<Nullable>disable</Nullable>
+		<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
+		<ServerGarbageCollection>True</ServerGarbageCollection>
+		<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
+		<Copyright>Copyright © 2023</Copyright>
+		<Product>FabricObserver</Product>
+		<Version>3.2.9</Version>
+		<FileVersion>3.2.9</FileVersion>
+		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
+		<Platforms>x64</Platforms>
+	    <NoWarn>CA1416</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="Connected Services\**" />
-    <EmbeddedResource Remove="Connected Services\**" />
-    <None Remove="Connected Services\**" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Remove="ApplicationInsights.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.16.0" />
-    <PackageReference Include="Octokit" Version="6.2.1" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.17.0" />
+    <PackageReference Include="Octokit" Version="7.0.1" />
     <PackageReference Include="System.Diagnostics.EventLog" Version="7.0.0" />
     <PackageReference Include="McMaster.NETCore.Plugins" Version="1.4.0" />
     <Reference Include="..\Interop\Interop.WUApiLib.dll" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="NLog.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="PackageRoot\Config\Settings.xml">
-      <SubType>Designer</SubType>
-    </None>
     <None Include="PackageRoot\Config\AppObserver.config.json" />
     <None Include="PackageRoot\Config\ContainerObserver.config.json" />
     <None Include="PackageRoot\Config\NetworkObserver.config.json" />

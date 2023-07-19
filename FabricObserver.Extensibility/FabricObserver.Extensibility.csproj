@@ -10,22 +10,13 @@
 		<NoWarn>CA1416</NoWarn>
 	</PropertyGroup>
 	<ItemGroup>
-		<Compile Remove="Utilities\MemoryUsage\**" />
-		<EmbeddedResource Remove="Utilities\MemoryUsage\**" />
-		<None Remove="Utilities\MemoryUsage\**" />
-	</ItemGroup>
-	<ItemGroup>
-		<Compile Remove="MachineInfoModel\ConfigSettings.cs" />
-		<Compile Remove="MachineInfoModel\ConfigurationSetting.cs" />
-	</ItemGroup>
-	<ItemGroup>
 		<PackageReference Include="Microsoft.ApplicationInsights" Version="2.21.0" />
 		<PackageReference Include="Microsoft.ApplicationInsights.NLogTarget" Version="2.21.0" />
 		<PackageReference Include="Microsoft.ServiceFabric.Services" Version="6.0.1017" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-		<PackageReference Include="NLog" Version="5.2.0" />
+		<PackageReference Include="NLog" Version="5.2.2" />
 		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="7.0.0" />
 		<PackageReference Include="System.Management" Version="7.0.2" />
 	</ItemGroup>
