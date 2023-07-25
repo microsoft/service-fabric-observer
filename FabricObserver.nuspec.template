@@ -4,7 +4,7 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.9</version>
 		<releaseNotes>
-- Added support for CPU Resource Governance monitoring (Windows-only).
+- Bug fix for CPU Resource Governance monitoring (Windows-only): App param updates.
 - Performance and code improvements.
 		</releaseNotes>
 		<authors>Microsoft</authors>
