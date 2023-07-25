@@ -73,6 +73,18 @@ namespace FabricObserver.Utilities.ServiceFabric
                             return fabricClient;
                         }
                     }
+                    catch (FabricObjectClosedException)
+                    {
+                        lock (lockObj)
+                        {
+                            fabricClient = null;
+                            fabricClient.Dispose();
+                            fabricClient = new FabricClient();
+                            fabricClient.Settings.HealthReportSendInterval = TimeSpan.FromSeconds(1);
+                            fabricClient.Settings.HealthReportRetrySendInterval = TimeSpan.FromSeconds(3);
+                            return fabricClient;
+                        }
+                    }
                     catch (Exception e) when (e is ObjectDisposedException or InvalidComObjectException)
                     {
                         lock (lockObj)
