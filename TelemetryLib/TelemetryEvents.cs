@@ -222,7 +222,7 @@ namespace FabricObserver.TelemetryLib
 
                 return true;
             }
-            catch (Exception e)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 // Telemetry is non-critical and should not take down FO.
                 _ = TryWriteLogFile(logFilePath, $"{e}");
@@ -274,7 +274,7 @@ namespace FabricObserver.TelemetryLib
 
                 return true;
             }
-            catch
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 // Telemetry is non-critical and should not take down FO.
             }
@@ -319,9 +319,9 @@ namespace FabricObserver.TelemetryLib
                     File.WriteAllText(path, content);
                     return true;
                 }
-                catch
-                {
-
+                catch (Exception e) when (e is not OutOfMemoryException) 
+                { 
+                
                 }
 
                 Thread.Sleep(1000);
@@ -371,7 +371,7 @@ namespace FabricObserver.TelemetryLib
                 eventProperties = null;
                 return true;
             }
-            catch (Exception e)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 // Telemetry is non-critical and should not take down FH.
                 _ = TryWriteLogFile(logFilePath, $"{e}");
@@ -427,10 +427,10 @@ namespace FabricObserver.TelemetryLib
                 obj = JsonConvert.DeserializeObject<FabricObserverOperationalEventData>(json);
                 return true;
             }
-            catch
-            {
-                obj = null;
-                return false;
+            catch (Exception e) when (e is not OutOfMemoryException) 
+            { 
+                obj = null; 
+                return false; 
             }
         }
     }

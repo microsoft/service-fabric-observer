@@ -2,10 +2,9 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
 	<metadata minClientVersion="3.3.0">
 		<id>%PACKAGE_ID%</id>
-		<version>3.2.8</version>
+		<version>3.2.9</version>
 		<releaseNotes>
-Note: This is library is required for observer plugins that target FabricObserver 3.2.8.
-- Added support for CPU Resource Governance monitoring (Windows-only).
+Note: This is library is required for observer plugins that target FabricObserver 3.2.9. 
 - Performance and Code improvements.
 		</releaseNotes>
 		<authors>Microsoft</authors>

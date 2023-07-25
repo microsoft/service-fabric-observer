@@ -390,11 +390,6 @@ namespace FabricObserver.Observers
             CodePackage = serviceContext.CodePackageActivationContext.GetCodePackageObject("Code");
             FabricServiceContext = serviceContext;
 
-            if (IsWindows)
-            {
-                FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
-            }
-
             SetObserverStaticConfiguration();
 
             if (ObserverName == ObserverConstants.AppObserverName)
@@ -431,16 +426,6 @@ namespace FabricObserver.Observers
                         ObserverConstants.ObserverWebApiEnabled), out bool obsWeb) && obsWeb && IsObserverWebApiAppInstalled();
 
             ServiceNamesLogPath = Path.Combine(ObserverLogger.LogFolderBasePath, ObserverName, "ServiceNames", "Services.txt");
-        }
-
-        private void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
-        {
-            ConfigPackage = e.NewPackage;
-            ConfigurationSettings = new ConfigSettings(ConfigPackage.Settings, ConfigurationSectionName);
-            ObserverLogger.EnableVerboseLogging = ConfigurationSettings.EnableVerboseLogging;
-
-            // Reset last run time so the observer restarts (if enabled) after the app parameter update completes.
-            LastRunDateTime = DateTime.MinValue;
         }
 
         /// <summary>
@@ -1501,11 +1486,6 @@ namespace FabricObserver.Observers
 
             if (disposing)
             {
-                if (IsWindows)
-                {
-                    FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent -= CodePackageActivationContext_ConfigurationPackageModifiedEvent;
-                }
-
                 disposed = true;
             }
         }

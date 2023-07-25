@@ -1149,11 +1149,6 @@ namespace FabricObserver.Observers.Utilities
                     }
                 }
             }
-            catch (OutOfMemoryException)
-            {
-                // Immediately die.
-                Environment.FailFast($"OOM. Taking down FO:{Environment.NewLine}{Environment.StackTrace}");
-            }
             catch (ArgumentException)
             {
 
@@ -1241,11 +1236,6 @@ namespace FabricObserver.Observers.Utilities
             catch (ArgumentException)
             {
                 return procInfo;
-            }
-            catch (OutOfMemoryException)
-            {
-                // Immediately die.
-                Environment.FailFast($"OOM. Taking down FO:{Environment.NewLine}{Environment.StackTrace}");
             }
             finally
             {
@@ -2320,10 +2310,6 @@ namespace FabricObserver.Observers.Utilities
                 var arr = new SYSTEM_PROCESS_INFORMATION[arrProcInfo.Count];
                 arrProcInfo.CopyTo(arr);
                 return arr;
-            }
-            catch (OutOfMemoryException) // Since OOMs can be caught in .net, failfast here.
-            {
-                Environment.FailFast($"FO hit OOM:{Environment.NewLine}{Environment.StackTrace}");
             }
             catch (Exception e) // Note: Catching all here as it is unclear what the error would be if the SYSTEM_PROCESS_INFORMATION structure definition is invalid (Windows changes support for what is used here, for example).
             {

@@ -407,11 +407,6 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
-                if (e is OutOfMemoryException)
-                {
-                    Environment.FailFast($"OOM encountered in NodeObserver.", e);
-                }
-
                 ObserverLogger.LogWarning($"Unhandled exception re-thrown:{Environment.NewLine}{e}");
 
                 // Fix the bug..
@@ -827,11 +822,6 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
-                if (e is OutOfMemoryException)
-                {
-                    Environment.FailFast($"OOM encountered in NodeObserver.", e);
-                }
-
                 ObserverLogger.LogWarning($"Unhandled exception in GetSystemCpuMemoryValuesAsync:{Environment.NewLine}{e}");
 
                 // Fix the bug..

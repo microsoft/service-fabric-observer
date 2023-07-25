@@ -76,7 +76,7 @@ namespace FabricObserver
         {
             try
             {
-                observerManager.ShutDownAsync().Wait();
+                observerManager.ShutDownAsync().GetAwaiter().GetResult();
             }
             catch (Exception e) when (e is AggregateException or ObjectDisposedException)
             {

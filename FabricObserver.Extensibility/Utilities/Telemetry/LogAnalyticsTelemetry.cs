@@ -85,7 +85,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             {
                 logger.LogInfo($"Exception sending telemetry to LogAnalytics service:{Environment.NewLine}{e.Message}");
             }
-            catch (Exception e)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 // Do not take down FO with a telemetry fault. Log it. Warning level will always log.
                 // This means there is either a bug in this code or something else that needs your attention.
@@ -94,11 +94,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 #else
                 logger.LogWarning($"Exception sending telemetry to LogAnalytics service: {e.Message}");
 #endif
-                if (e is OutOfMemoryException)
-                {
-                    // Terminate now.
-                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
-                }
             }
         }
 
@@ -408,16 +403,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
                 await SendTelemetryAsync(jsonPayload, token).ConfigureAwait(true);
             }
-            catch (Exception e)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 // Telemetry is non-critical and should not take down FH.
                 logger.LogWarning($"Failure in ReportClusterUpgradeStatus:{Environment.NewLine}{e.Message}");
-
-                if (e is OutOfMemoryException)
-                {
-                    // Terminate now.
-                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
-                }
             }
         }
 
@@ -447,16 +436,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
                 await SendTelemetryAsync(jsonPayload, token).ConfigureAwait(true);
             }
-            catch (Exception e)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
                 // Telemetry is non-critical and should not take down FH.
                 logger.LogWarning($"Failure in ReportClusterUpgradeStatus:{Environment.NewLine}{e.Message}");
-
-                if (e is OutOfMemoryException)
-                {
-                    // Terminate now.
-                    Environment.FailFast(string.Format("Out of Memory: {0}", e.Message));
-                }
             }
         }
 

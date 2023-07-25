@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <!-- You can try the XML diff/merge tool XmlDiffPatchSF (located in this repo) to make upgrading your base configurations to the latest version much easier. -->
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.8" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.9" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- ObserverManager Configuration -->
     <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
@@ -83,7 +83,7 @@
     <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:05" />
     <!-- Monitor Sleep Durations (Milliseconds, e.g. 50): How long an observer should wait between consecutive CPU usage collection for the same target (process or machine).
          This setting only applies to 3 observers.  -->
-    <Parameter Name="AppObserverMonitorSleepDurationMilliseconds" DefaultValue="500" />
+    <Parameter Name="AppObserverMonitorSleepDurationMilliseconds" DefaultValue="100" />
     <Parameter Name="FabricSystemObserverMonitorSleepDurationMilliseconds" DefaultValue="500" />
     <Parameter Name="NodeObserverMonitorSleepDurationMilliseconds" DefaultValue="500" />
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00): How often an enabled observer should run. -->
@@ -126,7 +126,7 @@
          You can control the level of concurrency by setting the AppObserverMaxConcurrentTasks setting. -->
     <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
     <!-- Max number of concurrent Tasks available to parallel loops (0 or 1 = sequential (no concurrency), -1 = maximum concurrency). The default value is 1/4 of detected logical processors (LPs). 
-         Set to this to -1 if you want to take advantage of all LPs. This setting roughly maps to the number of threads that will be available for use by Task-parallel loops. If you have 20 LPs, then setting this
+         Set to this to -1 if you want to take advantage of number of LPs - 1 (ex. For 20 LPs, 19 max concurrent tasks). This setting roughly maps to the number of threads that will be available for use by Task-parallel loops. If you have 20 LPs, then setting this
          to 10 means use up to 10 threads, if possible, at the time of parallel loop execution. -->
     <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
     <!-- Windows-only: KVS LVID Usage Monitoring.
@@ -136,14 +136,14 @@
          Note: You should consider monitoring process commit (warningPrivateBytesMb threshold setting) instead of Private Working Set for tracking potential leaks. 
          Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). 
          FO will automatically compute Shared + Private memory usage if it detects 50 or more same-named service processes, regardless of this setting. -->
-    <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="false" />
+    <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
     <!-- Windows-only. AppObserver can monitor services with Service Fabric Resource Governance limits set (CPU and Memory) and put related services into Warning if they reach 90% of the specified limit. 
          If you do set Memory or CPU Resource Governance limits for your service code packages, then you should enable this feature. -->
     <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="false" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
-    <!-- Required: These are JSON-style lists of strings, empty should be "[]", full should be "['mythumb1', 'mythumb2', etc...] or ['mycommon'1, 'mycommon2', etc...]" -->
+    <!-- Required: These are JSON-style lists of strings, empty should be "[]", full should be "['1fda27a2923505e47de37db48ff685b049642c25', '3gda29a2923505e77de37cb48ff685b049642c89', etc...] or ['mycommon'1, 'mycommon2', etc...]" -->
     <Parameter Name="AppCertThumbprintsToObserve" DefaultValue="[]" />
     <Parameter Name="AppCertCommonNamesToObserve" DefaultValue="[]" />
     <!-- ContainerObserver -->
@@ -228,12 +228,15 @@
     <Parameter Name="AzureStorageUploadObserverStorageAccountKey" DefaultValue="" />
     <!-- Zip file compression level to use: Optimal, Fastest or NoCompression. Default is Optimal if this is not set. We do not recommend NoCompression. -->
     <Parameter Name="AzureStorageUploadObserverZipFileCompressionLevel" DefaultValue="Optimal" />
+    <!-- RG - TEST ONLY
+    <Parameter Name="RGCPUCoresRequest" DefaultValue="10" />
+    <Parameter Name="RGMemoryInMBLimit" DefaultValue="500" /> -->
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.2.8" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.2.9" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -418,10 +421,12 @@
       </ConfigOverride>
     </ConfigOverrides>
     <Policies>
-      <!-- NOTE: On Windows and Linux, FO runs custom Setup scripts that must be run as elevated user. Do not remove this policy or change EntryPointType to Main, for example. 
-           Either leave EntryPointType as Setup and run FO as a restricted user, or set EntryPointType to All or remove EntryPointType attribute altogether to run everything 
-           as elevated user (Setup and FO service process). -->
+      <!-- FabricObserver runs a setup script during activation (Linux and Windows). It must be run as System user. 
+           Thus the below policy, which only impacts the Setup phase. The FabricObserver process itself runs as NetworkService on Windows and SFAppsUser on Linux. -->
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
+      <!-- RG - TEST ONLY
+      <ServicePackageResourceGovernancePolicy CpuCoresLimit="[RGCPUCoresRequest]" />
+      <ResourceGovernancePolicy CodePackageRef="Code" MemoryInMBLimit="[RGMemoryInMBLimit]" /> -->
     </Policies>
   </ServiceManifestImport>
   <Principals>
