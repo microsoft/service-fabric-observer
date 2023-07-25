@@ -77,8 +77,8 @@ namespace FabricObserver.Utilities.ServiceFabric
                     {
                         lock (lockObj)
                         {
-                            fabricClient = null;
                             fabricClient.Dispose();
+                            fabricClient = null;
                             fabricClient = new FabricClient();
                             fabricClient.Settings.HealthReportSendInterval = TimeSpan.FromSeconds(1);
                             fabricClient.Settings.HealthReportRetrySendInterval = TimeSpan.FromSeconds(3);
