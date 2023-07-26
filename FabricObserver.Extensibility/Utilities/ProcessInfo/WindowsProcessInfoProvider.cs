@@ -103,9 +103,10 @@ namespace FabricObserver.Observers.Utilities
                 return null;
             }
 
+            // This should never be the case. Something is wrong with the data that the OS provided (most likely related to pid recycling). Ignore for this run.
             if (childProcesses.Count >= MaxDescendants)
             {
-                return childProcesses.Take(MaxDescendants).ToList();
+                return null;
             }
 
             // Get descendant proc at max depth = 5 and max number of descendants = 50. 
@@ -122,7 +123,7 @@ namespace FabricObserver.Observers.Utilities
 
                 if (childProcesses.Count >= MaxDescendants)
                 {
-                    return childProcesses.Take(MaxDescendants).ToList();
+                    return null;
                 }
 
                 for (int j = 0; j < c1.Count; ++j)
@@ -138,7 +139,7 @@ namespace FabricObserver.Observers.Utilities
 
                     if (childProcesses.Count >= MaxDescendants)
                     {
-                        return childProcesses.Take(MaxDescendants).ToList();
+                        return null;
                     }
 
                     for (int k = 0; k < c2.Count; ++k)
@@ -154,7 +155,7 @@ namespace FabricObserver.Observers.Utilities
 
                         if (childProcesses.Count >= MaxDescendants)
                         {
-                            return childProcesses.Take(MaxDescendants).ToList();
+                            return null;
                         }
 
                         for (int l = 0; l < c3.Count; ++l)
@@ -170,7 +171,7 @@ namespace FabricObserver.Observers.Utilities
 
                             if (childProcesses.Count >= MaxDescendants)
                             {
-                                return childProcesses.Take(MaxDescendants).ToList();
+                                return null;
                             }
                         }
                     }
@@ -181,7 +182,8 @@ namespace FabricObserver.Observers.Utilities
             {
                 try
                 {
-                    childProcesses = childProcesses.DistinctBy(p => p.Pid).ToList();
+                    var uniqueEntries = childProcesses.DistinctBy(p => p.Pid).ToList();
+                    return uniqueEntries;
                 }
                 catch (ArgumentException)
                 {
@@ -189,7 +191,7 @@ namespace FabricObserver.Observers.Utilities
                 }
             }
 
-            return childProcesses;
+            return null;
         }
 
         private static List<(string procName, int pid, DateTime ProcessStartTime)> 

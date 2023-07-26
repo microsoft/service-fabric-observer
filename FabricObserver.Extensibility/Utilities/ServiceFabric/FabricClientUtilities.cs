@@ -31,16 +31,17 @@ namespace FabricObserver.Utilities.ServiceFabric
     /// </summary>
     public class FabricClientUtilities
     {
-        private readonly ParallelOptions parallelOptions;
-        private readonly string nodeName;
+        private const int MaxDescendants = 50;
 
         // This is the FC singleton that will be used for the lifetime of this FO instance.
         private static FabricClient fabricClient = null;
         private static readonly object lockObj = new();
-        private readonly bool isWindows;
-        private readonly Logger logger;
         private static readonly XmlSerializer applicationManifestSerializer = new (typeof(ApplicationManifestType));
         private static readonly XmlSerializer serviceManifestSerializer = new (typeof(ServiceManifestType));
+        private readonly ParallelOptions parallelOptions;
+        private readonly string nodeName;
+        private readonly bool isWindows;
+        private readonly Logger logger;
 
         /// <summary>
         /// The singleton FabricClient instance that is used throughout FabricObserver.
@@ -223,7 +224,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                         }
 
                         var repOrInstances = 
-                            GetInstanceOrReplicaMonitoringList(
+                                GetInstanceOrReplicaMonitoringList(
                                     app.ApplicationName,
                                     app.ApplicationTypeName ?? appList.First(a => a.ApplicationName == app.ApplicationName).ApplicationTypeName,
                                     deployedReplicas,
@@ -307,7 +308,8 @@ namespace FabricObserver.Utilities.ServiceFabric
                             List<(string ProcName, int Pid, DateTime ProcessStartTime)> childPids = null;
                             childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, handleToSnapshot);
 
-                            if (childPids != null && childPids.Count > 0)
+                            // If childPids.Count >= 50, then something went wrong with the child process detection. Ignore for this run.
+                            if (childPids != null && childPids.Count > 0 && childPids.Count < MaxDescendants)
                             {
                                 replicaInfo.ChildProcesses = childPids;
                             }
@@ -338,7 +340,8 @@ namespace FabricObserver.Utilities.ServiceFabric
                             List<(string ProcName, int Pid, DateTime ProcessStartTime)> childPids = null;
                             childPids = ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, handleToSnapshot);
 
-                            if (childPids != null && childPids.Count > 0)
+                            // If childPids.Count >= 50, then something went wrong with the child process detection. Ignore for this run.
+                            if (childPids != null && childPids.Count > 0 && childPids.Count < MaxDescendants)
                             {
                                 replicaInfo.ChildProcesses = childPids;
                             }

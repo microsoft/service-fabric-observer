@@ -2830,8 +2830,7 @@ namespace FabricObserverTests
                     && startDate > DateTime.MinValue);
 
                 Assert.IsTrue(data.EntityType is EntityType.Service or EntityType.Process);
-                Assert.IsTrue(data.ServicePackageActivationMode is "ExclusiveProcess"
-                              or "SharedProcess");
+                Assert.IsTrue(data.ServicePackageActivationMode is "ExclusiveProcess" or "SharedProcess");
                 Assert.IsTrue(data.HealthState == HealthState.Invalid);
                 Assert.IsTrue(data.ProcessId > 0);
                 Assert.IsTrue(data.ObserverName == ObserverConstants.AppObserverName);
@@ -2878,8 +2877,7 @@ namespace FabricObserverTests
                     && startDate > DateTime.MinValue);
 
                 Assert.IsTrue(data.EntityType is EntityType.Service or EntityType.Process);
-                Assert.IsTrue(data.ServicePackageActivationMode is "ExclusiveProcess"
-                              or "SharedProcess");
+                Assert.IsTrue(data.ServicePackageActivationMode is "ExclusiveProcess" or "SharedProcess");
                 Assert.IsTrue(data.HealthState == HealthState.Warning);
                 Assert.IsTrue(data.ProcessId > 0);
                 Assert.IsTrue(data.Value > 0.0);

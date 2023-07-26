@@ -1378,11 +1378,17 @@ namespace FabricObserver.Observers.Utilities
             for (int i = 0; i < procInfoList.Count; ++i)
             {
                 SYSTEM_PROCESS_INFORMATION procInfo = procInfoList[i];
+
+                if (procInfo.Reserved2 == UIntPtr.Zero)
+                {
+                    continue;
+                }
+
                 uint pid = procInfo.UniqueProcessId.ToUInt32();
                 string procName = Path.GetFileNameWithoutExtension(procInfo.ImageName.Buffer);
 
-                // Fill SF user service (and descendants) proc cache. It doesn't matter if the parent has children for this cache.
-                if (!currentSFServiceProcCache.ContainsKey((int)pid))
+                // Fill SF user service proc cache (parent procs).
+                if (procInfo.Reserved2 == fabHostPtr && !currentSFServiceProcCache.ContainsKey((int)pid))
                 {
                     currentSFServiceProcCache.Add((int)pid, procName);
                 }
@@ -1393,14 +1399,16 @@ namespace FabricObserver.Observers.Utilities
                     continue;
                 }
 
-                // Has parent that is not FabricHost?
-                if (procInfo.Reserved2 != UIntPtr.Zero && procInfo.Reserved2 != fabHostPtr)
+                // Has parent in process cache.
+                if (currentSFServiceProcCache.Any(p => p.Key == procInfo.Reserved2.ToUInt32()))
                 {
                     uint parentPid = procInfo.Reserved2.ToUInt32();
 
                     try
                     {
-                        var child = (procName, (int)pid, GetProcessStartTime((int)pid));
+                        // Add child to process cache dictionary.
+                        currentSFServiceProcCache.Add((int)pid, procName);
+                        (string procName, int, DateTime) child = (procName, (int)pid, GetProcessStartTime((int)pid));
 
                         if (!descendantsDictionary.ContainsKey((int)parentPid))
                         {
@@ -2092,7 +2100,6 @@ namespace FabricObserver.Observers.Utilities
             }
 
             List<SYSTEM_PROCESS_INFORMATION> procInfoList = new();
-            UIntPtr winInitPtr = UIntPtr.Zero;
 
             for (int i = 0; i < procInfo.Length; ++i)
             {
@@ -2103,23 +2110,16 @@ namespace FabricObserver.Observers.Utilities
                         continue;
                     }
 
-                    uint pid = procInfo[i].UniqueProcessId.ToUInt32();
+                    string procName = Path.GetFileName(procInfo[i].ImageName.Buffer);
                     UIntPtr parent = procInfo[i].Reserved2;
 
-                    // No parent, then not an SF user service. If a descendant of services.exe, ignore.
-                    if (parent == UIntPtr.Zero || parent == winInitPtr)
+                    // No parent, then not an SF user service as all SF user services are descendants of a parent.
+                    if (parent == UIntPtr.Zero)
                     {
                         continue;
                     }
 
-                    string procName = Path.GetFileName(procInfo[i].ImageName.Buffer);
-
-                    // This is for the case when FO is running as System user. Just ignore as much system-related stuff as possible.
-                    if (procName == "wininit.exe")
-                    {
-                        winInitPtr = procInfo[i].UniqueProcessId;
-                        continue;
-                    }
+                    uint pid = procInfo[i].UniqueProcessId.ToUInt32();
 
                     if (FindInStringArray(ignoreProcessList, procName))
                     {
