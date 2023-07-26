@@ -1332,7 +1332,7 @@ namespace FabricObserver.Observers.Utilities
                     result.Add((procName.Replace(".exe", string.Empty), (int)pid));
                 }
 
-                // FabricHost's direct children that are system service processes.
+                // We only care about FabricHost's direct children, which are SF system service processes.
                 if (!FindInStringArray(ignoreFabricSystemServicesList, procName))
                 {
                     continue;
