@@ -1545,7 +1545,7 @@ namespace FabricObserver.Observers.Utilities
                             continue;
                         }
 
-                        if (string.CompareOrdinal(parentProcName, parentSnapProcName) == 0)
+                        if (string.Compare(parentProcName, parentSnapProcName, StringComparison.OrdinalIgnoreCase) == 0)
                         {
                             childProcs.Add((procEntry.szExeFile.Replace(".exe", ""), (int)procEntry.th32ProcessID, GetProcessStartTime((int)procEntry.th32ProcessID)));
                         }
@@ -2412,8 +2412,8 @@ namespace FabricObserver.Observers.Utilities
         {
             for (int i = 0; i < arr.Length; i++)
             {
-                // 0 means the two strings are equal.
-                if (string.CompareOrdinal(s, arr[i]) != 0)
+                // 0 means the two strings are equal. In this case, regardless of casing.
+                if (string.Compare(s, arr[i], StringComparison.OrdinalIgnoreCase) != 0)
                 { 
                     continue;
                 }
