@@ -1672,14 +1672,54 @@ namespace FabricObserver.Observers.Utilities
             return null;
         }
 
-        private static string GetProcessNameFromIdInternal(uint pid)
+        public static string GetProcessNameFromId(SafeProcessHandle procHandle)
+        {
+            try
+            {
+                if (procHandle == null || procHandle.IsInvalid)
+                {
+                    return null;
+                }
+
+                string s = GetProcessNameFromIdInternal(0, procHandle);
+
+                if (s?.Length == 0)
+                {
+                    return null;
+                }
+
+                return s.Replace(".exe", "");
+            }
+            catch (ArgumentException)
+            {
+
+            }
+            catch (Win32Exception)
+            {
+
+            }
+
+            return null;
+        }
+
+        private static string GetProcessNameFromIdInternal(uint pid, SafeProcessHandle procHandle = null)
         {
             SafeProcessHandle hProc = null;
+            bool disposeHandle = true;
+
+            if (procHandle != null)
+            {
+                hProc = procHandle;
+
+                // Don't dispose the passed in handle. The caller should manage lifetime of the object.
+                disposeHandle = false;
+            }
+
             StringBuilder sbProcName = new(1024);
 
             try
             {
-                hProc = GetSafeProcessHandle((int)pid);
+                hProc ??= GetSafeProcessHandle((int)pid);
 
                 if (!hProc.IsInvalid)
                 {
@@ -1698,8 +1738,12 @@ namespace FabricObserver.Observers.Utilities
             {
                 sbProcName.Clear();
                 sbProcName = null;
-                hProc?.Dispose();
-                hProc = null;
+
+                if (disposeHandle)
+                {
+                    hProc?.Dispose();
+                    hProc = null;
+                }
             }
         }
 

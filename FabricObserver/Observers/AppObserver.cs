@@ -2784,25 +2784,29 @@ namespace FabricObserver.Observers
                 if (IsWindows)
                 {
                     procHandle = NativeMethods.GetSafeProcessHandle(procId);
+
+                    if (procHandle == null || procHandle.IsClosed || procHandle.IsInvalid)
+                    {
+                        return;
+                    }
                 }
 
                 while (timer.Elapsed <= duration)
                 {
                     if (token.IsCancellationRequested)
                     {
-                        break;
+                        state.Stop();
                     }
 
                     if (checkCpu || (MonitorResourceGovernanceLimits && repOrInst.RGCpuEnabled && rgCpuPercentThreshold > 0))
                     {
-                        double cpu = 0;
-                        cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, IsWindows ? procName : null, procHandle);
+                        double cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, IsWindows ? procName : null, procHandle);
 
-                        // Process's id is no longer mapped to expected process name or some internal error that is non-retryable. End here.
+                        // Process's id is no longer mapped to expected process name or some internal error occured that is non-retryable. End here.
                         // See CpuUsageProcess.cs/CpuUsageWin32.cs impls.
                         if (cpu == -1)
                         {
-                            continue;
+                            return;
                         }
 
                         // CPU (all cores) \\
@@ -2830,8 +2834,7 @@ namespace FabricObserver.Observers
 
                         if (MonitorResourceGovernanceLimits && repOrInst.RGCpuEnabled && repOrInst.RGAppliedCpuLimitCores > 0  && rgCpuPercentThreshold > 0)
                         {
-                            double pct = 0;
-                            pct = cpu * Environment.ProcessorCount / repOrInst.RGAppliedCpuLimitCores;
+                            double pct = cpu * Environment.ProcessorCount / repOrInst.RGAppliedCpuLimitCores;
 
                             if (procId == parentPid)
                             {
@@ -3763,7 +3766,7 @@ namespace FabricObserver.Observers
                         return proc.ProcessName == procName && proc.StartTime == processStartTime;
                     }
                 }
-                catch (Exception e) when (e is ArgumentException or InvalidOperationException)
+                catch (Exception e) when (e is ArgumentException or InvalidOperationException or SystemException)
                 {
                     return false;
                 }
@@ -3772,9 +3775,12 @@ namespace FabricObserver.Observers
             // Windows.
             try
             {
-                return NativeMethods.GetProcessNameFromId(procId) == procName && processStartTime == GetProcessStartTime(procId);
+                return string.Compare(
+                        NativeMethods.GetProcessNameFromId(procId),
+                        procName, StringComparison.OrdinalIgnoreCase) == 0 
+                        && processStartTime == GetProcessStartTime(procId);
             }
-            catch (Win32Exception)
+            catch (Exception e) when (e is ArgumentException or SystemException or Win32Exception)
             {
                 return false;
             }

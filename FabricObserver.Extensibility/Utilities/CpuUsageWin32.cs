@@ -3,6 +3,7 @@
 // Licensed under the MIT License (MIT). See License.txt in the repo root for license information.
 // ------------------------------------------------------------
 
+using System;
 using Microsoft.Win32.SafeHandles;
 using System.Runtime.InteropServices.ComTypes;
 using FabricObserver.Interfaces;
@@ -28,9 +29,16 @@ namespace FabricObserver.Observers.Utilities
         {
             procHandle ??= NativeMethods.GetSafeProcessHandle(procId);
 
+            // Validate that the supplied process is still the droid we're looking for. \\
+
             if (procHandle.IsInvalid)
             {
-                // Caller should ignore this result. Don't want to use an Exception here.
+                return -1;
+            }
+
+            // If the process went away, then came back with a new id, ignore it.
+            if (string.Compare(NativeMethods.GetProcessNameFromId(procHandle), procName, StringComparison.OrdinalIgnoreCase) != 0)
+            {
                 return -1;
             }
 
@@ -38,7 +46,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 ProcessInfoProvider.ProcessInfoLogger.LogWarning($"GetProcessTimes failed with error code {Marshal.GetLastWin32Error()}.");
 
-                // Caller should ignore this result. Don't want to use an Exception here.
+                // Caller should ignore this result.
                 return -1;
             }
 
@@ -46,7 +54,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 ProcessInfoProvider.ProcessInfoLogger.LogWarning($"GetSystemTimes failed with error code {Marshal.GetLastWin32Error()}.");
 
-                // Caller should ignore this result. Don't want to use an Exception here.
+                // Caller should ignore this result.
                 return -1;
             }
 

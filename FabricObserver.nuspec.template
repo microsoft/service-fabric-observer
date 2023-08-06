@@ -4,8 +4,9 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.9</version>
 		<releaseNotes>
-- Bug fix: CPU Resource Governance monitoring (Windows-only) - App Parameter updates.
-- Performance and code improvements.
+- Performance and Code improvements.
+- Bug fix in Child process management.
+- Bug fix in Cpu RG logic.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
