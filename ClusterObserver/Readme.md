@@ -46,7 +46,7 @@ foreach ($pair in $appParamCollection)
     $applicationParameterMap.Add($pair.Name, $pair.Value);
 }
 
-// Update parameters in the new collection with new values. The below is just an example of changing the RunInterval for cluster monitoring and how long a node needs to be Disabled before generating a Warning.
+# Update parameters in the new collection with new values. The below is just an example of changing the RunInterval for cluster monitoring and how long a node needs to be Disabled before generating a Warning.
 $applicationParameterMap["RunInterval"] = "00:10:00"
 $applicationParameterMap["MaxTimeNodeStatusNotOk"] = "04:00:00"
 
