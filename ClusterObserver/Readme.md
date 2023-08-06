@@ -13,7 +13,7 @@ you want by implementing the IObserverTelemetryProvider interface. As stated, th
 
 The core idea is that you use the aggregated cluster error/warning/Ok health state information from ClusterObserver to fire alerts and/or trigger some other action that gets your attention and/or some SF on-call's enagement via auto-creating a support incident (and an Ok signal would mean auto-mitigate the related incident/ticket).  
 
-```As of version 2.2.0.831/960, ClusterObserver supports the FabricObserver extensibility model. This means you can extend the behavior of ClusterObserver by writing your own observer plugins just as you can do with FabricObserver.```
+```As of version 2.2.0, ClusterObserver supports the FabricObserver extensibility model. This means you can extend the behavior of ClusterObserver by writing your own observer plugins just as you can do with FabricObserver.```
 
 [FabricObserver plugin documentation](https://github.com/microsoft/service-fabric-observer/blob/main/Documentation/Plugins.md) applies to ClusterObserver as well. The difference, of course, is that you will copy your plugin dll and its dependencies into ClusterObserver\PackageRoot\Data folder.
 
@@ -25,16 +25,37 @@ Application Parameter Upgrade Example:
 
 * Connect to your Service Fabric cluster using Connect-ServiceFabricCluster command. 
 
-* Create a variable that contains all the settings you want update:
+* Run the script below, which will preserve existing application parameters that were previously modified in an earlier parameter update.
 
 ```Powershell
-$appParams = @{ "RunInterval" = "00:10:00"; "MaxTimeNodeStatusNotOk" = "04:00:00"; }
+
+$appName = "fabric:/ClusterObserver"
+$appVersion = "2.2.5"
+
+$application = Get-ServiceFabricApplication -ApplicationName $appName
+
+# Get current app parameter settings.
+$appParamCollection = $application.ApplicationParameters
+
+# Create a new map that will hold both the current set of parameters and your modified ones.
+$applicationParameterMap = @{}
+
+# Fill the new map with current app parameter settings first.
+foreach ($pair in $appParamCollection)
+{
+    $applicationParameterMap.Add($pair.Name, $pair.Value);
+}
+
+// Update parameters in the new collection with new values. The below is just an example of changing the RunInterval for cluster monitoring and how long a node needs to be Disabled before generating a Warning.
+$applicationParameterMap["RunInterval"] = "00:10:00"
+$applicationParameterMap["MaxTimeNodeStatusNotOk"] = "04:00:00"
+
 ```
 
-Then execute the application upgrade with
+Then execute the version-less, parameter-only application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -ApplicationTypeVersion 2.2.0.960 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName $appName -ApplicationTypeVersion $appVersion -ApplicationParameter $applicationParameterMap -Monitored -FailureAction rollback
 ```
 
 ### ClusterObserver Configuration 
