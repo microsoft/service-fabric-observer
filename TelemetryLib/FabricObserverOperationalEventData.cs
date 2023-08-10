@@ -30,11 +30,6 @@ namespace FabricObserver.TelemetryLib
             get; set;
         }
 
-        public bool ParallelExecutionCapable 
-        { 
-            get; set; 
-        }
-
         public string SFRuntimeVersion
         {
             get; set;

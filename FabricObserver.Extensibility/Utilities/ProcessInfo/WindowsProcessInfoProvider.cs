@@ -402,10 +402,6 @@ namespace FabricObserver.Observers.Utilities
 
         private float GetProcessMemoryMbPerfCounter(string procName, int procId, CancellationToken token)
         {
-#if DEBUG
-            // For DEBUG - Perf.
-            Stopwatch stopwatch = Stopwatch.StartNew();
-#endif
             if (string.IsNullOrWhiteSpace(procName) || procId < 1)
             {
                 string message = $"GetProcessMemoryMbPerfCounter: Unsupported process information provided ({procName ?? "null"}, {procId})";
@@ -512,11 +508,6 @@ namespace FabricObserver.Observers.Utilities
                 using PerformanceCounter memCounter = new(ProcessCategoryName, ProcessMemoryCounterName, internalProcName, true);
                 _ = memCounter.NextValue();
                 float memMb = (float)(memCounter.NextValue() / 1024 / 1024);
-#if DEBUG
-                stopwatch.Stop();
-                ProcessInfoLogger.LogInfo($"GetProcessMemoryMbPerfCounter run time for {internalProcName} (private WS = {memMb}): {stopwatch.ElapsedMilliseconds} ms.");
-                stopwatch = null;
-#endif
                 return memMb;
             }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or UnauthorizedAccessException or Win32Exception)

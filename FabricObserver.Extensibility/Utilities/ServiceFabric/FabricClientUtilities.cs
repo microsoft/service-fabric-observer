@@ -110,10 +110,9 @@ namespace FabricObserver.Utilities.ServiceFabric
         public FabricClientUtilities(string nodeName = null)
         {
             logger = new Logger("FabClientUtil");
-            int maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
+
             parallelOptions = new ParallelOptions
             {
-                MaxDegreeOfParallelism = Environment.ProcessorCount >= 4 ? maxDegreeOfParallelism : 1,
                 TaskScheduler = TaskScheduler.Default
             };
 

@@ -46,7 +46,6 @@ Here is a full example of exactly what is sent in one of these telemetry events,
     "NodeNameHash": "3e83569d4c6aad78083cd081215dafc81e5218556b6a46cb8dd2b183ed0095ad",
     "FOVersion": "3.2.9",
     "HasPlugins": "False",
-    "ParallelCapable": "True",
     "SFRuntimeVersion":"9.0.1028.9590"
     "UpTime": "1.00:30:18.8058379",
     "Timestamp": "2022-07-08T02:45:28.9827940Z",
@@ -77,7 +76,6 @@ Let's take a look at the data and why we think it is useful to share with us. We
 -	**NodeNameHash** - this is a sha256 hash of the name of the Fabric node from where the data originates. It is used to correlate data from specific nodes in a cluster (the hashed node name will be known to be part of the cluster with a specific cluster id).
 -	**FOVersion** - this is the internal version of FO (if you have your own version naming, we will only know what the FO code version is (not your specific FO app version name)).
 -	**HasPlugins** - this informs us about whether or not FO plugins are being used (we would love to know if folks are using the plugin model).
--   **ParallelCapable** - this informs us about whether or not the underlying (virtual) machine's CPU configuration is parallel capable.
 -   **SFRuntimeVersion** - this is the version of the Service Fabric runtime.
 -	**UpTime** - this is the amount of time FO has been running since it last started.
 -	**Timestamp** - this is the time, in UTC, when FO sent the telemetry.

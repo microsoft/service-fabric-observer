@@ -5,6 +5,7 @@
 		<version>3.2.9</version>
 		<releaseNotes>
 - Performance and Code improvements.
+- AppObserver no longer relies on ProcessorCount to determine concurrent monitoring capability. Even if you resource govern CPU to a percentage of a single CPU core, AppObserver will still monitor services concurrently if AppObserverEnableConcurrentMonitoring is set to true.
 - Bug fix in Child process management.
 - Bug fix in Cpu RG logic.
 		</releaseNotes>

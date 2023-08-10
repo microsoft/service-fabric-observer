@@ -241,7 +241,7 @@ namespace FabricObserver.Observers
             if (EnableVerboseLogging)
             {
                 ObserverLogger.LogInfo($"Run Duration ({ReplicaOrInstanceList?.Count} service processes observed) {(parallelOptions.MaxDegreeOfParallelism == 1 ? "without" : "with")} " +
-                                       $"Parallel Processing (Logical Processors: {Environment.ProcessorCount}, MaxDegreeOfParallelism: {parallelOptions.MaxDegreeOfParallelism}): {RunDuration}.");
+                                       $"Parallel Processing (MaxDegreeOfParallelism: {parallelOptions.MaxDegreeOfParallelism}): {RunDuration}.");
             }
 
             CleanUp();
@@ -1003,6 +1003,8 @@ namespace FabricObserver.Observers
 
             // Support for specifying single configuration JSON object for all applications.
             await ProcessGlobalThresholdSettingsAsync();
+            SetConcurrentMonitoringState();
+
             int settingsFail = 0;
 
             for (int i = 0; i < userTargetList.Count; i++)
@@ -1151,6 +1153,39 @@ namespace FabricObserver.Observers
             ObserverLogger.LogInfo($"InitializeAsync run duration: {stopwatch.Elapsed}");
 #endif
             return true;
+        }
+
+        private void SetConcurrentMonitoringState()
+        {
+            if (bool.TryParse(
+                    GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoringParameter), out bool enableConcurrency))
+            {
+                EnableConcurrentMonitoring = enableConcurrency;
+            }
+            ObserverLogger.LogInfo($"EnableConcurrentMonitoring = {EnableConcurrentMonitoring}");
+
+            // Effectively sequential.
+            int maxDegreeOfParallelism = 1;
+
+            if (EnableConcurrentMonitoring)
+            {
+                _ = int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasksParameter), out maxDegreeOfParallelism);
+                
+                if (maxDegreeOfParallelism < -1 || maxDegreeOfParallelism == 0)
+                {
+                    ObserverLogger.LogWarning($"MaxConcurrentTasks setting is invalid ({maxDegreeOfParallelism}). Will not run concurrent operations.");
+                    maxDegreeOfParallelism = 1;
+                }
+            }
+           
+            ObserverLogger.LogInfo($"Environment.ProcessorCount = {Environment.ProcessorCount}");
+            ObserverLogger.LogInfo($"MaxDegreeOfParallelism = {maxDegreeOfParallelism}");
+            parallelOptions = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = maxDegreeOfParallelism,
+                CancellationToken = Token,
+                TaskScheduler = TaskScheduler.Default
+            };
         }
 
         private async Task ProcessGlobalThresholdSettingsAsync()
@@ -1676,42 +1711,6 @@ namespace FabricObserver.Observers
             }
             ObserverLogger.LogInfo($"MaxDumpsTimeWindow = {MaxDumpsTimeWindow}");
 
-            // Concurrency/Parallelism support. The minimum requirement is 4 logical processors, regardless of user setting.
-            if (Environment.ProcessorCount >= 4 && bool.TryParse(
-                    GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableConcurrentMonitoringParameter), out bool enableConcurrency))
-            {
-                EnableConcurrentMonitoring = enableConcurrency;
-            }
-            ObserverLogger.LogInfo($"EnableConcurrentMonitoring = {EnableConcurrentMonitoring}");
-
-            // Effectively, sequential.
-            int maxDegreeOfParallelism = 1;
-
-            if (EnableConcurrentMonitoring)
-            {
-                // Default to using [1/4 of available logical processors ~* 2] threads if MaxConcurrentTasks setting is not supplied.
-                // So, this means around 10 - 11 threads (or less) could be used if processor count = 20. This is only being done to limit the impact
-                // FabricObserver has on the resources it monitors and alerts on.
-                maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
-
-                // If user configures MaxConcurrentTasks setting, then use that value instead.
-                if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasksParameter), out int maxTasks))
-                {
-                    if (maxTasks is (-1) or > 0)
-                    {
-                        maxDegreeOfParallelism = maxTasks == -1 ? Environment.ProcessorCount - 1 : maxTasks;
-                    }
-                }
-            }
-            ObserverLogger.LogInfo($"MaxConcurrentTasks = {maxDegreeOfParallelism}");
-
-            parallelOptions = new ParallelOptions
-            {
-                MaxDegreeOfParallelism = maxDegreeOfParallelism,
-                CancellationToken = Token,
-                TaskScheduler = TaskScheduler.Default
-            };
-
             // KVS LVID Monitoring - Windows-only.
             if (IsWindows && bool.TryParse(
                     GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableKvsLvidMonitoringParameter), out bool enableLvidMonitoring))
@@ -2053,10 +2052,9 @@ namespace FabricObserver.Observers
                 }
             }
 
-            // DEBUG - Perf
-#if DEBUG
+            // Perf
             ConcurrentQueue<int> threadData = new();
-#endif
+
             ParallelLoopResult result = Parallel.For(0, ReplicaOrInstanceList.Count, parallelOptions, (i, state) =>
             {
                 if (token.IsCancellationRequested)
@@ -2071,10 +2069,9 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                // DEBUG - Perf
-#if DEBUG
+                // Perf
                 threadData.Enqueue(Environment.CurrentManagedThreadId);
-#endif
+
                 var repOrInst = ReplicaOrInstanceList[i];
                 var timer = new Stopwatch();
                 int parentPid = (int)repOrInst.HostProcessId;
@@ -2382,18 +2379,17 @@ namespace FabricObserver.Observers
                 throw new AggregateException(exceptions);
             }
 
-            // DEBUG - Perf 
+            // Perf 
             string threads = string.Empty;
-#if DEBUG
             int threadcount = threadData.Distinct().Count();
             threads = $", Threads: {threadcount}";
             threadData.Clear();
             threadData = null;
-#endif
             execTimer.Stop();
             ObserverLogger.LogInfo("Completed MonitorDeployedAppsAsync.");
             ObserverLogger.LogInfo($"MonitorDeployedAppsAsync Execution time: {execTimer.Elapsed}{threads}");
             execTimer = null;
+
             return Task.FromResult(result);
         }
 
@@ -3389,10 +3385,20 @@ namespace FabricObserver.Observers
                                 // RG Memory
                                 (replicaInfo.RGMemoryEnabled, replicaInfo.RGAppliedMemoryLimitMb) =
                                     fabricClientUtilities.TupleGetMemoryResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName, parameters);
+                                
+                                if (replicaInfo.RGMemoryEnabled)
+                                {
+                                    ObserverLogger.LogInfo($"RG Memory enabled. Applied Memory Limit MB: {replicaInfo.RGAppliedMemoryLimitMb}");
+                                }
 
                                 // RG Cpu
                                 (replicaInfo.RGCpuEnabled, replicaInfo.RGAppliedCpuLimitCores) =
                                     fabricClientUtilities.TupleGetCpuResourceGovernanceInfo(appManifest, svcManifest, replicaInfo.ServiceManifestName, codepackageName, parameters);
+                            
+                                if (replicaInfo.RGCpuEnabled) 
+                                {
+                                    ObserverLogger.LogInfo($"RG CPU enabled. Applied Cpu limit cores: {replicaInfo.RGAppliedCpuLimitCores}");
+                                }
                             }
                         }
 

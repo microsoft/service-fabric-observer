@@ -32,7 +32,7 @@
 		<Parameter Name="EnableEtw" Value="true" />
 		<Parameter Name="EnableCSVDataLogging" Value="false" />
 		<Parameter Name="EnableKvsLvidMonitoring" Value="false" />
-		<Parameter Name="EnableVerboseLogging" Value="false" />
+		<Parameter Name="EnableVerboseLogging" Value="true" />
 		<Parameter Name="MonitorDuration" Value="00:00:01" />
         <Parameter Name="MonitorSleepDurationMilliseconds" Value="50"/>
 		<Parameter Name="RunInterval" Value="" />

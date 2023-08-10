@@ -1290,7 +1290,6 @@ namespace FabricObserverTests
             // App parameter upgrade value.
             Assert.IsTrue(RGMemoryLimit == 2400);
 
-            // CPU RG is not implemented fully. This is for the next version.
             var (RGCpuEnabled, RGCpuLimit) = clientUtilities.TupleGetCpuResourceGovernanceInfo(appManifest, svcManifest, "VotingWebPkg", "Code", parameters);
             Assert.IsTrue(RGCpuEnabled);
 
