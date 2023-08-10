@@ -49,6 +49,10 @@
     <!-- Required: Diagnostic Telemetry. Azure ApplicationInsights and Azure LogAnalytics support is already implemented, 
          but you can implement whatever provider you want. See IObserverTelemetry interface. -->
     <Parameter Name="EnableTelemetryProvider" Value="" MustOverride="true" />
+
+    <!-- Resource Governance. MustOverride is required to enable changing RG settings with app parameter updates.
+    <Parameter Name="RGCPUCoresRequest" Value="" MustOverride="true" />
+    <Parameter Name="RGMemoryInMBLimit" Value="" MustOverride="true" /> -->
     
     <!-- *** Non-Overridable Parameters - Set these in this file. *** -->
     
@@ -100,10 +104,6 @@
     <Parameter Name="LogAnalyticsSharedKey" Value="" />
     <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
     <Parameter Name="LogAnalyticsLogType" Value="FabricObserver" />
-
-	<!-- RG - TEST ONLY -->
-	<Parameter Name="RGCPUCoresRequest" Value="" MustOverride="true" />
-	<Parameter Name="RGMemoryInMBLimit" Value="" MustOverride="true" />
 	  
     <!-- OBSOLETE: FabricObserverWebApi is no longer supported or maintained. This setting/feature exists for legacy purposes only. 
 	     If you deploy the FabricObserverWebApi app, set this to true. -->

@@ -3,7 +3,7 @@
 <ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.9" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- ObserverManager Configuration -->
-    <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="" />
+    <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
     <Parameter Name="ObserverManagerObserverExecutionTimeoutSeconds" DefaultValue="3600" />
     <Parameter Name="ObserverManagerEnableVerboseLogging" DefaultValue="false" />
     <!-- If you want to transmit ETW events to Kusto, for example, then enable this setting. Otherwise, set this to false. Please see ETW.md for related documentation. -->
@@ -66,7 +66,7 @@
     <Parameter Name="FabricSystemObserverEnableCSVDataLogging" DefaultValue="false" />
     <Parameter Name="NodeObserverEnableCSVDataLogging" DefaultValue="false" />
     <!-- Verbose Logging -->
-    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="true" />
+    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="AzureStorageUploadObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="ContainerObserverEnableVerboseLogging" DefaultValue="false" />
@@ -107,7 +107,7 @@
     <Parameter Name="AppObserverConfigurationFile" DefaultValue="AppObserver.config.json" />
     <!-- Process family tree monitoring: AppObserver monitors the resource usage by child processes of target services.
          NOTE: If you already know that your target services do *not* spawn child processes, then you should not enable this feature. -->
-    <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="true" />
+    <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="false" />
     <!-- The maximum number of child process data items to include in a sorted list of top n consumers for some metric, where n is the value of this setting. -->
     <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
     <!-- Service process dumps (dumpProcessOnError/dumpProcessOnWarning setting).
@@ -128,17 +128,17 @@
     <!-- Max number of concurrent Tasks available to parallel loops. Set this to -1 or some positive integer that roughly maps to max number of threads to use.
          See https://learn.microsoft.com/dotnet/api/system.threading.tasks.paralleloptions.maxdegreeofparallelism?view=net-6.0 -->
     <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="-1" />
-    <!-- Windows-only: KVS LVID Usage Monitoring.
+    <!-- *Windows-only*: KVS LVID Usage Monitoring.
          NOTE: If you monitor stateful Actor services, then you should set this to true. -->
-    <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="true" />
-    <!-- Windows-only: Process Working Set type for AppObserver to monitor.
-         Note: You should consider monitoring process commit (warningPrivateBytesMb threshold setting) instead of Private Working Set for tracking potential leaks. 
-         Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). 
-         FO will automatically compute Shared + Private memory usage if it detects 50 or more same-named service processes, regardless of this setting. -->
+    <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
+    <!-- *Windows-only*: Process Working Set type for AppObserver to monitor.
+         Note: You should consider monitoring process commit (warningPrivateBytesMb threshold setting) instead of Private Working Set for tracking potential leaks on Windows. 
+         The Private Bytes measurement code is extremely fast and CPU-efficient on Windows. Monitoring Private Working Set on Windows requires PerformanceCounter, which is an expensive .net object.
+		 *Windows* Recommendation: Disable this, employ warningPrivateBytesMb/errorPrivateBytesMb in AppObserver.config.json file for tracking process memory usage on Windows. -->
     <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="false" />
-    <!-- Windows-only. AppObserver can monitor services with Service Fabric Resource Governance limits set (CPU and Memory) and put related services into Warning if they reach 90% of the specified limit. 
+    <!-- *Windows-only*. AppObserver can monitor services with Service Fabric Resource Governance limits set (CPU and Memory) and put related services into Warning if they reach 90% of the specified limit. 
          If you do set Memory or CPU Resource Governance limits for your service code packages, then you should enable this feature. -->
-    <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="true" />
+    <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="false" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
@@ -227,9 +227,9 @@
     <Parameter Name="AzureStorageUploadObserverStorageAccountKey" DefaultValue="" />
     <!-- Zip file compression level to use: Optimal, Fastest or NoCompression. Default is Optimal if this is not set. We do not recommend NoCompression. -->
     <Parameter Name="AzureStorageUploadObserverZipFileCompressionLevel" DefaultValue="Optimal" />
-    <!-- RG - TEST ONLY -->
+    <!-- Resource Governance 
     <Parameter Name="RGCPUCoresRequest" DefaultValue="0.30" />
-    <Parameter Name="RGMemoryInMBLimit" DefaultValue="500" />
+    <Parameter Name="RGMemoryInMBLimit" DefaultValue="500" /> -->
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
@@ -264,6 +264,9 @@
             <Parameter Name="DumpType" Value="[AppObserverProcessDumpType]" />
             <Parameter Name="MaxDumps" Value="[AppObserverMaxProcessDumps]" />
             <Parameter Name="MaxDumpsTimeWindow" Value="[AppObserverMaxDumpsTimeWindow]" />
+            <!-- Resource Governance -->
+            <!-- <Parameter Name="RGCPUCoresRequest" Value="[RGCPUCoresRequest]" />
+                 <Parameter Name="RGMemoryInMBLimit" Value="[RGMemoryInMBLimit]" /> -->
           </Section>
           <Section Name="CertificateObserverConfiguration">
             <Parameter Name="Enabled" Value="[CertificateObserverEnabled]" />
@@ -415,8 +418,6 @@
             <Parameter Name="EnableFabricObserverOperationalTelemetry" Value="[ObserverManagerEnableOperationalFOTelemetry]" />
             <Parameter Name="ObserverFailureHealthStateLevel" Value="[ObserverManagerObserverFailureHealthStateLevel]" />
             <Parameter Name="ObserverLogPath" Value="[ObserverLogPath]" />
-            <Parameter Name="RGCPUCoresRequest" Value="[RGCPUCoresRequest]" />
-            <Parameter Name="RGMemoryInMBLimit" Value="[RGMemoryInMBLimit]" />
           </Section>
         </Settings>
       </ConfigOverride>
@@ -424,10 +425,10 @@
     <Policies>
       <!-- FabricObserver runs a setup script during activation (Linux and Windows). It must be run as System user. 
            Thus the below policy, which only impacts the Setup phase. The FabricObserver process itself runs as NetworkService on Windows and SFAppsUser on Linux. -->
-      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="All" />
-      <!-- RG - TEST ONLY -->
+      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
+      <!-- Resource Governance
       <ServicePackageResourceGovernancePolicy CpuCoresLimit="[RGCPUCoresRequest]" />
-      <ResourceGovernancePolicy CodePackageRef="Code" MemoryInMBLimit="[RGMemoryInMBLimit]" />
+      <ResourceGovernancePolicy CodePackageRef="Code" MemoryInMBLimit="[RGMemoryInMBLimit]" /> -->
     </Policies>
   </ServiceManifestImport>
   <Principals>
