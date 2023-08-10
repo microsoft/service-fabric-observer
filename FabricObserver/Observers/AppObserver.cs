@@ -2798,7 +2798,7 @@ namespace FabricObserver.Observers
                     {
                         double cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, IsWindows ? procName : null, procHandle);
 
-                        // Process's id is no longer mapped to expected process name or some internal error occured that is non-retryable. End here.
+                        // Process id is no longer mapped to expected process name or some internal error occured that is non-retryable. Ignore this process.
                         // See CpuUsageProcess.cs/CpuUsageWin32.cs impls.
                         if (cpu == -1)
                         {

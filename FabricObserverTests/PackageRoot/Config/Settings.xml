@@ -34,7 +34,7 @@
 		<Parameter Name="EnableKvsLvidMonitoring" Value="false" />
 		<Parameter Name="EnableVerboseLogging" Value="true" />
 		<Parameter Name="MonitorDuration" Value="00:00:01" />
-        <Parameter Name="MonitorSleepDurationMilliseconds" Value="50"/>
+        <Parameter Name="MonitorSleepDurationMilliseconds" Value="100"/>
 		<Parameter Name="RunInterval" Value="" />
 		<Parameter Name="ConfigurationFileName" Value="AppObserver.config.json" />
 		<Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
@@ -46,7 +46,7 @@
 		<Parameter Name="DumpType" Value="MiniPlus" />
 		<Parameter Name="MaxDumps" Value="3" />
 		<Parameter Name="MaxDumpsTimeWindow" Value="00:04:00" />
-		<Parameter Name="MonitorPrivateWorkingSet" Value="true" />
+		<Parameter Name="MonitorPrivateWorkingSet" Value="false" />
 		<Parameter Name="MonitorResourceGovernanceLimits" Value="true" />
 	</Section>
 	<Section Name="CertificateObserverConfiguration">
