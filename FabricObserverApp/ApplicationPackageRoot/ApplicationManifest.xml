@@ -127,7 +127,7 @@
     <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
     <!-- Max number of concurrent Tasks available to parallel loops. Set this to -1 or some positive integer that roughly maps to max number of threads to use.
          See https://learn.microsoft.com/dotnet/api/system.threading.tasks.paralleloptions.maxdegreeofparallelism?view=net-6.0 -->
-    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="-1" />
+    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="20" />
     <!-- *Windows-only*: KVS LVID Usage Monitoring.
          NOTE: If you monitor stateful Actor services, then you should set this to true. -->
     <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
@@ -150,7 +150,7 @@
     <!-- Concurrency/Parallelism Support 
          Note: If you do not monitor several containers, then enabling this is not super useful. -->
     <Parameter Name="ContainerObserverEnableConcurrentMonitoring" DefaultValue="false" />
-    <Parameter Name="ContainerObserverMaxConcurrentTasks" DefaultValue="-1" />
+    <Parameter Name="ContainerObserverMaxConcurrentTasks" DefaultValue="20" />
     <!-- Disk Observer Warning/Error Thresholds -->
     <Parameter Name="DiskObserverDiskSpacePercentUsageWarningThreshold" DefaultValue="90" />
     <Parameter Name="DiskObserverDiskSpacePercentUsageErrorThreshold" DefaultValue="" />
