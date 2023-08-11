@@ -1825,9 +1825,11 @@ namespace FabricObserver.Observers
                     string childProcName = childProcs[i].procName;
                     string childFrudKey = $"{parentKey}:{childProcName}{childPid}";
 
+                    // This means that the original child process detected at initialization time (SetInstanceOrReplicaMonitoringList)
+                    // was no longer running by the time ComputeResourceUsage function ran. Ignore.
                     if (!childFruds.ContainsKey(childFrudKey))
                     {
-                        ObserverLogger.LogInfo($"TupleProcessChildFruds: childFruds collection does not contain key {childFrudKey}. Ignoring.");
+                        ObserverLogger.LogInfo($"TupleProcessChildFruds: childFruds dictionary does not contain key {childFrudKey}. Ignoring.");
                         continue;
                     }
 
@@ -1836,15 +1838,17 @@ namespace FabricObserver.Observers
                     // Is the process the one we think it is?
                     if (!EnsureProcess(childProcName, childPid, startTime))
                     {
-                        ObserverLogger.LogInfo($"TupleProcessChildFruds: EnsureProcess for child {childProcName} ({childPid}) returned false. Ignoring.");
+                        ObserverLogger.LogInfo($"TupleProcessChildFruds: Child process {childProcName} with pid {childPid} is no longer running. Ignoring.");
                         continue;
                     }
 
+                    // Add child proc resource usage to sum for metric.
                     FabricResourceUsageData<T> childFrud = childFruds[childFrudKey];
                     metric = childFrud.Property;
                     double value = childFrud.AverageDataValue;
                     sumValues += value;
 
+                    // This data only matters if the user wants it for analysis.
                     if (IsEtwEnabled || IsTelemetryEnabled)
                     {
                         var childProcInfo = new ChildProcessInfo
@@ -1985,7 +1989,7 @@ namespace FabricObserver.Observers
                 childProcessInfoData.ChildProcessInfo = childProcessInfoData.ChildProcessInfo.OrderByDescending(v => v.Value).ToList();
 
                 // Cap size of List<ChildProcessInfo> to MaxChildProcTelemetryDataCount.
-                if (childProcessInfoData.ChildProcessInfo.Count >= MaxChildProcTelemetryDataCount)
+                if (childProcessInfoData.ChildProcessInfo.Count > MaxChildProcTelemetryDataCount)
                 {
                     childProcessInfoData.ChildProcessInfo = childProcessInfoData.ChildProcessInfo.Take(MaxChildProcTelemetryDataCount).ToList();
                 }
