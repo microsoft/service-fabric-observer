@@ -1757,7 +1757,7 @@ namespace FabricObserver.Observers
                 parentFrud.ClearData();
                 parentFrud.AddData((T)Convert.ChangeType(sumAllValues, typeof(T)));
             }
-            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException or OutOfMemoryException))
             {
                 ObserverLogger.LogWarning($"ProcessChildProcs - Failure processing descendants:{Environment.NewLine}{e}");
             }
@@ -1983,6 +1983,9 @@ namespace FabricObserver.Observers
 
             ObserverLogger.LogInfo($"TupleProcessChildFruds: ChildProcessInfo.Count = {childProcessInfoData.ChildProcessInfo.Count}.");
 
+            // Reset child proc count to the actual number of processed child proc info elements.
+            childProcessInfoData.ChildProcessCount = childProcessInfoData.ChildProcessInfo.Count;
+            
             try
             {
                 // Order List<ChildProcessInfo> by Value descending.
