@@ -741,7 +741,8 @@ namespace FabricObserver.Observers
                         ReplicaOrInstanceMonitoringInfo replicaOrInstance = null,
                         bool dumpOnError = false,
                         bool dumpOnWarning = false,
-                        int processId = 0) where T : struct
+                        int processId = 0,
+                        int childProcCount = 0) where T : struct
         {
             if (data == null)
             {
@@ -1204,9 +1205,9 @@ namespace FabricObserver.Observers
                 string rgInfo = string.Empty;
                 string drive = string.Empty;
 
-                if (replicaOrInstance != null && replicaOrInstance.ChildProcesses != null)
+                if (replicaOrInstance != null && childProcCount > 0)
                 {
-                    childProcMsg = $" Note that {serviceName.OriginalString} has spawned one or more child processes ({replicaOrInstance.ChildProcesses.Count}). " +
+                    childProcMsg = $" Note that {serviceName.OriginalString} has spawned one or more child processes ({childProcCount}). " +
                                    $"Their cumulative impact on {processName}'s resource usage has been applied.";
                 }
 

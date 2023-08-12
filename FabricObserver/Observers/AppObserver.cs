@@ -260,7 +260,7 @@ namespace FabricObserver.Observers
             ObserverLogger.LogInfo($"Started ReportAsync.");
 
             //DEBUG
-            //var stopwatch = Stopwatch.StartNew();
+            var stopwatch = Stopwatch.StartNew();
             TimeSpan healthReportTtl = GetHealthReportTTL();
 
             // This will run sequentially (with 1 thread) if the underlying CPU config does not meet the requirements for concurrency (e.g., if logical procs < 4).
@@ -405,7 +405,8 @@ namespace FabricObserver.Observers
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps,
                             app.DumpProcessOnWarning && EnableProcessDumps,
-                            processId);
+                            processId,
+                            hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
                     }
 
                     // Working Set (MB)
@@ -448,7 +449,8 @@ namespace FabricObserver.Observers
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps,
                             app.DumpProcessOnWarning && EnableProcessDumps,
-                            processId);
+                            processId,
+                            hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
                     }
 
                     // Working Set (Percent)
@@ -491,7 +493,8 @@ namespace FabricObserver.Observers
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps,
                             app.DumpProcessOnWarning && EnableProcessDumps,
-                            processId);
+                            processId,
+                            hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
                     }
 
                     // Private Bytes (MB)
@@ -536,7 +539,8 @@ namespace FabricObserver.Observers
                                 repOrInst,
                                 app.DumpProcessOnError && EnableProcessDumps,
                                 app.DumpProcessOnWarning && EnableProcessDumps,
-                                processId);
+                                processId,
+                                hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
                         }
                     }
 
@@ -582,7 +586,8 @@ namespace FabricObserver.Observers
                                 repOrInst,
                                 app.DumpProcessOnError && EnableProcessDumps,
                                 app.DumpProcessOnWarning && EnableProcessDumps,
-                                processId);
+                                processId,
+                                hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
                         }
                     }
 
@@ -629,7 +634,8 @@ namespace FabricObserver.Observers
                                 repOrInst,
                                 dumpOnError: false, // Not supported
                                 dumpOnWarning: false, // Not supported
-                                processId);
+                                processId,
+                                hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
                         }
 
                         // RG CPU Monitoring (CPU Time Percent)
@@ -672,7 +678,8 @@ namespace FabricObserver.Observers
                                 repOrInst,
                                 dumpOnError: false, // Not supported
                                 dumpOnWarning: false, // Not supported
-                                processId);
+                                processId,
+                                hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
                         }
                     }
 
@@ -716,7 +723,8 @@ namespace FabricObserver.Observers
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps,
                             app.DumpProcessOnWarning && EnableProcessDumps,
-                            processId);
+                            processId,
+                            hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
                     }
 
                     // TCP Ports Total - Ephemeral (port numbers fall in the dynamic range)
@@ -759,7 +767,8 @@ namespace FabricObserver.Observers
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps,
                             app.DumpProcessOnWarning && EnableProcessDumps,
-                            processId);
+                            processId,
+                            hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
                     }
 
                     // TCP Ports Percentage - Ephemeral (port numbers fall in the dynamic range)
@@ -802,7 +811,8 @@ namespace FabricObserver.Observers
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps,
                             app.DumpProcessOnWarning && EnableProcessDumps,
-                            processId);
+                            processId,
+                            hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
                     }
 
                     // Handles
@@ -845,7 +855,8 @@ namespace FabricObserver.Observers
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps,
                             app.DumpProcessOnWarning && EnableProcessDumps,
-                            processId);
+                            processId,
+                            hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
                     }
 
                     // Threads
@@ -888,7 +899,8 @@ namespace FabricObserver.Observers
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps,
                             app.DumpProcessOnWarning && EnableProcessDumps,
-                            processId);
+                            processId,
+                            hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
                     }
 
                     // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
@@ -932,7 +944,8 @@ namespace FabricObserver.Observers
                             repOrInst,
                             app.DumpProcessOnError && EnableProcessDumps,
                             app.DumpProcessOnWarning && EnableProcessDumps,
-                            processId);
+                            processId,
+                            hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
                     }
 
                     // Child proc info telemetry.
@@ -958,9 +971,9 @@ namespace FabricObserver.Observers
                 }
             });
 
-            //stopwatch.Stop();
-            //ObserverLogger.LogInfo($"ReportAsync run duration with parallel: {stopwatch.Elapsed}");
+            stopwatch.Stop();
             ObserverLogger.LogInfo($"Completed ReportAsync.");
+            ObserverLogger.LogInfo($"ReportAsync run duration: {stopwatch.Elapsed}");
             return Task.CompletedTask;
         }
 
