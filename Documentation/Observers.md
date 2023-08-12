@@ -133,15 +133,10 @@ Finally, ***if you do not launch child processes from your services please disab
 
 AppObserver, by default, will monitor and report on services using concurrent Tasks if FO is running on capable CPU(s). 
 
-You can turn this feature on/off by setting ```AppObserverEnableConcurrentMonitoring``` in ApplicationManifest.xml. Further, you can control "how much" parallelism you can handle (which means, really, how much of the CPU do you want FO to use).
-You set this with ```AppObserverMaxConcurrentTasks``` in ApplicationManifest.xml. The default value for ```AppObserverMaxConcurrentTasks``` is automatically calculated by FO and is 1/4 of the detected logical processors (LPs) on the VM/Machine.
-This would mean given 20 LPs, the number of threads that will be created will be close to 5 (less than 5 or maybe a few more).
-You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
-eating CPU to complete the parallelized monitoring on a node with lots of services (>= 200). **The impact of default parallelization settings on machines with less than 200 monitored services is minimal**.
-Please test and choose a value that suits your needs or simply leave AppObserverMaxConcurrentTasks unset and go with the default. 
-
-Finally, if you enable concurrent monitoring AND you do not launch child processes from your services please disable ```AppObserverEnableChildProcessMonitoring``` in ApplicationManifest.xml.
-This is very important because AppObserver will run code, in parallel, that checks to see if some process has children. This has some CPU cost on nodes where you are monitoring (in parallel) a lot of services, so if you already know that your services do not spawn child processes, then please save electrons and disable ```AppObserverEnableChildProcessMonitoring```.
+You can turn this feature on/off by setting ```AppObserverEnableConcurrentMonitoring``` in ApplicationManifest.xml. Further, you can control "how much" parallelism you can handle (which means, really, how many threads can be used to host tasks).
+You set this with ```AppObserverMaxConcurrentTasks``` in ApplicationManifest.xml. The default value for ```AppObserverMaxConcurrentTasks``` is 25.
+You can set this to -1 (unlimited), or some integer value that makes sense based on how many services AppObserver is monitoring. **The impact on CPU usage with default parallelization settings is minimal**.
+Please test and choose a value that suits your needs or simply leave AppObserverMaxConcurrentTasks unset and go with the default (25). 
 
 ### Input
 JSON config file supplied by user, stored in PackageRoot\Config folder. This configuration is composed of JSON array
@@ -151,15 +146,19 @@ IO, ports. Memory values are supplied as number of megabytes or percentage use. 
 will be ignored (they are not omitted below so you can see what a fully specified object looks like). 
 We recommend you omit all Error thresholds until you become more comfortable with the behavior of your services and the side effects they have on machine resources**.
 
-Example JSON config file located in **PackageRoot\\Config** folder (AppObserver.config.json). This is an example of a configuration that applies
-to all Service Fabric user (non-System) application service processes running on the virtual machine.
+Default AppObserver JSON config file located in **PackageRoot\\Config** folder (AppObserver.config.json). This configuration applies
+to all Service Fabric user (non-System) service processes running on the machine.
 ```JSON
 [
   {
     "targetApp": "*",
-    "cpuWarningLimitPercent": 80,
-    "memoryWarningLimitMb": 1048,
-    "networkWarningEphemeralPorts": 7000
+    "cpuWarningLimitPercent": 85,
+    "memoryWarningLimitMb": 1024,
+    "networkWarningEphemeralPorts": 7000,
+    "networkWarningEphemeralPortsPercent": 30,
+    "warningHandleCount": 10000,
+    "warningThreadCount": 500,
+    "warningPrivateBytesMb": 1280
   }
 ]
 ```
@@ -202,14 +201,17 @@ All settings are optional, ***except target OR targetType***, and can be omitted
 | **warningRGMemoryLimitPercent** | Windows-only. Percentage of Memory Resource Governance 'MemoryInMB/Limit' value currently in use that will trigger a Warning for a service. You can override the default value (90%) for specific or all services like any other AppObserver threshold. Note: if you supply a decimal value (e.g., 0.70) it is converted to a double (so, it is taken to mean 70.0, so 70%). |  
 | **warningRGCpuLimitPercent** | Windows-only. Percentage of CPU Resource Governance: Percentage of CPU usage for specified core limit. This will trigger a Warning for a service. You can override the default value (90%) for specific or all services like any other AppObserver threshold. Note: if you supply a decimal value (e.g., 0.70) it is converted to a double (so, it is taken to mean 70.0, so 70%). |  
 
+**A note on Private Working Set monitoring on Windows** This measurement employs a PerformanceCounter object created for each process (instance) being monitored. PerformanceCounter is an expensive and inefficent object. It is recommended that you monitor **Private Bytes** to track memory usage of your service processes as this employs an much more efficient mechanism that has little impact on memory and CPU usage.
+If you do want to track Working Set in addition to Private Bytes, then set ```AppObserverMonitorPrivateWorkingSet``` to false and this will use a very efficient way to compute Shared + Private Working Set.
+
 **Output** Local log text(Error/Warning/Info), Service entity Health Reports (Error/Warning/Ok), ETW (EventSource), Telemetry (AppInsights/LogAnalytics).
 
 AppObserver also supports non-JSON parameters for configuration unrelated to thresholds. Like all observers these settings are located in ApplicationManifest.xml to support versionless configuration updates via application upgrade. 
 
-#### Non-json settings set in ApplicationManifest.xml  
+#### Non-json settings set in ApplicationManifest.xml (Default Configuration)
 
 ```XML
-<!-- AppObserver -->
+    <!-- AppObserver -->
     <Parameter Name="AppObserverClusterOperationTimeoutSeconds" DefaultValue="120" />
     <!-- Note: CircularBufferCollection is not thread safe for writes. If you enable this AND enable concurrent monitoring, a ConcurrentQueue will be used. -->
     <Parameter Name="AppObserverUseCircularBuffer" DefaultValue="false" />
@@ -222,9 +224,9 @@ AppObserver also supports non-JSON parameters for configuration unrelated to thr
     <Parameter Name="AppObserverEnableChildProcessMonitoring" DefaultValue="false" />
     <!-- The maximum number of child process data items to include in a sorted list of top n consumers for some metric, where n is the value of this setting. -->
     <Parameter Name="AppObserverMaxChildProcTelemetryDataCount" DefaultValue="5" />
-    <!-- Service process dumps (dumpProcessOnError setting).
-         You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError to true in AppObserver.config.json
-         if you want AppObserver to dump service processes when an Error threshold has been breached for some observed metric (e.g., memoryErrorLimitPercent). -->
+    <!-- Service process dumps (dumpProcessOnError/dumpProcessOnWarning setting).
+         You need to set AppObserverEnableProcessDumps setting to true here AND set dumpProcessOnError or dumpProcessOnWarning to true in AppObserver.config.json
+         if you want AppObserver to dump service processes when an Error or Warning threshold has been breached for some observed metric (e.g., memoryErrorLimitPercent/memoryWarningLimitPercent). -->
     <Parameter Name="AppObserverEnableProcessDumps" DefaultValue="false" />
     <!-- Supported values are: Mini, MiniPlus, Full. -->
     <Parameter Name="AppObserverProcessDumpType" DefaultValue="MiniPlus" />
@@ -233,26 +235,25 @@ AppObserver also supports non-JSON parameters for configuration unrelated to thr
     <!-- Time window in which max dumps per process, per observed metric can occur. See AppObserverMaxProcessDumps. -->
     <Parameter Name="AppObserverMaxDumpsTimeWindow" DefaultValue="04:00:00" />
     <!-- Concurrency/Parallelism Support.
-         Note: This will only add real value (substantial) on machines with capable hardware (>= 8 logical processors). FO will not attempt to do anything concurrently if
-         the number of logical processors is less than 4, even if this is set to true. If you do run on capable hardware and want AppObserver to complete a run much faster than at sequential speed, then keep this enabled.
+         Note: This will only add real value (substantial) on machines with capable hardware (>= 4 logical processors). FO will not attempt to do anything concurrently if
+         the number of logical processors is less than 4, even if this is set to true.
          You can control the level of concurrency by setting the AppObserverMaxConcurrentTasks setting. -->
     <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
-    <!-- The default value is 1/4 of detected logical processors (LPs). This would mean given 20 LPs, the number of threads that will be created will be at least 5 (and seldom more than that), if possible.
-         You can set this to -1 (unlimited), or some integer value that makes sense based on your CPU configuration, how many services AppObserver is monitoring, how comfortable you are with FO process
-         eating some additional CPU and Memory to complete the parallelized monitoring on a node with lots of services (>= 100). The impact of parallelization on nodes with less than 100 services is minimal.
-         Please test and choose a value that suits your needs or simply leave this unset and go with the default. Please see Observers.md for more information. -->
-    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
-    <!-- KVS LVID Usage Monitoring - Windows-only.
-         NOTE: If you monitor stateful Actor services, then you should set this to true.
-         This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
+    <!-- Set this to -1 or some positive integer that roughly maps to max number of threads to use. -1 means that the .net runtime will use as many managed threadpool threads as possible. 
+         Default value is 25. Please read the related documentation for more information on MaxDegreeOfParallelism. This setting is provided here so you can dial thread usage up and down based on your needs, if you need to.
+         See https://learn.microsoft.com/dotnet/api/system.threading.tasks.paralleloptions.maxdegreeofparallelism?view=net-6.0 -->
+    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="25" />
+    <!-- *Windows-only*: KVS LVID Usage Monitoring.
+         NOTE: If you monitor stateful Actor services, then you should set this to true. -->
     <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
-    <!-- Process Working Set type for AppObserver to monitor. 
-         Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). 
-         NOTE: If you have *several* service processes of the **same name**, setting this to true will add *significant* time-to-completion and increased CPU usage (small, but more than necessary) to AppObserver. 
-         FO will automatically compute Shared + Private memory usage if it detects 50 or more same-named service processes, regardless of this setting.-->
-    <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
-    <!-- AppObserver can monitor services with resource governance limits set and put related services into Warning if they reach 90% of the specified limit (only Memory limit is supported in this release). -->
-    <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="true" />
+    <!-- *Windows-only*: Process Working Set type for AppObserver to monitor.
+         Note: You should consider monitoring process commit (warningPrivateBytesMb threshold setting) instead of Private Working Set for tracking potential leaks on Windows. 
+         The Private Bytes measurement code is extremely fast and CPU-efficient on Windows. Monitoring Private Working Set on Windows requires PerformanceCounter, which is an expensive .net object.
+		 *Windows* Recommendation: Disable this, employ warningPrivateBytesMb/errorPrivateBytesMb in AppObserver.config.json file for tracking process memory usage on Windows. -->
+    <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="false" />
+    <!-- *Windows-only*. AppObserver can monitor services with Service Fabric Resource Governance limits set (CPU and Memory) and put related services into Warning if they reach 90% of the specified limit. 
+         If you do set Memory or CPU Resource Governance limits for your service code packages, then you should enable this feature. -->
+    <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="false" />
 ```
 
 Example AppObserver Output (Warning - Ephemeral Ports Usage):  

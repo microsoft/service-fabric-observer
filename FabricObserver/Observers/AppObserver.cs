@@ -1173,8 +1173,8 @@ namespace FabricObserver.Observers
                 
                 if (maxDegreeOfParallelism < -1 || maxDegreeOfParallelism == 0)
                 {
-                    ObserverLogger.LogWarning($"MaxConcurrentTasks setting is invalid ({maxDegreeOfParallelism}). Will not run concurrent operations.");
-                    maxDegreeOfParallelism = 1;
+                    ObserverLogger.LogWarning($"MaxConcurrentTasks setting is invalid ({maxDegreeOfParallelism}). Employing default value (25).");
+                    maxDegreeOfParallelism = 25;
                 }
             }
            

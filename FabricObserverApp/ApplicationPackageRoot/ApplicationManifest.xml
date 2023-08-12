@@ -125,9 +125,10 @@
          the number of logical processors is less than 4, even if this is set to true.
          You can control the level of concurrency by setting the AppObserverMaxConcurrentTasks setting. -->
     <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
-    <!-- Max number of concurrent Tasks available to parallel loops. Set this to -1 or some positive integer that roughly maps to max number of threads to use.
+    <!-- Set this to -1 or some positive integer that roughly maps to max number of threads to use. -1 means that the .net runtime will use as many managed threadpool threads as possible. 
+         Default value is 25. Please read the related documentation for more information on MaxDegreeOfParallelism. This setting is provided here so you can dial thread usage up and down based on your needs, if you need to.
          See https://learn.microsoft.com/dotnet/api/system.threading.tasks.paralleloptions.maxdegreeofparallelism?view=net-6.0 -->
-    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="20" />
+    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="25" />
     <!-- *Windows-only*: KVS LVID Usage Monitoring.
          NOTE: If you monitor stateful Actor services, then you should set this to true. -->
     <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
