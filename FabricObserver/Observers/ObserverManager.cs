@@ -156,8 +156,6 @@ namespace FabricObserver.Observers
             linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, runAsyncToken);
 #if DEBUG
             cts.Token.Register(() => Logger.LogWarning("cts.Token token cancellation signalled."));
-#endif
-#if DEBUG
             linkedSFRuntimeObserverTokenSource.Token.Register(() => Logger.LogWarning("linkedSFRuntimeObserverTokenSource.Token token cancellation signalled."));
 #endif   
             nodeName = FabricServiceContext.NodeContext.NodeName;

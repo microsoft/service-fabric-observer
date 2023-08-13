@@ -95,100 +95,122 @@ namespace FabricObserver.Observers.Utilities
 
         public override List<(string ProcName, int Pid, DateTime ProcessStartTime)> GetChildProcessInfo(int parentPid, NativeMethods.SafeObjectHandle handleToSnapshot)
         {
-            // Get descendant procs.
-            List<(string ProcName, int Pid, DateTime ProcessStartTime)> childProcesses = TupleGetChildProcessesWin32(parentPid, handleToSnapshot);
-
-            if (childProcesses == null || !childProcesses.Any())
+            try
             {
-                return null;
-            }
+                // Get descendant procs.
+                List<(string ProcName, int Pid, DateTime ProcessStartTime)> childProcesses = TupleGetChildProcessesWin32(parentPid, handleToSnapshot);
 
-            // This should never be the case. Something is wrong with the data that the OS provided (most likely related to pid recycling). Ignore for this run.
-            if (childProcesses.Count >= MaxDescendants)
-            {
-                return null;
-            }
-
-            // Get descendant proc at max depth = 5 and max number of descendants = 50. 
-            for (int i = 0; i < childProcesses.Count; ++i)
-            {
-                List<(string ProcName, int Pid, DateTime ProcessStartTime)> c1 = TupleGetChildProcessesWin32(childProcesses[i].Pid, handleToSnapshot);
-
-                if (c1 == null || !c1.Any())
-                {
-                    continue;
-                }
-
-                childProcesses.AddRange(c1);
-
-                if (childProcesses.Count >= MaxDescendants)
+                if (childProcesses == null || childProcesses.Count == 0)
                 {
                     return null;
                 }
 
-                for (int j = 0; j < c1.Count; ++j)
+                // This should never be the case. Something is wrong with the data that the OS provided (most likely related to pid recycling). Ignore for this run.
+                if (childProcesses.Count >= MaxDescendants)
                 {
-                    List<(string ProcName, int Pid, DateTime ProcessStartTime)> c2 = TupleGetChildProcessesWin32(c1[j].Pid, handleToSnapshot);
+                    ProcessInfoLogger.LogInfo(
+                        $"GetChildProcessInfo (gen1): Unusually high number of child processes detected for parent process {parentPid}. Count: {childProcesses.Count}. Ignoring for this run.");
 
-                    if (c2 == null || !c2.Any())
+                    return null;
+                }
+
+                // Get descendant proc at max depth = 5. 
+                for (int i = 0; i < childProcesses.Count; ++i)
+                {
+                    List<(string ProcName, int Pid, DateTime ProcessStartTime)> c1 = TupleGetChildProcessesWin32(childProcesses[i].Pid, handleToSnapshot);
+
+                    if (c1 == null || c1.Count == 0)
                     {
                         continue;
                     }
 
-                    childProcesses.AddRange(c2);
+                    childProcesses.AddRange(c1);
 
                     if (childProcesses.Count >= MaxDescendants)
                     {
+                        ProcessInfoLogger.LogInfo(
+                          $"GetChildProcessInfo (gen2): Unusually high number of child processes detected at descendant process {childProcesses[i].Pid}. Count: {c1.Count}. Ignoring for this run.");
+
                         return null;
                     }
 
-                    for (int k = 0; k < c2.Count; ++k)
+                    for (int j = 0; j < c1.Count; ++j)
                     {
-                        List<(string ProcName, int Pid, DateTime ProcessStartTime)> c3 = TupleGetChildProcessesWin32(c2[k].Pid, handleToSnapshot);
+                        List<(string ProcName, int Pid, DateTime ProcessStartTime)> c2 = TupleGetChildProcessesWin32(c1[j].Pid, handleToSnapshot);
 
-                        if (c3 == null || !c3.Any())
+                        if (c2 == null || c2.Count == 0)
                         {
                             continue;
                         }
 
-                        childProcesses.AddRange(c3);
+                        childProcesses.AddRange(c2);
 
                         if (childProcesses.Count >= MaxDescendants)
                         {
+                            ProcessInfoLogger.LogInfo(
+                                $"GetChildProcessInfo (gen3): Unusually high number of child processes detected at descendant process {c1[j].Pid}. Count: {c2.Count}. Ignoring for this run.");
+
                             return null;
                         }
 
-                        for (int l = 0; l < c3.Count; ++l)
+                        for (int k = 0; k < c2.Count; ++k)
                         {
-                            List<(string ProcName, int Pid, DateTime ProcessStartTime)> c4 = TupleGetChildProcessesWin32(c3[l].Pid, handleToSnapshot);
+                            List<(string ProcName, int Pid, DateTime ProcessStartTime)> c3 = TupleGetChildProcessesWin32(c2[k].Pid, handleToSnapshot);
 
-                            if (c4 == null || !c4.Any())
+                            if (c3 == null || c3.Count == 0)
                             {
                                 continue;
                             }
 
-                            childProcesses.AddRange(c4);
+                            childProcesses.AddRange(c3);
 
                             if (childProcesses.Count >= MaxDescendants)
                             {
+                                ProcessInfoLogger.LogInfo(
+                                    $"GetChildProcessInfo (gen4): Unusually high number of child processes detected at descendant process {c2[k].Pid}. Count: {c3.Count}. Ignoring for this run.");
+
                                 return null;
+                            }
+
+                            for (int l = 0; l < c3.Count; ++l)
+                            {
+                                List<(string ProcName, int Pid, DateTime ProcessStartTime)> c4 = TupleGetChildProcessesWin32(c3[l].Pid, handleToSnapshot);
+
+                                if (c4 == null || c4.Count == 0)
+                                {
+                                    continue;
+                                }
+
+                                childProcesses.AddRange(c4);
+
+                                if (childProcesses.Count >= MaxDescendants)
+                                {
+                                    ProcessInfoLogger.LogInfo(
+                                        $"GetChildProcessInfo (gen5): Unusually high number of child processes detected at descendant process {c3[l].Pid}. Count: {c4.Count}. Ignoring for this run.");
+
+                                    return null;
+                                }
                             }
                         }
                     }
                 }
+
+                if (childProcesses != null && childProcesses.Count > 1)
+                {
+                    try
+                    {
+                        var uniqueEntries = childProcesses.DistinctBy(p => p.Pid).ToList();
+                        return uniqueEntries;
+                    }
+                    catch (ArgumentException)
+                    {
+
+                    }
+                }
             }
-
-            if (childProcesses != null && childProcesses.Count > 1)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
-                try
-                {
-                    var uniqueEntries = childProcesses.DistinctBy(p => p.Pid).ToList();
-                    return uniqueEntries;
-                }
-                catch (ArgumentException)
-                {
-
-                }
+                ProcessInfoLogger.LogWarning($"GetChildProcessInfo: Exception processing descendants for service process {parentPid}: {e.Message}");
             }
 
             return null;

@@ -35,7 +35,6 @@ namespace FabricObserver.Observers
         private const double MaxRGMemoryInUsePercent = 90.0;
         private const double MaxRGCpuInUsePercent = 90.0;
         private const int MaxSameNamedProcesses = 50;
-        private const int MaxDescendants = 50;
 
         // These are the concurrent data structures that hold all monitoring data for all application service targets for specific metrics.
         // In the case where machine has capable CPU configuration and AppObserverEnableConcurrentMonitoring is enabled, these ConcurrentDictionaries
@@ -406,6 +405,8 @@ namespace FabricObserver.Observers
                             app.DumpProcessOnError && EnableProcessDumps,
                             app.DumpProcessOnWarning && EnableProcessDumps,
                             processId,
+                            // The queue contains objects that hold data for the same metric for each child process (held in ChildProcessInfo instances). Getting the count of one these instances
+                            // suffices here. ElementAt(0) is a performant lookup since it is the first element in the collection.
                             hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
                     }
 
@@ -999,7 +1000,7 @@ namespace FabricObserver.Observers
 
             if (IsWindows)
             {
-                // If RefreshSFUserProcessDataCache returns false, then it means the internal impl failed. In this case, a different API will be used 
+                // If RefreshSFUserProcessDataCache returns false, then it means the internal impl failed. In this case, a different API (less efficient) will be used 
                 // to get child processes, if enabled (see Win32HandleToProcessSnapshot property impl). This function refreshes 2 caches. It is not
                 // only related to child process detection.
                 hasSFUserProcCache = NativeMethods.RefreshSFUserProcessDataCache(getChildProcesses: EnableChildProcessMonitoring);
@@ -1791,11 +1792,8 @@ namespace FabricObserver.Observers
                 return (null, 0);
             }
 
-            // The number of child procs should never be 50.
-            // That would most likely mean that something went wrong with the detection code (or the data Windows provided was wrong at the time, for example).
-            if (childProcs.Count == 0 || childProcs.Count == MaxDescendants)
+            if (childProcs.Count == 0)
             {
-                ObserverLogger.LogInfo($"TupleProcessChildFruds: childProcs.Count = {childProcs.Count}. Exiting.");
                 return (null, 0);
             }   
 
@@ -2145,7 +2143,7 @@ namespace FabricObserver.Observers
                     procs = new ConcurrentDictionary<int, (string ProcName, DateTime ProcessStartTime)>();
 
                     // Add parent to the process tree list since we want to monitor all processes in the family. If there are no child processes,
-                    // then only the parent process will be in this dictionary..
+                    // then only the parent process will be in this dictionary.
                     _ = procs.TryAdd(parentPid, (parentProcName, repOrInst.HostProcessStartTime));
 
                     if (repOrInst.ChildProcesses != null && repOrInst.ChildProcesses.Count > 0)
@@ -3146,8 +3144,7 @@ namespace FabricObserver.Observers
                             List<(string ProcName, int Pid, DateTime ProcessStartTime)> childPids =
                             ProcessInfoProvider.Instance.GetChildProcessInfo((int)statefulReplica.HostProcessId, Win32HandleToProcessSnapshot);
 
-                            // If childPids.Count >= 50, then something went wrong with the child process detection. Ignore for this run.
-                            if (childPids != null && childPids.Count > 0 && childPids.Count < MaxDescendants)
+                            if (childPids != null && childPids.Count > 0)
                             {
                                 replicaInfo.ChildProcesses = childPids;
                                 ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}({replicaInfo?.HostProcessId}):{Environment.NewLine}Child procs (name, id, startDate): {string.Join(" ", replicaInfo.ChildProcesses)}");
@@ -3200,8 +3197,7 @@ namespace FabricObserver.Observers
                             List<(string ProcName, int Pid, DateTime ProcessStartTime)> childPids =
                                 ProcessInfoProvider.Instance.GetChildProcessInfo((int)statelessInstance.HostProcessId, Win32HandleToProcessSnapshot);
 
-                            // If childPids.Count >= 50, then something went wrong with the child process detection. Ignore for this run.
-                            if (childPids != null && childPids.Count > 0 && childPids.Count < MaxDescendants)
+                            if (childPids != null && childPids.Count > 0)
                             {
                                 replicaInfo.ChildProcesses = childPids;
                                 ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}({replicaInfo?.HostProcessId}):{Environment.NewLine}Child procs (name, id, startDate): {string.Join(" ", replicaInfo.ChildProcesses)}");
@@ -3586,8 +3582,7 @@ namespace FabricObserver.Observers
                         List<(string ProcName, int Pid, DateTime ProcessStartTime)> childPids =
                             ProcessInfoProvider.Instance.GetChildProcessInfo(procId, Win32HandleToProcessSnapshot);
 
-                        // If childPids.Count >= 50, then something went wrong with the child process detection. Ignore for this run.
-                        if (childPids != null && childPids.Count > 0 && childPids.Count < MaxDescendants)
+                        if (childPids != null && childPids.Count > 0)
                         {
                             replicaInfo.ChildProcesses = childPids;
                             ObserverLogger.LogInfo($"{replicaInfo?.ServiceName}({procId}):{Environment.NewLine}Child procs (name, id, startDate): {string.Join(" ", replicaInfo.ChildProcesses)}");

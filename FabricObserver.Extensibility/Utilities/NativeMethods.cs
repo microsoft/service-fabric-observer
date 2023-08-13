@@ -1369,7 +1369,7 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException)
             {
-
+                return false;
             }
             
             descendantsDictionary = new();
@@ -1399,11 +1399,12 @@ namespace FabricObserver.Observers.Utilities
                     continue;
                 }
 
-                // Has parent in process cache.
-                if (currentSFServiceProcCache.Any(p => p.Key == procInfo.Reserved2.ToUInt32()))
-                {
-                    uint parentPid = procInfo.Reserved2.ToUInt32();
+                // Get Parent pid.
+                uint parentPid = procInfo.Reserved2.ToUInt32();
 
+                // Has parent in process cache.
+                if (currentSFServiceProcCache.ContainsKey((int)parentPid))
+                {
                     try
                     {
                         // Add child to process cache dictionary.
