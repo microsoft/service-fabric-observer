@@ -367,6 +367,7 @@ namespace FabricObserver.Observers
                     if (AllAppCpuData != null && AllAppCpuData.ContainsKey(id))
                     {
                         var parentFrud = AllAppCpuData[id];
+                        int childProcCount = 0;
 
                         if (hasChildProcs)
                         {
@@ -384,7 +385,7 @@ namespace FabricObserver.Observers
                                 _ = childProcDictionary.TryAdd(frud.Key, frud.Value);
                             }
 
-                            ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
+                            childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
 
                             // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
                             foreach (var item in childProcDictionary)
@@ -405,15 +406,14 @@ namespace FabricObserver.Observers
                             app.DumpProcessOnError && EnableProcessDumps,
                             app.DumpProcessOnWarning && EnableProcessDumps,
                             processId,
-                            // The queue contains objects that hold data for the same metric for each child process (held in ChildProcessInfo instances). Getting the count of one these instances
-                            // suffices here. ElementAt(0) is a performant lookup since it is the first element in the collection.
-                            hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
+                            childProcCount);
                     }
 
                     // Working Set (MB)
                     if (AllAppMemDataMb != null && AllAppMemDataMb.ContainsKey(id))
                     {
                         var parentFrud = AllAppMemDataMb[id];
+                        int childProcCount = 0;
 
                         if (hasChildProcs)
                         {
@@ -431,7 +431,7 @@ namespace FabricObserver.Observers
                                 _ = childProcDictionary.TryAdd(frud.Key, frud.Value);
                             }
 
-                            ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
+                            childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
 
                             // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
                             foreach (var item in childProcDictionary)
@@ -451,13 +451,14 @@ namespace FabricObserver.Observers
                             app.DumpProcessOnError && EnableProcessDumps,
                             app.DumpProcessOnWarning && EnableProcessDumps,
                             processId,
-                            hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
+                            childProcCount);
                     }
 
                     // Working Set (Percent)
                     if (AllAppMemDataPercent != null && AllAppMemDataPercent.ContainsKey(id))
                     {
                         var parentFrud = AllAppMemDataPercent[id];
+                        int childProcCount = 0;
 
                         if (hasChildProcs)
                         {
@@ -475,7 +476,7 @@ namespace FabricObserver.Observers
                                 _ = childProcDictionary.TryAdd(frud.Key, frud.Value);
                             }
 
-                            ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
+                            childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
 
                             // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
                             foreach (var item in childProcDictionary)
@@ -495,7 +496,7 @@ namespace FabricObserver.Observers
                             app.DumpProcessOnError && EnableProcessDumps,
                             app.DumpProcessOnWarning && EnableProcessDumps,
                             processId,
-                            hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
+                            childProcCount);
                     }
 
                     // Private Bytes (MB)
@@ -504,6 +505,7 @@ namespace FabricObserver.Observers
                         if (app.WarningPrivateBytesMb > 0 || app.ErrorPrivateBytesMb > 0)
                         {
                             var parentFrud = AllAppPrivateBytesDataMb[id];
+                            int childProcCount = 0;
 
                             if (hasChildProcs)
                             {
@@ -521,7 +523,7 @@ namespace FabricObserver.Observers
                                     _ = childProcDictionary.TryAdd(frud.Key, frud.Value);
                                 }
 
-                                ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
+                                childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
 
                                 // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
                                 foreach (var item in childProcDictionary)
@@ -541,7 +543,7 @@ namespace FabricObserver.Observers
                                 app.DumpProcessOnError && EnableProcessDumps,
                                 app.DumpProcessOnWarning && EnableProcessDumps,
                                 processId,
-                                hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
+                                childProcCount);
                         }
                     }
 
@@ -551,6 +553,7 @@ namespace FabricObserver.Observers
                         if (app.WarningPrivateBytesPercent > 0 || app.ErrorPrivateBytesPercent > 0)
                         {
                             var parentFrud = AllAppPrivateBytesDataPercent[id];
+                            int childProcCount = 0;
 
                             if (hasChildProcs)
                             {
@@ -568,7 +571,7 @@ namespace FabricObserver.Observers
                                     _ = childProcDictionary.TryAdd(frud.Key, frud.Value);
                                 }
 
-                                ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
+                                childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
 
                                 // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
                                 foreach (var item in childProcDictionary)
@@ -588,7 +591,7 @@ namespace FabricObserver.Observers
                                 app.DumpProcessOnError && EnableProcessDumps,
                                 app.DumpProcessOnWarning && EnableProcessDumps,
                                 processId,
-                                hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
+                                childProcCount);
                         }
                     }
 
@@ -599,6 +602,7 @@ namespace FabricObserver.Observers
                         if (repOrInst.RGMemoryEnabled && AllAppRGMemoryUsagePercent != null && AllAppRGMemoryUsagePercent.ContainsKey(id))
                         {
                             var parentFrud = AllAppRGMemoryUsagePercent[id];
+                            int childProcCount = 0;
 
                             if (hasChildProcs)
                             {
@@ -616,7 +620,7 @@ namespace FabricObserver.Observers
                                     _ = childProcDictionary.TryAdd(frud.Key, frud.Value);
                                 }
 
-                                ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
+                                childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
 
                                 // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
                                 foreach (var item in childProcDictionary)
@@ -636,13 +640,14 @@ namespace FabricObserver.Observers
                                 dumpOnError: false, // Not supported
                                 dumpOnWarning: false, // Not supported
                                 processId,
-                                hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
+                                childProcCount);
                         }
 
                         // RG CPU Monitoring (CPU Time Percent)
                         if (repOrInst.RGCpuEnabled && AllAppRGCpuUsagePercent != null && AllAppRGCpuUsagePercent.ContainsKey(id))
                         {
                             var parentFrud = AllAppRGCpuUsagePercent[id];
+                            int childProcCount = 0;
 
                             if (hasChildProcs)
                             {
@@ -660,7 +665,7 @@ namespace FabricObserver.Observers
                                     _ = childProcDictionary.TryAdd(frud.Key, frud.Value);
                                 }
 
-                                ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
+                                childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
 
                                 // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
                                 foreach (var item in childProcDictionary)
@@ -680,7 +685,7 @@ namespace FabricObserver.Observers
                                 dumpOnError: false, // Not supported
                                 dumpOnWarning: false, // Not supported
                                 processId,
-                                hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
+                                childProcCount);
                         }
                     }
 
@@ -688,6 +693,7 @@ namespace FabricObserver.Observers
                     if (AllAppTotalActivePortsData != null && AllAppTotalActivePortsData.ContainsKey(id))
                     {
                         var parentFrud = AllAppTotalActivePortsData[id];
+                        int childProcCount = 0;
 
                         if (hasChildProcs)
                         {
@@ -705,7 +711,7 @@ namespace FabricObserver.Observers
                                 _ = childProcDictionary.TryAdd(frud.Key, frud.Value);
                             }
 
-                            ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
+                            childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
 
                             // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
                             foreach (var item in childProcDictionary)
@@ -725,13 +731,14 @@ namespace FabricObserver.Observers
                             app.DumpProcessOnError && EnableProcessDumps,
                             app.DumpProcessOnWarning && EnableProcessDumps,
                             processId,
-                            hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
+                            childProcCount);
                     }
 
                     // TCP Ports Total - Ephemeral (port numbers fall in the dynamic range)
                     if (AllAppEphemeralPortsData != null && AllAppEphemeralPortsData.ContainsKey(id))
                     {
                         var parentFrud = AllAppEphemeralPortsData[id];
+                        int childProcCount = 0;
 
                         if (hasChildProcs)
                         {
@@ -749,7 +756,7 @@ namespace FabricObserver.Observers
                                 _ = childProcDictionary.TryAdd(frud.Key, frud.Value);
                             }
 
-                            ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
+                            childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
 
                             // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
                             foreach (var item in childProcDictionary)
@@ -769,13 +776,14 @@ namespace FabricObserver.Observers
                             app.DumpProcessOnError && EnableProcessDumps,
                             app.DumpProcessOnWarning && EnableProcessDumps,
                             processId,
-                            hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
+                            childProcCount);
                     }
 
                     // TCP Ports Percentage - Ephemeral (port numbers fall in the dynamic range)
                     if (AllAppEphemeralPortsDataPercent != null && AllAppEphemeralPortsDataPercent.ContainsKey(id))
                     {
                         var parentFrud = AllAppEphemeralPortsDataPercent[id];
+                        int childProcCount = 0;
 
                         if (hasChildProcs)
                         {
@@ -793,7 +801,7 @@ namespace FabricObserver.Observers
                                 _ = childProcDictionary.TryAdd(frud.Key, frud.Value);
                             }
 
-                            ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
+                            childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
 
                             // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
                             foreach (var item in childProcDictionary)
@@ -813,13 +821,14 @@ namespace FabricObserver.Observers
                             app.DumpProcessOnError && EnableProcessDumps,
                             app.DumpProcessOnWarning && EnableProcessDumps,
                             processId,
-                            hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
+                            childProcCount);
                     }
 
                     // Handles
                     if (AllAppHandlesData != null && AllAppHandlesData.ContainsKey(id))
                     {
                         var parentFrud = AllAppHandlesData[id];
+                        int childProcCount = 0;
 
                         if (hasChildProcs)
                         {
@@ -837,7 +846,7 @@ namespace FabricObserver.Observers
                                 _ = childProcDictionary.TryAdd(frud.Key, frud.Value);
                             }
 
-                            ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
+                            childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
 
                             // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
                             foreach (var item in childProcDictionary)
@@ -857,13 +866,14 @@ namespace FabricObserver.Observers
                             app.DumpProcessOnError && EnableProcessDumps,
                             app.DumpProcessOnWarning && EnableProcessDumps,
                             processId,
-                            hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
+                            childProcCount);
                     }
 
                     // Threads
                     if (AllAppThreadsData != null && AllAppThreadsData.ContainsKey(id))
                     {
                         var parentFrud = AllAppThreadsData[id];
+                        int childProcCount = 0;
 
                         if (hasChildProcs)
                         {
@@ -881,7 +891,7 @@ namespace FabricObserver.Observers
                                 _ = childProcDictionary.TryAdd(frud.Key, frud.Value);
                             }
 
-                            ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
+                            childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
 
                             // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
                             foreach (var item in childProcDictionary)
@@ -901,13 +911,14 @@ namespace FabricObserver.Observers
                             app.DumpProcessOnError && EnableProcessDumps,
                             app.DumpProcessOnWarning && EnableProcessDumps,
                             processId,
-                            hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
+                            childProcCount);
                     }
 
                     // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
                     if (EnableKvsLvidMonitoring && AllAppKvsLvidsData != null && AllAppKvsLvidsData.ContainsKey(id))
                     {
                         var parentFrud = AllAppKvsLvidsData[id];
+                        int childProcCount = 0;
 
                         if (hasChildProcs)
                         {
@@ -925,7 +936,7 @@ namespace FabricObserver.Observers
                                 _ = childProcDictionary.TryAdd(frud.Key, frud.Value);
                             }
 
-                            ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
+                            childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
 
                             // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
                             foreach (var item in childProcDictionary)
@@ -946,7 +957,7 @@ namespace FabricObserver.Observers
                             app.DumpProcessOnError && EnableProcessDumps,
                             app.DumpProcessOnWarning && EnableProcessDumps,
                             processId,
-                            hasChildProcs && childProcessTelemetryDataList != null && !childProcessTelemetryDataList.IsEmpty ? childProcessTelemetryDataList.ElementAt(0).ChildProcessCount : 0);
+                            childProcCount);
                     }
 
                     // Child proc info telemetry.
@@ -1736,7 +1747,7 @@ namespace FabricObserver.Observers
             ObserverLogger.LogInfo($"Completed setting properties from application parameters.");
         }
 
-        private void ProcessChildProcs<T>(
+        private int ProcessChildProcs<T>(
                         ref ConcurrentDictionary<string, FabricResourceUsageData<T>> childFruds,
                         ref ConcurrentQueue<ChildProcessTelemetryData> childProcessTelemetryDataList,
                         ReplicaOrInstanceMonitoringInfo repOrInst,
@@ -1748,20 +1759,23 @@ namespace FabricObserver.Observers
 
             if (childProcessTelemetryDataList == null)
             {
-                return;
+                return 0;
             }
 
             ObserverLogger.LogInfo($"Started ProcessChildProcs.");
+            int childProcCount = 0;
+
             try
             {
                 var (childProcInfo, Sum) = TupleProcessChildFruds(ref childFruds, repOrInst, appInfo, token);
 
-                if (childProcInfo == null || !childProcInfo.ChildProcessInfo.Any())
+                if (childProcInfo == null || childProcInfo.ChildProcessInfo?.Count == 0)
                 {
                     ObserverLogger.LogInfo($"ProcessChildProcs: ChildProcesssInfo collection is null or empty. Exiting.");
-                    return;
+                    return 0;
                 }
 
+                childProcCount = childProcInfo.ChildProcessCount;
                 string metric = parentFrud.Property;
                 var parentDataAvg = parentFrud.AverageDataValue;
                 double sumAllValues = Sum + parentDataAvg;
@@ -1776,6 +1790,7 @@ namespace FabricObserver.Observers
                 ObserverLogger.LogWarning($"ProcessChildProcs - Failure processing descendants:{Environment.NewLine}{e}");
             }
             ObserverLogger.LogInfo($"Completed ProcessChildProcs.");
+            return childProcCount;
         }
 
         private (ChildProcessTelemetryData childProcInfo, double Sum) TupleProcessChildFruds<T>(
