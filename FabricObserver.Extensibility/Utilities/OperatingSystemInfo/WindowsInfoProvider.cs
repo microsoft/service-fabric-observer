@@ -523,7 +523,7 @@ namespace FabricObserver.Observers.Utilities
 
                 if (!string.IsNullOrWhiteSpace(stateFilter))
                 {
-                    if (string.CompareOrdinal(stateFilter, State) != 0)
+                    if (string.Compare(stateFilter, State, StringComparison.OrdinalIgnoreCase) != 0)
                     {
                         continue;
                     }

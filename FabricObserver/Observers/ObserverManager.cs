@@ -17,12 +17,12 @@ using FabricObserver.Observers.Utilities.Telemetry;
 using Microsoft.Extensions.DependencyInjection;
 using FabricObserver.TelemetryLib;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
-using System.Fabric.Description;
 using Octokit;
 using System.Diagnostics;
 using System.ComponentModel;
 using System.Runtime;
 using FabricObserver.Utilities.ServiceFabric;
+using ConfigurationSettings = System.Fabric.Description.ConfigurationSettings;
 
 namespace FabricObserver.Observers
 {
@@ -44,6 +44,8 @@ namespace FabricObserver.Observers
         private readonly CancellationToken runAsyncToken;
         private readonly string sfVersion;
         private readonly bool isWindows;
+        private readonly ConfigurationPackage configurationPackage;
+        private System.Fabric.Description.ConfigurationSection configurationSection;
         private volatile bool shutdownSignaled;
         private DateTime StartDateTime;
         private bool isConfigurationUpdateInProgress;
@@ -146,18 +148,21 @@ namespace FabricObserver.Observers
         public ObserverManager(IServiceProvider serviceProvider, CancellationToken token)
         {
             FabricServiceContext ??= serviceProvider.GetRequiredService<StatelessServiceContext>();
-            FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
             runAsyncToken = token;
-            runAsyncToken.Register(() => Logger.LogWarning("FabricObserver.RunAsync token cancellation signalled.")); 
-
+#if DEBUG
+            runAsyncToken.Register(() => Logger.LogWarning("FabricObserver.RunAsync token cancellation signalled."));
+#endif
             cts = new CancellationTokenSource();
             linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, runAsyncToken);
+#if DEBUG
             cts.Token.Register(() => Logger.LogWarning("cts.Token token cancellation signalled."));
             linkedSFRuntimeObserverTokenSource.Token.Register(() => Logger.LogWarning("linkedSFRuntimeObserverTokenSource.Token token cancellation signalled."));
-            
+#endif   
             nodeName = FabricServiceContext.NodeContext.NodeName;
             isWindows = OperatingSystem.IsWindows();
             sfVersion = GetServiceFabricRuntimeVersion();
+            configurationPackage = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
+            configurationSection = configurationPackage.Settings.Sections[ObserverConstants.ObserverManagerConfigurationSectionName];
 
             // Observer Logger setup.
             string logFolderBasePath;
@@ -182,6 +187,7 @@ namespace FabricObserver.Observers
             SetPropertiesFromConfigurationParameters();
             Observers = serviceProvider.GetServices<ObserverBase>().ToList();
             HealthReporter = new ObserverHealthReporter(Logger);
+            FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
         }
 
         private string GetServiceFabricRuntimeVersion()
@@ -658,7 +664,7 @@ namespace FabricObserver.Observers
             return false;
         }
 
-        private static string GetConfigSettingValue(string parameterName, ConfigurationSettings settings, string sectionName = null)
+        private string GetConfigSettingValue(string parameterName, ConfigurationSettings settings, string sectionName = null)
         {
             try
             {
@@ -671,7 +677,7 @@ namespace FabricObserver.Observers
                 }
                 else
                 {
-                    configSettings = FabricServiceContext.CodePackageActivationContext?.GetConfigurationPackageObject("Config")?.Settings;
+                    configSettings = configurationPackage.Settings;
                 }
 
                 var section = configSettings?.Sections[sectionName];
@@ -736,7 +742,6 @@ namespace FabricObserver.Observers
                     Version = InternalVersionNumber,
                     EnabledObserverCount = Observers.Count(obs => obs.IsEnabled),
                     HasPlugins = hasPlugins,
-                    ParallelExecutionCapable = Environment.ProcessorCount >= 4,
                     SFRuntimeVersion = sfVersion,
                     ObserverData = GetObserverData(),
                 };

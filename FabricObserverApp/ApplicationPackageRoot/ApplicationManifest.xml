@@ -78,14 +78,14 @@
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
     <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00): How long an observer should monitor CPU usage per target (process or machine).
          This setting only applies to 3 observers.  -->
-    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:05" />
-    <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:05" />
-    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:05" />
-    <!-- Monitor Sleep Durations (Milliseconds, e.g. 50): How long an observer should wait between consecutive CPU usage collection for the same target (process or machine).
+    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:10" />
+    <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:10" />
+    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:10" />
+    <!-- Monitor Sleep Durations (Milliseconds, e.g. 1000 is generally a good idea): How long an observer should wait between consecutive CPU usage collection for the same target (process or machine).
          This setting only applies to 3 observers.  -->
-    <Parameter Name="AppObserverMonitorSleepDurationMilliseconds" DefaultValue="100" />
-    <Parameter Name="FabricSystemObserverMonitorSleepDurationMilliseconds" DefaultValue="500" />
-    <Parameter Name="NodeObserverMonitorSleepDurationMilliseconds" DefaultValue="500" />
+    <Parameter Name="AppObserverMonitorSleepDurationMilliseconds" DefaultValue="1000" />
+    <Parameter Name="FabricSystemObserverMonitorSleepDurationMilliseconds" DefaultValue="1000" />
+    <Parameter Name="NodeObserverMonitorSleepDurationMilliseconds" DefaultValue="1000" />
     <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00): How often an enabled observer should run. -->
     <Parameter Name="AppObserverRunInterval" DefaultValue="" />
     <Parameter Name="AzureStorageUploadObserverRunInterval" DefaultValue="00:05:00" />
@@ -125,19 +125,19 @@
          the number of logical processors is less than 4, even if this is set to true.
          You can control the level of concurrency by setting the AppObserverMaxConcurrentTasks setting. -->
     <Parameter Name="AppObserverEnableConcurrentMonitoring" DefaultValue="true" />
-    <!-- Max number of concurrent Tasks available to parallel loops (0 or 1 = sequential (no concurrency), -1 = maximum concurrency). The default value is 1/4 of detected logical processors (LPs). 
-         Set to this to -1 if you want to take advantage of number of LPs - 1 (ex. For 20 LPs, 19 max concurrent tasks). This setting roughly maps to the number of threads that will be available for use by Task-parallel loops. If you have 20 LPs, then setting this
-         to 10 means use up to 10 threads, if possible, at the time of parallel loop execution. -->
-    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="" />
-    <!-- Windows-only: KVS LVID Usage Monitoring.
+    <!-- Set this to -1 or some positive integer that roughly maps to max number of threads to use. -1 means that the .net runtime will use as many managed threadpool threads as possible. 
+         Default value is 25. Please read the related documentation for more information on MaxDegreeOfParallelism. This setting is provided here so you can dial thread usage up and down based on your needs, if you need to.
+         See https://learn.microsoft.com/dotnet/api/system.threading.tasks.paralleloptions.maxdegreeofparallelism?view=net-6.0 -->
+    <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="25" />
+    <!-- *Windows-only*: KVS LVID Usage Monitoring.
          NOTE: If you monitor stateful Actor services, then you should set this to true. -->
     <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
-    <!-- Windows-only: Process Working Set type for AppObserver to monitor.
-         Note: You should consider monitoring process commit (warningPrivateBytesMb threshold setting) instead of Private Working Set for tracking potential leaks. 
-         Setting this to false will enable Full Working Set monitoring (Private + Shared process memory). 
-         FO will automatically compute Shared + Private memory usage if it detects 50 or more same-named service processes, regardless of this setting. -->
-    <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="true" />
-    <!-- Windows-only. AppObserver can monitor services with Service Fabric Resource Governance limits set (CPU and Memory) and put related services into Warning if they reach 90% of the specified limit. 
+    <!-- *Windows-only*: Process Working Set type for AppObserver to monitor.
+         Note: You should consider monitoring process commit (warningPrivateBytesMb threshold setting) instead of Private Working Set for tracking potential leaks on Windows. 
+         The Private Bytes measurement code is extremely fast and CPU-efficient on Windows. Monitoring Private Working Set on Windows requires PerformanceCounter, which is an expensive .net object.
+		 *Windows* Recommendation: Disable this, employ warningPrivateBytesMb/errorPrivateBytesMb in AppObserver.config.json file for tracking process memory usage on Windows. -->
+    <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="false" />
+    <!-- *Windows-only*. AppObserver can monitor services with Service Fabric Resource Governance limits set (CPU and Memory) and put related services into Warning if they reach 90% of the specified limit. 
          If you do set Memory or CPU Resource Governance limits for your service code packages, then you should enable this feature. -->
     <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="false" />
     <!-- CertificateObserver-->
@@ -151,7 +151,7 @@
     <!-- Concurrency/Parallelism Support 
          Note: If you do not monitor several containers, then enabling this is not super useful. -->
     <Parameter Name="ContainerObserverEnableConcurrentMonitoring" DefaultValue="false" />
-    <Parameter Name="ContainerObserverMaxConcurrentTasks" DefaultValue="" />
+    <Parameter Name="ContainerObserverMaxConcurrentTasks" DefaultValue="20" />
     <!-- Disk Observer Warning/Error Thresholds -->
     <Parameter Name="DiskObserverDiskSpacePercentUsageWarningThreshold" DefaultValue="90" />
     <Parameter Name="DiskObserverDiskSpacePercentUsageErrorThreshold" DefaultValue="" />
@@ -228,8 +228,8 @@
     <Parameter Name="AzureStorageUploadObserverStorageAccountKey" DefaultValue="" />
     <!-- Zip file compression level to use: Optimal, Fastest or NoCompression. Default is Optimal if this is not set. We do not recommend NoCompression. -->
     <Parameter Name="AzureStorageUploadObserverZipFileCompressionLevel" DefaultValue="Optimal" />
-    <!-- RG - TEST ONLY
-    <Parameter Name="RGCPUCoresRequest" DefaultValue="10" />
+    <!-- Resource Governance 
+    <Parameter Name="RGCPUCoresRequest" DefaultValue="0.30" />
     <Parameter Name="RGMemoryInMBLimit" DefaultValue="500" /> -->
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
@@ -265,6 +265,9 @@
             <Parameter Name="DumpType" Value="[AppObserverProcessDumpType]" />
             <Parameter Name="MaxDumps" Value="[AppObserverMaxProcessDumps]" />
             <Parameter Name="MaxDumpsTimeWindow" Value="[AppObserverMaxDumpsTimeWindow]" />
+            <!-- Resource Governance -->
+            <!-- <Parameter Name="RGCPUCoresRequest" Value="[RGCPUCoresRequest]" />
+                 <Parameter Name="RGMemoryInMBLimit" Value="[RGMemoryInMBLimit]" /> -->
           </Section>
           <Section Name="CertificateObserverConfiguration">
             <Parameter Name="Enabled" Value="[CertificateObserverEnabled]" />
@@ -424,7 +427,7 @@
       <!-- FabricObserver runs a setup script during activation (Linux and Windows). It must be run as System user. 
            Thus the below policy, which only impacts the Setup phase. The FabricObserver process itself runs as NetworkService on Windows and SFAppsUser on Linux. -->
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
-      <!-- RG - TEST ONLY
+      <!-- Resource Governance
       <ServicePackageResourceGovernancePolicy CpuCoresLimit="[RGCPUCoresRequest]" />
       <ResourceGovernancePolicy CodePackageRef="Code" MemoryInMBLimit="[RGMemoryInMBLimit]" /> -->
     </Policies>

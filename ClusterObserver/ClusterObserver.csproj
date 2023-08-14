@@ -1,36 +1,38 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <RootNamespace>ClusterObserver</RootNamespace>
-    <AssemblyName>ClusterObserver</AssemblyName>
-	<OutputType>Exe</OutputType>
-	<TargetFramework>net6.0</TargetFramework>
-	<Nullable>disable</Nullable>
-	<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
-	<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
-	<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
-	<Copyright>Copyright © 2023</Copyright>
-	<Product>ClusterObserver</Product>
-	<Version>2.2.4</Version>
-	<FileVersion>2.2.4</FileVersion>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-	<Platforms>x64</Platforms>
-  </PropertyGroup>
-  <ItemGroup>
-    <Compile Remove="Utilities\ClusterIdentificationUtility.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Remove="ApplicationInsights.config" />
-  </ItemGroup>
-  <ItemGroup>
-	<PackageReference Include="Microsoft.ServiceFabric.Services" Version="6.0.1017" />
-	<PackageReference Include="McMaster.NETCore.Plugins" Version="1.4.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\FabricObserver.Extensibility\FabricObserver.Extensibility.csproj" />
-    <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="PackageRoot\Data\Plugins\" />
-  </ItemGroup>
+	<PropertyGroup>
+		<ProjectGuid>{5E990052-7B55-4AF1-BCD9-48DE6EA0E547}</ProjectGuid>
+		<RootNamespace>ClusterObserver</RootNamespace>
+		<AssemblyName>ClusterObserver</AssemblyName>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net6.0</TargetFramework>
+		<Nullable>disable</Nullable>
+		<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
+		<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
+		<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
+		<Copyright>Copyright © 2022</Copyright>
+		<Product>ClusterObserver</Product>
+		<Version>2.2.5</Version>
+		<FileVersion>2.2.5</FileVersion>
+		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+		<StartupObject>ClusterObserver.Program</StartupObject>
+		<Platforms>x64</Platforms>
+	</PropertyGroup>
+	<ItemGroup>
+		<Compile Remove="Utilities\ClusterIdentificationUtility.cs" />
+	</ItemGroup>
+	<ItemGroup>
+		<None Remove="ApplicationInsights.config" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Microsoft.ServiceFabric.Services" Version="6.0.1017" />
+		<PackageReference Include="McMaster.NETCore.Plugins" Version="1.4.0" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\FabricObserver.Extensibility\FabricObserver.Extensibility.csproj" />
+		<ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<Folder Include="PackageRoot\Data\Plugins\" />
+	</ItemGroup>
 </Project>

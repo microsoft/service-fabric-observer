@@ -207,17 +207,13 @@ namespace FabricObserver.Observers
 
             if (EnableConcurrentMonitoring)
             {
-                // Default to using [1/4 of available logical processors ~* 2] threads if MaxConcurrentTasks setting is not supplied.
-                // So, this means around 10 - 11 threads (or less) could be used if processor count = 20. This is only being done to limit the impact
-                // FabricObserver has on the resources it monitors and alerts on...
-                maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
-
                 // If user configures MaxConcurrentTasks setting, then use that value instead.
-                if (int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasksParameter), out int maxTasks))
+                _ = int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasksParameter), out maxDegreeOfParallelism);
                 {
-                    if (maxTasks is (-1) or > 0)
+                    if (maxDegreeOfParallelism < -1 || maxDegreeOfParallelism == 0)
                     {
-                        maxDegreeOfParallelism = maxTasks;
+                        ObserverLogger.LogWarning($"MaxConcurrentTasks setting is invalid ({maxDegreeOfParallelism}). Enploying default value (25).");
+                        maxDegreeOfParallelism = 25;
                     }
                 }
             }

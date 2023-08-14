@@ -1,4 +1,4 @@
-### ClusterObserver 2.2.4
+### ClusterObserver 2.2.5
 #### This version requires SF Runtime >= 9.0 and targets .NET 6. .NET Core 3.1 is no longer supported.
 
 [ClusterObserver (CO)](https://github.com/microsoft/service-fabric-observer/tree/main/ClusterObserver) is a stateless singleton Service Fabric .NET 6 service that runs on one node in a cluster. CO observes cluster health (aggregated) 

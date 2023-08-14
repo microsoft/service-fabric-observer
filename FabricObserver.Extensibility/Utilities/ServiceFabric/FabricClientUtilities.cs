@@ -31,16 +31,15 @@ namespace FabricObserver.Utilities.ServiceFabric
     /// </summary>
     public class FabricClientUtilities
     {
-        private readonly ParallelOptions parallelOptions;
-        private readonly string nodeName;
-
         // This is the FC singleton that will be used for the lifetime of this FO instance.
         private static FabricClient fabricClient = null;
         private static readonly object lockObj = new();
-        private readonly bool isWindows;
-        private readonly Logger logger;
         private static readonly XmlSerializer applicationManifestSerializer = new (typeof(ApplicationManifestType));
         private static readonly XmlSerializer serviceManifestSerializer = new (typeof(ServiceManifestType));
+        private readonly ParallelOptions parallelOptions;
+        private readonly string nodeName;
+        private readonly bool isWindows;
+        private readonly Logger logger;
 
         /// <summary>
         /// The singleton FabricClient instance that is used throughout FabricObserver.
@@ -73,6 +72,18 @@ namespace FabricObserver.Utilities.ServiceFabric
                             return fabricClient;
                         }
                     }
+                    catch (FabricObjectClosedException)
+                    {
+                        lock (lockObj)
+                        {
+                            fabricClient.Dispose();
+                            fabricClient = null;
+                            fabricClient = new FabricClient();
+                            fabricClient.Settings.HealthReportSendInterval = TimeSpan.FromSeconds(1);
+                            fabricClient.Settings.HealthReportRetrySendInterval = TimeSpan.FromSeconds(3);
+                            return fabricClient;
+                        }
+                    }
                     catch (Exception e) when (e is ObjectDisposedException or InvalidComObjectException)
                     {
                         lock (lockObj)
@@ -97,10 +108,9 @@ namespace FabricObserver.Utilities.ServiceFabric
         public FabricClientUtilities(string nodeName = null)
         {
             logger = new Logger("FabClientUtil");
-            int maxDegreeOfParallelism = Convert.ToInt32(Math.Ceiling(Environment.ProcessorCount * 0.25 * 1.0));
+
             parallelOptions = new ParallelOptions
             {
-                MaxDegreeOfParallelism = Environment.ProcessorCount >= 4 ? maxDegreeOfParallelism : 1,
                 TaskScheduler = TaskScheduler.Default
             };
 
@@ -211,7 +221,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                         }
 
                         var repOrInstances = 
-                            GetInstanceOrReplicaMonitoringList(
+                                GetInstanceOrReplicaMonitoringList(
                                     app.ApplicationName,
                                     app.ApplicationTypeName ?? appList.First(a => a.ApplicationName == app.ApplicationName).ApplicationTypeName,
                                     deployedReplicas,

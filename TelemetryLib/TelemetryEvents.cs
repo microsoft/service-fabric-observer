@@ -69,7 +69,6 @@ namespace FabricObserver.TelemetryLib
                     { "FOVersion", foData.Version },
                     { "SFRuntimeVersion", foData.SFRuntimeVersion },
                     { "HasPlugins", foData.HasPlugins.ToString() },
-                    { "ParallelCapable", foData.ParallelExecutionCapable.ToString() },
                     { "UpTime", foData.UpTime },
                     { "Timestamp", DateTime.UtcNow.ToString("o") },
                     { "OS", FabricObserverOperationalEventData.OS }

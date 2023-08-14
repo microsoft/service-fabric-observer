@@ -1,65 +1,81 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<OutputType>Exe</OutputType>
-		<TargetFramework>net6.0</TargetFramework>
+		<ProjectGuid>{51AC2A69-B952-4766-8A1E-2C7752BC011A}</ProjectGuid>
 		<RootNamespace>FabricObserver</RootNamespace>
 		<AssemblyName>FabricObserver</AssemblyName>
-		<ImplicitUsings>disable</ImplicitUsings>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net6.0</TargetFramework>
 		<Nullable>disable</Nullable>
 		<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
-		<ServerGarbageCollection>True</ServerGarbageCollection>
+		<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
 		<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
-		<Copyright>Copyright © 2023</Copyright>
+		<Copyright>Copyright © 2022</Copyright>
 		<Product>FabricObserver</Product>
 		<Version>3.2.9</Version>
 		<FileVersion>3.2.9</FileVersion>
 		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-		<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
+		<IsServiceFabricServiceProject>true</IsServiceFabricServiceProject>
+		<StartupObject>FabricObserver.Program</StartupObject>
+		<NoWarn>CA1822;$(NoWarn)</NoWarn>
+		<ResolveComReferenceSilent>true</ResolveComReferenceSilent>
 		<Platforms>x64</Platforms>
-	    <NoWarn>CA1416</NoWarn>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.17.0" />
-    <PackageReference Include="Octokit" Version="7.0.1" />
-    <PackageReference Include="System.Diagnostics.EventLog" Version="7.0.0" />
-    <PackageReference Include="McMaster.NETCore.Plugins" Version="1.4.0" />
-    <Reference Include="..\Interop\Interop.WUApiLib.dll" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="PackageRoot\Config\AppObserver.config.json" />
-    <None Include="PackageRoot\Config\ContainerObserver.config.json" />
-    <None Include="PackageRoot\Config\NetworkObserver.config.json" />
-    <None Include="PackageRoot\ServiceManifest.xml" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="NLog.config">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\FabricObserver.Extensibility\FabricObserver.Extensibility.csproj">
-      <Private>true</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj">
-      <Private>true</Private>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Update="elevated_docker_stats">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="elevated_netstat">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="elevated_proc_fd">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="install_lvid_perfcounter.bat">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="setcaps.sh">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
+		<NoWarn>CA1416</NoWarn>
+	</PropertyGroup>
+	<ItemGroup>
+		<Compile Remove="Connected Services\**" />
+		<EmbeddedResource Remove="Connected Services\**" />
+		<None Remove="Connected Services\**" />
+	</ItemGroup>
+	<ItemGroup>
+		<None Remove="ApplicationInsights.config" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="Azure.Storage.Blobs" Version="12.16.0" />
+		<PackageReference Include="Octokit" Version="6.0.0" />
+		<PackageReference Include="System.Diagnostics.EventLog" Version="7.0.0" />
+		<PackageReference Include="McMaster.NETCore.Plugins" Version="1.4.0" />
+		<Reference Include="..\Interop\Interop.WUApiLib.dll" />
+	</ItemGroup>
+	<ItemGroup>
+		<None Include="NLog.xsd">
+			<SubType>Designer</SubType>
+		</None>
+		<None Include="PackageRoot\Config\Settings.xml">
+			<SubType>Designer</SubType>
+		</None>
+		<None Include="PackageRoot\Config\AppObserver.config.json" />
+		<None Include="PackageRoot\Config\ContainerObserver.config.json" />
+		<None Include="PackageRoot\Config\NetworkObserver.config.json" />
+		<None Include="PackageRoot\ServiceManifest.xml" />
+	</ItemGroup>
+	<ItemGroup>
+		<Content Include="NLog.config">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\FabricObserver.Extensibility\FabricObserver.Extensibility.csproj">
+			<Private>true</Private>
+		</ProjectReference>
+		<ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj">
+			<Private>true</Private>
+		</ProjectReference>
+	</ItemGroup>
+	<ItemGroup>
+		<None Update="elevated_docker_stats">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="elevated_netstat">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="elevated_proc_fd">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="install_lvid_perfcounter.bat">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+		<None Update="setcaps.sh">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
 </Project>

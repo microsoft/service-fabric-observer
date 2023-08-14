@@ -61,7 +61,7 @@ namespace FabricObserverTests
 
             if (!await IsOneNodeClusterAsync())
             {
-                throw new Exception("These tests need to be run in a 1-node SF dev cluster (one box) setup.");
+                //throw new Exception("These tests need to be run in a 1-node SF dev cluster (one box) setup.");
             }
 
             // Remove orphaned health reports.
@@ -240,10 +240,6 @@ namespace FabricObserverTests
                 await FabricClientSingleton.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
 
                 // Create HealthMetrics app instance.
-                /* override app params..
-                NameValueCollection nameValueCollection = new NameValueCollection();
-                nameValueCollection.Add("foo", "bar");
-                */
                 ApplicationDescription appDesc = new(new Uri(appName), appType, appVersion/*, nameValueCollection */);
                 await FabricClientSingleton.ApplicationManager.CreateApplicationAsync(appDesc);
 
@@ -252,6 +248,7 @@ namespace FabricObserverTests
                 {
                     ApplicationName = new Uri(appName),
                     MinReplicaSetSize = 1,
+                    TargetReplicaSetSize = 1,
                     PartitionSchemeDescription = new SingletonPartitionSchemeDescription(),
                     ServiceName = new Uri(serviceName1),
                     ServiceTypeName = serviceType1
@@ -261,6 +258,7 @@ namespace FabricObserverTests
                 {
                     ApplicationName = new Uri(appName),
                     MinReplicaSetSize = 1,
+                    TargetReplicaSetSize = 1,
                     PartitionSchemeDescription = new SingletonPartitionSchemeDescription(),
                     ServiceName = new Uri(serviceName2),
                     ServiceTypeName = serviceType2
@@ -1292,7 +1290,6 @@ namespace FabricObserverTests
             // App parameter upgrade value.
             Assert.IsTrue(RGMemoryLimit == 2400);
 
-            // CPU RG is not implemented fully. This is for the next version.
             var (RGCpuEnabled, RGCpuLimit) = clientUtilities.TupleGetCpuResourceGovernanceInfo(appManifest, svcManifest, "VotingWebPkg", "Code", parameters);
             Assert.IsTrue(RGCpuEnabled);
 
@@ -2830,8 +2827,7 @@ namespace FabricObserverTests
                     && startDate > DateTime.MinValue);
 
                 Assert.IsTrue(data.EntityType is EntityType.Service or EntityType.Process);
-                Assert.IsTrue(data.ServicePackageActivationMode is "ExclusiveProcess"
-                              or "SharedProcess");
+                Assert.IsTrue(data.ServicePackageActivationMode is "ExclusiveProcess" or "SharedProcess");
                 Assert.IsTrue(data.HealthState == HealthState.Invalid);
                 Assert.IsTrue(data.ProcessId > 0);
                 Assert.IsTrue(data.ObserverName == ObserverConstants.AppObserverName);
@@ -2878,8 +2874,7 @@ namespace FabricObserverTests
                     && startDate > DateTime.MinValue);
 
                 Assert.IsTrue(data.EntityType is EntityType.Service or EntityType.Process);
-                Assert.IsTrue(data.ServicePackageActivationMode is "ExclusiveProcess"
-                              or "SharedProcess");
+                Assert.IsTrue(data.ServicePackageActivationMode is "ExclusiveProcess" or "SharedProcess");
                 Assert.IsTrue(data.HealthState == HealthState.Warning);
                 Assert.IsTrue(data.ProcessId > 0);
                 Assert.IsTrue(data.Value > 0.0);

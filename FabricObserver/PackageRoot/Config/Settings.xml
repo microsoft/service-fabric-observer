@@ -49,6 +49,10 @@
     <!-- Required: Diagnostic Telemetry. Azure ApplicationInsights and Azure LogAnalytics support is already implemented, 
          but you can implement whatever provider you want. See IObserverTelemetry interface. -->
     <Parameter Name="EnableTelemetryProvider" Value="" MustOverride="true" />
+
+    <!-- Resource Governance. MustOverride is required to enable changing RG settings with app parameter updates.
+    <Parameter Name="RGCPUCoresRequest" Value="" MustOverride="true" />
+    <Parameter Name="RGMemoryInMBLimit" Value="" MustOverride="true" /> -->
     
     <!-- *** Non-Overridable Parameters - Set these in this file. *** -->
     

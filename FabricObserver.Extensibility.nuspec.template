@@ -6,6 +6,8 @@
 		<releaseNotes>
 Note: This is library is required for observer plugins that target FabricObserver 3.2.9. 
 - Performance and Code improvements.
+- Bug fix in Child process management.
+- Bug fix in Cpu RG logic.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

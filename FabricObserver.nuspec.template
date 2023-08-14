@@ -4,8 +4,10 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.9</version>
 		<releaseNotes>
-- Bug fix for CPU Resource Governance monitoring (Windows-only): App param updates.
-- Performance and code improvements.
+	- AppObserver no longer relies on Environment.ProcessorCount to determine concurrent monitoring capability. Even if you are CPU-limiting FabricObserver to a percentage of a single CPU core via Service Fabric Resource Governance, in which case Environment.ProcessorCount would return 1, AppObserver will still monitor services concurrently if AppObserverEnableConcurrentMonitoring is set to true.
+	- AppObserver: Bug fix in child process monitoring.
+	- AppObserver: Bug fix in Cpu RG monitoring.
+	- Performance and Code improvements.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

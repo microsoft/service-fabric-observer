@@ -31,6 +31,18 @@ namespace FabricObserver.Observers.Utilities
         {
             try
             {
+                if (OperatingSystem.IsWindows())
+                {
+                    procHandle ??= NativeMethods.GetSafeProcessHandle(procId);
+
+                    // Validate that the supplied process is still the droid we're looking for.
+                    if (procHandle.IsInvalid || string.Compare(NativeMethods.GetProcessNameFromId(procHandle), procName, StringComparison.OrdinalIgnoreCase) != 0)
+                    {
+                        // Not the droid we're looking for. Caller should ignore this result..
+                        return -1;
+                    }
+                }
+
                 using Process p = Process.GetProcessById(procId);
 
                 // First run.
