@@ -372,19 +372,17 @@ namespace FabricObserver.Observers.Utilities
             };
 
             List<string> output = new();
-
-            using (Process process = Process.Start(startInfo))
+            using Process process = Process.Start(startInfo);
+            
+            string line;
+            while (process != null && (line = await process.StandardOutput.ReadLineAsync()) != null)
             {
-                string line;
-                while (process != null && (line = await process.StandardOutput.ReadLineAsync()) != null)
-                {
-                    output.Add(line);
-                }
-
-                process.WaitForExit();
-
-                return (process.ExitCode, output);
+                output.Add(line);
             }
+
+            process.WaitForExit();
+
+            return (process.ExitCode, output);
         }
     }
 
@@ -399,17 +397,14 @@ namespace FabricObserver.Observers.Utilities
         public static string Bash(this string cmd)
         {
             var escapedArgs = cmd.Replace("\"", "\\\"");
-
-            var process = new Process
+            using Process process = new();
+            process.StartInfo = new ProcessStartInfo
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "/bin/bash",
-                    Arguments = $"-c \"{escapedArgs}\"",
-                    RedirectStandardOutput = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                }
+                FileName = "/bin/bash",
+                Arguments = $"-c \"{escapedArgs}\"",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                CreateNoWindow = true,
             };
 
             process.Start();

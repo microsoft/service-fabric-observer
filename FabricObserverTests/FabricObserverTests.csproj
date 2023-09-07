@@ -48,6 +48,12 @@
 	<None Update="HealthMetrics.zip">
 		<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	</None>
+	<None Update="PackageRoot\Config\AppObserver.config.single-app-target-warning-ports.json">
+	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</None>
+	<None Update="PackageRoot\Config\AppObserver.config.single-app-target.json">
+	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</None>
 	<None Update="PackageRoot\Config\AppObserver_errors_dmps.config.json">
 	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	</None>
@@ -61,6 +67,9 @@
 	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	</None>
 	<None Update="PackageRoot\Config\AppObserver_warnings_dmps.config.json">
+	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	</None>
+	<None Update="PortTestApp.zip">
 	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	</None>
 	<None Update="TestApp42.zip">

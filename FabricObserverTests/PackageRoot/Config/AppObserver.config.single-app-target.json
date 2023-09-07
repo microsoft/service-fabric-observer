@@ -1,0 +1,12 @@
+[
+  {
+    "targetApp": "PortTest",
+    "cpuWarningLimitPercent": 85,
+    "memoryWarningLimitMb": 1024,
+    "networkWarningEphemeralPorts": 10000,
+    "warningThreadCount": 500,
+    "warningOpenFileHandles": 7000,
+    "warningPrivateBytesMb": 1280,
+    "warningPrivateBytesPercent": 50
+  }
+]

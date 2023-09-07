@@ -195,7 +195,7 @@ namespace FabricObserver.Observers.Utilities
                     }
                 }
 
-                if (childProcesses != null && childProcesses.Count > 1)
+                if (childProcesses != null)
                 {
                     try
                     {
