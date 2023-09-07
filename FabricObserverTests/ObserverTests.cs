@@ -129,7 +129,7 @@ namespace FabricObserverTests
             }
 
             await CleanupTestHealthReportsAsync();
-            //await RemoveTestApplicationsAsync();
+            await RemoveTestApplicationsAsync();
         }
 
         /* Helpers */
