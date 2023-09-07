@@ -73,7 +73,7 @@ namespace FabricObserver.Observers.Utilities
 
             string localIpAndPort = stats[1];
 
-            if (string.IsNullOrWhiteSpace(localIpAndPort) || !localIpAndPort.Contains(":"))
+            if (string.IsNullOrWhiteSpace(localIpAndPort) || !localIpAndPort.Contains(':'))
             {
                 throw new ArgumentException("netstatOutputLine value must be a valid nestat output row");
             }

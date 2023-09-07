@@ -537,8 +537,11 @@ namespace FabricObserver.Observers
                 {
                     string cmdline = File.ReadAllText($"/proc/{process.Id}/cmdline");
 
-                    // dotnet /mnt/sfroot/_App/__FabricSystem_App4294967295/US.Code.Current/FabricUS.dll 
-                    if (cmdline.Contains("/mnt/sfroot/_App/"))
+                    // E.g., dotnet /mnt/sfroot/_App/__FabricSystem_App4294967295/US.Code.Current/FabricUS.dll 
+                    string sfRootDir = ServiceFabricConfiguration.Instance.FabricDataRoot;
+                    string sfAppDir = Path.Combine(sfRootDir, "_App");
+
+                    if (cmdline.Contains(sfAppDir))
                     {
                         string bin = cmdline[(cmdline.LastIndexOf("/", StringComparison.Ordinal) + 1)..];
 
@@ -867,7 +870,7 @@ namespace FabricObserver.Observers
             string dotnetArg = procName;
             Process process = null;
             SafeProcessHandle procHandle = null;
-
+ 
             if (!IsWindows && procName.Contains("dotnet"))
             {
                 dotnetArg = $"{procName.Replace("dotnet ", string.Empty)}";

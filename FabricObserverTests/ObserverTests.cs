@@ -105,6 +105,7 @@ namespace FabricObserverTests
             await DeployTestApp42Async();
             await DeployVotingAppAsync();
             await DeployCpuStressAppAsync();
+            await DeployPortTestAppAsync();
         }
 
         [ClassCleanup]
@@ -128,7 +129,7 @@ namespace FabricObserverTests
             }
 
             await CleanupTestHealthReportsAsync();
-            await RemoveTestApplicationsAsync();
+            //await RemoveTestApplicationsAsync();
         }
 
         /* Helpers */
@@ -488,6 +489,85 @@ namespace FabricObserverTests
             }
         }
 
+        private static async Task DeployPortTestAppAsync()
+        {
+            string appName = "fabric:/PortTest";
+
+            // If fabric:/Voting is already installed, exit.
+            var deployedTestApp =
+                    await FabricClientSingleton.QueryManager.GetDeployedApplicationListAsync(
+                            NodeName,
+                            new Uri(appName),
+                            TimeSpan.FromSeconds(30),
+                            Token);
+
+            if (deployedTestApp?.Count > 0)
+            {
+                return;
+            }
+
+            string appType = "PortTestType";
+            string appVersion = "1.0.0";
+
+            // Change this to suit your configuration (so, if you are on Windows and you installed SF on a different drive, for example).
+            string imageStoreConnectionString = @"file:C:\SfDevCluster\Data\ImageStoreShare";
+            string packagePathInImageStore = "PortTestApp";
+            string packagePathZip = Path.Combine(Environment.CurrentDirectory, "PortTestApp.zip");
+            string packagePath = Path.Combine(Environment.CurrentDirectory, "PortTestApp");
+
+            try
+            {
+                // Unzip the compressed HealthMetrics app package.
+                System.IO.Compression.ZipFile.ExtractToDirectory(packagePathZip, "PortTestApp", true);
+
+                // Copy the HealthMetrics app package to a location in the image store.
+                FabricClientSingleton.ApplicationManager.CopyApplicationPackage(imageStoreConnectionString, packagePath, packagePathInImageStore);
+
+                // Provision the HealthMetrics application.          
+                await FabricClientSingleton.ApplicationManager.ProvisionApplicationAsync(packagePathInImageStore);
+
+                // Create HealthMetrics app instance.
+                ApplicationDescription appDesc = new(new Uri(appName), appType, appVersion);
+                await FabricClientSingleton.ApplicationManager.CreateApplicationAsync(appDesc);
+
+                // This is a hack. Withouth this timeout, the deployed test services may not have populated the FC cache?
+                // You may need to increase this value depending upon your dev machine? You'll find out..
+                await Task.Delay(TimeSpan.FromSeconds(15));
+
+                StatelessServiceDescription serviceDescription = new()
+                {
+                    ServiceName = new Uri(appName + "/PortTestService"),
+                    ServiceTypeName = "PortTestServiceType",
+                    PartitionSchemeDescription = new SingletonPartitionSchemeDescription(),
+                    ApplicationName = new Uri(appName),
+                    MinInstanceCount = 1,
+                    InstanceCount = 1
+                };
+
+                await FabricClientSingleton.ServiceManager.CreateServiceAsync(serviceDescription);
+
+                await Task.Delay(TimeSpan.FromSeconds(15));
+            }
+            catch (FabricException fe)
+            {
+                if (fe.ErrorCode == FabricErrorCode.ApplicationAlreadyExists)
+                {
+                    await FabricClientSingleton.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
+                    await DeployPortTestAppAsync();
+                }
+                else if (fe.ErrorCode == FabricErrorCode.ApplicationTypeAlreadyExists)
+                {
+                    var appList = await FabricClientSingleton.QueryManager.GetApplicationListAsync(new Uri(appName));
+                    if (appList.Count > 0)
+                    {
+                        await FabricClientSingleton.ApplicationManager.DeleteApplicationAsync(new DeleteApplicationDescription(new Uri(appName)) { ForceDelete = true });
+                    }
+                    await FabricClientSingleton.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+                    await DeployPortTestAppAsync();
+                }
+            }
+        }
+
         private static bool IsLocalSFRuntimePresent()
         {
             try
@@ -629,8 +709,6 @@ namespace FabricObserverTests
 
             // CpuStress \\
 
-            // Voting \\
-
             if (await EnsureTestServicesExistAsync("fabric:/CpuStress"))
             {
                 string appName = "fabric:/CpuStress";
@@ -638,6 +716,31 @@ namespace FabricObserverTests
                 string appVersion = "1.0.0";
                 string serviceName = "fabric:/CpuStress/CpuMemStressor";
                 string packagePathInImageStore = "CpuStressApp";
+
+                // Clean up the unzipped directory.
+                FabricClientSingleton.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
+
+                // Delete services.
+                var deleteServiceDescription = new DeleteServiceDescription(new Uri(serviceName));
+                await FabricClientSingleton.ServiceManager.DeleteServiceAsync(deleteServiceDescription);
+
+                // Delete an application instance from the application type.
+                var deleteApplicationDescription = new DeleteApplicationDescription(new Uri(appName));
+                await FabricClientSingleton.ApplicationManager.DeleteApplicationAsync(deleteApplicationDescription);
+
+                // Un-provision the application type.
+                await FabricClientSingleton.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
+            }
+
+            // PortTest \\
+
+            if (await EnsureTestServicesExistAsync("fabric:/PortTest"))
+            {
+                string appName = "fabric:/PortTest";
+                string appType = "PortTestType";
+                string appVersion = "1.0.0";
+                string serviceName = "fabric:/PortTest/PortTestService";
+                string packagePathInImageStore = "PortTestApp";
 
                 // Clean up the unzipped directory.
                 FabricClientSingleton.ApplicationManager.RemoveApplicationPackage(imageStoreConnectionString, packagePathInImageStore);
@@ -3406,6 +3509,72 @@ namespace FabricObserverTests
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
         }
+
+        // Port tests (w/GuestExe service, single child proc (BUG: https://github.com/microsoft/service-fabric-observer/issues/276). \\
+
+        [TestMethod]
+        public async Task AppObserver_ChildProcs_Detects_SingleDescendant_Ports_Warning()
+        {
+            ObserverManager.FabricServiceContext = TestServiceContext;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            using var obs = new AppObserver(TestServiceContext)
+            {
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.single-app-target-warning-ports.json"),
+                EnableConcurrentMonitoring = true,
+                EnableChildProcessMonitoring = true
+            };
+
+            var startDateTime = DateTime.Now;
+            await obs.InitializeAsync();
+
+            Assert.IsTrue(obs.ReplicaOrInstanceList.All(r => r.ChildProcesses?.Count == 1 && r.ChildProcesses[0].procName == "PortEaterGuestExe"));
+
+            await obs.ObserveAsync(Token);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no warning conditions.
+            Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+        }
+
+        [TestMethod]
+        public async Task AppObserver_ChildProcs_Detects_SingleDescendant_Ports_NoWarning()
+        {
+            ObserverManager.FabricServiceContext = TestServiceContext;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            using var obs = new AppObserver(TestServiceContext)
+            {
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.single-app-target.json"),
+                EnableConcurrentMonitoring = true,
+                EnableChildProcessMonitoring = true
+            };
+
+            var startDateTime = DateTime.Now;
+
+            await obs.InitializeAsync();
+
+            Assert.IsTrue(obs.ReplicaOrInstanceList.All(r => r.ChildProcesses?.Count == 1 && r.ChildProcesses[0].procName == "PortEaterGuestExe"));
+
+            await obs.ObserveAsync(Token);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no warning conditions.
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+        }
+
         #endregion
     }
 }
