@@ -53,7 +53,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.2.10";
+        private const string InternalVersionNumber = "3.2.11";
 
         private bool RuntimeTokenCancelled =>
             linkedSFRuntimeObserverTokenSource?.Token.IsCancellationRequested ?? runAsyncToken.IsCancellationRequested;
@@ -1286,15 +1286,15 @@ namespace FabricObserver.Observers
         {
             try
             {
-                var githubClient = new GitHubClient(new ProductHeaderValue(ObserverConstants.FabricObserverName));
-                IReadOnlyList<Release> releases = await githubClient.Repository.Release.GetAll("microsoft", "service-fabric-observer");
+                GitHubClient githubClient = new(new ProductHeaderValue(ObserverConstants.FabricObserverName));
+                Release latestRelease = await githubClient.Repository.Release.GetLatest("microsoft", "service-fabric-observer");
 
-                if (releases.Count == 0)
+                if (latestRelease == null)
                 {
                     return;
                 }
 
-                string releaseAssetName = releases[0].Name;
+                string releaseAssetName = latestRelease.Name;
                 string latestVersion = releaseAssetName.Split(" ")[1];
                 Version latestGitHubVersion = new(latestVersion);
                 Version localVersion = new(InternalVersionNumber);
@@ -1344,6 +1344,9 @@ namespace FabricObserver.Observers
                         Logger.LogEtw(ObserverConstants.FabricObserverETWEventName, telemetryData);
                     }
                 }
+
+                latestRelease = null;
+                githubClient = null;
             }
             catch (Exception e) when (e is not OutOfMemoryException)
             {
