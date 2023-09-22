@@ -251,11 +251,7 @@ namespace FabricObserver.Observers.Utilities
                                 };
 
                                 process.StartInfo = ps;
-
-                                if (!process.Start())
-                                {
-                                    return (-1, -1, 0);
-                                }
+                                process.Start();
 
                                 // Start async reads.
                                 process.BeginErrorReadLine();
@@ -276,7 +272,7 @@ namespace FabricObserver.Observers.Utilities
                                     {
                                         OSInfoLogger.LogWarning(
                                             "TupleGetDynamicPortRange: netsh failure. " +
-                                            $"Unable to determine dynamic port range (will return (-1, -1)):{Environment.NewLine}{error}");
+                                            $"Unable to determine dynamic port range (will return (-1, -1)). Failed with: {error}");
 
                                         return (-1, -1, 0);
                                     }
@@ -645,12 +641,7 @@ namespace FabricObserver.Observers.Utilities
                 };
 
                 process.StartInfo = ps;
-
-                if (!process.Start())
-                {
-                    OSInfoLogger.LogWarning($"Unable to start process: {ps.Arguments}");
-                    return;
-                }
+                process.Start();
 
                 // Start asynchronous read operations.
                 process.BeginErrorReadLine();
