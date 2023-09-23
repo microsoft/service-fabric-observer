@@ -931,7 +931,7 @@ namespace FabricObserver.Observers
                 IsLvidCounterEnabled = IsLVIDPerfCounterEnabled(settings);
             }
 
-            // ETW - Overridable
+            // ETW.
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProvider, settings), out bool etwEnabled))
             {
                 EtwEnabled = etwEnabled;
@@ -1357,7 +1357,7 @@ namespace FabricObserver.Observers
 
         private bool IsLVIDPerfCounterEnabled(ConfigurationSettings settings = null)
         {
-            if (!isWindows)
+            if (!isWindows /*|| ServiceFabricConfiguration.Instance.FabricVersion.StartsWith("10")*/)
             {
                 return false;
             }
@@ -1401,7 +1401,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or UnauthorizedAccessException or Win32Exception)
             {
-                Logger.LogWarning($"IsLVIDPerfCounterEnabled: Failed to determine LVID perf counter state:{Environment.NewLine}{e.Message}");
+                Logger.LogWarning($"IsLVIDPerfCounterEnabled: Failed to determine LVID perf counter state: {e.Message}");
             }
 
             return false;

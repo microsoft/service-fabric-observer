@@ -251,7 +251,7 @@ namespace FabricObserver.Observers.Utilities
                                 };
 
                                 process.StartInfo = ps;
-                                process.Start();
+                                _ = process.Start();
 
                                 // Start async reads.
                                 process.BeginErrorReadLine();
@@ -641,7 +641,7 @@ namespace FabricObserver.Observers.Utilities
                 };
 
                 process.StartInfo = ps;
-                process.Start();
+                _ = process.Start();
 
                 // Start asynchronous read operations.
                 process.BeginErrorReadLine();
