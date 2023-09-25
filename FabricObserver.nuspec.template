@@ -4,8 +4,9 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.11</version>
 		<releaseNotes>
+- Bug fix in OSObserver's Windows Update Automatic Download check.
+- Bug fix in Windows dynamic port range detection.
 - Memory usage improvement in Github release version check implementation.
-- Bug fix in OSObserver's Windows Update Automatic Download check app parameter update support.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
