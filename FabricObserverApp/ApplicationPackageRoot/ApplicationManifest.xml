@@ -91,11 +91,11 @@
     <Parameter Name="AzureStorageUploadObserverRunInterval" DefaultValue="00:05:00" />
     <Parameter Name="CertificateObserverRunInterval" DefaultValue="1.00:00:00" />
     <Parameter Name="ContainerObserverRunInterval" DefaultValue="" />
-    <Parameter Name="DiskObserverRunInterval" DefaultValue="00:15:00" />
-    <Parameter Name="FabricSystemObserverRunInterval" DefaultValue="00:15:00" />
+    <Parameter Name="DiskObserverRunInterval" DefaultValue="" />
+    <Parameter Name="FabricSystemObserverRunInterval" DefaultValue="" />
     <Parameter Name="NetworkObserverRunInterval" DefaultValue="" />
     <Parameter Name="NodeObserverRunInterval" DefaultValue="" />
-    <Parameter Name="OSObserverRunInterval" DefaultValue="00:15:00" />
+    <Parameter Name="OSObserverRunInterval" DefaultValue="" />
     <Parameter Name="SFConfigurationObserverRunInterval" DefaultValue="" />
     <!-- AppObserver -->
     <Parameter Name="AppObserverClusterOperationTimeoutSeconds" DefaultValue="120" />
