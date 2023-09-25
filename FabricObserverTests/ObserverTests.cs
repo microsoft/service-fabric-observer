@@ -59,9 +59,10 @@ namespace FabricObserverTests
                 throw new Exception("Can't run these tests without a local dev cluster.");
             }
 
+            // TODO: Make this not the case..
             if (!await IsOneNodeClusterAsync())
             {
-                //throw new Exception("These tests need to be run in a 1-node SF dev cluster (one box) setup.");
+                throw new Exception("These tests need to be run in a 1-node SF dev cluster (one box) setup.");
             }
 
             // Remove orphaned health reports.
@@ -2296,6 +2297,38 @@ namespace FabricObserverTests
 
             // Output file is not empty.
             Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath)).Length > 0);
+        }
+
+        [TestMethod]
+        public async Task OSObserver_IsWindowsDevCluster_True()
+        {
+            var startDateTime = DateTime.Now;
+
+            ObserverManager.FabricServiceContext = TestServiceContext;
+            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.EtwEnabled = false;
+
+            using var obs = new OSObserver(TestServiceContext)
+            {
+                ClusterManifestPath = Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml"),
+                IsObserverWebApiAppDeployed = false,
+                IsEtwProviderEnabled = false
+            };
+
+            // This is required since output files are only created if fo api app is also deployed to cluster..
+
+            await obs.ObserveAsync(Token);
+
+            // observer ran to completion with no errors.
+            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            // observer detected no error conditions.
+            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
+
+            // observer did not have any internal errors during run.
+            Assert.IsFalse(obs.IsUnhealthy);
+
+            Assert.IsTrue(obs.IsWindowsDevCluster);
         }
 
         [TestMethod]

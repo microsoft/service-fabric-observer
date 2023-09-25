@@ -21,6 +21,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
 using System.Xml.Serialization;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
@@ -248,6 +249,246 @@ namespace FabricObserver.Utilities.ServiceFabric
             return repList;
         }
 
+        private void ProcessServiceConfiguration(string appTypeName, string codepackageName, ReplicaOrInstanceMonitoringInfo replicaInfo, CancellationToken token)
+        {
+            // ResourceGovernance/AppTypeVer/ServiceTypeVer.
+            logger.LogInfo($"Starting ProcessServiceConfiguration check for {replicaInfo.ServiceName.OriginalString}.");
+
+            if (string.IsNullOrWhiteSpace(appTypeName))
+            {
+                return;
+            }
+
+            try
+            {
+                string appTypeVersion = null;
+                ApplicationParameterList appParameters = null;
+                ApplicationParameterList defaultParameters = null;
+
+                ApplicationList appList =
+                    FabricClientSingleton.QueryManager.GetApplicationListAsync(
+                        replicaInfo.ApplicationName,
+                        TimeSpan.FromSeconds(60),
+                        token).Result;
+
+                ApplicationTypeList applicationTypeList =
+                    FabricClientSingleton.QueryManager.GetApplicationTypeListAsync(
+                appTypeName,
+                        TimeSpan.FromSeconds(60),
+                        token).Result;
+
+                if (appList?.Count > 0)
+                {
+                    try
+                    {
+                        if (appList.Any(app => app.ApplicationTypeName == appTypeName))
+                        {
+                            appTypeVersion = appList.First(app => app.ApplicationTypeName == appTypeName).ApplicationTypeVersion;
+                            appParameters = appList.First(app => app.ApplicationTypeName == appTypeName).ApplicationParameters;
+                            replicaInfo.ApplicationTypeVersion = appTypeVersion;
+                        }
+
+                        if (applicationTypeList.Any(app => app.ApplicationTypeVersion == appTypeVersion))
+                        {
+                            defaultParameters = applicationTypeList.First(app => app.ApplicationTypeVersion == appTypeVersion).DefaultParameters;
+                        }
+                    }
+                    catch (Exception e) when (e is ArgumentException or InvalidOperationException)
+                    {
+
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(appTypeVersion))
+                    {
+                        // ServiceTypeVersion
+                        var serviceList =
+                            FabricClientSingleton.QueryManager.GetServiceListAsync(
+                                replicaInfo.ApplicationName,
+                                replicaInfo.ServiceName,
+                                TimeSpan.FromSeconds(60),
+                                token).Result;
+
+                        if (serviceList?.Count > 0)
+                        {
+                            try
+                            {
+                                Uri serviceName = replicaInfo.ServiceName;
+
+                                if (serviceList.Any(s => s.ServiceName == serviceName))
+                                {
+                                    replicaInfo.ServiceTypeVersion = serviceList.First(s => s.ServiceName == serviceName).ServiceManifestVersion;
+                                }
+                            }
+                            catch (Exception e) when (e is ArgumentException or InvalidOperationException)
+                            {
+
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception e) when (e is AggregateException or FabricException or TaskCanceledException or TimeoutException or XmlException)
+            {
+                if (e is not TaskCanceledException)
+                {
+                    logger.LogWarning($"Handled: Failed to process Service configuration for {replicaInfo.ServiceName.OriginalString} with exception '{e.Message}'");
+                }
+                // move along
+            }
+            logger.LogInfo($"Completed ProcessServiceConfiguration for {replicaInfo.ServiceName.OriginalString}.");
+        }
+
+        private void ProcessMultipleHelperCodePackages(
+                        Uri appName,
+                        string appTypeName,
+                        DeployedServiceReplica deployedReplica,
+                        ref ConcurrentQueue<ReplicaOrInstanceMonitoringInfo> repsOrInstancesInfo,
+                        bool isHostedByFabric,
+                        bool enableChildProcessMonitoring,
+                        NativeMethods.SafeObjectHandle handleToProcessSnapshot,
+                        CancellationToken token)
+        {
+            logger.LogInfo($"Starting ProcessMultipleHelperCodePackages for {deployedReplica.ServiceName} (isHostedByFabric = {isHostedByFabric})");
+
+            if (repsOrInstancesInfo == null)
+            {
+                logger.LogInfo($"repsOrInstanceList is null. Exiting ProcessMultipleHelperCodePackages");
+                return;
+            }
+
+            try
+            {
+                DeployedCodePackageList codepackages =
+                    FabricClientSingleton.QueryManager.GetDeployedCodePackageListAsync(
+                        this.nodeName,
+                        appName,
+                        deployedReplica.ServiceManifestName,
+                        null,
+                        TimeSpan.FromSeconds(60),
+                        token).Result;
+
+                ReplicaOrInstanceMonitoringInfo replicaInfo = null;
+
+                // Check for multiple code packages or GuestExecutable service (Fabric is the host).
+                if (codepackages.Count < 2 && !isHostedByFabric)
+                {
+                    logger.LogInfo($"Completed ProcessMultipleHelperCodePackages.");
+                    return;
+                }
+
+                if (!codepackages.Any(c => c.CodePackageName != deployedReplica.CodePackageName))
+                {
+                    logger.LogInfo($"No helper code packages detected. Completed ProcessMultipleHelperCodePackages.");
+                    return;
+                }
+
+                var helperCodePackages = codepackages.Where(c => c.CodePackageName != deployedReplica.CodePackageName);
+
+                foreach (var codepackage in helperCodePackages)
+                {
+                    if (token.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
+                    int procId = (int)codepackage.EntryPoint.ProcessId; // The actual process id of the helper or guest executable binary.
+                    string procName = null;
+
+                    if (OperatingSystem.IsWindows())
+                    {
+                        try
+                        {
+                            procName = NativeMethods.GetProcessNameFromId(procId);
+
+                            if (procName == null)
+                            {
+                                continue;
+                            }
+                        }
+                        catch (Win32Exception)
+                        {
+                            // Process no longer running or access denied.
+                            continue;
+                        }
+                    }
+                    else // Linux
+                    {
+                        using (var proc = Process.GetProcessById(procId))
+                        {
+                            try
+                            {
+                                procName = proc.ProcessName;
+                            }
+                            catch (Exception e) when (e is InvalidOperationException or NotSupportedException or ArgumentException)
+                            {
+                                // Process no longer running.
+                                continue;
+                            }
+                        }
+                    }
+
+                    // This ensures that support for multiple CodePackages and GuestExecutable services fit naturally into AppObserver's *existing* implementation.
+                    replicaInfo = new ReplicaOrInstanceMonitoringInfo
+                    {
+                        ApplicationName = appName,
+                        ApplicationTypeName = appTypeName,
+                        HostProcessId = procId,
+                        HostProcessName = procName,
+                        HostProcessStartTime = NativeMethods.GetProcessStartTime(procId),
+                        ReplicaOrInstanceId = deployedReplica is DeployedStatefulServiceReplica replica ?
+                                                replica.ReplicaId : ((DeployedStatelessServiceInstance)deployedReplica).InstanceId,
+                        PartitionId = deployedReplica.Partitionid,
+                        ReplicaRole = deployedReplica is DeployedStatefulServiceReplica rep ? rep.ReplicaRole : ReplicaRole.None,
+                        ServiceKind = deployedReplica.ServiceKind,
+                        ServiceName = deployedReplica.ServiceName,
+                        ServiceManifestName = codepackage.ServiceManifestName,
+                        ServiceTypeName = deployedReplica.ServiceTypeName,
+                        ServicePackageActivationId = string.IsNullOrWhiteSpace(codepackage.ServicePackageActivationId) ?
+                                                        deployedReplica.ServicePackageActivationId : codepackage.ServicePackageActivationId,
+                        ServicePackageActivationMode = string.IsNullOrWhiteSpace(codepackage.ServicePackageActivationId) ?
+                                                        ServicePackageActivationMode.SharedProcess : ServicePackageActivationMode.ExclusiveProcess,
+                        ReplicaStatus = deployedReplica is DeployedStatefulServiceReplica r ?
+                                            r.ReplicaStatus : ((DeployedStatelessServiceInstance)deployedReplica).ReplicaStatus,
+                    };
+
+                    // If Helper binaries launch child processes, AppObserver will monitor them, too.
+                    if (enableChildProcessMonitoring && procId > 0)
+                    {
+                        // DEBUG - Perf
+#if DEBUG
+                        var sw = Stopwatch.StartNew();
+#endif
+                        List<(string ProcName, int Pid, DateTime ProcessStartTime)> childPids =
+                            ProcessInfoProvider.Instance.GetChildProcessInfo(procId, handleToProcessSnapshot);
+
+                        if (childPids != null && childPids.Count > 0)
+                        {
+                            replicaInfo.ChildProcesses = childPids;
+                            logger.LogInfo($"{replicaInfo?.ServiceName}({procId}):{Environment.NewLine}Child procs (name, id, startDate): {string.Join(" ", replicaInfo.ChildProcesses)}");
+                        }
+#if DEBUG
+                        sw.Stop();
+                        logger.LogInfo($"EnableChildProcessMonitoring block run duration: {sw.Elapsed}");
+#endif
+                    }
+
+                    // ResourceGovernance/AppTypeVer/ServiceTypeVer.
+                    ProcessServiceConfiguration(appTypeName, codepackage.CodePackageName, replicaInfo, token);
+
+                    if (replicaInfo != null && replicaInfo.HostProcessId > 0 &&
+                        !repsOrInstancesInfo.Any(r => r.HostProcessId == replicaInfo.HostProcessId && r.HostProcessName == replicaInfo.HostProcessName))
+                    {
+                        repsOrInstancesInfo.Enqueue(replicaInfo);
+                    }
+                }
+            }
+            catch (Exception e) when (e is ArgumentException or FabricException or TaskCanceledException or TimeoutException)
+            {
+                logger.LogInfo($"ProcessMultipleHelperCodePackages: Handled Exception: {e.Message}");
+            }
+            logger.LogInfo($"Completed ProcessMultipleHelperCodePackages.");
+        }
+
         /// <summary>
         /// Returns a list of ReplicaOrInstanceMonitoringInfo objects that will contain child process information if handleToSnapshot is provided.
         /// </summary>
@@ -367,7 +608,15 @@ namespace FabricObserver.Utilities.ServiceFabric
                         }
                     }
 
-                    replicaMonitoringList.Enqueue(replicaInfo);
+                    ProcessServiceConfiguration(applicationTypeName, deployedReplica.CodePackageName, replicaInfo, token);
+
+                    // null HostProcessName means the service process can't be monitored. If Fabric is the hosting process, then this is a Guest Executable or helper code package.
+                    if (!string.IsNullOrWhiteSpace(replicaInfo.HostProcessName) && replicaInfo.HostProcessName != "Fabric")
+                    {
+                        replicaMonitoringList.Enqueue(replicaInfo);
+                    }
+
+                    ProcessMultipleHelperCodePackages(appName, applicationTypeName, deployedReplica, ref replicaMonitoringList, replicaInfo.HostProcessName == "Fabric", includeChildProcesses, handleToSnapshot, token);
                 }
             });
 

@@ -6,11 +6,13 @@
 using System;
 using System.ComponentModel;
 using System.Fabric;
+using System.Fabric.Description;
 using System.Fabric.Health;
 using System.Fabric.Query;
 using System.IO;
 using System.Linq;
 using System.Management;
+using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
 using System.Threading;
@@ -32,12 +34,9 @@ namespace FabricObserver.Observers
         private string osReport;
         private string osStatus;
         private bool auStateUnknown;
-        private bool isAUAutomaticDownloadEnabled;
 
-        private bool IsAUCheckSettingEnabled
-        {
-            get; set;
-        }
+        // For WU Automatic Download check.
+        public readonly bool IsWindowsDevCluster;
 
         public string ClusterManifestPath
         {
@@ -50,7 +49,7 @@ namespace FabricObserver.Observers
         /// <param name="context">The StatelessServiceContext instance.</param>
         public OSObserver(StatelessServiceContext context) : base(null, context)
         {
-            
+            IsWindowsDevCluster = IsWindowsDevClusterAsync().GetAwaiter().GetResult();
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -62,23 +61,10 @@ namespace FabricObserver.Observers
             }
 
             Token = token;
-
-            // This only makes sense for Windows and only for non-dev clusters.
-            if (IsWindows)
-            {
-                await InitializeAUCheckAsync();
-
-                if (IsAUCheckSettingEnabled)
-                {
-                    CheckWuAutoDownloadEnabled();
-                }
-            }
-
             await GetComputerInfoAsync(token);
             await ReportAsync(token);
             osReport = null;
             osStatus = null;
-
             LastRunDateTime = DateTime.Now;
         }
 
@@ -203,7 +189,7 @@ namespace FabricObserver.Observers
                 HealthReporter.ReportHealthToServiceFabric(report);
 
                 // Windows Update automatic download enabled?
-                if (IsWindows && isAUAutomaticDownloadEnabled)
+                if (IsWindows && CheckWuAutoDownloadEnabled())
                 {
                     CurrentWarningCount++;
 
@@ -260,45 +246,73 @@ namespace FabricObserver.Observers
             }
         }
 
-        private async Task InitializeAUCheckAsync()
-        {
-            if (!IsWindows)
-            {
-                return;
-            }
-
-            var checkAU = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableWindowsAutoUpdateCheck);
-            bool isISDeployed = await IsInfrastructureServiceDeployedAsync();
-
-            if (isISDeployed && !string.IsNullOrEmpty(checkAU) && bool.TryParse(checkAU, out bool auChk))
-            {
-                IsAUCheckSettingEnabled = auChk;
-            }
-        }
-
-        public async Task<bool> IsInfrastructureServiceDeployedAsync()
+        private async Task<bool> IsOneNodeClusterAsync()
         {
             try
             {
-                var allSystemServices =
-                        await FabricClientInstance.QueryManager.GetServiceListAsync(
-                                new Uri(ObserverConstants.SystemAppName),
-                                null, 
-                                AsyncClusterOperationTimeoutSeconds, Token);
+                var nodeQueryDesc = new NodeQueryDescription
+                {
+                    MaxResults = 3,
+                };
 
-                return allSystemServices.Count > 0 && allSystemServices.Any(
-                                                        service => service.ServiceTypeName.Equals(
-                                                            ObserverConstants.InfrastructureServiceType,
-                                                            StringComparison.InvariantCultureIgnoreCase));
+                NodeList nodes = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
+                                        () => FabricClientInstance.QueryManager.GetNodePagedListAsync(
+                                                nodeQueryDesc,
+                                                ConfigurationSettings.AsyncTimeout,
+                                                Token),
+                                         Token);
+
+                return nodes != null && nodes.Count == 1;
             }
-            catch (Exception e) when (e is FabricException or TimeoutException)
+            catch (Exception e) when (e is FabricException or TaskCanceledException or TimeoutException)
             {
-                ObserverLogger.LogWarning($"Unable to determine IS deployment status:{Environment.NewLine}{e}");
+                ObserverLogger.LogWarning($"IsOneNodeClusterAsync failure: {e.Message}");
+
+                // Don't know the answer, so false.
                 return false;
             }
         }
 
-        private static string GetWindowsHotFixes(bool generateKbUrl, CancellationToken token)
+        private async Task<bool> IsWindowsDevClusterAsync()
+        {
+            if (IsWindowsDevCluster || await IsOneNodeClusterAsync())
+            {
+                return true;
+            }
+
+            string clusterManifestXml =
+                !string.IsNullOrWhiteSpace(ClusterManifestPath) ? await File.ReadAllTextAsync(ClusterManifestPath, Token)
+                                                                : await FabricClientInstance.ClusterManager.GetClusterManifestAsync(AsyncClusterOperationTimeoutSeconds, Token);
+
+            // No-op. This dev cluster check only matters for Windows clusters (Windows auto-update check), so if for some reason we can't get the manifest,
+            // then assume dev cluster to block checking for AU download configuration.
+            if (string.IsNullOrWhiteSpace(clusterManifestXml))
+            {
+                return true;
+            }
+
+            if (clusterManifestXml.Contains("DevCluster", StringComparison.OrdinalIgnoreCase)
+                || ServiceFabricConfiguration.Instance.FabricDataRoot.Contains("DevCluster", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private bool IsAutoUpdateDownloadCheckEnabled()
+        {
+            if (!IsWindows || IsWindowsDevCluster)
+            {
+                return false;
+            }
+
+            string checkAU = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.EnableWindowsAutoUpdateCheck);
+
+            return !string.IsNullOrEmpty(checkAU) && bool.TryParse(checkAU, out bool auChk) && auChk;
+        }
+
+        private string GetWindowsHotFixes(bool generateKbUrl, CancellationToken token)
         {
             if (!IsWindows)
             {
@@ -356,27 +370,20 @@ namespace FabricObserver.Observers
                 sb = null;
 
             }
-            catch (Exception e) when (
-                    e is ArgumentException or
-                    FormatException or
-                    InvalidCastException or
-                    ManagementException or
-                    NullReferenceException)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
-
+                ObserverLogger.LogWarning($"Unhandled Exception processing OS information: {e.Message}");
             }
 
             return ret;
         }
 
-        private void CheckWuAutoDownloadEnabled()
+        private bool CheckWuAutoDownloadEnabled()
         {
-            if (!IsWindows)
+            if (!IsWindows || !IsAutoUpdateDownloadCheckEnabled())
             {
-                return;
+                return false;
             }
-
-            Token.ThrowIfCancellationRequested();
 
             // Windows Update Automatic Download enabled (automatically downloading an update without notification beforehand)?
             // If so, it's best to disable this and deploy either POA (for Bronze durability clusters)
@@ -385,19 +392,16 @@ namespace FabricObserver.Observers
             try
             {
                 var wuLibAutoUpdates = new AutomaticUpdatesClass();
-                isAUAutomaticDownloadEnabled =
-                    wuLibAutoUpdates.ServiceEnabled &&
-                    wuLibAutoUpdates.Settings.NotificationLevel == AutomaticUpdatesNotificationLevel.aunlScheduledInstallation;
+                return wuLibAutoUpdates.ServiceEnabled &&
+                       wuLibAutoUpdates.Settings.NotificationLevel == AutomaticUpdatesNotificationLevel.aunlScheduledInstallation;
             }
-            catch (Exception e) when (
-                    e is System.Runtime.InteropServices.COMException or
-                    InvalidOperationException or
-                    SecurityException or
-                    Win32Exception)
+            catch (Exception e) when (e is COMException or InvalidOperationException or SecurityException or Win32Exception)
             {
-                ObserverLogger.LogWarning($"{AuStateUnknownMessage}{Environment.NewLine}{e}");
+                ObserverLogger.LogWarning($"{AuStateUnknownMessage}{Environment.NewLine}{e.Message}");
                 auStateUnknown = true;
             }
+
+            return false;
         }
 
         private async Task GetComputerInfoAsync(CancellationToken token)
@@ -419,13 +423,10 @@ namespace FabricObserver.Observers
                 string osEphemeralPortRange = string.Empty;
                 string fabricAppPortRange = string.Empty;
                 string clusterManifestXml =
-                    !string.IsNullOrWhiteSpace(ClusterManifestPath) ? await File.ReadAllTextAsync(ClusterManifestPath, token)
-                                                                    : await FabricClientInstance.ClusterManager.GetClusterManifestAsync(
-                                                                                  AsyncClusterOperationTimeoutSeconds, Token);
+                !string.IsNullOrWhiteSpace(ClusterManifestPath) ? await File.ReadAllTextAsync(ClusterManifestPath, token)
+                                                                : await FabricClientInstance.ClusterManager.GetClusterManifestAsync(AsyncClusterOperationTimeoutSeconds, Token);
 
-                (int lowPortApp, int highPortApp) =
-                    NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(NodeType, clusterManifestXml);
-
+                (int lowPortApp, int highPortApp) = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(NodeType, clusterManifestXml);
                 int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
 
                 // OS info.
@@ -443,7 +444,7 @@ namespace FabricObserver.Observers
                 if (IsWindows)
                 {
                     // WU AutoUpdate - Automatic Download enabled.
-                    if (IsAUCheckSettingEnabled)
+                    if (IsAutoUpdateDownloadCheckEnabled())
                     {
                         string auMessage = "WindowsUpdateAutoDownloadEnabled: ";
 
@@ -453,7 +454,7 @@ namespace FabricObserver.Observers
                         }
                         else
                         {
-                            auMessage += isAUAutomaticDownloadEnabled;
+                            auMessage += CheckWuAutoDownloadEnabled();
                         }
                         _ = sb.AppendLine(auMessage);
                     }
@@ -577,7 +578,7 @@ namespace FabricObserver.Observers
                     OSVersion = osInfo.Version,
                     OSInstallDate = osInfo.InstallDate,
                     LastBootUpTime = osInfo.LastBootUpTime,
-                    WindowsUpdateAutoDownloadEnabled = isAUAutomaticDownloadEnabled,
+                    WindowsUpdateAutoDownloadEnabled = CheckWuAutoDownloadEnabled(),
                     TotalMemorySizeGB = (int)osInfo.TotalVisibleMemorySizeKB / 1048576,
                     AvailablePhysicalMemoryGB = !IsWindows ? Math.Round(osInfo.AvailableMemoryKB / 1048576.0, 2) : Math.Round(osInfo.FreePhysicalMemoryKB / 1048576.0, 2),
                     FreeVirtualMemoryGB = Math.Round(osInfo.FreeVirtualMemoryKB / 1048576.0, 2),
@@ -608,9 +609,9 @@ namespace FabricObserver.Observers
                 _ = sb.Clear();
                 sb = null;
             }
-            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException or OutOfMemoryException))
             {
-                ObserverLogger.LogError($"Unhandled Exception processing OS information:{Environment.NewLine}{e}");
+                ObserverLogger.LogError($"Unhandled Exception processing OS information: {e.Message}");
             }
         }
     }
