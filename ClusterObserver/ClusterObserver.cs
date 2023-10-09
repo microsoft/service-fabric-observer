@@ -1337,15 +1337,15 @@ namespace ClusterObserver
             try
             {
                 var repairTasks = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                                               () => FabricClientInstance.RepairManager.GetRepairTaskListAsync(
-                                                        null,
-                                                        RepairTaskStateFilter.Active |
-                                                        RepairTaskStateFilter.Approved |
-                                                        RepairTaskStateFilter.Executing,
-                                                        null,
-                                                        ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigurationSettings.AsyncTimeout,
-                                                        cancellationToken),
-                                               cancellationToken);  
+                                            () => FabricClientInstance.RepairManager.GetRepairTaskListAsync(
+                                                    null,
+                                                    RepairTaskStateFilter.Active |
+                                                    RepairTaskStateFilter.Approved |
+                                                    RepairTaskStateFilter.Executing,
+                                                    null,
+                                                    ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigurationSettings.AsyncTimeout,
+                                                    cancellationToken),
+                                            cancellationToken);  
 
                 return repairTasks;
             }
@@ -1353,7 +1353,7 @@ namespace ClusterObserver
             {
 
             }
-            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
+            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException or OutOfMemoryException))
             {
                 ObserverLogger.LogWarning(e.ToString());
             }
