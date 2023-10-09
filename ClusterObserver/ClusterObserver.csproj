@@ -9,10 +9,9 @@
 		<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
 		<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
 		<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
-		<Copyright>Copyright © 2022</Copyright>
 		<Product>ClusterObserver</Product>
-		<Version>2.2.5</Version>
-		<FileVersion>2.2.5</FileVersion>
+		<Version>2.2.6</Version>
+		<FileVersion>2.2.6</FileVersion>
 		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
 		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
 		<StartupObject>ClusterObserver.Program</StartupObject>

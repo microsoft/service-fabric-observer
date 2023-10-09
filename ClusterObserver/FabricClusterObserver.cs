@@ -35,7 +35,7 @@ namespace ClusterObserver
             ConfigureServices(services);
 
             await using ServiceProvider serviceProvider = services.BuildServiceProvider();
-            using var observerManager = new ClusterObserverManager(serviceProvider, cancellationToken);
+            using ClusterObserverManager observerManager = new(serviceProvider, cancellationToken);
             await observerManager.StartAsync();
         }
 
