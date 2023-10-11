@@ -131,7 +131,7 @@
     <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="25" />
     <!-- *Windows-only*: KVS LVID Usage Monitoring.
          NOTE: If you monitor stateful Actor services, then you should set this to true. -->
-    <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
+    <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="true" />
     <!-- *Windows-only*: Process Working Set type for AppObserver to monitor.
          Note: You should consider monitoring process commit (warningPrivateBytesMb threshold setting) instead of Private Working Set for tracking potential leaks on Windows. 
          The Private Bytes measurement code is extremely fast and CPU-efficient on Windows. Monitoring Private Working Set on Windows requires PerformanceCounter, which is an expensive .net object.

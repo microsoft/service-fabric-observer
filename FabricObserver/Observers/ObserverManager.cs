@@ -1387,7 +1387,13 @@ namespace FabricObserver.Observers
 
             // DEBUG
             Logger.LogInfo("IsLVIDPerfCounterEnabled: Running check since a supported observer is enabled for LVID monitoring.");
-            const string categoryName = "Windows Fabric Database";
+            string categoryName = "Windows Fabric Database";
+
+            if (sfVersion.StartsWith("10"))
+            {
+                categoryName = "MSExchange Database";
+            }
+
             const string counterName = "Long-Value Maximum LID";
 
             // If there is corrupted state on the machine with respect to performance counters, an AV can occur (in native code, then wrapped in AccessViolationException)
