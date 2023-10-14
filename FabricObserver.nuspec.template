@@ -2,12 +2,9 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
 	<metadata minClientVersion="3.3.0">
 		<id>%PACKAGE_ID%</id>
-		<version>3.2.11</version>
+		<version>3.2.12</version>
 		<releaseNotes>
-- Bug fix in OSObserver's Windows Update Automatic Download check.
-- Bug fix in Windows dynamic port range detection (rare occurences, but still a bug).
-- Memory usage improvement in Github release version check implementation.
-- Updated package dependencies.
+- ESE LVID count monitor logic updated to support ESE changes in SF 10.x.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
@@ -16,7 +13,7 @@
 		<icon>icon.png</icon>
 		<readme>fonuget.md</readme>
 		<language>en-US</language>
-		<description>This package contains the FabricObserver(FO) Application - built for .NET 6.0 and SF Runtime 9.x. FO a highly configurable and extensible resource usage watchdog service that is designed to be run in Azure Service Fabric Windows and Linux clusters. This package contains the entire application and can be used to build .NET Standard 2.0 observer plugins. NOTE: If you want to target .NET 6 for your plugins, then you must use Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.11 nuget package to build them.</description>
+		<description>This package contains the FabricObserver(FO) Application - built for .NET 6.0 and SF Runtime 9.x. FO a highly configurable and extensible resource usage watchdog service that is designed to be run in Azure Service Fabric Windows and Linux clusters. This package contains the entire application and can be used to build .NET Standard 2.0 observer plugins. NOTE: If you want to target .NET 6 for your plugins, then you must use Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.12 nuget package to build them.</description>
 		<contentFiles>
 			<files include="**" buildAction="None" copyToOutput="true" />
 		</contentFiles>

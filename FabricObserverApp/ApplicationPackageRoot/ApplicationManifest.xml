@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <!-- You can try the XML diff/merge tool XmlDiffPatchSF (located in this repo) to make upgrading your base configurations to the latest version much easier. -->
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.11" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.12" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- ObserverManager Configuration -->
     <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
@@ -20,7 +20,7 @@
          for example, then this setting will put FO into Warning or Error state or just create a an Ok (info) health message.
          Supported values are Error, Warning, Ok or None (which means don't put FO into Warning or Error state or create an Ok health event (info)). -->
     <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
-    <Parameter Name="ObserverLogPath" DefaultValue="fabric_observer_logs" />
+    <Parameter Name="ObserverLogPath" DefaultValue="w:\fabric_observer_logs" />
     <!-- Observer Configuration Settings.
          Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can run
          versionless parameter-only application upgrades to modify them while FO is running. By design, any observer you make using our
@@ -131,7 +131,7 @@
     <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="25" />
     <!-- *Windows-only*: KVS LVID Usage Monitoring.
          NOTE: If you monitor stateful Actor services, then you should set this to true. -->
-    <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="true" />
+    <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
     <!-- *Windows-only*: Process Working Set type for AppObserver to monitor.
          Note: You should consider monitoring process commit (warningPrivateBytesMb threshold setting) instead of Private Working Set for tracking potential leaks on Windows. 
          The Private Bytes measurement code is extremely fast and CPU-efficient on Windows. Monitoring Private Working Set on Windows requires PerformanceCounter, which is an expensive .net object.
@@ -236,7 +236,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.2.11" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.2.12" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>

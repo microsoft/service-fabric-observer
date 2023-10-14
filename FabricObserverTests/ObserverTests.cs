@@ -215,7 +215,6 @@ namespace FabricObserverTests
             {
                 return;
             }
-
             
             string appType = "HealthMetricsType";
             string appVersion = "1.0.0.0";

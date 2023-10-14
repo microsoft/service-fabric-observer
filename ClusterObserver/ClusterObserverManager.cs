@@ -10,7 +10,6 @@ using System.Fabric.Description;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
-using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using ClusterObserver.Utilities;

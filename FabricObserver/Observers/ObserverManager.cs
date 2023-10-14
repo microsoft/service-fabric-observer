@@ -53,7 +53,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.2.11";
+        private const string InternalVersionNumber = "3.2.12";
 
         private static FabricClient FabricClientInstance => FabricClientUtilities.FabricClientSingleton;
 
@@ -404,115 +404,37 @@ namespace FabricObserver.Observers
             }
         }
 
-        private async Task ClearHealthReportsAsync(string configUpdateLinux)
+        public async Task ClearHealthReportsAsync(string configUpdateLinux)
         {
-            var healthReport = new HealthReport
+            HealthReport healthReport = new()
             {
                 Code = FOErrorWarningCodes.Ok,
                 HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping, starting, or updating.{configUpdateLinux}.",
                 State = HealthState.Ok,
-                NodeName = nodeName
+                NodeName = nodeName,
+                HealthReportTimeToLive = TimeSpan.FromSeconds(1)
             };
 
-            foreach (var obs in Observers)
+            foreach (var observer in Observers)
             {
-                if (obs.ObserverName == ObserverConstants.AppObserverName ||
-                    obs.ObserverName == ObserverConstants.ContainerObserverName ||
-                    obs.ObserverName == ObserverConstants.NetworkObserverName)
+                try
                 {
-                    // Service Health reports.
-                    if (obs.ServiceNames.Any(a => !string.IsNullOrWhiteSpace(a) && a.Contains("fabric:/")))
+                    if (observer.ObserverName == ObserverConstants.ContainerObserverName)
                     {
-                        foreach (var service in obs.ServiceNames)
+                        ServiceHealth serviceHealth = await FabricClientInstance.HealthManager.GetServiceHealthAsync(FabricServiceContext.ServiceName);
+                        IEnumerable<HealthEvent> fabricObserverServiceHealthEvents =
+                            serviceHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(observer.ObserverName));
+
+                        if (fabricObserverServiceHealthEvents != null && fabricObserverServiceHealthEvents.Any())
                         {
-                            try
-                            {
-                                // App Health reports. NetworkObserver only generates App health reports and stores app name in ServiceNames field (TODO: Change that).
-                                if (obs.ObserverName == ObserverConstants.NetworkObserverName)
-                                {
-                                    Uri appName = new(service);
-                                    var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(appName);
-                                    var fabricObserverAppHealthEvents =
-                                            appHealth?.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
-
-                                    if (fabricObserverAppHealthEvents != null && fabricObserverAppHealthEvents.Any())
-                                    {
-                                        foreach (var evt in fabricObserverAppHealthEvents)
-                                        {
-                                            try
-                                            {
-                                                healthReport.AppName = appName;
-                                                healthReport.EntityType = EntityType.Application;
-                                                healthReport.Property = evt.HealthInformation.Property;
-                                                healthReport.SourceId = evt.HealthInformation.SourceId;
-
-                                                var healthReporter = new ObserverHealthReporter(Logger);
-                                                healthReporter.ReportHealthToServiceFabric(healthReport);
-                                            }
-                                            catch (FabricException)
-                                            {
-
-                                            }
-                                        }
-                                    }
-                                }
-                                else // Service Health reports.
-                                {
-                                    Uri serviceName = new(service);
-                                    ServiceHealth serviceHealth = await FabricClientInstance.HealthManager.GetServiceHealthAsync(serviceName);
-                                    IEnumerable<HealthEvent> fabricObserverServiceHealthEvents =
-                                        serviceHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
-
-                                    if (fabricObserverServiceHealthEvents != null && fabricObserverServiceHealthEvents.Any())
-                                    {
-                                        foreach (var evt in fabricObserverServiceHealthEvents)
-                                        {
-                                            try
-                                            {
-                                                healthReport.ServiceName = serviceName;
-                                                healthReport.EntityType = EntityType.Service;
-                                                healthReport.Property = evt.HealthInformation.Property;
-                                                healthReport.SourceId = evt.HealthInformation.SourceId;
-
-                                                var healthReporter = new ObserverHealthReporter(Logger);
-                                                healthReporter.ReportHealthToServiceFabric(healthReport);
-                                            }
-                                            catch (FabricException)
-                                            {
-
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            catch (Exception e) when (e is FabricException or TimeoutException)
-                            {
-
-                            }
-                        }
-                    }
-                }
-
-                // FSO Health Reports.
-                if (obs.ObserverName == ObserverConstants.FabricSystemObserverName)
-                {
-                    try
-                    {
-                        // System app reports.
-                        var sysAppHealth =
-                                await FabricClientInstance.HealthManager.GetApplicationHealthAsync(new Uri(ObserverConstants.SystemAppName));
-                        var sysAppHealthEvents = sysAppHealth?.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
-
-                        if (sysAppHealthEvents != null && sysAppHealthEvents.Any())
-                        {
-                            foreach (var evt in sysAppHealthEvents)
+                            foreach (var evt in fabricObserverServiceHealthEvents)
                             {
                                 try
                                 {
-                                    healthReport.AppName = new Uri(ObserverConstants.SystemAppName);
+                                    healthReport.ServiceName = FabricServiceContext.ServiceName;
+                                    healthReport.EntityType = EntityType.Service;
                                     healthReport.Property = evt.HealthInformation.Property;
                                     healthReport.SourceId = evt.HealthInformation.SourceId;
-                                    healthReport.EntityType = EntityType.Application;
 
                                     var healthReporter = new ObserverHealthReporter(Logger);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
@@ -524,23 +446,125 @@ namespace FabricObserver.Observers
                             }
                         }
                     }
-                    catch (Exception e) when (e is FabricException or TimeoutException)
+                    else if (observer.ObserverName == ObserverConstants.AppObserverName || observer.ObserverName == ObserverConstants.NetworkObserverName)
                     {
+                        // Service Health reports.
+                        if (observer.ServiceNames.Any(a => !string.IsNullOrWhiteSpace(a) && a.Contains("fabric:/")))
+                        {
+                            foreach (var service in observer.ServiceNames)
+                            {
+                                try
+                                {
+                                    // App Health reports. NetworkObserver only generates App health reports and stores app name in ServiceNames field (TODO: Change that).
+                                    if (observer.ObserverName == ObserverConstants.NetworkObserverName)
+                                    {
+                                        Uri appName = new(service);
+                                        var appHealth = await FabricClientInstance.HealthManager.GetApplicationHealthAsync(appName);
+                                        var fabricObserverAppHealthEvents =
+                                                appHealth?.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(observer.ObserverName));
 
+                                        if (fabricObserverAppHealthEvents != null && fabricObserverAppHealthEvents.Any())
+                                        {
+                                            foreach (var evt in fabricObserverAppHealthEvents)
+                                            {
+                                                try
+                                                {
+                                                    healthReport.AppName = appName;
+                                                    healthReport.EntityType = EntityType.Application;
+                                                    healthReport.Property = evt.HealthInformation.Property;
+                                                    healthReport.SourceId = evt.HealthInformation.SourceId;
+
+                                                    var healthReporter = new ObserverHealthReporter(Logger);
+                                                    healthReporter.ReportHealthToServiceFabric(healthReport);
+                                                }
+                                                catch (FabricException)
+                                                {
+
+                                                }
+                                            }
+                                        }
+                                    }
+                                    else // Service Health reports.
+                                    {
+                                        Uri serviceName = new(service);
+                                        ServiceHealth serviceHealth = await FabricClientInstance.HealthManager.GetServiceHealthAsync(serviceName);
+                                        IEnumerable<HealthEvent> fabricObserverServiceHealthEvents =
+                                            serviceHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(observer.ObserverName));
+
+                                        if (fabricObserverServiceHealthEvents != null && fabricObserverServiceHealthEvents.Any())
+                                        {
+                                            foreach (var evt in fabricObserverServiceHealthEvents)
+                                            {
+                                                try
+                                                {
+                                                    healthReport.ServiceName = serviceName;
+                                                    healthReport.EntityType = EntityType.Service;
+                                                    healthReport.Property = evt.HealthInformation.Property;
+                                                    healthReport.SourceId = evt.HealthInformation.SourceId;
+
+                                                    var healthReporter = new ObserverHealthReporter(Logger);
+                                                    healthReporter.ReportHealthToServiceFabric(healthReport);
+                                                }
+                                                catch (FabricException)
+                                                {
+
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                catch (Exception e) when (e is FabricException or TimeoutException)
+                                {
+
+                                }
+                            }
+                        }
                     }
-                }
-
-                try
-                {
-                    if (obs.ObserverName == ObserverConstants.CertificateObserverName ||
-                        obs.ObserverName == ObserverConstants.DiskObserverName ||
-                        obs.ObserverName == ObserverConstants.FabricSystemObserverName ||
-                        obs.ObserverName == ObserverConstants.NodeObserverName ||
-                        obs.ObserverName == ObserverConstants.OSObserverName)
+                    // System reports (fabric:/System).
+                    else if (observer.ObserverName == ObserverConstants.FabricSystemObserverName)
                     {
-                        // Node reports.
-                        var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(obs.NodeName);
-                        var fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(obs.ObserverName));
+                        try
+                        {
+                            var sysAppHealth =
+                                    await FabricClientInstance.HealthManager.GetApplicationHealthAsync(new Uri(ObserverConstants.SystemAppName));
+                            var sysAppHealthEvents = sysAppHealth?.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(observer.ObserverName));
+
+                            if (sysAppHealthEvents != null && sysAppHealthEvents.Any())
+                            {
+                                foreach (var evt in sysAppHealthEvents)
+                                {
+                                    try
+                                    {
+                                        healthReport.AppName = new Uri(ObserverConstants.SystemAppName);
+                                        healthReport.Property = evt.HealthInformation.Property;
+                                        healthReport.SourceId = evt.HealthInformation.SourceId;
+                                        healthReport.EntityType = EntityType.Application;
+
+                                        var healthReporter = new ObserverHealthReporter(Logger);
+                                        healthReporter.ReportHealthToServiceFabric(healthReport);
+                                    }
+                                    catch (FabricException)
+                                    {
+
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception e) when (e is FabricException or TimeoutException)
+                        {
+
+                        }
+                    }
+
+                    // Node reports.
+                    if (observer.ObserverName == ObserverConstants.CertificateObserverName ||
+                        observer.ObserverName == ObserverConstants.DiskObserverName ||
+                        observer.ObserverName == ObserverConstants.FabricSystemObserverName ||
+                        observer.ObserverName == ObserverConstants.NodeObserverName ||
+                        observer.ObserverName == ObserverConstants.OSObserverName)
+                    {
+                        var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(observer.NodeName);
+                        var fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(observer.ObserverName));
 
                         if (fabricObserverNodeHealthEvents != null && fabricObserverNodeHealthEvents.Any())
                         {
@@ -563,13 +587,14 @@ namespace FabricObserver.Observers
                             }
                         }
                     }
+
+                    // Reset warning/error states.
+                    observer.HasActiveFabricErrorOrWarning = false;
                 }
-                catch (Exception e) when (e is FabricException or TimeoutException)
+                catch (Exception e) when (e is not OutOfMemoryException)
                 {
 
                 }
-
-                obs.HasActiveFabricErrorOrWarning = false;
             }
         }
 

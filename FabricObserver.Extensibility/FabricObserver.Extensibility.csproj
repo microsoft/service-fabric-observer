@@ -5,8 +5,8 @@
 		<RootNamespace>FabricObserver</RootNamespace>
 		<Copyright>Copyright © 2023</Copyright>
 		<Product>FabricObserver</Product>
-		<Version>3.2.11</Version>
-		<FileVersion>3.2.11</FileVersion>
+		<Version>3.2.12</Version>
+		<FileVersion>3.2.12</FileVersion>
 		<NoWarn>CA1416</NoWarn>
 	</PropertyGroup>
 	<ItemGroup>
