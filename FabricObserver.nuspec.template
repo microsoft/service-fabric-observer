@@ -4,7 +4,7 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.12</version>
 		<releaseNotes>
-- ESE LVID count monitor logic updated to support ESE changes in SF 10.x.
+- ESE LVID count monitor updated to support ESE database performance category change in SF 10.x versions.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
