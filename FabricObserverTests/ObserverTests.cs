@@ -102,6 +102,11 @@ namespace FabricObserverTests
                         long.MaxValue);
 
             // Install required SF test applications.
+            await DeployTestAppsAppsAsync();
+        }
+
+        private static async Task DeployTestAppsAppsAsync()
+        {
             await DeployHealthMetricsAppAsync();
             await DeployTestApp42Async();
             await DeployVotingAppAsync();

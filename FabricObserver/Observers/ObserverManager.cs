@@ -39,6 +39,7 @@ namespace FabricObserver.Observers
             get; set;
         }
 
+        private const string LVIDCounterName = "Long-Value Maximum LID";
         private readonly string nodeName;
         private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
         private readonly CancellationToken runAsyncToken;
@@ -1413,13 +1414,12 @@ namespace FabricObserver.Observers
             // DEBUG
             Logger.LogInfo("IsLVIDPerfCounterEnabled: Running check since a supported observer is enabled for LVID monitoring.");
             string categoryName = "Windows Fabric Database";
+            
 
-            if (sfVersion.StartsWith("10"))
+            if (sfVersion.StartsWith("1"))
             {
                 categoryName = "MSExchange Database";
             }
-
-            const string counterName = "Long-Value Maximum LID";
 
             // If there is corrupted state on the machine with respect to performance counters, an AV can occur (in native code, then wrapped in AccessViolationException)
             // when calling PerformanceCounterCategory.Exists below. This is actually a symptom of a problem that extends beyond just this counter category..
@@ -1428,7 +1428,7 @@ namespace FabricObserver.Observers
             // cause issues (not FO crashes necessarily, but inaccurate data related to the metrics they represent (like, you will always see 0 or -1 measurement values)).
             try
             {
-                return PerformanceCounterCategory.CounterExists(counterName, categoryName);
+                return PerformanceCounterCategory.CounterExists(LVIDCounterName, categoryName);
             }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or UnauthorizedAccessException or Win32Exception)
             {

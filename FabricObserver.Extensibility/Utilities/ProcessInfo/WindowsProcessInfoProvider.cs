@@ -25,12 +25,27 @@ namespace FabricObserver.Observers.Utilities
         private const string ProcessCategoryName = "Process";
         private const string ProcessMemoryCounterName = "Working Set - Private";
         private const string ProcessIDCounterName = "ID Process";
-        private const string WinFabDbCategoryName = "Windows Fabric Database";
-        private const string LvidCounterName = "Long-Value Maximum LID";
+        private const string LVIDCounterName = "Long-Value Maximum LID";
         private static readonly object lockObj = new();
-        private volatile bool hasWarnedProcessNameLength = false;
         private static PerformanceCounterCategory performanceCounterCategory = null;
+        private volatile bool hasWarnedProcessNameLength = false;
         public readonly static ConcurrentDictionary<string, (string procName, int procId, DateTime processStartTime)> InstanceNameDictionary = new();
+
+        private static string WinFabDbCategoryName
+        {
+            get
+            {
+                try
+                {
+                    return ServiceFabricConfiguration.Instance.FabricVersion.StartsWith("1") ? "MSExchange Database" : "Windows Fabric Database";
+                }
+                catch (ArgumentException ae)
+                {
+                    ProcessInfoLogger.LogWarning("WinFabDbCategoryName property failure: " + ae.Message);
+                    return null;
+                }
+            }
+        }
 
         private static PerformanceCounterCategory PerfCounterProcessCategory
         {
@@ -290,7 +305,7 @@ namespace FabricObserver.Observers.Utilities
 
                 /* Check to see if the supplied instance (process) exists in the category. */
 
-                if (!PerformanceCounterCategory.InstanceExists(internalProcName, WinFabDbCategoryName))
+                if (!string.IsNullOrEmpty(WinFabDbCategoryName) && !PerformanceCounterCategory.InstanceExists(internalProcName, WinFabDbCategoryName))
                 {
                     return -1;
                 }
@@ -302,7 +317,7 @@ namespace FabricObserver.Observers.Utilities
                    categoryName and counterName are never null (they are const strings).
                    Only two possible exceptions can happen here: IOE and Win32Exception. */
 
-                using PerformanceCounter LvidCounter = new(WinFabDbCategoryName, LvidCounterName, internalProcName, true);
+                using PerformanceCounter LvidCounter = new(WinFabDbCategoryName, LVIDCounterName, internalProcName, true);
                 float result = LvidCounter.NextValue();
                 double usedPct = (double)(result * 100) / int.MaxValue;
                 return usedPct;
