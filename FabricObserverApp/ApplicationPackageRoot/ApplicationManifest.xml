@@ -20,7 +20,7 @@
          for example, then this setting will put FO into Warning or Error state or just create a an Ok (info) health message.
          Supported values are Error, Warning, Ok or None (which means don't put FO into Warning or Error state or create an Ok health event (info)). -->
     <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
-    <Parameter Name="ObserverLogPath" DefaultValue="w:\fabric_observer_logs" />
+    <Parameter Name="ObserverLogPath" DefaultValue="fabric_observer_logs" />
     <!-- Observer Configuration Settings.
          Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can run
          versionless parameter-only application upgrades to modify them while FO is running. By design, any observer you make using our
