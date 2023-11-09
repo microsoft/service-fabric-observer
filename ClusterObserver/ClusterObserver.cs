@@ -28,7 +28,7 @@ namespace ClusterObserver
         private readonly Uri fabricSystemAppUri = new(ObserverConstants.SystemAppName);
         private readonly bool ignoreDefaultQueryTimeout;
 
-        private HealthState LastKnownClusterHealthState
+        private HealthState LastKnownClusterAggregatedHealthState
         {
             get; set;
         } = HealthState.Unknown;
@@ -185,7 +185,7 @@ namespace ClusterObserver
                             HealthState = HealthState.Ok,
                             Description = repairState,
                             Metric = "RepairJobs",
-                            Source = ObserverName
+                            ObserverName = ObserverName
                         };
 
                         // Telemetry.
@@ -243,19 +243,17 @@ namespace ClusterObserver
                             Token);
 
                 // Previous aggregated cluster health state was Error or Warning. It's now Ok.
-                if (clusterHealth.AggregatedHealthState == HealthState.Ok && (LastKnownClusterHealthState == HealthState.Error
-                    || (EmitWarningDetails && LastKnownClusterHealthState == HealthState.Warning)))
+                if (clusterHealth.AggregatedHealthState == HealthState.Ok && (LastKnownClusterAggregatedHealthState == HealthState.Error
+                    || (EmitWarningDetails && LastKnownClusterAggregatedHealthState == HealthState.Warning)))
                 {
-                    LastKnownClusterHealthState = HealthState.Ok;
-
                     var telemetry = new ClusterTelemetryData()
                     {
                         ClusterId = ClusterInformation.ClusterInfoTuple.ClusterId,
                         EntityType = EntityType.Cluster,
                         HealthState = HealthState.Ok,
-                        Description = $"Cluster has recovered from previous {LastKnownClusterHealthState} state.",
+                        Description = $"Cluster has recovered from previous {LastKnownClusterAggregatedHealthState} state.",
                         Metric = "AggregatedClusterHealth",
-                        Source = ObserverName
+                        ObserverName = ObserverName
                     };
 
                     // Telemetry.
@@ -272,6 +270,9 @@ namespace ClusterObserver
                     {
                         ObserverLogger.LogEtw(ClusterObserverConstants.ClusterObserverETWEventName, telemetry);
                     }
+
+                    // Reset last known Cluster aggregated health state.
+                    LastKnownClusterAggregatedHealthState = HealthState.Ok;
 
                     return;
                 }
@@ -350,7 +351,7 @@ namespace ClusterObserver
                 }
 
                 // Track current aggregated health state for use in next run.
-                LastKnownClusterHealthState = clusterHealth.AggregatedHealthState;
+                LastKnownClusterAggregatedHealthState = clusterHealth.AggregatedHealthState;
             }
             catch (Exception e) when (e is FabricException or TimeoutException)
             {
@@ -372,7 +373,7 @@ namespace ClusterObserver
                     EntityType = EntityType.Cluster,
                     HealthState = HealthState.Warning,
                     Description = msg,
-                    Source = ObserverName
+                    ObserverName = ObserverName
                 };
 
                 // Send Telemetry.
@@ -763,7 +764,7 @@ namespace ClusterObserver
                                 EntityType = EntityType.Node,
                                 NodeName = targetNode?.NodeName ?? node.NodeName,
                                 NodeType = targetNode?.NodeType,
-                                Source = ObserverName,
+                                ObserverName = ObserverName,
                                 HealthState = targetNode?.HealthState ?? node.AggregatedHealthState,
                                 Description = telemetryDescription
                             };
@@ -814,7 +815,8 @@ namespace ClusterObserver
                             Property = healthEvent.HealthInformation.Property,
                             Description = healthEvent.HealthInformation.Description,
                             HealthState = healthEvent.HealthInformation.HealthState,
-                            Source = healthEvent.HealthInformation.SourceId
+                            Source = healthEvent.HealthInformation.SourceId,
+                            ObserverName = ClusterObserverConstants.ClusterObserverName
                         };
 
                         // Telemetry.
@@ -853,7 +855,8 @@ namespace ClusterObserver
                             Property = healthEvent.HealthInformation.Property,
                             Description = healthEvent.HealthInformation.Description,
                             HealthState = healthEvent.HealthInformation.HealthState,
-                            Source = healthEvent.HealthInformation.SourceId
+                            Source = healthEvent.HealthInformation.SourceId,
+                            ObserverName = ClusterObserverConstants.ClusterObserverName
                         };
 
                         // Telemetry.
@@ -905,7 +908,8 @@ namespace ClusterObserver
                             Property = healthEvent.HealthInformation.Property,
                             Description = healthEvent.HealthInformation.Description,
                             HealthState = healthEvent.HealthInformation.HealthState,
-                            Source = healthEvent.HealthInformation.SourceId
+                            Source = healthEvent.HealthInformation.SourceId,
+                            ObserverName = ClusterObserverConstants.ClusterObserverName
                         };
 
                         // Telemetry.
@@ -943,7 +947,8 @@ namespace ClusterObserver
                             Property = healthEvent.HealthInformation.Property,
                             Description = healthEvent.HealthInformation.Description,
                             HealthState = healthEvent.HealthInformation.HealthState,
-                            Source = healthEvent.HealthInformation.SourceId
+                            Source = healthEvent.HealthInformation.SourceId,
+                            ObserverName = ClusterObserverConstants.ClusterObserverName
                         };
 
                         // Telemetry.
@@ -981,7 +986,8 @@ namespace ClusterObserver
                             PartitionId = partitionHealth.PartitionId.ToString(),
                             Description = healthEvent.HealthInformation.Description,
                             HealthState = healthEvent.HealthInformation.HealthState,
-                            Source = healthEvent.HealthInformation.SourceId
+                            Source = healthEvent.HealthInformation.SourceId,
+                            ObserverName = ClusterObserverConstants.ClusterObserverName
                         };
 
                         // Telemetry.
@@ -1037,7 +1043,8 @@ namespace ClusterObserver
                             Description = healthEvent.HealthInformation.Description,
                             HealthState = healthEvent.HealthInformation.HealthState,
                             ServiceKind = serviceKind,
-                            Source = healthEvent.HealthInformation.SourceId
+                            Source = healthEvent.HealthInformation.SourceId,
+                            ObserverName = ClusterObserverConstants.ClusterObserverName
                         };
 
                         // Telemetry.
@@ -1096,7 +1103,8 @@ namespace ClusterObserver
                             ServiceTypeVersion = serviceList[0].ServiceManifestVersion,
                             Description = healthEvent.HealthInformation.Description,
                             HealthState = healthEvent.HealthInformation.HealthState,
-                            Source = healthEvent.HealthInformation.SourceId
+                            Source = healthEvent.HealthInformation.SourceId,
+                            ObserverName = ClusterObserverConstants.ClusterObserverName
                         };
 
                         // Telemetry.
@@ -1153,7 +1161,7 @@ namespace ClusterObserver
                         Metric = "NodeStatus",
                         NodeName = nodeDictItem.Key,
                         NodeType = nodeList.Any(n => n.NodeName == nodeDictItem.Key) ? nodeList.First(n => n.NodeName == nodeDictItem.Key).NodeType : null,
-                        Source = ObserverName,
+                        ObserverName = ObserverName,
                         Value = 0
                     };
 
@@ -1221,7 +1229,7 @@ namespace ClusterObserver
                             Metric = "NodeStatus",
                             NodeName = kvp.Key,
                             NodeType = nodeList.Any(n => n.NodeName == kvp.Key) ? nodeList.First(n => n.NodeName == kvp.Key).NodeType : null,
-                            Source = ObserverName,
+                            ObserverName = ObserverName,
                             Value = 1,
                         };
 

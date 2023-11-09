@@ -70,7 +70,7 @@ namespace FabricObserver
             LoadObserversFromPlugins(services);
         }
 
-        // When deleting a stateless instance (like the FabricObserver instance), the SF runtime will call this override. 
+        // Stateless instance restarted (via Remove-ServiceFabricReplica or RemoveReplicaAsync called *without* ForceRemove flag).
         // This ensures that any health report that FO created will be cleared.
         protected override void OnAbort()
         {
@@ -78,9 +78,9 @@ namespace FabricObserver
             {
                 observerManager.ShutDownAsync().GetAwaiter().GetResult();
             }
-            catch (Exception e) when (e is AggregateException or ObjectDisposedException)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
-
+                // Don't crash in Abort unless it's OOM..
             }
 
             base.OnAbort();
