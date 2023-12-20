@@ -52,7 +52,7 @@ You must implement ObserverBase's two abstract functions:
     }
 ```
 
-5. Build your observer project, drop the output dll and *ALL* of its dependencies, both managed and native (this is *very* important), into the Config/Data/Plugins folder in FabricObserver/PackageRoot. 
+5. Build your observer project, drop the output dll and *ALL* of its dependencies, both managed and native (this is *very* important), into the Data/Plugins folder in FabricObserver/PackageRoot. 
    You can place your plugin dll and all of its dependencies in its own (*same*) folder under the Plugins directory (useful if you have multiple plugins). 
    Again, ALL plugin dll dependencies (and their dependencies, if any) need to live in the *same* folder as the plugin dll.
 
