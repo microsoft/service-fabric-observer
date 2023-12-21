@@ -5,6 +5,7 @@
 		<version>3.2.12</version>
 		<releaseNotes>
 - ESE LVID count monitor updated to support ESE database performance category change in SF 10.x versions.
+- Adding a warning health event to inform customer if there is an issue with loading plugins.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

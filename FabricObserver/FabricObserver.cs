@@ -11,6 +11,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers;
+using FabricObserver.Observers.Utilities;
 using FabricObserver.Utilities;
 using McMaster.NETCore.Plugins;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,6 +25,7 @@ namespace FabricObserver
     internal sealed class FabricObserverService : StatelessService
     {
         private ObserverManager observerManager;
+        private readonly Logger logger;
 
         /// <summary>
         /// Initializes a new instance of the type.
@@ -31,7 +33,7 @@ namespace FabricObserver
         /// <param name="context">StatelessServiceContext instance.</param>
         public FabricObserverService(StatelessServiceContext context) : base(context)
         {
-
+            logger = new Logger("FabricObserverService");
         }
 
         /// <summary>
@@ -108,10 +110,11 @@ namespace FabricObserver
 
             PluginLoader[] pluginLoaders = new PluginLoader[pluginDlls.Length];
             Type[] sharedTypes = { typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup), typeof(IServiceCollection) };
+            string dll = "";
 
             for (int i = 0; i < pluginDlls.Length; ++i)
             {
-                string dll = pluginDlls[i];
+                dll = pluginDlls[i];
                 PluginLoader loader = PluginLoader.CreateFromAssemblyFile(dll, sharedTypes, a => a.IsUnloadable = false);
                 pluginLoaders[i] = loader;
             }
@@ -148,7 +151,32 @@ namespace FabricObserver
                 }
                 catch (Exception e) when (e is ArgumentException or BadImageFormatException or IOException)
                 {
+                    if(e is IOException)
+                    {
+                        string error = $"Plugin dll {dll} could not be loaded. {e.Message}";
+                        HealthReport healthReport = new()
+                        {
+                            AppName = new Uri($"{Context.CodePackageActivationContext.ApplicationName}"),
+                            EmitLogEvent = true,
+                            HealthMessage = error,
+                            EntityType = Observers.Utilities.Telemetry.EntityType.Application,
+                            HealthReportTimeToLive = TimeSpan.FromMinutes(10),
+                            State = System.Fabric.Health.HealthState.Warning,
+                            Property = "FabricObserverPluginLoadError",
+                            SourceId = $"FabricObserverService-{Context.NodeContext.NodeName}",
+                            NodeName = Context.NodeContext.NodeName,
+                        };
+
+                        ObserverHealthReporter observerHealth = new(logger);
+                        observerHealth.ReportHealthToServiceFabric(healthReport);
+                    }
+
                     continue;
+                }
+                catch (Exception e) when (e is not OutOfMemoryException)
+                {
+                    logger.LogError($"Unhandled exception in FabricObserverService Instance: {e.Message}");
+                    throw;
                 }
             }
         }
