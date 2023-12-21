@@ -25,7 +25,7 @@ namespace FabricObserver
     internal sealed class FabricObserverService : StatelessService
     {
         private ObserverManager observerManager;
-        readonly Logger logger;
+        private readonly Logger logger;
 
         /// <summary>
         /// Initializes a new instance of the type.
