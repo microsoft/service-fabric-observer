@@ -151,7 +151,7 @@ namespace FabricObserver
                 }
                 catch (Exception e) when (e is ArgumentException or BadImageFormatException or IOException)
                 {
-                    if(e is IOException)
+                    if (e is IOException)
                     {
                         string error = $"Plugin dll {dll} could not be loaded. {e.Message}";
                         HealthReport healthReport = new()
