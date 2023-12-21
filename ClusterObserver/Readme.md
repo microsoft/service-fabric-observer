@@ -1,4 +1,4 @@
-### ClusterObserver 2.2.6
+### ClusterObserver 2.2.7
 #### This version - and all subsequent versions - requires SF Runtime >= 9.0 and targets .NET 6
 
 ClusterObserver (CO) is a stateless singleton Service Fabric .NET 6 service that runs on one node in a cluster. CO observes cluster health (aggregated) 
@@ -30,7 +30,7 @@ Application Parameter Upgrade Example:
 ```Powershell
 
 $appName = "fabric:/ClusterObserver"
-$appVersion = "2.2.6"
+$appVersion = "2.2.7"
 
 $application = Get-ServiceFabricApplication -ApplicationName $appName
 
@@ -161,7 +161,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName $appName -ApplicationType
 
 ``` XML
 <?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.2.6" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.2.7" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- ClusterObserverManager settings. -->
     <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
@@ -190,7 +190,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName $appName -ApplicationType
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.2.6" />
+    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.2.7" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>

@@ -2,9 +2,11 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
 	<metadata minClientVersion="3.3.0">
 		<id>%PACKAGE_ID%</id>
-		<version>3.2.11</version>
+		<version>3.2.12</version>
 		<releaseNotes>
-Note: This is library is required for observer plugins that target FabricObserver 3.2.11. 
+Note: This is library is required for observer plugins that target FabricObserver 3.2.12. 
+- Updated LVID count monitor to support ESE database performance category change in SF 10.x versions.
+- Adding a warning health event to inform customer if there is an issue with loading plugins.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.2.6" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.2.7" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- ClusterObserverManager settings. -->
     <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
@@ -10,7 +10,7 @@
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
     <Parameter Name="ObserverManagerEnableOperationalTelemetry" DefaultValue="true" />
     <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
-    <Parameter Name="ClusterObserverLogPath" DefaultValue="cluster_observer_logs" />
+    <Parameter Name="ClusterObserverLogPath" DefaultValue="s:\cluster_observer_logs" />
     <!-- ClusterObserver settings. -->
     <Parameter Name="ClusterObserverEnabled" DefaultValue="true" />
     <Parameter Name="ClusterObserverEnableETW" DefaultValue="true" />
@@ -20,15 +20,15 @@
     <Parameter Name="EmitHealthWarningEvaluationDetails" DefaultValue="true" />
     <Parameter Name="ClusterObserverRunInterval" DefaultValue="" />
     <Parameter Name="ClusterObserverAsyncOperationTimeoutSeconds" DefaultValue="120" />
-    <Parameter Name="MonitorRepairJobs" DefaultValue="true" />
-    <Parameter Name="MonitorUpgrades" DefaultValue="true" />
+    <Parameter Name="MonitorRepairJobs" DefaultValue="false" />
+    <Parameter Name="MonitorUpgrades" DefaultValue="false" />
     <!-- Plugin settings... -->
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.2.6" />
+    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.2.7" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>

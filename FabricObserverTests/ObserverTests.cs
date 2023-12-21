@@ -102,6 +102,11 @@ namespace FabricObserverTests
                         long.MaxValue);
 
             // Install required SF test applications.
+            await DeployTestAppsAppsAsync();
+        }
+
+        private static async Task DeployTestAppsAppsAsync()
+        {
             await DeployHealthMetricsAppAsync();
             await DeployTestApp42Async();
             await DeployVotingAppAsync();
@@ -215,7 +220,6 @@ namespace FabricObserverTests
             {
                 return;
             }
-
             
             string appType = "HealthMetricsType";
             string appVersion = "1.0.0.0";

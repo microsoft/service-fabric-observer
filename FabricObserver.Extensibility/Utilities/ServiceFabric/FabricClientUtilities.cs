@@ -1212,7 +1212,8 @@ namespace FabricObserver.Utilities.ServiceFabric
                 State = HealthState.Ok,
                 NodeName = nodeName,
                 ServiceName = service.ServiceName,
-                EntityType = EntityType.Service
+                EntityType = EntityType.Service,
+                HealthReportTimeToLive = TimeSpan.FromSeconds(1)
             };
             ObserverHealthReporter healthReporter = new(logger);
 
@@ -1264,7 +1265,8 @@ namespace FabricObserver.Utilities.ServiceFabric
                 State = HealthState.Ok,
                 NodeName = nodeName,
                 AppName = app.ApplicationName,
-                EntityType = EntityType.Application
+                EntityType = EntityType.Application,
+                HealthReportTimeToLive = TimeSpan.FromSeconds(1)
             };
             ObserverHealthReporter healthReporter = new(logger);
 
@@ -1319,7 +1321,8 @@ namespace FabricObserver.Utilities.ServiceFabric
                     HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping or starting.",
                     State = HealthState.Ok,
                     NodeName = this.nodeName,
-                    EntityType = EntityType.Machine
+                    EntityType = EntityType.Machine,
+                    HealthReportTimeToLive = TimeSpan.FromSeconds(1)
                 };
                 ObserverHealthReporter healthReporter = new(logger);
 

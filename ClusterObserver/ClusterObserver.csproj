@@ -10,8 +10,8 @@
 		<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
 		<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
 		<Product>ClusterObserver</Product>
-		<Version>2.2.6</Version>
-		<FileVersion>2.2.6</FileVersion>
+		<Version>2.2.7</Version>
+		<FileVersion>2.2.7</FileVersion>
 		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
 		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
 		<StartupObject>ClusterObserver.Program</StartupObject>

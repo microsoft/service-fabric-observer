@@ -10,7 +10,6 @@ using System.Fabric.Description;
 using System.Fabric.Health;
 using System.IO;
 using System.Linq;
-using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using ClusterObserver.Utilities;
@@ -40,7 +39,7 @@ namespace ClusterObserver
         private bool appParamsUpdating;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "2.2.6";
+        private const string InternalVersionNumber = "2.2.7";
 
         public bool EnableOperationalTelemetry
         {
