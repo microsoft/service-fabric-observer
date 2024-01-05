@@ -1028,6 +1028,10 @@ namespace FabricObserver.Observers
 
             // Support for specifying single configuration JSON object for all applications.
             await ProcessGlobalThresholdSettingsAsync();
+
+            // Support for specifying thresholds in application's manifest
+            await ProcessAppManifestThresholdSettingsAsync();
+
             SetConcurrentMonitoringState();
 
             int settingsFail = 0;
@@ -1211,6 +1215,129 @@ namespace FabricObserver.Observers
                 CancellationToken = Token,
                 TaskScheduler = TaskScheduler.Default
             };
+        }
+
+        private bool PopulateAppInfoWithAppManifestThresholds(DeployedApplication deployedApp, ApplicationInfo appInfo) 
+        {
+            string appTypeVersion = null;
+            ApplicationParameterList appParameters = null;
+            ApplicationParameterList defaultParameters = null;
+
+            ApplicationList appList =
+                FabricClientInstance.QueryManager.GetApplicationListAsync(
+                    deployedApp.ApplicationName,
+                    ConfigurationSettings.AsyncTimeout,
+                    Token).Result;
+
+            ApplicationTypeList applicationTypeList =
+                FabricClientInstance.QueryManager.GetApplicationTypeListAsync(
+                    deployedApp.ApplicationTypeName,
+                    ConfigurationSettings.AsyncTimeout,
+                    Token).Result;
+
+            if (appList?.Count > 0)
+            {
+                try
+                {
+                    if (appList.Any(app => app.ApplicationTypeName == deployedApp.ApplicationTypeName))
+                    {
+                        appTypeVersion = appList.First(app => app.ApplicationTypeName == deployedApp.ApplicationTypeName).ApplicationTypeVersion;
+                        appParameters = appList.First(app => app.ApplicationTypeName == deployedApp.ApplicationTypeName).ApplicationParameters;
+                    }
+
+                    if (applicationTypeList.Any(app => app.ApplicationTypeVersion == appTypeVersion))
+                    {
+                        defaultParameters = applicationTypeList.First(app => app.ApplicationTypeVersion == appTypeVersion).DefaultParameters;
+                    }
+                }
+                catch (Exception e) when (e is ArgumentException or InvalidOperationException)
+                {
+
+                }
+            }
+
+            ApplicationParameterList parameters = new();
+            FabricClientUtilities.AddParametersIfNotExists(parameters, appParameters);
+            FabricClientUtilities.AddParametersIfNotExists(parameters, defaultParameters);
+
+            // RG memory warning threshold 
+            if (parameters.Contains(ObserverConstants.AppManifestThresholdRGMemory))
+            {
+                if (double.TryParse(parameters[ObserverConstants.AppManifestThresholdRGMemory].Value, out double rgMemoryThreshold) && rgMemoryThreshold > 0)
+                {
+                    appInfo.WarningRGMemoryLimitPercent = rgMemoryThreshold;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private async Task ProcessAppManifestThresholdSettingsAsync()
+        {
+            for (int i = 0; i < deployedApps.Count; i++)
+            {
+                Token.ThrowIfCancellationRequested();
+
+                var app = deployedApps[i];
+
+                try
+                {
+                    // Make sure deployed app is not a containerized app.
+                    var codepackages = await FabricClientInstance.QueryManager.GetDeployedCodePackageListAsync(NodeName, app.ApplicationName, null, null, ConfigurationSettings.AsyncTimeout, Token);
+
+                    if (codepackages.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    int containerHostCount = codepackages.Count(c => c.HostType == HostType.ContainerHost);
+
+                    // Ignore containerized apps. ContainerObserver is designed for those types of services.
+                    if (containerHostCount > 0)
+                    {
+                        continue;
+                    }
+
+                    // AppObserver does not monitor SF system services.
+                    if (app.ApplicationName.OriginalString == "fabric:/System")
+                    {
+                        continue;
+                    }
+                }
+                catch (FabricException fe)
+                {
+                    ObserverLogger.LogWarning($"Handled FabricException from GetDeployedCodePackageListAsync call for app {app.ApplicationName.OriginalString}: {fe.Message}.");
+                    continue;
+                }
+                // Don't create a brand new entry for an existing (specified in configuration) app target/type. Just update the appConfig instance with data supplied in the application's manifest.
+                // If a threshold is supplied in the application's manifest, it will override all other settings.
+                if (userTargetList.Any(a => a.TargetApp == app.ApplicationName.OriginalString || a.TargetAppType == app.ApplicationTypeName))
+                {
+                    var existingAppConfig = userTargetList.FindAll(a => a.TargetApp == app.ApplicationName.OriginalString || a.TargetAppType == app.ApplicationTypeName);
+
+                    if (existingAppConfig == null || existingAppConfig.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    for (int j = 0; j < existingAppConfig.Count; j++)
+                    {
+                        PopulateAppInfoWithAppManifestThresholds(app, existingAppConfig[j]);
+                    }
+                }
+                else
+                {
+                    var appConfig = new ApplicationInfo
+                    {
+                        TargetApp = app.ApplicationName.OriginalString
+                    };
+
+                    if (PopulateAppInfoWithAppManifestThresholds(app, appConfig))
+                    {
+                        userTargetList.Add(appConfig);
+                    }
+                }
+            }
         }
 
         private async Task ProcessGlobalThresholdSettingsAsync()

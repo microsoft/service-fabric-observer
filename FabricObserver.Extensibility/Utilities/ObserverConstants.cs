@@ -193,5 +193,8 @@ namespace FabricObserver.Observers.Utilities
         public const string DefaultValue = "DefaultValue";
         public const string Parameter = "Parameter";
         public const string Parameters = "Parameters";
+
+        // AppManifest Thresholds
+        public const string AppManifestThresholdRGMemory = "FabricObserverWarningThresholdPercent_RGMemory";
     }
 }
