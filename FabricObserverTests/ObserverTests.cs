@@ -1255,7 +1255,7 @@ namespace FabricObserverTests
                 UpgradePolicyDescription = new RollingUpgradePolicyDescription() { UpgradeMode = RollingUpgradeMode.UnmonitoredAuto }
             };
 
-            appUpgradeDescription.ApplicationParameters.Add("FabricObserverWarningThresholdPercent_RGMemory", "1");
+            appUpgradeDescription.ApplicationParameters.Add(ObserverConstants.AppManifestWarningRGMemoryLimitPercent, "1");
 
             try
             {
@@ -1288,7 +1288,7 @@ namespace FabricObserverTests
             await obs.ObserveAsync(Token);
 
             // Revert previous upgrade.
-            appUpgradeDescription.ApplicationParameters["FabricObserverWarningThresholdPercent_RGMemory"] =  "0";
+            appUpgradeDescription.ApplicationParameters[ObserverConstants.AppManifestWarningRGMemoryLimitPercent] =  "0";
 
             try
             {

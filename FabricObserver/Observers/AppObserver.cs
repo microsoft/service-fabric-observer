@@ -1260,16 +1260,226 @@ namespace FabricObserver.Observers
             FabricClientUtilities.AddParametersIfNotExists(parameters, appParameters);
             FabricClientUtilities.AddParametersIfNotExists(parameters, defaultParameters);
 
-            // RG memory warning threshold 
-            if (parameters.Contains(ObserverConstants.AppManifestThresholdRGMemory))
+            bool informationAdded = false;
+
+            // Working Set
+            if (parameters.Contains(ObserverConstants.AppManifestMemoryWarningLimitMb))
             {
-                if (double.TryParse(parameters[ObserverConstants.AppManifestThresholdRGMemory].Value, out double rgMemoryThreshold) && rgMemoryThreshold > 0)
+                if (long.TryParse(parameters[ObserverConstants.AppManifestMemoryWarningLimitMb].Value, out long memoryMbWarningThreshold) && memoryMbWarningThreshold > 0)
                 {
-                    appInfo.WarningRGMemoryLimitPercent = rgMemoryThreshold;
-                    return true;
+                    appInfo.MemoryWarningLimitMb = memoryMbWarningThreshold;
+                    informationAdded = true;
                 }
             }
-            return false;
+            if (parameters.Contains(ObserverConstants.AppManifestMemoryErrorLimitMb))
+            {
+                if (long.TryParse(parameters[ObserverConstants.AppManifestMemoryErrorLimitMb].Value, out long memoryMbErrorThreshold) && memoryMbErrorThreshold > 0)
+                {
+                    appInfo.MemoryErrorLimitMb = memoryMbErrorThreshold;
+                    informationAdded = true;
+                }
+            }
+            if (parameters.Contains(ObserverConstants.AppManifestMemoryWarningLimitPercent))
+            {
+                if (double.TryParse(parameters[ObserverConstants.AppManifestMemoryWarningLimitPercent].Value, out double memoryPctWarningThreshold) && memoryPctWarningThreshold > 0)
+                {
+                    appInfo.MemoryWarningLimitPercent = memoryPctWarningThreshold;
+                    informationAdded = true;
+                }
+            }
+            if (parameters.Contains(ObserverConstants.AppManifestMemoryErrorLimitPercent))
+            {
+                if (double.TryParse(parameters[ObserverConstants.AppManifestMemoryErrorLimitPercent].Value, out double memoryPctErrorThreshold) && memoryPctErrorThreshold > 0)
+                {
+                    appInfo.MemoryErrorLimitPercent = memoryPctErrorThreshold;
+                    informationAdded = true;
+                }
+            }
+            // CPU
+            if (parameters.Contains(ObserverConstants.AppManifestCpuErrorLimitPercent))
+            {
+                if (double.TryParse(parameters[ObserverConstants.AppManifestCpuErrorLimitPercent].Value, out double cpuPctErrorThreshold) && cpuPctErrorThreshold > 0)
+                {
+                    appInfo.CpuErrorLimitPercent = cpuPctErrorThreshold;
+                    informationAdded = true;
+                }
+            }
+            if (parameters.Contains(ObserverConstants.AppManifestCpuWarningLimitPercent))
+            {
+                if (double.TryParse(parameters[ObserverConstants.AppManifestCpuWarningLimitPercent].Value, out double cpuPctWarningThreshold) && cpuPctWarningThreshold > 0)
+                {
+                    appInfo.CpuWarningLimitPercent = cpuPctWarningThreshold;
+                    informationAdded = true;
+                }
+            }
+            // Active Ports
+            if (parameters.Contains(ObserverConstants.AppManifestNetworkErrorActivePorts))
+            {
+                if (int.TryParse(parameters[ObserverConstants.AppManifestNetworkErrorActivePorts].Value, out int activePortsErrorThreshold) && activePortsErrorThreshold > 0)
+                {
+                    appInfo.NetworkErrorActivePorts = activePortsErrorThreshold;
+                    informationAdded = true;
+                }
+            }
+            if (parameters.Contains(ObserverConstants.AppManifestNetworkWarningActivePorts))
+            {
+                if (int.TryParse(parameters[ObserverConstants.AppManifestNetworkWarningActivePorts].Value, out int activePortsWarningThreshold) && activePortsWarningThreshold > 0)
+                {
+                    appInfo.NetworkWarningActivePorts = activePortsWarningThreshold;
+                    informationAdded = true;
+                }
+            }
+            // Ephemeral Ports
+            if (parameters.Contains(ObserverConstants.AppManifestNetworkErrorEphemeralPorts))
+            {
+                if (int.TryParse(parameters[ObserverConstants.AppManifestNetworkErrorEphemeralPorts].Value, out int ephemeralPortsErrorThreshold) && ephemeralPortsErrorThreshold > 0)
+                {
+                    appInfo.NetworkErrorEphemeralPorts = ephemeralPortsErrorThreshold;
+                    informationAdded = true;
+                }
+            }
+            if (parameters.Contains(ObserverConstants.AppManifestNetworkWarningEphemeralPorts))
+            {
+                if (int.TryParse(parameters[ObserverConstants.AppManifestNetworkWarningEphemeralPorts].Value, out int ephemeralPortsWarningThreshold) && ephemeralPortsWarningThreshold > 0)
+                {
+                    appInfo.NetworkWarningEphemeralPorts = ephemeralPortsWarningThreshold;
+                    informationAdded = true;
+                }
+            }
+            if (parameters.Contains(ObserverConstants.AppManifestNetworkErrorEphemeralPortsPercent))
+            {
+                if (double.TryParse(parameters[ObserverConstants.AppManifestNetworkErrorEphemeralPortsPercent].Value, out double ephemeralPortsPctErrorThreshold) && ephemeralPortsPctErrorThreshold > 0)
+                {
+                    appInfo.NetworkErrorEphemeralPortsPercent = ephemeralPortsPctErrorThreshold;
+                    informationAdded = true;
+                }
+            }
+            if (parameters.Contains(ObserverConstants.AppManifestNetworkWarningEphemeralPortsPercent))
+            {
+                if (double.TryParse(parameters[ObserverConstants.AppManifestNetworkWarningEphemeralPortsPercent].Value, out double ephemeralPortsPctWarningThreshold) && ephemeralPortsPctWarningThreshold > 0)
+                {
+                    appInfo.NetworkWarningEphemeralPortsPercent = ephemeralPortsPctWarningThreshold;
+                    informationAdded = true;
+                }
+            }
+            // Dump Process
+            if (parameters.Contains(ObserverConstants.AppManifestDumpProcessOnError))
+            {
+                if (bool.TryParse(parameters[ObserverConstants.AppManifestDumpProcessOnError].Value, out bool dumpProcessOnError))
+                {
+                    appInfo.DumpProcessOnError = dumpProcessOnError;
+                    informationAdded = true;
+                }
+            }
+            if (parameters.Contains(ObserverConstants.AppManifestDumpProcessOnWarning))
+            {
+                if (bool.TryParse(parameters[ObserverConstants.AppManifestDumpProcessOnWarning].Value, out bool dumpProcessOnWarning))
+                {
+                    appInfo.DumpProcessOnWarning = dumpProcessOnWarning;
+                    informationAdded = true;
+                }
+            }
+            // Handles
+            if (parameters.Contains(ObserverConstants.AppManifestErrorOpenFileHandles))
+            {
+                if (int.TryParse(parameters[ObserverConstants.AppManifestErrorOpenFileHandles].Value, out int openFileHandlesErrorThreshold) && openFileHandlesErrorThreshold > 0)
+                {
+                    appInfo.ErrorOpenFileHandles = openFileHandlesErrorThreshold;
+                    informationAdded = true;
+                }
+            }
+            if (parameters.Contains(ObserverConstants.AppManifestWarningOpenFileHandles))
+            {
+                if (int.TryParse(parameters[ObserverConstants.AppManifestWarningOpenFileHandles].Value, out int openFileHandlesWarningThreshold) && openFileHandlesWarningThreshold > 0)
+                {
+                    appInfo.WarningOpenFileHandles = openFileHandlesWarningThreshold;
+                    informationAdded = true;
+                }
+            }
+            if (parameters.Contains(ObserverConstants.AppManifestErrorHandleCount))
+            {
+                if (int.TryParse(parameters[ObserverConstants.AppManifestErrorHandleCount].Value, out int handleCountErrorThreshold) && handleCountErrorThreshold > 0)
+                {
+                    appInfo.ErrorHandleCount = handleCountErrorThreshold;
+                    informationAdded = true;
+                }
+            }
+            if (parameters.Contains(ObserverConstants.AppManifestWarningHandleCount))
+            {
+                if (int.TryParse(parameters[ObserverConstants.AppManifestWarningHandleCount].Value, out int handleCountWarningThreshold) && handleCountWarningThreshold > 0)
+                {
+                    appInfo.WarningHandleCount = handleCountWarningThreshold;
+                    informationAdded = true;
+                }
+            }
+            // Threads
+            if (parameters.Contains(ObserverConstants.AppManifestErrorThreadCount))
+            {
+                if (int.TryParse(parameters[ObserverConstants.AppManifestErrorThreadCount].Value, out int threadCountErrorThreshold) && threadCountErrorThreshold > 0)
+                {
+                    appInfo.ErrorThreadCount = threadCountErrorThreshold;
+                    informationAdded = true;
+                }
+            }
+            if (parameters.Contains(ObserverConstants.AppManifestWarningThreadCount))
+            {
+                if (int.TryParse(parameters[ObserverConstants.AppManifestWarningThreadCount].Value, out int threadCountWarningThreshold) && threadCountWarningThreshold > 0)
+                {
+                    appInfo.WarningThreadCount = threadCountWarningThreshold;
+                    informationAdded = true;
+                }
+            }
+            // Private Bytes
+            if (parameters.Contains(ObserverConstants.AppManifestWarningPrivateBytesMb))
+            {
+                if (long.TryParse(parameters[ObserverConstants.AppManifestWarningPrivateBytesMb].Value, out long privateBytesMbWarningThreshold) && privateBytesMbWarningThreshold > 0)
+                {
+                    appInfo.WarningPrivateBytesMb = privateBytesMbWarningThreshold;
+                    informationAdded = true;
+                }
+            }
+            if (parameters.Contains(ObserverConstants.AppManifestErrorPrivateBytesMb))
+            {
+                if (long.TryParse(parameters[ObserverConstants.AppManifestErrorPrivateBytesMb].Value, out long privateBytesMbErrorThreshold) && privateBytesMbErrorThreshold > 0)
+                {
+                    appInfo.ErrorPrivateBytesMb = privateBytesMbErrorThreshold;
+                    informationAdded = true;
+                }
+            }
+            if (parameters.Contains(ObserverConstants.AppManifestWarningPrivateBytesPercent))
+            {
+                if (double.TryParse(parameters[ObserverConstants.AppManifestWarningPrivateBytesPercent].Value, out double privateBytesPctWarningThreshold) && privateBytesPctWarningThreshold > 0)
+                {
+                    appInfo.WarningPrivateBytesPercent = privateBytesPctWarningThreshold;
+                    informationAdded = true;
+                }
+            }
+            if (parameters.Contains(ObserverConstants.AppManifestErrorPrivateBytesPercent))
+            {
+                if (double.TryParse(parameters[ObserverConstants.AppManifestErrorPrivateBytesPercent].Value, out double privateBytesPctErrorThreshold) && privateBytesPctErrorThreshold > 0)
+                {
+                    appInfo.ErrorPrivateBytesPercent = privateBytesPctErrorThreshold;
+                    informationAdded = true;
+                }
+            }
+            // RG monitoring
+            if (parameters.Contains(ObserverConstants.AppManifestWarningRGMemoryLimitPercent))
+            {
+                if (double.TryParse(parameters[ObserverConstants.AppManifestWarningRGMemoryLimitPercent].Value, out double rgMemoryThreshold) && rgMemoryThreshold > 0)
+                {
+                    appInfo.WarningRGMemoryLimitPercent = rgMemoryThreshold;
+                    informationAdded = true;
+                }
+            }
+            if (parameters.Contains(ObserverConstants.AppManifestWarningRGCpuLimitPercent))
+            {
+                if (double.TryParse(parameters[ObserverConstants.AppManifestWarningRGCpuLimitPercent].Value, out double rgCpuThreshold) && rgCpuThreshold > 0)
+                {
+                    appInfo.WarningRGCpuLimitPercent = rgCpuThreshold;
+                    informationAdded = true;
+                }
+            }
+            return informationAdded;
         }
 
         private async Task ProcessAppManifestThresholdSettingsAsync()
