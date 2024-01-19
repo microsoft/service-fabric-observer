@@ -193,5 +193,33 @@ namespace FabricObserver.Observers.Utilities
         public const string DefaultValue = "DefaultValue";
         public const string Parameter = "Parameter";
         public const string Parameters = "Parameters";
+
+        // AppManifest Thresholds
+        public const string AppManifestMemoryWarningLimitMb = "FabricObserver_MemoryWarningLimitMb";
+        public const string AppManifestMemoryErrorLimitMb = "FabricObserver_MemoryErrorLimitMb";
+        public const string AppManifestMemoryWarningLimitPercent = "FabricObserver_MemoryWarningLimitPercent";
+        public const string AppManifestMemoryErrorLimitPercent = "FabricObserver_MemoryErrorLimitPercent";
+        public const string AppManifestCpuErrorLimitPercent = "FabricObserver_CpuErrorLimitPercent";
+        public const string AppManifestCpuWarningLimitPercent = "FabricObserver_CpuWarningLimitPercent";
+        public const string AppManifestNetworkErrorActivePorts = "FabricObserver_NetworkErrorActivePorts";
+        public const string AppManifestNetworkWarningActivePorts = "FabricObserver_NetworkWarningActivePorts";
+        public const string AppManifestNetworkErrorEphemeralPorts = "FabricObserver_NetworkErrorEphemeralPorts";
+        public const string AppManifestNetworkWarningEphemeralPorts = "FabricObserver_NetworkWarningEphemeralPorts";
+        public const string AppManifestNetworkErrorEphemeralPortsPercent = "FabricObserver_NetworkErrorEphemeralPortsPercent";
+        public const string AppManifestNetworkWarningEphemeralPortsPercent = "FabricObserver_NetworkWarningEphemeralPortsPercent";
+        public const string AppManifestDumpProcessOnError = "FabricObserver_DumpProcessOnError";
+        public const string AppManifestDumpProcessOnWarning = "FabricObserver_DumpProcessOnWarning";
+        public const string AppManifestErrorOpenFileHandles = "FabricObserver_ErrorOpenFileHandles";
+        public const string AppManifestWarningOpenFileHandles = "FabricObserver_WarningOpenFileHandles";
+        public const string AppManifestErrorHandleCount = "FabricObserver_ErrorHandleCount";
+        public const string AppManifestWarningHandleCount = "FabricObserver_WarningHandleCount";
+        public const string AppManifestErrorThreadCount = "FabricObserver_ErrorThreadCount";
+        public const string AppManifestWarningThreadCount = "FabricObserver_WarningThreadCount";
+        public const string AppManifestWarningPrivateBytesMb = "FabricObserver_WarningPrivateBytesMb";
+        public const string AppManifestErrorPrivateBytesMb = "FabricObserver_ErrorPrivateBytesMb";
+        public const string AppManifestWarningPrivateBytesPercent = "FabricObserver_WarningPrivateBytesPercent";
+        public const string AppManifestErrorPrivateBytesPercent = "FabricObserver_ErrorPrivateBytesPercent";
+        public const string AppManifestWarningRGMemoryLimitPercent = "FabricObserver_WarningRGMemoryLimitPercent";
+        public const string AppManifestWarningRGCpuLimitPercent = "FabricObserver_WarningRGCpuLimitPercent";
     }
 }

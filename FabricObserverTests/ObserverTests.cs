@@ -1247,7 +1247,76 @@ namespace FabricObserverTests
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver_rg_memory_warning.config.json"),
             };
 
+            // Upgrade RG memory warning threshold App parameters.
+            ApplicationUpgradeDescription appUpgradeDescription = new()
+            {
+                ApplicationName = new Uri("fabric:/Voting"),
+                TargetApplicationTypeVersion = "1.0.0",
+                UpgradePolicyDescription = new RollingUpgradePolicyDescription() { UpgradeMode = RollingUpgradeMode.UnmonitoredAuto }
+            };
+
+            appUpgradeDescription.ApplicationParameters.Add(ObserverConstants.AppManifestWarningRGMemoryLimitPercent, "1");
+
+            try
+            {
+                await FabricClientSingleton.ApplicationManager.UpgradeApplicationAsync(
+                        appUpgradeDescription,
+                        TimeSpan.FromSeconds(60),
+                        Token);
+            }
+            catch (FabricException)
+            {
+                // This can happen if the parameter value is the same/already in place. Ignore it.
+                // If it is for some other reason, then this test function will naturally fail.
+            }
+
+            Stopwatch stopwatch = Stopwatch.StartNew();
+
+            // Wait for the upgrade to complete.
+            while (stopwatch.Elapsed <= TimeSpan.FromSeconds(30))
+            {
+                var progress = await FabricClientSingleton.ApplicationManager.GetApplicationUpgradeProgressAsync(new Uri("fabric:/Voting"));
+
+                if (progress.UpgradeState == ApplicationUpgradeState.RollingForwardCompleted)
+                {
+                    break;
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(3));
+            }
+
             await obs.ObserveAsync(Token);
+
+            // Revert previous upgrade.
+            appUpgradeDescription.ApplicationParameters[ObserverConstants.AppManifestWarningRGMemoryLimitPercent] =  "0";
+
+            try
+            {
+                await FabricClientSingleton.ApplicationManager.UpgradeApplicationAsync(
+                        appUpgradeDescription,
+                        TimeSpan.FromSeconds(60),
+                        Token);
+            }
+            catch (FabricException)
+            {
+                // This can happen if the parameter value is the same/already in place. Ignore it.
+                // If it is for some other reason, then this test function will naturally fail.
+            }
+
+            stopwatch = Stopwatch.StartNew();
+
+            // Wait for the upgrade to complete.
+            while (stopwatch.Elapsed <= TimeSpan.FromSeconds(30))
+            {
+                var progress = await FabricClientSingleton.ApplicationManager.GetApplicationUpgradeProgressAsync(new Uri("fabric:/Voting"));
+
+                if (progress.UpgradeState == ApplicationUpgradeState.RollingForwardCompleted)
+                {
+                    break;
+                }
+
+                await Task.Delay(TimeSpan.FromSeconds(3));
+            }
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
