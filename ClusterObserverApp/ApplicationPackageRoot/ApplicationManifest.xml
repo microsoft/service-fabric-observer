@@ -10,6 +10,10 @@
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
     <Parameter Name="ObserverManagerEnableOperationalTelemetry" DefaultValue="true" />
     <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
+    <Parameter Name="ObserverManagerTelemetryProvider" DefaultValue="AzureLogAnalytics" />
+    <Parameter Name="ObserverManagerAppInsightsConnectionString" DefaultValue="" />
+    <Parameter Name="ObserverManagerLogAnalyticsWorkspaceId" DefaultValue="" />
+    <Parameter Name="ObserverManagerLogAnalyticsSharedKey" DefaultValue="" />
     <Parameter Name="ClusterObserverLogPath" DefaultValue="s:\cluster_observer_logs" />
     <!-- ClusterObserver settings. -->
     <Parameter Name="ClusterObserverEnabled" DefaultValue="true" />
@@ -24,8 +28,8 @@
     <Parameter Name="MonitorUpgrades" DefaultValue="false" />
     <!-- Plugin settings... -->
   </Parameters>
-  <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
-       should match the Name and Version attributes of the ServiceManifest element defined in the 
+  <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion
+       should match the Name and Version attributes of the ServiceManifest element defined in the
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
     <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.2.7" />
@@ -42,6 +46,10 @@
             <Parameter Name="ETWProviderName" Value="[ObserverManagerETWProviderName]" />
             <Parameter Name="EnableTelemetryProvider" Value="[ObserverManagerEnableTelemetryProvider]" />
             <Parameter Name="ObserverFailureHealthStateLevel" Value="[ObserverManagerObserverFailureHealthStateLevel]" />
+            <Parameter Name="TelemetryProvider" Value="[ObserverManagerTelemetryProvider]" />
+            <Parameter Name="AppInsightsConnectionString" Value="[ObserverManagerAppInsightsConnectionString]" />
+            <Parameter Name="LogAnalyticsWorkspaceId" Value="[ObserverManagerLogAnalyticsWorkspaceId]" />
+            <Parameter Name="LogAnalyticsSharedKey" Value="[ObserverManagerLogAnalyticsSharedKey]" />
           </Section>
           <Section Name="ClusterObserverConfiguration">
             <Parameter Name="Enabled" Value="[ClusterObserverEnabled]" />
