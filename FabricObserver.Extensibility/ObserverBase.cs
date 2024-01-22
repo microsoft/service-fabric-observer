@@ -127,10 +127,10 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public bool IsEnabled
-        {
+        public bool IsEnabled 
+        { 
             get => ConfigurationSettings == null || ConfigurationSettings.IsEnabled;
-
+            
             // default is observer enabled.
             set
             {
@@ -366,16 +366,16 @@ namespace FabricObserver.Observers
             get;
         }
 
-        public CsvFileWriteFormat CsvWriteFormat
+        public CsvFileWriteFormat CsvWriteFormat 
         {
-            get; set;
+            get; set; 
         }
 
         /// <summary>
         /// Base type constructor for all observers (both built-in and plugin impls).
         /// </summary>
-        /// <param name="fabricClient">Pass null for this parameter. It only exists here to preserve the existing interface definition of IFabricObserverStartup, which is used by FO plugins.
-        /// There is actually no longer a need to pass in a FabricClient instance as this is now a singleton instance managed by
+        /// <param name="fabricClient">Pass null for this parameter. It only exists here to preserve the existing interface definition of IFabricObserverStartup, which is used by FO plugins. 
+        /// There is actually no longer a need to pass in a FabricClient instance as this is now a singleton instance managed by 
         /// FabricObserver.Extensibility.FabricClientUtilities and is protected against premature disposal.</param>
         /// <param name="serviceContext">The ServiceContext instance for FO, which is a Stateless singleton (1 partition) service that runs on all nodes in an SF cluster. FO will inject this instance when the application starts.</param>
         protected ObserverBase(FabricClient fabricClient, StatelessServiceContext serviceContext)
@@ -400,7 +400,7 @@ namespace FabricObserver.Observers
             // Observer Logger setup.
             string logFolderBasePath;
             string observerLogPath = GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.ObserverLogPathParameter);
-
+            
             if (!string.IsNullOrWhiteSpace(observerLogPath))
             {
                 logFolderBasePath = observerLogPath;
@@ -419,7 +419,7 @@ namespace FabricObserver.Observers
             ConfigurationSettings = new ConfigSettings(ConfigPackage.Settings, ConfigurationSectionName);
             ObserverLogger.EnableVerboseLogging = ConfigurationSettings.EnableVerboseLogging;
             HealthReporter = new ObserverHealthReporter(ObserverLogger);
-            IsObserverWebApiAppDeployed =
+            IsObserverWebApiAppDeployed = 
                 bool.TryParse(
                     GetSettingParameterValue(
                         ObserverConstants.ObserverManagerConfigurationSectionName,
@@ -714,12 +714,12 @@ namespace FabricObserver.Observers
                     }
                 }
             }
-
+           
             return false;
         }
 
         /// <summary>
-        /// This function *only* processes *numeric* data held in (FabricResourceUsageData (FRUD) instances and generates Application, Service, and Node level Health Reports depending on supplied Error and Warning thresholds.
+        /// This function *only* processes *numeric* data held in (FabricResourceUsageData (FRUD) instances and generates Application, Service, and Node level Health Reports depending on supplied Error and Warning thresholds. 
         /// </summary>
         /// <typeparam name="T">Generic: This represents the numeric type of data this function will operate on.</typeparam>
         /// <param name="data">FabricResourceUsageData (FRUD) instance.</param>
@@ -771,7 +771,7 @@ namespace FabricObserver.Observers
                     serviceTypeName = replicaOrInstance.ServiceTypeName;
                     serviceTypeVersion = replicaOrInstance.ServiceTypeVersion;
                     procId = (int)replicaOrInstance.HostProcessId;
-
+                   
                     // This doesn't apply to ContainerObserver.
                     if (ObserverName != ObserverConstants.ContainerObserverName)
                     {
@@ -1139,7 +1139,7 @@ namespace FabricObserver.Observers
                         errorWarningCode = (healthState == HealthState.Error) ?
                             FOErrorWarningCodes.NodeErrorActiveEphemeralPortsPercent : FOErrorWarningCodes.NodeWarningActiveEphemeralPortsPercent;
                         break;
-
+                        
                     // Support for legacy Handles property name.
                     case ErrorWarningProperty.AllocatedFileHandles when entityType is EntityType.Application or EntityType.Service:
                         errorWarningCode = (healthState == HealthState.Error) ?
@@ -1229,8 +1229,8 @@ namespace FabricObserver.Observers
                 }
 
                 _ = healthMessage.Append($"{metric}{dynamicRange} has exceeded the specified {thresholdName} threshold ({threshold}{data.Units}{rgInfo}){drive}");
-                _ = healthMessage.Append($" - {metric}: {data.AverageDataValue}{data.Units}{rgInfo}{totalPorts}");
-
+                _ = healthMessage.Append($" - {metric}: {data.AverageDataValue}{data.Units}{rgInfo}{totalPorts}"); 
+                
                 if (childProcMsg != string.Empty)
                 {
                     _ = healthMessage.Append(childProcMsg);
@@ -1303,7 +1303,7 @@ namespace FabricObserver.Observers
                 {
                     CurrentErrorCount++;
                 }
-
+                
                 // Clean up sb.
                 _ = healthMessage.Clear();
                 healthMessage = null;
@@ -1383,7 +1383,7 @@ namespace FabricObserver.Observers
                 return HealthState.Unknown;
             }
 
-            if (FOErrorWarningCodes.GetCodeNameFromErrorCode(activeErrorOrWarningCode).Contains("warning", StringComparison.OrdinalIgnoreCase))
+            if (FOErrorWarningCodes.GetCodeNameFromErrorCode(activeErrorOrWarningCode).Contains("warning", StringComparison.OrdinalIgnoreCase)) 
             {
                 return HealthState.Warning;
             }
@@ -1542,7 +1542,7 @@ namespace FabricObserver.Observers
             switch (telemetryProvider)
             {
                 case TelemetryProviderType.AzureLogAnalytics:
-
+                        
                     string logAnalyticsLogType =
                         GetSettingParameterValue(
                             ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.LogAnalyticsLogTypeParameter);
@@ -1565,7 +1565,7 @@ namespace FabricObserver.Observers
                     break;
 
                 case TelemetryProviderType.AzureApplicationInsights:
-
+                        
                     string aiConnString = GetSettingParameterValue(
                         ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.AppInsightsConnectionString);
 
