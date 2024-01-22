@@ -2082,7 +2082,6 @@ namespace FabricObserver.Observers
                 ObserverLogger.LogInfo($"EnableKvsLvidMonitoring = {EnableKvsLvidMonitoring}");
             }
             ObserverLogger.LogInfo($"Completed setting properties from application parameters.");
-
             SetTelemetryConfiguration();
         }
 
