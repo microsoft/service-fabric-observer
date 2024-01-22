@@ -61,22 +61,22 @@ namespace ClusterObserver
             get; set;
         }
 
-        public bool HasClusterUpgradeCompleted 
+        public bool HasClusterUpgradeCompleted
         {
-            get; set; 
+            get; set;
         }
 
-        public bool EmitWarningDetails 
-        { 
-            get; set; 
+        public bool EmitWarningDetails
+        {
+            get; set;
         }
 
-        public ClusterObserver(StatelessServiceContext serviceContext, bool ignoreDefaultQueryTimeout = false) 
+        public ClusterObserver(StatelessServiceContext serviceContext, bool ignoreDefaultQueryTimeout = false)
             : base (null, serviceContext)
         {
             NodeStatusDictionary = new Dictionary<string, (NodeStatus NodeStatus, DateTime FirstDetectedTime, DateTime LastDetectedTime)>();
             ApplicationUpgradesCompletedStatus = new Dictionary<string, bool>();
-            
+
             this.ignoreDefaultQueryTimeout = ignoreDefaultQueryTimeout;
 
             // Observer Logger setup. This will override the default setup in FabricObserver.Extensibility.dll.
@@ -151,6 +151,8 @@ namespace ClusterObserver
             {
                 MonitorUpgradeStatus = monitorUpgrades;
             }
+
+            SetTelemetryConfiguration();
         }
 
         private async Task ReportClusterHealthAsync()
@@ -516,7 +518,7 @@ namespace ClusterObserver
                                             ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigurationSettings.AsyncTimeout,
                                             Token),
                                     Token);
-            
+
             if (appHealth == null)
             {
                 return;
@@ -548,7 +550,7 @@ namespace ClusterObserver
 
                 // TelemetryData?
                 if (TryGetTelemetryData(healthEvent, out TelemetryDataBase foTelemetryData))
-                { 
+                {
                     // Telemetry.
                     if (IsTelemetryEnabled)
                     {
@@ -573,7 +575,7 @@ namespace ClusterObserver
                                 Token);
 
                     await ProcessEntityHealthAsync(applicationHealth, Token);
-                    
+
                 }
             }
         }
@@ -668,7 +670,7 @@ namespace ClusterObserver
                 }
                 else // Not from FO/FHProxy.
                 {
-                    var serviceEntityHealth = 
+                    var serviceEntityHealth =
                         await FabricClientInstance.HealthManager.GetServiceHealthAsync(serviceName, ConfigurationSettings.AsyncTimeout, Token);
 
                     await ProcessEntityHealthAsync(serviceEntityHealth, Token);
@@ -681,7 +683,7 @@ namespace ClusterObserver
             // Check cluster upgrade status. This will be used to help determine if a node in Error is in that state because of a Fabric runtime upgrade.
             var clusterUpgradeInfo =
                 await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                         () => 
+                         () =>
                             UpgradeChecker.GetClusterUpgradeDetailsAsync(FabricClientInstance, Token),
                          Token);
 
@@ -710,7 +712,7 @@ namespace ClusterObserver
 
                 var nodeHealth =
                     await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                            () => 
+                            () =>
                                 FabricClientInstance.HealthManager.GetNodeHealthAsync(
                                     node.NodeName, ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigurationSettings.AsyncTimeout, Token),
                             Token);
@@ -734,7 +736,7 @@ namespace ClusterObserver
 
                         if (TryGetTelemetryData(nodeHealthEvent, out TelemetryDataBase telemetryData))
                         {
-                            telemetryData.Description += 
+                            telemetryData.Description +=
                                 $"{Environment.NewLine}Node Status: {(targetNode != null ? targetNode.NodeStatus.ToString() : string.Empty)}";
 
                             // Telemetry (AppInsights/LogAnalytics..).
@@ -754,7 +756,7 @@ namespace ClusterObserver
                         }
                         else if (!string.IsNullOrWhiteSpace(nodeHealthEvent.HealthInformation.Description))
                         {
-                            telemetryDescription += 
+                            telemetryDescription +=
                                 $"{nodeHealthEvent.HealthInformation.Description}{Environment.NewLine}" +
                                 $"Node Status: {(targetNode != null ? targetNode.NodeStatus.ToString() : string.Empty)}";
 
@@ -786,7 +788,7 @@ namespace ClusterObserver
                         }
                     }
 
-                    // Reset 
+                    // Reset
                     telemetryDescription = string.Empty;
                 }
             }
@@ -1132,7 +1134,7 @@ namespace ClusterObserver
 
         private async Task MonitorNodeStatusAsync(CancellationToken Token, bool isTest = false)
         {
-            // If a node's NodeStatus is Disabling, Disabled, or Down 
+            // If a node's NodeStatus is Disabling, Disabled, or Down
             // for at or above the specified maximum time (in ApplicationManifest.xml, see MaxTimeNodeStatusNotOk),
             // then CO will emit a Warning signal.
             var nodeList = await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
@@ -1259,7 +1261,7 @@ namespace ClusterObserver
                 switch (telemData.ObserverName)
                 {
                     case ObserverConstants.AppObserverName:
-                        
+
                         if (JsonHelper.TryDeserializeObject(healthEvent.HealthInformation.Description, out ServiceTelemetryData serviceTelemetryData))
                         {
                             telemetryData = serviceTelemetryData;
@@ -1325,7 +1327,7 @@ namespace ClusterObserver
                                                     repairManagerServiceUri,
                                                     ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigurationSettings.AsyncTimeout,
                                                     cancellationToken),
-                                            cancellationToken);  
+                                            cancellationToken);
 
                 return serviceList?.Count > 0;
             }
@@ -1353,7 +1355,7 @@ namespace ClusterObserver
                                                     null,
                                                     ignoreDefaultQueryTimeout ? TimeSpan.FromSeconds(1) : ConfigurationSettings.AsyncTimeout,
                                                     cancellationToken),
-                                            cancellationToken);  
+                                            cancellationToken);
 
                 return repairTasks;
             }

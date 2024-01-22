@@ -1011,7 +1011,7 @@ namespace FabricObserver.Observers
 
             if (IsWindows)
             {
-                // If RefreshSFUserProcessDataCache returns false, then it means the internal impl failed. In this case, a different API (less efficient) will be used 
+                // If RefreshSFUserProcessDataCache returns false, then it means the internal impl failed. In this case, a different API (less efficient) will be used
                 // to get child processes, if enabled (see Win32HandleToProcessSnapshot property impl). This function refreshes 2 caches. It is not
                 // only related to child process detection.
                 hasSFUserProcCache = NativeMethods.RefreshSFUserProcessDataCache(getChildProcesses: EnableChildProcessMonitoring);
@@ -1199,14 +1199,14 @@ namespace FabricObserver.Observers
             if (EnableConcurrentMonitoring)
             {
                 _ = int.TryParse(GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.MaxConcurrentTasksParameter), out maxDegreeOfParallelism);
-                
+
                 if (maxDegreeOfParallelism < -1 || maxDegreeOfParallelism == 0)
                 {
                     ObserverLogger.LogWarning($"MaxConcurrentTasks setting is invalid ({maxDegreeOfParallelism}). Employing default value (25).");
                     maxDegreeOfParallelism = 25;
                 }
             }
-           
+
             ObserverLogger.LogInfo($"Environment.ProcessorCount = {Environment.ProcessorCount}");
             ObserverLogger.LogInfo($"MaxDegreeOfParallelism = {maxDegreeOfParallelism}");
             parallelOptions = new ParallelOptions
@@ -1217,7 +1217,7 @@ namespace FabricObserver.Observers
             };
         }
 
-        private bool PopulateAppInfoWithAppManifestThresholds(DeployedApplication deployedApp, ApplicationInfo appInfo) 
+        private bool PopulateAppInfoWithAppManifestThresholds(DeployedApplication deployedApp, ApplicationInfo appInfo)
         {
             string appTypeVersion = null;
             ApplicationParameterList appParameters = null;
@@ -2051,7 +2051,7 @@ namespace FabricObserver.Observers
                 }
             }
             ObserverLogger.LogInfo($"EnableProcessDumps = {EnableProcessDumps}");
-            
+
             if (Enum.TryParse(
                 GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.DumpTypeParameter), out DumpType dumpType))
             {
@@ -2082,6 +2082,8 @@ namespace FabricObserver.Observers
                 ObserverLogger.LogInfo($"EnableKvsLvidMonitoring = {EnableKvsLvidMonitoring}");
             }
             ObserverLogger.LogInfo($"Completed setting properties from application parameters.");
+
+            SetTelemetryConfiguration();
         }
 
         private int ProcessChildProcs<T>(
@@ -2147,7 +2149,7 @@ namespace FabricObserver.Observers
             if (childProcs.Count == 0)
             {
                 return (null, 0);
-            }   
+            }
 
             int parentPid = (int)repOrInst.HostProcessId;
 
@@ -2348,7 +2350,7 @@ namespace FabricObserver.Observers
 
             // Reset child proc count to the actual number of processed child proc info elements.
             childProcessInfoData.ChildProcessCount = childProcessInfoData.ChildProcessInfo.Count;
-            
+
             try
             {
                 // Order List<ChildProcessInfo> by Value descending.
@@ -2714,7 +2716,7 @@ namespace FabricObserver.Observers
                     // For Windows: Regardless of user setting, if there are more than 50 service processes with the same name, then FO will employ Win32 API (fast, lightweight).
                     bool usePerfCounter = IsWindows && CheckPrivateWorkingSet && ReplicaOrInstanceList.Count(p => p.HostProcessName == parentProcName) < MaxSameNamedProcesses;
 
-                    // Compute the resource usage of the family of processes (each proc in the family tree). This is also parallelized and has real perf benefits when 
+                    // Compute the resource usage of the family of processes (each proc in the family tree). This is also parallelized and has real perf benefits when
                     // a service process has mulitple descendants.
                     ComputeResourceUsage(
                         capacity,
@@ -2749,7 +2751,7 @@ namespace FabricObserver.Observers
                 throw new AggregateException(exceptions);
             }
 
-            // Perf 
+            // Perf
             string threads = string.Empty;
             int threadcount = threadData.Distinct().Count();
             threads = $", Threads: {threadcount}";
@@ -3146,7 +3148,7 @@ namespace FabricObserver.Observers
 
                 Stopwatch timer = Stopwatch.StartNew();
                 SafeProcessHandle procHandle = null;
-                
+
                 if (IsWindows)
                 {
                     procHandle = NativeMethods.GetSafeProcessHandle(procId);
@@ -3738,7 +3740,7 @@ namespace FabricObserver.Observers
 												     Token).Result;
                             string svcManifest =
 									  FabricClientInstance.ServiceManager.GetServiceManifestAsync(
-                                                     appTypeName, 
+                                                     appTypeName,
                                                      appTypeVersion,
                                                      replicaInfo.ServiceManifestName,
                                                      ConfigurationSettings.AsyncTimeout,
@@ -3753,7 +3755,7 @@ namespace FabricObserver.Observers
                                 // RG Memory
                                 (replicaInfo.RGMemoryEnabled, replicaInfo.RGAppliedMemoryLimitMb) =
                                     fabricClientUtilities.TupleGetMemoryResourceGovernanceInfo(appManifest, replicaInfo.ServiceManifestName, codepackageName, parameters);
-                                
+
                                 if (replicaInfo.RGMemoryEnabled)
                                 {
                                     ObserverLogger.LogInfo($"RG Memory enabled. Applied Memory Limit MB: {replicaInfo.RGAppliedMemoryLimitMb}");
@@ -3762,8 +3764,8 @@ namespace FabricObserver.Observers
                                 // RG Cpu
                                 (replicaInfo.RGCpuEnabled, replicaInfo.RGAppliedCpuLimitCores) =
                                     fabricClientUtilities.TupleGetCpuResourceGovernanceInfo(appManifest, svcManifest, replicaInfo.ServiceManifestName, codepackageName, parameters);
-                            
-                                if (replicaInfo.RGCpuEnabled) 
+
+                                if (replicaInfo.RGCpuEnabled)
                                 {
                                     ObserverLogger.LogInfo($"RG CPU enabled. Applied Cpu limit cores: {replicaInfo.RGAppliedCpuLimitCores}");
                                 }
@@ -3816,7 +3818,7 @@ namespace FabricObserver.Observers
                         bool isHostedByFabric)
         {
             ObserverLogger.LogInfo($"Starting ProcessMultipleHelperCodePackages for {deployedReplica.ServiceName} (isHostedByFabric = {isHostedByFabric})");
-            
+
             if (repsOrInstancesInfo == null)
             {
                 ObserverLogger.LogInfo($"repsOrInstanceList is null. Exiting ProcessMultipleHelperCodePackages");
@@ -3866,7 +3868,7 @@ namespace FabricObserver.Observers
                         try
                         {
                             procName = NativeMethods.GetProcessNameFromId(procId);
-                            
+
                             if (procName == null)
                             {
                                 continue;
@@ -4150,7 +4152,7 @@ namespace FabricObserver.Observers
             {
                 return string.Compare(
                         NativeMethods.GetProcessNameFromId(procId),
-                        procName, StringComparison.OrdinalIgnoreCase) == 0 
+                        procName, StringComparison.OrdinalIgnoreCase) == 0
                         && processStartTime == GetProcessStartTime(procId);
             }
             catch (Exception e) when (e is ArgumentException or SystemException or Win32Exception)
