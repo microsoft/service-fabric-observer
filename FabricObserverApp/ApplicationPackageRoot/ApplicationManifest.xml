@@ -52,7 +52,7 @@
     <Parameter Name="NodeObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
-    <!-- ETW - Custom EventSource Tracing. Each observer can emit ETW. You can decide which ones.
+    <!-- ETW - Custom EventSource Tracing. Each observer can emit ETW. You can decide which ones. 
          Make sure to enable ObserverManagerEnableETWProvider above if you plan on enabling ETW for some observer below. -->
     <Parameter Name="AppObserverEnableEtw" DefaultValue="true" />
     <Parameter Name="AzureStorageUploadObserverEnableEtw" DefaultValue="false" />
@@ -236,7 +236,7 @@
     <Parameter Name="RGCPUCoresRequest" DefaultValue="0.30" />
     <Parameter Name="RGMemoryInMBLimit" DefaultValue="500" /> -->
   </Parameters>
-  <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion
+  <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
