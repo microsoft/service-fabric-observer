@@ -5,7 +5,7 @@
 		<version>3.2.14</version>
 		<releaseNotes>
 - *Breaking Change*: Telemetry configuration settings are now required to be overridden in ApplicationManifest.xml to support versionless, parameter-only application upgrades for telemetry settings. See [Issue 292](https://github.com/microsoft/service-fabric-observer/issues/292) for details.
-- Bug fixes and performance improvements to address AppObserver consuming high CPU if misconfigured.
+- Bug fixes and performance improvements to address AppObserver (in concurrency mode) consuming high CPU if misconfigured. There are now throttles and guardrails in place that will override any related user configuration that is deemed "dangerous" with respect to CPU consumption.
 - Updated nuget package dependencies to latest versions.
 		</releaseNotes>
 		<authors>Microsoft</authors>
