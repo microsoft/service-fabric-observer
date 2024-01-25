@@ -33,8 +33,8 @@
 		<Parameter Name="EnableCSVDataLogging" Value="false" />
 		<Parameter Name="EnableKvsLvidMonitoring" Value="false" />
 		<Parameter Name="EnableVerboseLogging" Value="true" />
-		<Parameter Name="MonitorDuration" Value="00:00:01" />
-        <Parameter Name="MonitorSleepDurationMilliseconds" Value="100"/>
+		<Parameter Name="MonitorDuration" Value="00:00:05" />
+        <Parameter Name="MonitorSleepDurationMilliseconds" Value="1000"/>
 		<Parameter Name="RunInterval" Value="" />
 		<Parameter Name="ConfigurationFileName" Value="AppObserver.config.json" />
 		<Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />

@@ -46,7 +46,6 @@ namespace FabricObserver.Observers
         private readonly string sfVersion;
         private readonly bool isWindows;
         private readonly ConfigurationPackage configurationPackage;
-        private System.Fabric.Description.ConfigurationSection configurationSection;
         private volatile bool shutdownSignaled;
         private DateTime StartDateTime;
         private bool isConfigurationUpdateInProgress;
@@ -54,7 +53,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.2.13";
+        private const string InternalVersionNumber = "3.2.14";
 
         private static FabricClient FabricClientInstance => FabricClientUtilities.FabricClientSingleton;
 
@@ -163,7 +162,6 @@ namespace FabricObserver.Observers
             isWindows = OperatingSystem.IsWindows();
             sfVersion = GetServiceFabricRuntimeVersion();
             configurationPackage = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
-            configurationSection = configurationPackage.Settings.Sections[ObserverConstants.ObserverManagerConfigurationSectionName];
 
             // Observer Logger setup.
             string logFolderBasePath;
@@ -196,11 +194,16 @@ namespace FabricObserver.Observers
             try
             {
                 var config = ServiceFabricConfiguration.Instance;
-                return config.FabricVersion;
+                return config.FabricVersion.Trim();
             }
-            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
-                Logger.LogWarning($"GetServiceFabricRuntimeVersion failure:{Environment.NewLine}{e.Message}");
+                if (e is TaskCanceledException or OperationCanceledException)
+                {
+                    throw;
+                }
+
+                Logger.LogWarning($"GetServiceFabricRuntimeVersion failure: {e.Message}");
             }
 
             return null;
@@ -279,13 +282,15 @@ namespace FabricObserver.Observers
                     else if (Observers.Count == 1)
                     {
                         // This protects against loop spinning when you run FO with one observer enabled and no sleep time set.
-                        await Task.Delay(TimeSpan.FromSeconds(5), runAsyncToken);
+                        await Task.Delay(TimeSpan.FromSeconds(15), runAsyncToken);
                     }
 
                     // All observers have run at this point. Try and empty the trash now.
                     GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
                     GC.Collect(2, GCCollectionMode.Forced, true, true);
-                    await Task.Delay(TimeSpan.FromSeconds(5), runAsyncToken);
+
+                    // Prevent loop spinning. Be conservative here.
+                    await Task.Delay(TimeSpan.FromSeconds(15), runAsyncToken);
                 }
             }
             catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
@@ -902,6 +907,9 @@ namespace FabricObserver.Observers
                 await StopObserversAsync(false).ConfigureAwait(false);
                 var newSettings = e.NewPackage.Settings;
 
+                // ObserverManager settings.
+                SetPropertiesFromConfigurationParameters(newSettings);
+
                 // Observer settings.
                 foreach (var observer in Observers)
                 {
@@ -909,13 +917,11 @@ namespace FabricObserver.Observers
                     observer.ConfigPackage = e.NewPackage;
                     observer.ConfigurationSettings = new ConfigSettings(newSettings, configSectionName);
                     observer.ObserverLogger.EnableVerboseLogging = observer.ConfigurationSettings.EnableVerboseLogging;
-
+                    observer.SetObserverEtwTelemetryConfiguration();
+                    
                     // Reset last run time so the observer restarts (if enabled) after the app parameter update completes.
                     observer.LastRunDateTime = DateTime.MinValue;
                 }
-
-                // ObserverManager settings.
-                SetPropertiesFromConfigurationParameters(newSettings);
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
@@ -1058,23 +1064,20 @@ namespace FabricObserver.Observers
                         return;
                     }
 
-                    TelemetryClient = new LogAnalyticsTelemetry(
-                                            logAnalyticsWorkspaceId,
-                                            logAnalyticsSharedKey,
-                                            logAnalyticsLogType);
+                    TelemetryClient = new LogAnalyticsTelemetry(logAnalyticsWorkspaceId, logAnalyticsSharedKey, logAnalyticsLogType);
                     break;
                     
                 case TelemetryProviderType.AzureApplicationInsights:
                     
-                    string aiKey = GetConfigSettingValue(ObserverConstants.AiKey, settings);
+                    string aiConnString = GetConfigSettingValue(ObserverConstants.AppInsightsConnectionString, settings);
 
-                    if (string.IsNullOrEmpty(aiKey))
+                    if (string.IsNullOrEmpty(aiConnString))
                     {
                         TelemetryEnabled = false;
                         return;
                     }
 
-                    TelemetryClient = new AppInsightsTelemetry(aiKey);
+                    TelemetryClient = new AppInsightsTelemetry(aiConnString);
                     break;
 
                 default:
@@ -1383,7 +1386,7 @@ namespace FabricObserver.Observers
 
         private bool IsLVIDPerfCounterEnabled(ConfigurationSettings settings = null)
         {
-            if (!isWindows /*|| ServiceFabricConfiguration.Instance.FabricVersion.StartsWith("10")*/)
+            if (!isWindows)
             {
                 return false;
             }
@@ -1392,7 +1395,7 @@ namespace FabricObserver.Observers
             if (IsLvidCounterEnabled)
             {
                 // DEBUG
-                Logger.LogInfo("IsLVIDPerfCounterEnabled: Counter has already been determined to be enabled. Not running the check again..");
+                Logger.LogInfo("IsLVIDPerfCounterEnabled: Counter has already been determined to be enabled. Not running the check again.");
                 return true;
             }
 
@@ -1412,14 +1415,16 @@ namespace FabricObserver.Observers
             }
 
             // DEBUG
-            Logger.LogInfo("IsLVIDPerfCounterEnabled: Running check since a supported observer is enabled for LVID monitoring.");
+            Logger.LogInfo($"IsLVIDPerfCounterEnabled: Running check since a supported observer is enabled for LVID monitoring. Detected Fabric version is {sfVersion}");
             string categoryName = "Windows Fabric Database";
-            
 
-            if (sfVersion.StartsWith("1"))
-            {
+            if (sfVersion.StartsWith('1'))
+            { 
                 categoryName = "MSExchange Database";
             }
+
+            // DEBUG
+            Logger.LogInfo($"IsLVIDPerfCounterEnabled: using '{categoryName}' for CategoryName.");
 
             // If there is corrupted state on the machine with respect to performance counters, an AV can occur (in native code, then wrapped in AccessViolationException)
             // when calling PerformanceCounterCategory.Exists below. This is actually a symptom of a problem that extends beyond just this counter category..
@@ -1432,7 +1437,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or UnauthorizedAccessException or Win32Exception)
             {
-                Logger.LogWarning($"IsLVIDPerfCounterEnabled: Failed to determine LVID perf counter state: {e.Message}");
+                Logger.LogWarning($"IsLVIDPerfCounterEnabled: Failed to determine LVID perf counter state: {e.Message}. Detected SF Runtime Version: {sfVersion}");
             }
 
             return false;

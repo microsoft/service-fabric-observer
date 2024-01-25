@@ -101,8 +101,14 @@ namespace FabricObserverTests
                         Guid.NewGuid(),
                         long.MaxValue);
 
+            // Ensure clean test app state.
+            await RemoveTestApplicationsAsync();
+
             // Install required SF test applications.
             await DeployTestAppsAppsAsync();
+
+            // Wait for apps to be deployed.
+            await Task.Delay(TimeSpan.FromSeconds(15));
         }
 
         private static async Task DeployTestAppsAppsAsync()
@@ -207,20 +213,6 @@ namespace FabricObserverTests
         private static async Task DeployHealthMetricsAppAsync()
         {
             string appName = "fabric:/HealthMetrics";
-
-            // If fabric:/HealthMetrics is already installed, exit.
-            var deployedTestApp =
-                    await FabricClientSingleton.QueryManager.GetDeployedApplicationListAsync(
-                            NodeName,
-                            new Uri(appName),
-                            TimeSpan.FromSeconds(30),
-                            Token);
-
-            if (deployedTestApp?.Count > 0)
-            {
-                return;
-            }
-            
             string appType = "HealthMetricsType";
             string appVersion = "1.0.0.0";
             string serviceName1 = "fabric:/HealthMetrics/BandActorService";
@@ -302,20 +294,6 @@ namespace FabricObserverTests
         private static async Task DeployTestApp42Async()
         {
             string appName = "fabric:/TestApp42";
-
-            // If fabric:/TestApp42 is already installed, exit.
-            var deployedTestApp =
-                    await FabricClientSingleton.QueryManager.GetDeployedApplicationListAsync(
-                            NodeName,
-                            new Uri(appName),
-                            TimeSpan.FromSeconds(30),
-                            Token);
-
-            if (deployedTestApp?.Count > 0)
-            {
-                return;
-            }
-
             string appType = "TestApp42Type";
             string appVersion = "1.0.0";
 
@@ -367,20 +345,6 @@ namespace FabricObserverTests
         private static async Task DeployVotingAppAsync()
         {
             string appName = "fabric:/Voting";
-
-            // If fabric:/Voting is already installed, exit.
-            var deployedTestApp =
-                    await FabricClientSingleton.QueryManager.GetDeployedApplicationListAsync(
-                            NodeName,
-                            new Uri(appName),
-                            TimeSpan.FromSeconds(30),
-                            Token);
-
-            if (deployedTestApp?.Count > 0)
-            {
-                return;
-            }
-
             string appType = "VotingType";
             string appVersion = "1.0.0";
 
@@ -432,20 +396,6 @@ namespace FabricObserverTests
         private static async Task DeployCpuStressAppAsync()
         {
             string appName = "fabric:/CpuStress";
-
-            // If fabric:/Voting is already installed, exit.
-            var deployedTestApp =
-                    await FabricClientSingleton.QueryManager.GetDeployedApplicationListAsync(
-                            NodeName,
-                            new Uri(appName),
-                            TimeSpan.FromSeconds(30),
-                            Token);
-
-            if (deployedTestApp?.Count > 0)
-            {
-                return;
-            }
-
             string appType = "CpuStressType";
             string appVersion = "1.0.0";
 
@@ -497,20 +447,6 @@ namespace FabricObserverTests
         private static async Task DeployPortTestAppAsync()
         {
             string appName = "fabric:/PortTest";
-
-            // If fabric:/Voting is already installed, exit.
-            var deployedTestApp =
-                    await FabricClientSingleton.QueryManager.GetDeployedApplicationListAsync(
-                            NodeName,
-                            new Uri(appName),
-                            TimeSpan.FromSeconds(30),
-                            Token);
-
-            if (deployedTestApp?.Count > 0)
-            {
-                return;
-            }
-
             string appType = "PortTestType";
             string appVersion = "1.0.0";
 
@@ -1343,6 +1279,8 @@ namespace FabricObserverTests
             };
 
             await obs.ObserveAsync(Token);
+
+            await Task.Delay(5000);
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
@@ -3154,6 +3092,9 @@ namespace FabricObserverTests
         {
             using var foEtwListener = new FabricObserverEtwListener(_logger);
             await AppObserver_ObserveAsync_PrivateBytes_Successful_WarningsGenerated();
+
+            await Task.Delay(5000);
+
             List<ServiceTelemetryData> telemData = foEtwListener.foEtwConverter.ServiceTelemetryData;
 
             Assert.IsNotNull(telemData);
@@ -3214,7 +3155,7 @@ namespace FabricObserverTests
             telemData = telemData.Where(
                 t => t.ApplicationName == "fabric:/Voting" && t.HealthState == HealthState.Warning).ToList();
 
-            // 2 service code packages + 2 helper code packages (VotingData) * 1 metric = 4 warnings...
+            // 2 service code packages + 2 helper code packages (VotingData) * 1 metric = 4 warnings.
             Assert.IsTrue(telemData.All(t => t.Metric == ErrorWarningProperty.RGMemoryUsagePercent && telemData.Count == 4));
         }
 
@@ -3641,6 +3582,8 @@ namespace FabricObserverTests
 
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
+
+            await Task.Delay(5000);
 
             // observer detected no warning conditions.
             Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);

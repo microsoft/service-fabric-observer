@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <!-- You can try the XML diff/merge tool XmlDiffPatchSF (located in this repo) to make upgrading your base configurations to the latest version much easier. -->
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.13" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.14" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- ObserverManager Configuration -->
     <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
@@ -14,17 +14,27 @@
     <Parameter Name="ObserverManagerETWProviderName" DefaultValue="" />
     <!-- If you want to transmit telemetry events to ApplicationInsights or LogAnalytics, for example, then enable this setting. Otherwise, set this to false. -->
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
+    <!-- Telemetry - AppInsights/LogAnalytics. Supported values are AzureApplicationInsights and AzureLogAnalytics. -->
+    <Parameter Name="ObserverManagerTelemetryProviderType" DefaultValue="" />
+    <!-- Application Insights -->
+    <Parameter Name="ObserverManagerAppInsightsConnectionString" DefaultValue="" />
+    <!-- LogAnalytics -->
+    <Parameter Name="ObserverManagerLogAnalyticsWorkspaceId" DefaultValue="" />
+    <Parameter Name="ObserverManagerLogAnalyticsSharedKey" DefaultValue="" />
+    <Parameter Name="ObserverManagerLogAnalyticsLogType" DefaultValue="FabricObserver" />
     <!-- We would really appreciate it if you kept this set to true. The information we collect contains no PII and helps us understand how FO is doing in the wild. -->
+    <!-- End Telemetry -->
+    <!-- Observer Configuration Settings.
+         Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can run
+         versionless parameter-only application upgrades to modify them while FO is running. By design, any observer you make using our
+         extensibility model will employ the same basic config parameters as all observers do. Please see Observers.md -->
     <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="true" />
     <!-- If an observer run fails due to timeout (ObserverExecutionTimeout is exceeded) or AppObserver can't monitor a service that runs at higher privilege, 
          for example, then this setting will put FO into Warning or Error state or just create a an Ok (info) health message.
          Supported values are Error, Warning, Ok or None (which means don't put FO into Warning or Error state or create an Ok health event (info)). -->
     <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
     <Parameter Name="ObserverLogPath" DefaultValue="fabric_observer_logs" />
-    <!-- Observer Configuration Settings.
-         Note: Add parameters for your Observer plugins here (e.g., [ObserverName]Enabled, etc.) so you can run
-         versionless parameter-only application upgrades to modify them while FO is running. By design, any observer you make using our
-         extensibility model will employ the same basic config parameters as all observers do. Please see Observers.md -->
+    <!-- Observer enablement. -->
     <Parameter Name="AppObserverEnabled" DefaultValue="true" />
     <Parameter Name="AzureStorageUploadObserverEnabled" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnabled" DefaultValue="true" />
@@ -35,9 +45,9 @@
     <Parameter Name="NetworkObserverEnabled" DefaultValue="false" />
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
-    <!-- Deprecated: SFConfigurationObserver is only useful if you deploy the now-obsolete (and unsupported) FabricObserverWebApi application. -->
+    <!-- Deprecated: SFConfigurationObserver is only useful if you deploy the now-obsolete - and unsupported - FabricObserverWebApi application. -->
     <Parameter Name="SFConfigurationObserverEnabled" DefaultValue="false" />
-    <!-- Telemetry - AppInsights or LogAnalytics -->
+    <!-- Observer Telemetry - AppInsights or LogAnalytics -->
     <Parameter Name="AppObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="AzureStorageUploadObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableTelemetry" DefaultValue="false" />
@@ -48,9 +58,9 @@
     <Parameter Name="NodeObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
-    <!-- ETW - Custom EventSource Tracing. Each observer can emit ETW. You can decide which ones. 
+    <!-- Observer ETW - Custom EventSource Tracing. Each observer can emit ETW. You can decide which ones. 
          Make sure to enable ObserverManagerEnableETWProvider above if you plan on enabling ETW for some observer below. -->
-    <Parameter Name="AppObserverEnableEtw" DefaultValue="true" />
+    <Parameter Name="AppObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="AzureStorageUploadObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="ContainerObserverEnableEtw" DefaultValue="false" />
@@ -60,12 +70,12 @@
     <Parameter Name="NodeObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="OSObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableEtw" DefaultValue="false" />
-    <!-- CSV Logging -->
+    <!-- Observer CSV Logging -->
     <Parameter Name="AppObserverEnableCSVDataLogging" DefaultValue="false" />
     <Parameter Name="ContainerObserverEnableCSVDataLogging" DefaultValue="false" />
     <Parameter Name="FabricSystemObserverEnableCSVDataLogging" DefaultValue="false" />
     <Parameter Name="NodeObserverEnableCSVDataLogging" DefaultValue="false" />
-    <!-- Verbose Logging -->
+    <!-- Observer Verbose Logging -->
     <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="AzureStorageUploadObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="CertificateObserverEnableVerboseLogging" DefaultValue="false" />
@@ -76,17 +86,17 @@
     <Parameter Name="NodeObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
-    <!-- Monitor Durations (TimeSpan format, e.g., 00:00:00): How long an observer should monitor CPU usage per target (process or machine).
-         This setting only applies to 3 observers.  -->
-    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:10" />
-    <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:10" />
-    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:10" />
-    <!-- Monitor Sleep Durations (Milliseconds, e.g. 1000 is generally a good idea): How long an observer should wait between consecutive CPU usage collection for the same target (process or machine).
-         This setting only applies to 3 observers.  -->
+    <!-- Observer Monitor Durations (TimeSpan format, e.g., 00:00:00): How long an observer should monitor CPU usage per target (process or machine).
+         This setting only applies to 3 observers. NOTE: Values greater than 10 seconds are not supported by AppObserver. -->
+    <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:04" />
+    <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:04" />
+    <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:04" />
+    <!-- Observer Monitor Sleep Durations (Milliseconds, e.g. 1000 is generally a good idea): How long an observer should wait between consecutive CPU usage collection for the same target (process or machine).
+         This setting only applies to 3 observers. NOTE: Values less than 500 are not supported by AppObserver. -->
     <Parameter Name="AppObserverMonitorSleepDurationMilliseconds" DefaultValue="1000" />
     <Parameter Name="FabricSystemObserverMonitorSleepDurationMilliseconds" DefaultValue="1000" />
     <Parameter Name="NodeObserverMonitorSleepDurationMilliseconds" DefaultValue="1000" />
-    <!-- Run Intervals (TimeSpan format, e.g., 0.00:00:00): How often an enabled observer should run. -->
+    <!-- Observer Run Intervals (TimeSpan format, e.g., 0.00:00:00): How often an enabled observer should run. -->
     <Parameter Name="AppObserverRunInterval" DefaultValue="" />
     <Parameter Name="AzureStorageUploadObserverRunInterval" DefaultValue="00:05:00" />
     <Parameter Name="CertificateObserverRunInterval" DefaultValue="1.00:00:00" />
@@ -169,7 +179,7 @@
     <Parameter Name="FabricSystemObserverResourceUsageDataCapacity" DefaultValue="" />
     <!-- KVS LVID Usage Monitoring - Windows-only.
          This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
-    <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="true" />
+    <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="false" />
     <Parameter Name="FabricSystemObserverMonitorPrivateWorkingSet" DefaultValue="false" />
     <!-- FabricSystemObserver Warning/Error Thresholds -->
     <Parameter Name="FabricSystemObserverCpuErrorLimitPercent" DefaultValue="" />
@@ -236,7 +246,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.2.13" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.2.14" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -419,6 +429,13 @@
             <Parameter Name="EnableFabricObserverOperationalTelemetry" Value="[ObserverManagerEnableOperationalFOTelemetry]" />
             <Parameter Name="ObserverFailureHealthStateLevel" Value="[ObserverManagerObserverFailureHealthStateLevel]" />
             <Parameter Name="ObserverLogPath" Value="[ObserverLogPath]" />
+            <Parameter Name="TelemetryProvider" Value="[ObserverManagerTelemetryProviderType]" />
+            <!-- Application Insights -->
+            <Parameter Name="AppInsightsConnectionString" Value="[ObserverManagerAppInsightsConnectionString]" />
+            <!-- LogAnalytics -->
+            <Parameter Name="LogAnalyticsWorkspaceId" Value="[ObserverManagerLogAnalyticsWorkspaceId]" />
+            <Parameter Name="LogAnalyticsSharedKey" Value="[ObserverManagerLogAnalyticsSharedKey]" />
+            <Parameter Name="LogAnalyticsLogType" Value="[ObserverManagerLogAnalyticsLogType]" />
           </Section>
         </Settings>
       </ConfigOverride>

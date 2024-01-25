@@ -186,14 +186,14 @@ namespace FabricObserver.Observers
         {
             ObserverLogger.LogInfo($"Started ObserveAsync.");
 
-            if (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
+            if (RunInterval > TimeSpan.Zero && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
-                ObserverLogger.LogInfo($"RunInterval ({RunInterval}) has not elapsed. Exiting.");
+                ObserverLogger.LogInfo($"ObserveAsync: RunInterval ({RunInterval}) has not elapsed. Exiting.");
                 return;
             }
 
             Token = token;
-            stopwatch.Start();
+            stopwatch.Restart();
 
             try
             {
@@ -203,7 +203,6 @@ namespace FabricObserver.Observers
                 {
                     ObserverLogger.LogWarning("AppObserver was unable to initialize correctly due to misconfiguration. " +
                                               "Please check your AppObserver configuration settings.");
-                    stopwatch.Stop();
                     stopwatch.Reset();
                     CleanUp();
                     LastRunDateTime = DateTime.Now;
@@ -227,26 +226,36 @@ namespace FabricObserver.Observers
                 throw;
             }
 
-            ParallelLoopResult result = await MonitorDeployedAppsAsync(token);
-
-            if (result.IsCompleted)
+            try
             {
-                await ReportAsync(token);
+                ParallelLoopResult result = await MonitorDeployedAppsAsync(token);
+
+                if (result.IsCompleted)
+                {
+                    await ReportAsync(token);
+                }
+
+                stopwatch.Stop();
+                RunDuration = stopwatch.Elapsed;
+
+                if (EnableVerboseLogging)
+                {
+                    ObserverLogger.LogInfo($"Run Duration ({ReplicaOrInstanceList?.Count} service processes observed) {(parallelOptions.MaxDegreeOfParallelism == 1 ? "without" : "with")} " +
+                                           $"Parallel Processing (MaxDegreeOfParallelism: {parallelOptions.MaxDegreeOfParallelism}): {RunDuration}.");
+                }
+
+                ObserverLogger.LogInfo($"Completed ObserveAsync.");
             }
-
-            stopwatch.Stop();
-            RunDuration = stopwatch.Elapsed;
-
-            if (EnableVerboseLogging)
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
-                ObserverLogger.LogInfo($"Run Duration ({ReplicaOrInstanceList?.Count} service processes observed) {(parallelOptions.MaxDegreeOfParallelism == 1 ? "without" : "with")} " +
-                                       $"Parallel Processing (MaxDegreeOfParallelism: {parallelOptions.MaxDegreeOfParallelism}): {RunDuration}.");
+                ObserverLogger.LogError($"Unhandled exception in ObserveAsync: {e.Message}");
+                throw;
             }
-
-            CleanUp();
-            stopwatch.Reset();
-            ObserverLogger.LogInfo($"Completed ObserveAsync.");
-            LastRunDateTime = DateTime.Now;
+            finally
+            {
+                CleanUp();
+                LastRunDateTime = DateTime.Now;
+            }
         }
 
         public override Task ReportAsync(CancellationToken token)
@@ -2524,7 +2533,7 @@ namespace FabricObserver.Observers
                     {
                         capacity = DataCapacity > 0 ? DataCapacity : 5;
                     }
-                    else if (MonitorDuration > TimeSpan.MinValue)
+                    else if (MonitorDuration > TimeSpan.Zero)
                     {
                         capacity = MonitorDuration.Seconds * 4;
                     }
@@ -2744,11 +2753,6 @@ namespace FabricObserver.Observers
                 }
             });
 
-            if (!exceptions.IsEmpty)
-            {
-                throw new AggregateException(exceptions);
-            }
-
             // Perf 
             string threads = string.Empty;
             int threadcount = threadData.Distinct().Count();
@@ -2756,10 +2760,16 @@ namespace FabricObserver.Observers
             threadData.Clear();
             threadData = null;
             execTimer.Stop();
-            ObserverLogger.LogInfo("Completed MonitorDeployedAppsAsync.");
             ObserverLogger.LogInfo($"MonitorDeployedAppsAsync Execution time: {execTimer.Elapsed}{threads}");
             execTimer = null;
 
+            if (!exceptions.IsEmpty)
+            {
+                ObserverLogger.LogInfo("Completed MonitorDeployedAppsAsync with one or more exceptions inside task. Throwing inner exceptions aggregate.");
+                throw new AggregateException(exceptions);
+            }
+
+            ObserverLogger.LogInfo("Completed MonitorDeployedAppsAsync.");
             return Task.FromResult(result);
         }
 
@@ -2787,6 +2797,8 @@ namespace FabricObserver.Observers
         {
             _ = Parallel.For(0, processDictionary.Count, parallelOptions, (i, state) =>
             {
+                ObserverLogger.LogInfo($"ComputeResourceUsage: Entering outer loop. ConcurrencyEnabled = {EnableConcurrentMonitoring}");
+
                 if (token.IsCancellationRequested)
                 {
                     if (parallelOptions.MaxDegreeOfParallelism == -1 || parallelOptions.MaxDegreeOfParallelism > 1)
@@ -2807,19 +2819,6 @@ namespace FabricObserver.Observers
                 if (!EnsureProcess(procName, procId, entry.Value.ProcessStartTime))
                 {
                     return;
-                }
-
-                TimeSpan duration = TimeSpan.FromSeconds(1);
-                TimeSpan sleep = TimeSpan.FromMilliseconds(50);
-
-                if (MonitorDuration > TimeSpan.MinValue)
-                {
-                    duration = MonitorDuration;
-                }
-
-                if (MonitorSleepDuration > TimeSpan.MinValue)
-                {
-                    sleep = MonitorSleepDuration;
                 }
 
                 // Handles/FDs
@@ -3157,83 +3156,111 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                while (timer.Elapsed <= duration)
+                TimeSpan duration = TimeSpan.FromSeconds(5);
+                TimeSpan sleep = TimeSpan.FromMilliseconds(1000);
+
+                // This is only used in CPU monitoring. On Windows, this is an expensive lookup that is done in a sequential while loop,
+                // so we should not let this duration exceed 10 seconds. Do not monitor CPU for more than 10 seconds, regardless of user setting.
+                if (MonitorDuration > TimeSpan.Zero && MonitorDuration <= TimeSpan.FromSeconds(10))
                 {
-                    if (token.IsCancellationRequested)
-                    {
-                        state.Stop();
-                    }
-
-                    if (checkCpu || (MonitorResourceGovernanceLimits && repOrInst.RGCpuEnabled && rgCpuPercentThreshold > 0))
-                    {
-                        double cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, IsWindows ? procName : null, procHandle);
-
-                        // Process id is no longer mapped to expected process name or some internal error occured that is non-retryable. Ignore this process.
-                        // See CpuUsageProcess.cs/CpuUsageWin32.cs impls.
-                        if (cpu == -1)
-                        {
-                            return;
-                        }
-
-                        // CPU (all cores) \\
-                        if (checkCpu)
-                        {
-                            if (procId == parentPid)
-                            {
-                                AllAppCpuData[id].AddData(cpu);
-                            }
-                            else
-                            {
-                                // Add new child proc entry if not already present in dictionary.
-                                _ = AllAppCpuData.TryAdd(
-                                        $"{id}:{procName}{procId}",
-                                        new FabricResourceUsageData<double>(
-                                            ErrorWarningProperty.CpuTime,
-                                            $"{id}:{procName}{procId}",
-                                            capacity,
-                                            UseCircularBuffer,
-                                            EnableConcurrentMonitoring));
-
-                                AllAppCpuData[$"{id}:{procName}{procId}"].AddData(cpu);
-                            }
-                        }
-
-                        if (MonitorResourceGovernanceLimits && repOrInst.RGCpuEnabled && repOrInst.RGAppliedCpuLimitCores > 0  && rgCpuPercentThreshold > 0)
-                        {
-                            double pct = cpu * Environment.ProcessorCount / repOrInst.RGAppliedCpuLimitCores;
-
-                            if (procId == parentPid)
-                            {
-                                AllAppRGCpuUsagePercent[id].AddData(pct);
-                            }
-                            else
-                            {
-                                // Add new child proc entry if not already present in dictionary.
-                                _ = AllAppRGCpuUsagePercent.TryAdd(
-                                        $"{id}:{procName}{procId}",
-                                        new FabricResourceUsageData<double>(
-                                            ErrorWarningProperty.RGCpuUsagePercent,
-                                            $"{id}:{procName}{procId}",
-                                            capacity,
-                                            UseCircularBuffer,
-                                            EnableConcurrentMonitoring));
-
-                                AllAppRGCpuUsagePercent[$"{id}:{procName}{procId}"].AddData(pct);
-                            }
-                        }
-                    }
-
-                    Thread.Sleep(sleep);
+                    duration = MonitorDuration;
                 }
 
-                if (IsWindows)
+                // This should *not* ever be less than 500 ms. If so, change it to 1000 ms.
+                if (CpuMonitorLoopSleepDuration > TimeSpan.Zero)
                 {
-                    procHandle?.Dispose();
-                    procHandle = null;
+                    sleep = CpuMonitorLoopSleepDuration >= TimeSpan.FromMilliseconds(500) ? CpuMonitorLoopSleepDuration : TimeSpan.FromMilliseconds(1000);
                 }
 
-                timer.Stop();
-                timer = null;
+                // TODO: Add support for longer-term CPU monitoring (across AppObserver runs) and not point in time like this. Doing multiple lookups per run is expensive (CPU-usage wise when running
+                // concurrently on Windows).
+                try
+                {
+                    ObserverLogger.LogInfo($"ComputeResourceUsage: Entering CPU monitor while loop. MonitorDuration = {duration}. CpuMonitorLoopSleepDuration = {CpuMonitorLoopSleepDuration} ms.");
+
+                    while (timer.Elapsed <= duration)
+                    {
+                        if (token.IsCancellationRequested)
+                        {
+                            state.Stop();
+                        }
+
+                        if (checkCpu || (MonitorResourceGovernanceLimits && repOrInst.RGCpuEnabled && rgCpuPercentThreshold > 0))
+                        {
+                            double cpu = cpuUsage.GetCurrentCpuUsagePercentage(procId, IsWindows ? procName : null, procHandle);
+
+                            // Process id is no longer mapped to expected process name or some internal error occured that is non-retryable. Ignore this process.
+                            // See CpuUsageProcess.cs/CpuUsageWin32.cs impls.
+                            if (cpu == -1)
+                            {
+                                return;
+                            }
+
+                            // CPU (all cores) \\
+                            if (checkCpu)
+                            {
+                                if (procId == parentPid)
+                                {
+                                    AllAppCpuData[id].AddData(cpu);
+                                }
+                                else
+                                {
+                                    // Add new child proc entry if not already present in dictionary.
+                                    _ = AllAppCpuData.TryAdd(
+                                            $"{id}:{procName}{procId}",
+                                            new FabricResourceUsageData<double>(
+                                                ErrorWarningProperty.CpuTime,
+                                                $"{id}:{procName}{procId}",
+                                                capacity,
+                                                UseCircularBuffer,
+                                                EnableConcurrentMonitoring));
+
+                                    AllAppCpuData[$"{id}:{procName}{procId}"].AddData(cpu);
+                                }
+                            }
+
+                            if (MonitorResourceGovernanceLimits && repOrInst.RGCpuEnabled && repOrInst.RGAppliedCpuLimitCores > 0 && rgCpuPercentThreshold > 0)
+                            {
+                                double pct = cpu * Environment.ProcessorCount / repOrInst.RGAppliedCpuLimitCores;
+
+                                if (procId == parentPid)
+                                {
+                                    AllAppRGCpuUsagePercent[id].AddData(pct);
+                                }
+                                else
+                                {
+                                    // Add new child proc entry if not already present in dictionary.
+                                    _ = AllAppRGCpuUsagePercent.TryAdd(
+                                            $"{id}:{procName}{procId}",
+                                            new FabricResourceUsageData<double>(
+                                                ErrorWarningProperty.RGCpuUsagePercent,
+                                                $"{id}:{procName}{procId}",
+                                                capacity,
+                                                UseCircularBuffer,
+                                                EnableConcurrentMonitoring));
+
+                                    AllAppRGCpuUsagePercent[$"{id}:{procName}{procId}"].AddData(pct);
+                                }
+                            }
+                        }
+
+                        ObserverLogger.LogInfo($"ComputeResourceUsage: Sleeping for {sleep} ms in CPU monitoring while loop.");
+                        Thread.Sleep(sleep);
+                    }
+
+                    ObserverLogger.LogInfo($"ComputeResourceUsage: Exiting CPU monitoring while loop.");
+                }
+                finally 
+                {
+                    if (IsWindows)
+                    {
+                        procHandle?.Dispose();
+                        procHandle = null;
+                    }
+
+                    timer.Stop();
+                    timer = null;
+                }
             });
         }
 

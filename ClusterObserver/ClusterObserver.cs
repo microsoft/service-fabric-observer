@@ -104,7 +104,7 @@ namespace ClusterObserver
         public override async Task ObserveAsync(CancellationToken token)
         {
             if (!IsEnabled || (!IsTelemetryEnabled && !IsEtwEnabled)
-                || (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval))
+                || (RunInterval > TimeSpan.Zero && DateTime.Now.Subtract(LastRunDateTime) < RunInterval))
             {
                 return;
             }

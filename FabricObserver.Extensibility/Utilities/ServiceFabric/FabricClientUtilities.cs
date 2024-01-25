@@ -68,7 +68,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                     {
                         // This call with throw an ObjectDisposedException if fabricClient was disposed by, say, a plugin or if the runtime
                         // disposed of it for some reason (FO replica restart, for example). This is just a test to ensure it is not in a disposed state.
-                        if (fabricClient.Settings.HealthReportSendInterval > TimeSpan.MinValue)
+                        if (fabricClient.Settings.HealthReportSendInterval > TimeSpan.Zero)
                         {
                             return fabricClient;
                         }

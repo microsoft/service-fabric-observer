@@ -57,7 +57,7 @@ namespace FabricObserver.Observers
         {
             // If set, this observer will only run during the supplied interval.
             // See Settings.xml, CertificateObserverConfiguration section, RunInterval parameter for an example.
-            if (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
+            if (RunInterval > TimeSpan.Zero && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
                 return;
             }

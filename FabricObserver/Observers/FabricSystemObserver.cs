@@ -183,8 +183,9 @@ namespace FabricObserver.Observers
             }
 
             // If set, this observer will only run during the supplied interval.
-            if (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
+            if (RunInterval > TimeSpan.Zero && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
+                ObserverLogger.LogInfo($"ObserveAsync: RunInterval ({RunInterval}) has not elapsed. Exiting.");
                 return;
             }
 
@@ -588,7 +589,7 @@ namespace FabricObserver.Observers
             {
                 frudCapacity = DataCapacity > 0 ? DataCapacity : 5;
             }
-            else if (MonitorDuration > TimeSpan.MinValue)
+            else if (MonitorDuration > TimeSpan.Zero)
             {
                 frudCapacity = (int)MonitorDuration.TotalSeconds * 4;
             }
@@ -1050,14 +1051,14 @@ namespace FabricObserver.Observers
                     TimeSpan duration = TimeSpan.FromSeconds(1);
                     TimeSpan sleep = TimeSpan.FromMilliseconds(150);
 
-                    if (MonitorDuration > TimeSpan.MinValue)
+                    if (MonitorDuration > TimeSpan.Zero)
                     {
                         duration = MonitorDuration;
                     }
 
-                    if (MonitorSleepDuration > TimeSpan.MinValue)
+                    if (CpuMonitorLoopSleepDuration > TimeSpan.Zero)
                     {
-                        sleep = MonitorSleepDuration;
+                        sleep = CpuMonitorLoopSleepDuration;
                     }
 
                     Stopwatch timer = Stopwatch.StartNew();

@@ -13,20 +13,23 @@ namespace FabricObserver.Observers.Utilities
 {
     public class ConfigSettings
     {
+        // Default run interval is 1m.
         public TimeSpan RunInterval
         {
             get; set;
-        }
+        } = TimeSpan.FromMinutes(1);
 
+        // Default monitor duration is 1s.
         public TimeSpan MonitorDuration
         {
             get; set;
-        }
+        } = TimeSpan.FromSeconds(1);
 
+        // Default monitor sleep duration is 1000ms.
         public TimeSpan MonitorSleepDuration
         {
             get; set;
-        }
+        } = TimeSpan.FromMilliseconds(1000);
 
         // Default enablement for any observer is enabled (true).
         public bool IsEnabled

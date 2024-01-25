@@ -144,8 +144,9 @@ namespace FabricObserver.Observers
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
-            if (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
+            if (RunInterval > TimeSpan.Zero && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
+                ObserverLogger.LogInfo($"ObserveAsync: RunInterval ({RunInterval}) has not elapsed. Exiting.");
                 return;
             }
 
@@ -428,7 +429,7 @@ namespace FabricObserver.Observers
             {
                 frudCapacity = DataCapacity > 0 ? DataCapacity : 4;
             }
-            else if (MonitorDuration > TimeSpan.MinValue)
+            else if (MonitorDuration > TimeSpan.Zero)
             {
                 frudCapacity = (int)MonitorDuration.TotalSeconds * 4;
             }
@@ -694,14 +695,14 @@ namespace FabricObserver.Observers
                 TimeSpan duration = TimeSpan.FromSeconds(10);
                 TimeSpan sleep = TimeSpan.FromMilliseconds(1000);
 
-                if (MonitorDuration > TimeSpan.MinValue)
+                if (MonitorDuration > TimeSpan.Zero)
                 {
                     duration = MonitorDuration;
                 }
 
-                if (MonitorSleepDuration > TimeSpan.MinValue)
+                if (CpuMonitorLoopSleepDuration > TimeSpan.Zero)
                 {
-                    sleep = MonitorSleepDuration;
+                    sleep = CpuMonitorLoopSleepDuration;
                 }
 
                 // OS-level file handle monitoring only makes sense for Linux, where the Maximum system-wide number of handles the kernel will allocate is a user-configurable setting.
