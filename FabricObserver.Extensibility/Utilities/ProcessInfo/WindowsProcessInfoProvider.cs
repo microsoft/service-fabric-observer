@@ -321,7 +321,7 @@ namespace FabricObserver.Observers.Utilities
                 float result = LvidCounter.NextValue();
                 
                 // DEBUG
-                ProcessInfoLogger.LogInfo($"GetProcessKvsLvidsUsagePercentage: {internalProcName} LVIDs used: {result}. CategoryName: {WinFabDbCategoryName}");
+                //ProcessInfoLogger.LogInfo($"GetProcessKvsLvidsUsagePercentage: {internalProcName} LVIDs used: {result}. CategoryName: {WinFabDbCategoryName}");
 
                 double usedPct = (double)(result * 100) / int.MaxValue;
                 return usedPct;
