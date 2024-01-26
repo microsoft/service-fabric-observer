@@ -83,6 +83,7 @@ namespace FabricObserver.Observers
                     "FabricDnsService",
                     "FabricFAS",
                     "FabricGateway",
+                    "FabricImage",
                     "FabricHost",
                     "FabricIS",
                     "FabricRM"
@@ -356,7 +357,7 @@ namespace FabricObserver.Observers
                     return Task.CompletedTask;
                 }
 
-                // Windows Event Log
+                // OBSOLETE: Windows Event Log
                 if (IsWindows && IsObserverWebApiAppDeployed && monitorWinEventLog)
                 {
                     // SF Eventlog Errors?
@@ -589,9 +590,9 @@ namespace FabricObserver.Observers
             {
                 frudCapacity = DataCapacity > 0 ? DataCapacity : 5;
             }
-            else if (MonitorDuration > TimeSpan.Zero)
+            else if (CpuMonitorDuration > TimeSpan.Zero)
             {
-                frudCapacity = (int)MonitorDuration.TotalSeconds * 4;
+                frudCapacity = (int)CpuMonitorDuration.TotalSeconds * 4;
             }
 
             stopwatch ??= new Stopwatch();
@@ -1011,7 +1012,7 @@ namespace FabricObserver.Observers
                 // KVS LVIDs
                 if (EnableKvsLvidMonitoring && (dotnetArg == "Fabric" || dotnetArg == "FabricRM"))
                 {
-                    double lvidPct = ProcessInfoProvider.Instance.GetProcessKvsLvidsUsagePercentage(dotnetArg, Token);
+                    double lvidPct = ProcessInfoProvider.Instance.GetProcessKvsLvidsUsagePercentage(dotnetArg, token);
 
                     // GetProcessKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
                     if (lvidPct > -1)
@@ -1026,7 +1027,7 @@ namespace FabricObserver.Observers
                 // Memory MB
                 if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
                 {
-                    float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, dotnetArg, Token, checkPrivateWorkingSet);
+                    float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, dotnetArg, token, checkPrivateWorkingSet);
 
                     if (allMemData.ContainsKey(dotnetArg))
                     {
@@ -1048,19 +1049,6 @@ namespace FabricObserver.Observers
                         cpuUsage = new CpuUsageProcess();
                     }
 
-                    TimeSpan duration = TimeSpan.FromSeconds(1);
-                    TimeSpan sleep = TimeSpan.FromMilliseconds(150);
-
-                    if (MonitorDuration > TimeSpan.Zero)
-                    {
-                        duration = MonitorDuration;
-                    }
-
-                    if (CpuMonitorLoopSleepDuration > TimeSpan.Zero)
-                    {
-                        sleep = CpuMonitorLoopSleepDuration;
-                    }
-
                     Stopwatch timer = Stopwatch.StartNew();
                     
                     if (IsWindows)
@@ -1068,7 +1056,7 @@ namespace FabricObserver.Observers
                         procHandle = NativeMethods.GetSafeProcessHandle(procId);
                     }
 
-                    while (timer.Elapsed <= duration)
+                    while (timer.Elapsed <= CpuMonitorDuration)
                     {
                         token.ThrowIfCancellationRequested();
 
@@ -1085,7 +1073,7 @@ namespace FabricObserver.Observers
                                 }
                             }
 
-                            await Task.Delay(sleep, Token);
+                            await Task.Delay(CpuMonitorLoopSleepDuration, token);
                         }
                         catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
                         {

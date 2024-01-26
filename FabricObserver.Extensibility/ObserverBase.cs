@@ -318,28 +318,40 @@ namespace FabricObserver.Observers
             }
         }
 
-        public TimeSpan MonitorDuration
+        public TimeSpan CpuMonitorDuration
         {
-            get => ConfigurationSettings?.MonitorDuration ?? TimeSpan.Zero;
+            get
+            {
+                return ConfigurationSettings.MonitorDuration > TimeSpan.FromSeconds(10)
+                    ? TimeSpan.FromSeconds(4)
+                    : ConfigurationSettings.MonitorDuration;
+            }
             set
             {
                 if (ConfigurationSettings != null)
                 {
-                    // Prevent bad values.
-                    ConfigurationSettings.MonitorDuration = value > TimeSpan.Zero ? value : TimeSpan.FromSeconds(1);
+                    // Prevent bad values. CPU measurements require multiple iterations of internal monitoring sequential while loop.
+                    // The calculation is expensive on Windows. Do not call it too many times per run. It's OK to be conservative here.
+                    ConfigurationSettings.MonitorDuration = 
+                        value > TimeSpan.Zero ? value : CpuMonitorLoopSleepDuration < TimeSpan.FromMilliseconds(1000) ? TimeSpan.FromSeconds(2) : TimeSpan.FromSeconds(4);
                 }
             }
         }
 
         public TimeSpan CpuMonitorLoopSleepDuration
         {
-            get => ConfigurationSettings?.MonitorSleepDuration ?? TimeSpan.Zero;
+            get
+            {
+                return ConfigurationSettings.MonitorSleepDuration <= TimeSpan.FromMilliseconds(500)
+                    ? TimeSpan.FromMilliseconds(1000)
+                    : ConfigurationSettings.MonitorSleepDuration;
+            }
             set
             {
                 if (ConfigurationSettings != null)
                 {
                     // Prevent bad values.
-                    ConfigurationSettings.MonitorSleepDuration = value > TimeSpan.Zero ? value : TimeSpan.FromMilliseconds(1000);
+                    ConfigurationSettings.MonitorSleepDuration = value >= TimeSpan.FromMilliseconds(500) ? value : TimeSpan.FromMilliseconds(1000);
                 }
             }
         }
@@ -1504,7 +1516,7 @@ namespace FabricObserver.Observers
                 IsTelemetryProviderEnabled = telemEnabled;
             }
 
-            if (!IsTelemetryEnabled)
+            if (!IsTelemetryProviderEnabled || !IsTelemetryEnabled)
             {
                 return;
             }

@@ -106,9 +106,6 @@ namespace FabricObserverTests
 
             // Install required SF test applications.
             await DeployTestAppsAppsAsync();
-
-            // Wait for apps to be deployed.
-            await Task.Delay(TimeSpan.FromSeconds(15));
         }
 
         private static async Task DeployTestAppsAppsAsync()
@@ -118,6 +115,9 @@ namespace FabricObserverTests
             await DeployVotingAppAsync();
             await DeployCpuStressAppAsync();
             await DeployPortTestAppAsync();
+
+            // Wait a little extra time for apps to be fully in ready state.
+            await Task.Delay(15000);
         }
 
         [ClassCleanup]
@@ -697,6 +697,8 @@ namespace FabricObserverTests
                 // Un-provision the application type.
                 await FabricClientSingleton.ApplicationManager.UnprovisionApplicationAsync(appType, appVersion);
             }
+
+            await Task.Delay(5000);
         }
 
         private static async Task<bool> EnsureTestServicesExistAsync(string appName, int numServices = 0)
@@ -2189,7 +2191,7 @@ namespace FabricObserverTests
             using var obs = new NodeObserver(TestServiceContext)
             {
                 DataCapacity = 2,
-                MonitorDuration = TimeSpan.FromSeconds(1),
+                CpuMonitorDuration = TimeSpan.FromSeconds(1),
                 CpuWarningUsageThresholdPct = 10000
             };
 
@@ -2217,7 +2219,7 @@ namespace FabricObserverTests
             using var obs = new NodeObserver(TestServiceContext)
             {
                 DataCapacity = 2,
-                MonitorDuration = TimeSpan.FromSeconds(1),
+                CpuMonitorDuration = TimeSpan.FromSeconds(1),
                 CpuWarningUsageThresholdPct = -1000,
                 MemWarningUsageThresholdMb = -2500,
                 EphemeralPortsRawErrorThreshold = -42,
@@ -2246,7 +2248,7 @@ namespace FabricObserverTests
             using var obs = new NodeObserver(TestServiceContext)
             {
                 DataCapacity = 2,
-                MonitorDuration = TimeSpan.FromSeconds(1),
+                CpuMonitorDuration = TimeSpan.FromSeconds(1),
                 CpuWarningUsageThresholdPct = -1000,
                 MemWarningUsageThresholdMb = -2500,
                 EphemeralPortsRawErrorThreshold = -42,
@@ -2360,7 +2362,7 @@ namespace FabricObserverTests
             {
                 // This is required since output files are only created if fo api app is also deployed to cluster..
                 IsObserverWebApiAppDeployed = true,
-                MonitorDuration = TimeSpan.FromSeconds(1),
+                CpuMonitorDuration = TimeSpan.FromSeconds(1),
                 FolderSizeMonitoringEnabled = true,
                 FolderSizeConfigDataWarning = warningDictionary,
                 IsEtwProviderEnabled = true
@@ -2519,7 +2521,7 @@ namespace FabricObserverTests
             using var obs = new NodeObserver(TestServiceContext)
             {
                 IsEnabled = true,
-                MonitorDuration = TimeSpan.FromSeconds(5),
+                CpuMonitorDuration = TimeSpan.FromSeconds(5),
                 CpuWarningUsageThresholdPct = 90, // This will generate Warning for sure.
                 ActivePortsWarningThreshold = 10000,
                 MemoryWarningLimitPercent = 90,
@@ -2550,7 +2552,7 @@ namespace FabricObserverTests
 
             using var obs = new NodeObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
+                CpuMonitorDuration = TimeSpan.FromSeconds(1),
                 DataCapacity = 5,
                 UseCircularBuffer = false,
                 IsEtwProviderEnabled = true,
@@ -2692,7 +2694,7 @@ namespace FabricObserverTests
 
             using var obs = new FabricSystemObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
+                CpuMonitorDuration = TimeSpan.FromSeconds(1),
                 ActiveTcpPortCountWarning = 3
             };
 
@@ -2725,7 +2727,7 @@ namespace FabricObserverTests
 
             using var obs = new FabricSystemObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
+                CpuMonitorDuration = TimeSpan.FromSeconds(1),
                 ActiveEphemeralPortCountWarning = 1
             };
 
@@ -2758,7 +2760,7 @@ namespace FabricObserverTests
 
             using var obs = new FabricSystemObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
+                CpuMonitorDuration = TimeSpan.FromSeconds(1),
                 AllocatedHandlesWarning = 100
             };
 
@@ -2792,7 +2794,7 @@ namespace FabricObserverTests
 
             using var obs = new FabricSystemObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
+                CpuMonitorDuration = TimeSpan.FromSeconds(1),
                 CpuWarnUsageThresholdPct = -42
             };
 
@@ -2824,7 +2826,7 @@ namespace FabricObserverTests
 
             using var obs = new FabricSystemObserver(TestServiceContext)
             {
-                MonitorDuration = TimeSpan.FromSeconds(1),
+                CpuMonitorDuration = TimeSpan.FromSeconds(1),
                 CpuWarnUsageThresholdPct = 420
             };
 
@@ -3446,7 +3448,7 @@ namespace FabricObserverTests
             using var obs = new NodeObserver(TestServiceContext)
             {
                 IsEnabled = true,
-                MonitorDuration = TimeSpan.FromSeconds(5),
+                CpuMonitorDuration = TimeSpan.FromSeconds(5),
                 CpuWarningUsageThresholdPct = 90,
                 ActivePortsWarningThreshold = 10000,
                 MemoryWarningLimitPercent = 90,
@@ -3530,9 +3532,7 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
-                EnableConcurrentMonitoring = true,
-                EnableChildProcessMonitoring = true
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json")
             };
 
             var startDateTime = DateTime.Now;
@@ -3568,9 +3568,7 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.single-app-target-warning-ports.json"),
-                EnableConcurrentMonitoring = true,
-                EnableChildProcessMonitoring = true
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.single-app-target-warning-ports.json")
             };
 
             var startDateTime = DateTime.Now;
@@ -3583,9 +3581,7 @@ namespace FabricObserverTests
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 
-            await Task.Delay(5000);
-
-            // observer detected no warning conditions.
+            // observer detected warning condition.
             Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
 
             // observer did not have any internal errors during run.

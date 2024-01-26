@@ -27,21 +27,21 @@
 	<Section Name="AppObserverConfiguration">
 		<Parameter Name="Enabled" Value="true" />
 		<Parameter Name="EnableConcurrentMonitoring" Value="true" />
-		<Parameter Name="MaxConcurrentTasks" Value="-1" />
+		<Parameter Name="MaxConcurrentTasks" Value="" />
+		<Parameter Name="EnableChildProcessMonitoring" Value="true" />
+		<Parameter Name="MaxChildProcTelemetryDataCount" Value="25" />
 		<Parameter Name="EnableTelemetry" Value="false" />
 		<Parameter Name="EnableEtw" Value="true" />
 		<Parameter Name="EnableCSVDataLogging" Value="false" />
 		<Parameter Name="EnableKvsLvidMonitoring" Value="false" />
 		<Parameter Name="EnableVerboseLogging" Value="true" />
-		<Parameter Name="MonitorDuration" Value="00:00:05" />
-        <Parameter Name="MonitorSleepDurationMilliseconds" Value="1000"/>
+		<Parameter Name="MonitorDuration" Value="" />
+        <Parameter Name="MonitorSleepDurationMilliseconds" Value=""/>
 		<Parameter Name="RunInterval" Value="" />
 		<Parameter Name="ConfigurationFileName" Value="AppObserver.config.json" />
 		<Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
 		<Parameter Name="UseCircularBuffer" Value="false" />
 		<Parameter Name="ResourceUsageDataCapacity" Value="" />
-		<Parameter Name="EnableChildProcessMonitoring" Value="true" />
-		<Parameter Name="MaxChildProcTelemetryDataCount" Value="25" />
 		<Parameter Name="EnableProcessDumps" Value="true" />
 		<Parameter Name="DumpType" Value="MiniPlus" />
 		<Parameter Name="MaxDumps" Value="3" />
@@ -81,8 +81,8 @@
 		<Parameter Name="EnableEtw" Value="true" />
 		<Parameter Name="EnableCSVDataLogging" Value="" />
 		<Parameter Name="EnableVerboseLogging" Value="" />
-		<Parameter Name="MonitorDuration" Value="00:00:01" />
-		<Parameter Name="MonitorSleepDurationMilliseconds" Value="500" />
+		<Parameter Name="MonitorDuration" Value="" />
+		<Parameter Name="MonitorSleepDurationMilliseconds" Value="" />
 		<Parameter Name="RunInterval" Value="" />
 		<Parameter Name="MonitorPrivateWorkingSet" Value="true" />
 		<Parameter Name="UseCircularBuffer" Value="" />

@@ -275,22 +275,20 @@ namespace FabricObserver.Observers
                         LastVersionCheckDateTime = DateTime.UtcNow;
                     }
 
-                    if (ObserverExecutionLoopSleepSeconds > 0)
+                    // Time to tale a nap before running observers again. 30 seconds is the minimum sleep time.
+                    if (ObserverExecutionLoopSleepSeconds >= 30)
                     {
                         await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds), runAsyncToken);
                     }
-                    else if (Observers.Count == 1)
+                    else
                     {
-                        // This protects against loop spinning when you run FO with one observer enabled and no sleep time set.
-                        await Task.Delay(TimeSpan.FromSeconds(15), runAsyncToken);
+                        // Prevent loop spinning. Let threads drain (in the case of AppObserver monitoring with concurrent Tasks). Be conservative here.
+                        await Task.Delay(TimeSpan.FromSeconds(30), runAsyncToken);
                     }
 
                     // All observers have run at this point. Try and empty the trash now.
                     GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
                     GC.Collect(2, GCCollectionMode.Forced, true, true);
-
-                    // Prevent loop spinning. Be conservative here.
-                    await Task.Delay(TimeSpan.FromSeconds(15), runAsyncToken);
                 }
             }
             catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
@@ -888,10 +886,10 @@ namespace FabricObserver.Observers
         /// <param name="e">Contains the information necessary for setting new config params from updated package.</param>
         private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
         {
-            Logger.LogWarning("Application Parameter upgrade started...");
-
             try
             {
+                Logger.LogWarning("Application Parameter upgrade started...");
+
                 // For Linux, we need to restart the FO process due to the Linux Capabilities impl that enables us to run docker and netstat commands as elevated user (FO Linux should always be run as standard user on Linux).
                 // During an upgrade event, SF touches the cap binaries which removes the cap settings so we need to run the FO app setup script again to reset them.
                 if (!isWindows)
@@ -922,6 +920,11 @@ namespace FabricObserver.Observers
                     // Reset last run time so the observer restarts (if enabled) after the app parameter update completes.
                     observer.LastRunDateTime = DateTime.MinValue;
                 }
+
+                // Refresh FO CancellationTokenSources.
+                cts = new CancellationTokenSource();
+                linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, runAsyncToken);
+                Logger.LogWarning("Application Parameter upgrade completed...");
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
@@ -939,14 +942,10 @@ namespace FabricObserver.Observers
 
                 HealthReporter.ReportHealthToServiceFabric(healthReport);
             }
-
-            // Refresh FO CancellationTokenSources.
-            cts?.Dispose();
-            linkedSFRuntimeObserverTokenSource?.Dispose();
-            cts = new CancellationTokenSource();
-            linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, runAsyncToken);
-            Logger.LogWarning("Application Parameter upgrade completed...");
-            isConfigurationUpdateInProgress = false;
+            finally
+            {
+                isConfigurationUpdateInProgress = false;
+            }
         }
 
         /// <summary>

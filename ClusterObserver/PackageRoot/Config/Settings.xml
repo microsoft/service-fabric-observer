@@ -22,25 +22,33 @@
 		<Parameter Name="EnableTelemetryProvider" Value="" MustOverride="true" />
 		<Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
 
+		<!-- Telemetry - ApplicationInsights/LogAnalytics. NOTE: Values must now be set in ApplicationManifest.xml. This is a *breaking change* in version 3.2.14. -->
+
+		<!-- Required - Telemetry Provider. Supported values are AzureApplicationInsights or AzureLogAnalytics. 
+         NOTE: Value must now be set in ApplicationManifest.xml. This is a *breaking change* in version 3.2.14. -->
+		<Parameter Name="TelemetryProvider" Value="" MustOverride="true" />
+
+		<!-- Application Insights -->
+		<!-- Required-If TelemetryProvider is AzureApplicationInsights. Your AppInsights Connection String. 
+         NOTE: Value must now be set in ApplicationManifest.xml. This is a *breaking change* in version 3.2.14.-->
+		<Parameter Name="AppInsightsConnectionString" Value="" MustOverride="true" />
+		<!-- OBSOLETE. DO NOT USE. Use AppInsightsConnectionString instead. InstrumentationKey is no longer recommended for ApplicationInsights ingestion.
+	     NOTE: Specifying this has no effect as ClusterObserver requires a ConnectionString for ApplicationInsights. -->
+		<Parameter Name="AppInsightsInstrumentationKey" Value="" />
+
+		<!-- LogAnalytics -->
+		<!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Workspace Id.
+         NOTE: Values must now be set in ApplicationManifest.xml. This is a *breaking change* in version 3.2.14. -->
+		<Parameter Name="LogAnalyticsWorkspaceId" Value="" MustOverride="true" />
+		<!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Shared Key. -->
+		<Parameter Name="LogAnalyticsSharedKey" Value="" MustOverride="true" />
+		<!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
+		<Parameter Name="LogAnalyticsLogType" Value="" MustOverride="true" />
+		<!-- End Telemetry Config -->
+
 		<!-- Non-overridable. -->
 
 		<Parameter Name="AsyncOperationTimeoutSeconds" Value="120" />
-		<!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
-		<Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
-		
-		<!-- AzureApplicationInsights -->
-		<!-- OBSOLETE: Use AppInsightsConnectionString instead. Setting this has no effect. -->
-		<Parameter Name="AppInsightsInstrumentationKey" Value="" />
-		<!-- Required-If TelemetryProvider is AzureApplicationInsights. Your Connection String. -->
-		<Parameter Name="AppInsightsConnectionString" Value="" />
-		
-		<!-- AzureLogAnalytics -->
-		<!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Workspace Id. -->
-		<Parameter Name="LogAnalyticsWorkspaceId" Value="" />
-		<!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Shared Key. -->
-		<Parameter Name="LogAnalyticsSharedKey" Value="" />
-		<!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
-		<Parameter Name="LogAnalyticsLogType" Value="ClusterObserver" />
 		
 		<!-- Optional: Amount of time in seconds to wait before ObserverManager signals shutdown. -->
 		<Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="1" />

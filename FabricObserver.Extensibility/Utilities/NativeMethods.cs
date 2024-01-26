@@ -43,11 +43,11 @@ namespace FabricObserver.Observers.Utilities
             "taskhostw.exe", "TextInputHost.exe", "wininit.exe", "winlogon.exe",
             "WmiPrvSE.exe", "WUDFHost.exe", "vmcompute.exe", "vmms.exe", "vmwp.exe", "vmmem"
         };
-        private static readonly string[] ignoreFabricSystemServicesList = new string[]
+        private static readonly string[] fabricSystemServicesList = new string[]
         {
             "EventStore.Service.exe", "Fabric.exe", "FabricHost.exe", "FabricApplicationGateway.exe", "FabricCAS.exe",
             "FabricDCA.exe", "FabricDnsService.exe", "FabricFAS.exe", "FabricGateway.exe",
-            "FabricHost.exe", "FabricIS.exe", "FabricRM.exe", "FabricUS.exe"
+            "FabricHost.exe", "FabricImage.exe", "FabricIS.exe", "FabricRM.exe", "FabricUS.exe"
         };
 
         // These are only read from concurrently. These do not need to be ConcurrentDictionaries.
@@ -1332,8 +1332,8 @@ namespace FabricObserver.Observers.Utilities
                     result.Add((procName.Replace(".exe", string.Empty), (int)pid));
                 }
 
-                // We only care about FabricHost's direct children, which are SF system service processes.
-                if (!FindInStringArray(ignoreFabricSystemServicesList, procName))
+                // We only care about FabricHost's direct descendants that are SF system service processes.
+                if (!FindInStringArray(fabricSystemServicesList, procName))
                 {
                     continue;
                 }
@@ -1534,7 +1534,7 @@ namespace FabricObserver.Observers.Utilities
 
                         // Filter out the procs we know are not the droids we're looking for just by name or pid.
                         if (procEntry.th32ProcessID == 0 || FindInStringArray(ignoreProcessList, procEntry.szExeFile)
-                            || FindInStringArray(ignoreFabricSystemServicesList, procEntry.szExeFile))
+                            || FindInStringArray(fabricSystemServicesList, procEntry.szExeFile))
                         {
                             continue;
                         }
@@ -1967,7 +1967,7 @@ namespace FabricObserver.Observers.Utilities
                     string procName = Path.GetFileName(snapshot.ImageFileName);
 
                     // We don't care about SF system service procs.
-                    if (FindInStringArray(ignoreFabricSystemServicesList, procName))
+                    if (FindInStringArray(fabricSystemServicesList, procName))
                     {
                         continue;
                     }

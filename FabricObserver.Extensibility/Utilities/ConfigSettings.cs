@@ -19,11 +19,11 @@ namespace FabricObserver.Observers.Utilities
             get; set;
         } = TimeSpan.FromMinutes(1);
 
-        // Default monitor duration is 1s.
+        // Default monitor duration is 3s.
         public TimeSpan MonitorDuration
         {
             get; set;
-        } = TimeSpan.FromSeconds(1);
+        } = TimeSpan.FromSeconds(3);
 
         // Default monitor sleep duration is 1000ms.
         public TimeSpan MonitorSleepDuration

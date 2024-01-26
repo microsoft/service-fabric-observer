@@ -39,7 +39,7 @@ namespace ClusterObserver
         private bool appParamsUpdating;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "2.2.7";
+        private const string InternalVersionNumber = "2.2.8";
 
         public bool EnableOperationalTelemetry
         {
@@ -250,10 +250,7 @@ namespace ClusterObserver
                             return;
                         }
 
-                        TelemetryClient = new LogAnalyticsTelemetry(
-                                                logAnalyticsWorkspaceId,
-                                                logAnalyticsSharedKey,
-                                                logAnalyticsLogType);
+                        TelemetryClient = new LogAnalyticsTelemetry(logAnalyticsWorkspaceId, logAnalyticsSharedKey, logAnalyticsLogType);
                         break;
                     
                     case TelemetryProviderType.AzureApplicationInsights:
@@ -574,13 +571,16 @@ namespace ClusterObserver
 
         private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
         {
-            Logger.LogWarning("Application Parameter upgrade started...");
-
             try
             {
+                Logger.LogWarning("Application Parameter upgrade started...");
+
                 appParamsUpdating = true;
                 await StopAsync(isAppParamUpdate: true);
                 var newSettings = e.NewPackage.Settings;
+
+                // ClusterObserverManager settings.
+                SetPropertiesFromConfigurationParameters(newSettings);
 
                 // ClusterObserver and plugin observer settings.
                 foreach (var observer in Observers)
@@ -589,13 +589,16 @@ namespace ClusterObserver
                     observer.ConfigPackage = e.NewPackage;
                     observer.ConfigurationSettings = new ConfigSettings(newSettings, configSectionName);
                     observer.ObserverLogger.EnableVerboseLogging = observer.ConfigurationSettings.EnableVerboseLogging;
+                    observer.SetObserverEtwTelemetryConfiguration();
 
                     // Reset last run time so the observer restarts (if enabled) after the app parameter update completes.
                     observer.LastRunDateTime = DateTime.MinValue;
                 }
 
-                // ClusterObserverManager settings.
-                SetPropertiesFromConfigurationParameters(newSettings);
+                // Refresh CO CancellationTokenSources.
+                cts = new CancellationTokenSource();
+                linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, this.token);
+                Logger.LogWarning("Application Parameter upgrade completed...");
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
@@ -614,14 +617,10 @@ namespace ClusterObserver
                 ObserverHealthReporter healthReporter = new(Logger);
                 healthReporter.ReportHealthToServiceFabric(healthReport);
             }
-
-            // Refresh CO CancellationTokenSources.
-            cts?.Dispose();
-            linkedSFRuntimeObserverTokenSource?.Dispose();
-            cts = new CancellationTokenSource();
-            linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, this.token);
-            Logger.LogWarning("Application Parameter upgrade completed...");
-            appParamsUpdating = false;
+            finally
+            {
+                appParamsUpdating = false;
+            }
         }
 
         private void Dispose(bool disposing)

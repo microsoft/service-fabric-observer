@@ -429,9 +429,9 @@ namespace FabricObserver.Observers
             {
                 frudCapacity = DataCapacity > 0 ? DataCapacity : 4;
             }
-            else if (MonitorDuration > TimeSpan.Zero)
+            else if (CpuMonitorDuration > TimeSpan.Zero)
             {
-                frudCapacity = (int)MonitorDuration.TotalSeconds * 4;
+                frudCapacity = (int)CpuMonitorDuration.TotalSeconds * 4;
             }
 
             if (CpuTimeData == null && (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0))
@@ -691,20 +691,7 @@ namespace FabricObserver.Observers
                     int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
                     FirewallData.AddData(firewalls);
                 }
-
-                TimeSpan duration = TimeSpan.FromSeconds(10);
-                TimeSpan sleep = TimeSpan.FromMilliseconds(1000);
-
-                if (MonitorDuration > TimeSpan.Zero)
-                {
-                    duration = MonitorDuration;
-                }
-
-                if (CpuMonitorLoopSleepDuration > TimeSpan.Zero)
-                {
-                    sleep = CpuMonitorLoopSleepDuration;
-                }
-
+                
                 // OS-level file handle monitoring only makes sense for Linux, where the Maximum system-wide number of handles the kernel will allocate is a user-configurable setting.
                 // Windows does not have a configurable setting for Max Handles as the number of handles available to the system is dynamic (even if the max per process is not). 
                 // As such, for Windows, GetMaximumConfiguredFileHandlesCount always return -1, by design. Also, GetTotalAllocatedFileHandlesCount is not implemented for Windows (just returns -1).
@@ -794,28 +781,23 @@ namespace FabricObserver.Observers
                 }
 
                 // No need to proceed.
-                if (CpuTimeData == null)
+                if (CpuTimeData == null || (CpuErrorUsageThresholdPct <= 0 && CpuWarningUsageThresholdPct <= 0))
                 {
                     return;
                 }
 
                 // Warm up counter.
                 _ = CpuUtilizationProvider.Instance.GetProcessorTimePercentage();
-                await Task.Delay(sleep, Token);
+                await Task.Delay(CpuMonitorLoopSleepDuration, token);
 
                 timer.Start();
                 
-                while (timer.Elapsed <= duration)
+                while (timer.Elapsed <= CpuMonitorDuration)
                 {
                     token.ThrowIfCancellationRequested();
-
-                    // CPU
-                    if (CpuErrorUsageThresholdPct > 0 || CpuWarningUsageThresholdPct > 0)
-                    {
-                         CpuTimeData.AddData(CpuUtilizationProvider.Instance.GetProcessorTimePercentage());
-                    }
-
-                    await Task.Delay(sleep, Token);
+                    
+                    CpuTimeData.AddData(CpuUtilizationProvider.Instance.GetProcessorTimePercentage());
+                    await Task.Delay(CpuMonitorLoopSleepDuration, token);
                 }
 
                 timer.Stop();

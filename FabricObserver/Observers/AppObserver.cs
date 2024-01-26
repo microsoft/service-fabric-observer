@@ -2533,9 +2533,9 @@ namespace FabricObserver.Observers
                     {
                         capacity = DataCapacity > 0 ? DataCapacity : 5;
                     }
-                    else if (MonitorDuration > TimeSpan.Zero)
+                    else if (CpuMonitorDuration > TimeSpan.Zero)
                     {
-                        capacity = MonitorDuration.Seconds * 4;
+                        capacity = CpuMonitorDuration.Seconds * 4;
                     }
 
                     // CPU
@@ -3156,29 +3156,12 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                TimeSpan duration = TimeSpan.FromSeconds(5);
-                TimeSpan sleep = TimeSpan.FromMilliseconds(1000);
-
-                // This is only used in CPU monitoring. On Windows, this is an expensive lookup that is done in a sequential while loop,
-                // so we should not let this duration exceed 10 seconds. Do not monitor CPU for more than 10 seconds, regardless of user setting.
-                if (MonitorDuration > TimeSpan.Zero && MonitorDuration <= TimeSpan.FromSeconds(10))
-                {
-                    duration = MonitorDuration;
-                }
-
-                // This should *not* ever be less than 500 ms. If so, change it to 1000 ms.
-                if (CpuMonitorLoopSleepDuration > TimeSpan.Zero)
-                {
-                    sleep = CpuMonitorLoopSleepDuration >= TimeSpan.FromMilliseconds(500) ? CpuMonitorLoopSleepDuration : TimeSpan.FromMilliseconds(1000);
-                }
-
-                // TODO: Add support for longer-term CPU monitoring (across AppObserver runs) and not point in time like this. Doing multiple lookups per run is expensive (CPU-usage wise when running
-                // concurrently on Windows).
                 try
                 {
-                    ObserverLogger.LogInfo($"ComputeResourceUsage: Entering CPU monitor while loop. MonitorDuration = {duration}. CpuMonitorLoopSleepDuration = {CpuMonitorLoopSleepDuration} ms.");
-
-                    while (timer.Elapsed <= duration)
+#if DEBUG
+                    ObserverLogger.LogInfo($"ComputeResourceUsage: Entering CPU monitor while loop. MonitorDuration = {CpuMonitorDuration}. CpuMonitorLoopSleepDuration = {CpuMonitorLoopSleepDuration}.");
+#endif
+                    while (timer.Elapsed <= CpuMonitorDuration)
                     {
                         if (token.IsCancellationRequested)
                         {
@@ -3244,11 +3227,11 @@ namespace FabricObserver.Observers
                             }
                         }
 
-                        ObserverLogger.LogInfo($"ComputeResourceUsage: Sleeping for {sleep} ms in CPU monitoring while loop.");
-                        Thread.Sleep(sleep);
+                        Thread.Sleep(CpuMonitorLoopSleepDuration);
                     }
-
-                    ObserverLogger.LogInfo($"ComputeResourceUsage: Exiting CPU monitoring while loop.");
+#if DEBUG
+                    ObserverLogger.LogInfo($"ComputeResourceUsage: Exiting CPU monitoring while loop. Ran for {timer.Elapsed}.");
+#endif
                 }
                 finally 
                 {
