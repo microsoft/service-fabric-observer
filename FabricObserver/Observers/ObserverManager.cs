@@ -231,64 +231,71 @@ namespace FabricObserver.Observers
                 // Observers run sequentially. See RunObservers impl.
                 while (true)
                 {
-                    if (!isConfigurationUpdateInProgress && (shutdownSignaled || runAsyncToken.IsCancellationRequested))
+                    try
                     {
-                        await ShutDownAsync();
-                        break;
-                    }
-
-                    await RunObserversAsync();
-
-                    // Identity-agnostic internal operational telemetry sent to Service Fabric team (only) for use in
-                    // understanding generic behavior of FH in the real world (no PII). This data is sent once a day and will be retained for no more
-                    // than 90 days.
-                    if (FabricObserverOperationalTelemetryEnabled && !(shutdownSignaled || runAsyncToken.IsCancellationRequested)
-                        && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
-                    {
-                        try
+                        if (!isConfigurationUpdateInProgress && (shutdownSignaled || runAsyncToken.IsCancellationRequested))
                         {
-                            using var telemetryEvents = new TelemetryEvents(nodeName);
-                            var foData = GetFabricObserverInternalTelemetryData();
+                            await ShutDownAsync();
+                            break;
+                        }
 
-                            if (foData != null)
+                        await RunObserversAsync();
+
+                        // Identity-agnostic internal operational telemetry sent to Service Fabric team (only) for use in
+                        // understanding generic behavior of FH in the real world (no PII). This data is sent once a day and will be retained for no more
+                        // than 90 days.
+                        if (FabricObserverOperationalTelemetryEnabled && !(shutdownSignaled || runAsyncToken.IsCancellationRequested)
+                            && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
+                        {
+                            try
                             {
-                                string filepath = Path.Combine(Logger.LogFolderBasePath, $"fo_operational_telemetry.log");
+                                using var telemetryEvents = new TelemetryEvents(nodeName);
+                                var foData = GetFabricObserverInternalTelemetryData();
 
-                                if (telemetryEvents.EmitFabricObserverOperationalEvent(foData, OperationalTelemetryRunInterval, filepath))
+                                if (foData != null)
                                 {
-                                    LastTelemetrySendDate = DateTime.UtcNow;
-                                    ResetInternalErrorWarningDataCounters();
+                                    string filepath = Path.Combine(Logger.LogFolderBasePath, $"fo_operational_telemetry.log");
+
+                                    if (telemetryEvents.EmitFabricObserverOperationalEvent(foData, OperationalTelemetryRunInterval, filepath))
+                                    {
+                                        LastTelemetrySendDate = DateTime.UtcNow;
+                                        ResetInternalErrorWarningDataCounters();
+                                    }
                                 }
                             }
+                            catch (Exception ex) when (ex is not OutOfMemoryException)
+                            {
+                                // Telemetry is non-critical and should *not* take down FO.
+                                Logger.LogWarning($"Unable to send internal diagnostic telemetry: {ex.Message}");
+                            }
                         }
-                        catch (Exception ex) when (ex is not OutOfMemoryException)
+
+                        // Check for new version once a day.
+                        if (!(shutdownSignaled || runAsyncToken.IsCancellationRequested) && DateTime.UtcNow.Subtract(LastVersionCheckDateTime) >= OperationalTelemetryRunInterval)
                         {
-                            // Telemetry is non-critical and should *not* take down FO.
-                            Logger.LogWarning($"Unable to send internal diagnostic telemetry: {ex.Message}");
+                            await CheckGithubForNewVersionAsync();
+                            LastVersionCheckDateTime = DateTime.UtcNow;
                         }
-                    }
 
-                    // Check for new version once a day.
-                    if (!(shutdownSignaled || runAsyncToken.IsCancellationRequested) && DateTime.UtcNow.Subtract(LastVersionCheckDateTime) >= OperationalTelemetryRunInterval)
-                    {
-                        await CheckGithubForNewVersionAsync();
-                        LastVersionCheckDateTime = DateTime.UtcNow;
-                    }
+                        // Time to tale a nap before running observers again. 30 seconds is the minimum sleep time.
+                        if (ObserverExecutionLoopSleepSeconds >= 30)
+                        {
+                            await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds), runAsyncToken);
+                        }
+                        else
+                        {
+                            // Prevent loop spinning. Let threads drain (in the case of AppObserver monitoring with concurrent Tasks). Be conservative here.
+                            await Task.Delay(TimeSpan.FromSeconds(30), runAsyncToken);
+                        }
 
-                    // Time to tale a nap before running observers again. 30 seconds is the minimum sleep time.
-                    if (ObserverExecutionLoopSleepSeconds >= 30)
-                    {
-                        await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds), runAsyncToken);
+                        // All observers have run at this point. Try and empty the trash now.
+                        GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+                        GC.Collect(2, GCCollectionMode.Forced, true, true);
                     }
-                    else
+                    catch (Exception e) when (e is FabricException or TimeoutException)
                     {
-                        // Prevent loop spinning. Let threads drain (in the case of AppObserver monitoring with concurrent Tasks). Be conservative here.
-                        await Task.Delay(TimeSpan.FromSeconds(30), runAsyncToken);
-                    }
 
-                    // All observers have run at this point. Try and empty the trash now.
-                    GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-                    GC.Collect(2, GCCollectionMode.Forced, true, true);
+                    }
                 }
             }
             catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
@@ -322,23 +329,23 @@ namespace FabricObserver.Observers
                         Source = ObserverConstants.ObserverManagerName
                     };
 
-                    await TelemetryClient.ReportHealthAsync(telemetryData, runAsyncToken);
+                    await TelemetryClient.ReportHealthAsync(telemetryData, CancellationToken.None);
                 }
 
                 // ETW.
                 if (EtwEnabled)
                 {
                     Logger.LogEtw(
-                            ObserverConstants.FabricObserverETWEventName,
-                            new
-                            {
-                                Description = message,
-                                HealthState = "Error",
-                                Metric = $"{ObserverConstants.FabricObserverName}_ServiceHealth",
-                                NodeName = nodeName,
-                                ObserverName = ObserverConstants.ObserverManagerName,
-                                Source = ObserverConstants.FabricObserverName
-                            });
+                        ObserverConstants.FabricObserverETWEventName,
+                        new
+                        {
+                            Description = message,
+                            HealthState = "Error",
+                            Metric = $"{ObserverConstants.FabricObserverName}_ServiceHealth",
+                            NodeName = nodeName,
+                            ObserverName = ObserverConstants.ObserverManagerName,
+                            Source = ObserverConstants.FabricObserverName
+                        });
                 }
 
                 // Operational telemetry sent to FO developer for use in understanding generic behavior of FO in the real world (no PII).
@@ -443,7 +450,7 @@ namespace FabricObserver.Observers
                                     var healthReporter = new ObserverHealthReporter(Logger);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
                                 }
-                                catch (FabricException)
+                                catch (Exception e) when (e is FabricException or TimeoutException)
                                 {
 
                                 }
@@ -481,7 +488,7 @@ namespace FabricObserver.Observers
                                                     var healthReporter = new ObserverHealthReporter(Logger);
                                                     healthReporter.ReportHealthToServiceFabric(healthReport);
                                                 }
-                                                catch (FabricException)
+                                                catch (Exception e) when (e is FabricException or TimeoutException)
                                                 {
 
                                                 }
@@ -509,7 +516,7 @@ namespace FabricObserver.Observers
                                                     var healthReporter = new ObserverHealthReporter(Logger);
                                                     healthReporter.ReportHealthToServiceFabric(healthReport);
                                                 }
-                                                catch (FabricException)
+                                                catch (Exception e) when (e is FabricException or TimeoutException)
                                                 {
 
                                                 }
@@ -547,7 +554,7 @@ namespace FabricObserver.Observers
                                         var healthReporter = new ObserverHealthReporter(Logger);
                                         healthReporter.ReportHealthToServiceFabric(healthReport);
                                     }
-                                    catch (FabricException)
+                                    catch (Exception e) when (e is FabricException or TimeoutException)
                                     {
 
                                     }
@@ -567,28 +574,35 @@ namespace FabricObserver.Observers
                         observer.ObserverName == ObserverConstants.NodeObserverName ||
                         observer.ObserverName == ObserverConstants.OSObserverName)
                     {
-                        var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(observer.NodeName);
-                        var fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(observer.ObserverName));
-
-                        if (fabricObserverNodeHealthEvents != null && fabricObserverNodeHealthEvents.Any())
+                        try
                         {
-                            healthReport.EntityType = EntityType.Machine;
+                            var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(observer.NodeName);
+                            var fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(observer.ObserverName));
 
-                            foreach (var evt in fabricObserverNodeHealthEvents)
+                            if (fabricObserverNodeHealthEvents != null && fabricObserverNodeHealthEvents.Any())
                             {
-                                try
-                                {
-                                    healthReport.Property = evt.HealthInformation.Property;
-                                    healthReport.SourceId = evt.HealthInformation.SourceId;
+                                healthReport.EntityType = EntityType.Machine;
 
-                                    var healthReporter = new ObserverHealthReporter(Logger);
-                                    healthReporter.ReportHealthToServiceFabric(healthReport);
-                                }
-                                catch (FabricException)
+                                foreach (var evt in fabricObserverNodeHealthEvents)
                                 {
+                                    try
+                                    {
+                                        healthReport.Property = evt.HealthInformation.Property;
+                                        healthReport.SourceId = evt.HealthInformation.SourceId;
 
+                                        var healthReporter = new ObserverHealthReporter(Logger);
+                                        healthReporter.ReportHealthToServiceFabric(healthReport);
+                                    }
+                                    catch (Exception e) when (e is FabricException or TimeoutException)
+                                    {
+
+                                    }
                                 }
                             }
+                        }
+                        catch (Exception e) when (e is FabricException or TimeoutException)
+                        {
+
                         }
                     }
 
@@ -633,7 +647,7 @@ namespace FabricObserver.Observers
                             var healthReporter = new ObserverHealthReporter(Logger);
                             healthReporter.ReportHealthToServiceFabric(healthReport);
                         }
-                        catch (FabricException)
+                        catch (Exception e) when (e is FabricException or TimeoutException)
                         {
 
                         }
@@ -659,7 +673,7 @@ namespace FabricObserver.Observers
                             var healthReporter = new ObserverHealthReporter(Logger);
                             healthReporter.ReportHealthToServiceFabric(healthReport);
                         }
-                        catch (FabricException)
+                        catch (Exception e) when (e is FabricException or TimeoutException)
                         {
 
                         }
