@@ -106,7 +106,7 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public static bool TelemetryEnabled
+        public static bool TelemetryProviderEnabled
         {
             get; set;
         }
@@ -319,7 +319,7 @@ namespace FabricObserver.Observers
                 await ShutDownAsync();
 
                 // Telemetry.
-                if (TelemetryEnabled)
+                if (TelemetryProviderEnabled)
                 {
                     var telemetryData = new NodeTelemetryData()
                     {
@@ -1023,7 +1023,7 @@ namespace FabricObserver.Observers
             // This only makes sense when you have the FabricObserverWebApi app installed.
             string fqdn = GetConfigSettingValue(ObserverConstants.Fqdn, settings);
 
-            if (!string.IsNullOrEmpty(fqdn))
+            if (!string.IsNullOrWhiteSpace(fqdn))
             {
                 Fqdn = fqdn;
             }
@@ -1051,12 +1051,12 @@ namespace FabricObserver.Observers
             }
 
             // Telemetry (AppInsights, LogAnalytics, etc) - Override
-            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.TelemetryEnabled, settings), out bool telemEnabled))
+            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.TelemetryProviderEnabled, settings), out bool telemProviderEnabled))
             {
-                TelemetryEnabled = telemEnabled;
+                TelemetryProviderEnabled = telemProviderEnabled;
             }
 
-            if (!TelemetryEnabled)
+            if (!TelemetryProviderEnabled)
             {
                 return;
             }
@@ -1065,13 +1065,13 @@ namespace FabricObserver.Observers
 
             if (string.IsNullOrEmpty(telemetryProviderType))
             {
-                TelemetryEnabled = false;
+                TelemetryProviderEnabled = false;
                 return;
             }
 
             if (!Enum.TryParse(telemetryProviderType, out TelemetryProviderType telemetryProvider))
             {
-                TelemetryEnabled = false;
+                TelemetryProviderEnabled = false;
                 return;
             }
 
@@ -1085,7 +1085,7 @@ namespace FabricObserver.Observers
 
                     if (string.IsNullOrEmpty(logAnalyticsWorkspaceId) || string.IsNullOrEmpty(logAnalyticsSharedKey))
                     {
-                        TelemetryEnabled = false;
+                        TelemetryProviderEnabled = false;
                         return;
                     }
 
@@ -1098,7 +1098,7 @@ namespace FabricObserver.Observers
 
                     if (string.IsNullOrEmpty(aiConnString))
                     {
-                        TelemetryEnabled = false;
+                        TelemetryProviderEnabled = false;
                         return;
                     }
 
@@ -1107,7 +1107,7 @@ namespace FabricObserver.Observers
 
                 default:
 
-                    TelemetryEnabled = false;
+                    TelemetryProviderEnabled = false;
                     break;
             }
         }
@@ -1187,7 +1187,7 @@ namespace FabricObserver.Observers
                         linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, runAsyncToken);
 
                         // Telemetry.
-                        if (TelemetryEnabled)
+                        if (TelemetryProviderEnabled)
                         {
                             var telemetryData = new NodeTelemetryData()
                             {
@@ -1387,7 +1387,7 @@ namespace FabricObserver.Observers
                     };
 
                     // Telemetry.
-                    if (TelemetryEnabled)
+                    if (TelemetryProviderEnabled)
                     {
                         await TelemetryClient?.ReportHealthAsync(telemetryData, runAsyncToken);
                     }

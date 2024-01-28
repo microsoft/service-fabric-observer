@@ -724,7 +724,7 @@ namespace FabricObserverTests
         public void AppObserver_Constructor_Test()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new AppObserver(TestServiceContext);
@@ -738,7 +738,7 @@ namespace FabricObserverTests
         public void AzureStorageUploadObserver_Constructor_Test()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new AzureStorageUploadObserver(TestServiceContext);
@@ -752,7 +752,7 @@ namespace FabricObserverTests
         public void CertificateObserver_Constructor_test()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new CertificateObserver(TestServiceContext);
@@ -766,7 +766,7 @@ namespace FabricObserverTests
         public void ContainerObserver_Constructor_test()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new ContainerObserver(TestServiceContext);
@@ -780,7 +780,7 @@ namespace FabricObserverTests
         public void DiskObserver_Constructor_Test()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
@@ -795,7 +795,7 @@ namespace FabricObserverTests
         public void FabricSystemObserver_Constructor_Test()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new FabricSystemObserver(TestServiceContext);
@@ -809,7 +809,7 @@ namespace FabricObserverTests
         public void NetworkObserver_Constructor_Test()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
@@ -824,7 +824,7 @@ namespace FabricObserverTests
         public void NodeObserver_Constructor_Test()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new NodeObserver(TestServiceContext);
@@ -838,7 +838,7 @@ namespace FabricObserverTests
         public void OSObserver_Constructor_Test()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new OSObserver(TestServiceContext);
@@ -855,7 +855,7 @@ namespace FabricObserverTests
 
             ObserverManager.FabricServiceContext = TestServiceContext;
 
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
             ObserverManager.ObserverWebAppDeployed = true;
 
@@ -875,7 +875,7 @@ namespace FabricObserverTests
         public async Task AppObserver_InitializeAsync_MalformedTargetAppValue_GeneratesWarning()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new AppObserver(TestServiceContext)
@@ -893,7 +893,7 @@ namespace FabricObserverTests
         public async Task AppObserver_InitializeAsync_InvalidJson_GeneratesWarning()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new AppObserver(TestServiceContext)
@@ -911,7 +911,7 @@ namespace FabricObserverTests
         public async Task AppObserver_InitializeAsync_NoConfigFound_GeneratesWarning()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new AppObserver(TestServiceContext)
@@ -931,7 +931,7 @@ namespace FabricObserverTests
         public async Task AppObserver_InitializeAsync_TargetAppType_ServiceExcludeList_EnsureExcluded()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new AppObserver(TestServiceContext)
@@ -949,7 +949,7 @@ namespace FabricObserverTests
         public async Task AppObserver_InitializeAsync_TargetApp_ServiceExcludeList_EnsureExcluded()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new AppObserver(TestServiceContext)
@@ -967,7 +967,7 @@ namespace FabricObserverTests
         public async Task AppObserver_InitializeAsync_TargetAppType_ServiceIncludeList_EnsureIncluded()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new AppObserver(TestServiceContext)
@@ -985,7 +985,7 @@ namespace FabricObserverTests
         public async Task AppObserver_InitializeAsync_TargetApp_ServiceIncludeList_EnsureIncluded()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new AppObserver(TestServiceContext)
@@ -1005,7 +1005,7 @@ namespace FabricObserverTests
         public async Task AppObserver_InitializeAsync_TargetAppType_MultiServiceExcludeList_EnsureNotExcluded()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new AppObserver(TestServiceContext)
@@ -1028,7 +1028,7 @@ namespace FabricObserverTests
         public async Task AppObserver_InitializeAsync_TargetApp_MultiServiceExcludeList_EnsureNotExcluded()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new AppObserver(TestServiceContext)
@@ -1051,7 +1051,7 @@ namespace FabricObserverTests
         public async Task AppObserver_InitializeAsync_TargetAppType_MultiServiceIncludeList_EnsureIncluded()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new AppObserver(TestServiceContext)
@@ -1069,7 +1069,7 @@ namespace FabricObserverTests
         public async Task AppObserver_InitializeAsync_TargetApp_MultiServiceIncludeList_EnsureIncluded()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new AppObserver(TestServiceContext)
@@ -1097,7 +1097,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = true;
 
             using var obs = new AppObserver(TestServiceContext)
@@ -1123,7 +1123,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = true;
 
             using var obs = new AppObserver(TestServiceContext)
@@ -1149,7 +1149,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = true;
 
             using var obs = new AppObserver(TestServiceContext)
@@ -1177,7 +1177,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new AppObserver(TestServiceContext)
@@ -1272,7 +1272,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = true;
 
             using var obs = new AppObserver(TestServiceContext)
@@ -1300,7 +1300,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new AppObserver(TestServiceContext);
@@ -1431,7 +1431,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new AppObserver(TestServiceContext)
@@ -1457,7 +1457,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new AppObserver(TestServiceContext)
@@ -1801,7 +1801,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new AppObserver(TestServiceContext)
@@ -1842,7 +1842,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new AppObserver(TestServiceContext)
@@ -1884,7 +1884,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new ContainerObserver(TestServiceContext)
@@ -2080,7 +2080,7 @@ namespace FabricObserverTests
                 var startDateTime = DateTime.Now;
 
                 ObserverManager.FabricServiceContext = TestServiceContext;
-                ObserverManager.TelemetryEnabled = false;
+                ObserverManager.TelemetryProviderEnabled = false;
                 ObserverManager.EtwEnabled = false;
 
                 using var obs = new CertificateObserver(TestServiceContext);
@@ -2129,7 +2129,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new CertificateObserver(TestServiceContext);
@@ -2185,7 +2185,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new NodeObserver(TestServiceContext)
@@ -2213,7 +2213,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new NodeObserver(TestServiceContext)
@@ -2242,7 +2242,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new NodeObserver(TestServiceContext)
@@ -2278,7 +2278,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = true;
 
             using var obs = new OSObserver(TestServiceContext)
@@ -2318,7 +2318,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new OSObserver(TestServiceContext)
@@ -2350,7 +2350,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = true;
 
             var warningDictionary = new Dictionary<string, double>
@@ -2396,7 +2396,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = true;
 
             var warningDictionary = new Dictionary<string, double>
@@ -2515,7 +2515,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = true;
 
             using var obs = new NodeObserver(TestServiceContext)
@@ -2547,7 +2547,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = true;
 
             using var obs = new NodeObserver(TestServiceContext)
@@ -2578,7 +2578,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new SFConfigurationObserver(TestServiceContext)
@@ -2623,7 +2623,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = true;
 
             using var obs = new FabricSystemObserver(TestServiceContext)
@@ -2658,7 +2658,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = true;
 
             using var obs = new FabricSystemObserver(TestServiceContext)
@@ -2689,7 +2689,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new FabricSystemObserver(TestServiceContext)
@@ -2722,7 +2722,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new FabricSystemObserver(TestServiceContext)
@@ -2755,7 +2755,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new FabricSystemObserver(TestServiceContext)
@@ -2788,7 +2788,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
 
@@ -2821,7 +2821,7 @@ namespace FabricObserverTests
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new FabricSystemObserver(TestServiceContext)
@@ -3442,7 +3442,7 @@ namespace FabricObserverTests
             using var foEtwListener = new FabricObserverEtwListener(_logger);
             var startDateTime = DateTime.Now;
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = true;
 
             using var obs = new NodeObserver(TestServiceContext)
@@ -3527,7 +3527,7 @@ namespace FabricObserverTests
         public async Task AppObserver_Detects_Monitors_Multiple_Helper_CodePackages()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new AppObserver(TestServiceContext)
@@ -3563,7 +3563,7 @@ namespace FabricObserverTests
         public async Task AppObserver_ChildProcs_Detects_SingleDescendant_Ports_Warning()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new AppObserver(TestServiceContext)
@@ -3592,7 +3592,7 @@ namespace FabricObserverTests
         public async Task AppObserver_ChildProcs_Detects_SingleDescendant_Ports_NoWarning()
         {
             ObserverManager.FabricServiceContext = TestServiceContext;
-            ObserverManager.TelemetryEnabled = false;
+            ObserverManager.TelemetryProviderEnabled = false;
             ObserverManager.EtwEnabled = false;
 
             using var obs = new AppObserver(TestServiceContext)

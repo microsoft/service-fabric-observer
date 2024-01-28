@@ -1525,7 +1525,7 @@ namespace FabricObserver.Observers
 
             // Telemetry Provider.
             if (bool.TryParse(
-                GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.TelemetryEnabled), out bool telemEnabled))
+                GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.TelemetryProviderEnabled), out bool telemEnabled))
             {
                 IsTelemetryProviderEnabled = telemEnabled;
             }
