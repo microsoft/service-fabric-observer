@@ -398,10 +398,23 @@ namespace FabricObserver.Observers
                 ServiceNames.Enqueue(ServiceName.OriginalString);
             }
 
+            InitializeObserverLoggingInfra();
+
+            HealthReporter = new ObserverHealthReporter(ObserverLogger);
+
+            IsObserverWebApiAppDeployed =
+                bool.TryParse(
+                    GetSettingParameterValue(
+                        ObserverConstants.ObserverManagerConfigurationSectionName,
+                        ObserverConstants.ObserverWebApiEnabled), out bool obsWeb) && obsWeb && IsObserverWebApiAppInstalled();
+        }
+
+        public void InitializeObserverLoggingInfra(bool isConfigUpdate = false)
+        {
             // Observer Logger setup.
             string logFolderBasePath;
             string observerLogPath = GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.ObserverLogPathParameter);
-            
+
             if (!string.IsNullOrWhiteSpace(observerLogPath))
             {
                 logFolderBasePath = observerLogPath;
@@ -413,28 +426,29 @@ namespace FabricObserver.Observers
             }
 
             // Archive file lifetime - ObserverLogger files.
-            if (int.TryParse(
+            _ = int.TryParse(
                  GetSettingParameterValue(
                     ObserverConstants.ObserverManagerConfigurationSectionName,
-                    ObserverConstants.MaxArchivedLogFileLifetimeDaysParameter), out int maxFileArchiveLifetime))
-            {
-
-            }
+                    ObserverConstants.MaxArchivedLogFileLifetimeDaysParameter), out int maxFileArchiveLifetime);
 
             SetObserverEtwTelemetryConfiguration();
 
-            ObserverLogger = new Logger(ObserverName, logFolderBasePath, maxFileArchiveLifetime > 0 ? maxFileArchiveLifetime : 7)
+            if (ObserverLogger == null)
             {
-                EnableETWLogging = IsEtwProviderEnabled,
-                EnableVerboseLogging = ConfigurationSettings.EnableVerboseLogging
-            };
-
-            HealthReporter = new ObserverHealthReporter(ObserverLogger);
-            IsObserverWebApiAppDeployed = 
-                bool.TryParse(
-                    GetSettingParameterValue(
-                        ObserverConstants.ObserverManagerConfigurationSectionName,
-                        ObserverConstants.ObserverWebApiEnabled), out bool obsWeb) && obsWeb && IsObserverWebApiAppInstalled();
+                ObserverLogger = new Logger(ObserverName, logFolderBasePath, maxFileArchiveLifetime > 0 ? maxFileArchiveLifetime : 7)
+                {
+                    EnableETWLogging = IsEtwProviderEnabled && ConfigurationSettings.IsObserverEtwEnabled,
+                    EnableVerboseLogging = ConfigurationSettings.EnableVerboseLogging
+                };
+            }
+            else if (isConfigUpdate)
+            {
+                ObserverLogger.EnableETWLogging = IsEtwProviderEnabled && ConfigurationSettings.IsObserverEtwEnabled;
+                ObserverLogger.EnableVerboseLogging = ConfigurationSettings.EnableVerboseLogging;
+                ObserverLogger.LogFolderBasePath = logFolderBasePath;
+                ObserverLogger.MaxArchiveFileLifetimeDays = maxFileArchiveLifetime > 0 ? maxFileArchiveLifetime : 7;
+                ObserverLogger.InitializeLoggers(isConfigUpdate);
+            }
         }
 
         /// <summary>

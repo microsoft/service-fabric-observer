@@ -2797,8 +2797,6 @@ namespace FabricObserver.Observers
         {
             _ = Parallel.For(0, processDictionary.Count, parallelOptions, (i, state) =>
             {
-                ObserverLogger.LogInfo($"ComputeResourceUsage: Entering outer loop. ConcurrencyEnabled = {EnableConcurrentMonitoring}");
-
                 if (token.IsCancellationRequested)
                 {
                     if (parallelOptions.MaxDegreeOfParallelism == -1 || parallelOptions.MaxDegreeOfParallelism > 1)

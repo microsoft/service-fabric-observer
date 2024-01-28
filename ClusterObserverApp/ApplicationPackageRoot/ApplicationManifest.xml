@@ -13,7 +13,7 @@
     <Parameter Name="ObserverManagerETWProviderName" DefaultValue="ClusterObserverETWProvider" />
     <!-- If you want to transmit telemetry events to ApplicationInsights or LogAnalytics, for example, then enable this setting. Otherwise, set this to false. -->
     <!-- Observer Telemetry -->
-    <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="false" />
+    <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
     <!-- Telemetry Provider - ApplicationInsights/LogAnalytics. Supported values are AzureApplicationInsights and AzureLogAnalytics. -->
     <Parameter Name="TelemetryProvider" DefaultValue="" />
     <!-- ApplicationInsights -->
@@ -25,6 +25,7 @@
     <!-- End Telemetry -->
     <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
     <Parameter Name="ClusterObserverLogPath" DefaultValue="cluster_observer_logs" />
+    <Parameter Name="MaxArchivedLogFileLifetimeDays" DefaultValue="7" />
     <!-- ClusterObserver settings. -->
     <Parameter Name="ClusterObserverEnabled" DefaultValue="true" />
     <Parameter Name="ClusterObserverEnableETW" DefaultValue="false" />
@@ -57,6 +58,7 @@
             <Parameter Name="ETWProviderName" Value="[ObserverManagerETWProviderName]" />
             <Parameter Name="EnableTelemetryProvider" Value="[ObserverManagerEnableTelemetryProvider]" />
             <Parameter Name="TelemetryProvider" Value="[TelemetryProvider]" />
+            <Parameter Name="MaxArchivedLogFileLifetimeDays" Value="[MaxArchivedLogFileLifetimeDays]" />
             <!-- Application Insights -->
             <Parameter Name="AppInsightsConnectionString" Value="[ApplicationInsightsConnectionString]" />
             <!-- LogAnalytics -->

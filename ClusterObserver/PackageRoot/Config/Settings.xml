@@ -21,6 +21,7 @@
 		<Parameter Name="ETWProviderName" Value="" MustOverride="true" />
 		<Parameter Name="EnableTelemetryProvider" Value="" MustOverride="true" />
 		<Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
+		<Parameter Name="MaxArchivedLogFileLifetimeDays" Value="" MustOverride="true" />
 
 		<!-- Telemetry - ApplicationInsights/LogAnalytics. NOTE: Values must now be set in ApplicationManifest.xml. This is a *breaking change* in version 3.2.14. -->
 

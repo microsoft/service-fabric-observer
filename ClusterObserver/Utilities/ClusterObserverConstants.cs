@@ -19,6 +19,7 @@ namespace ClusterObserver.Utilities
         public const string ClusterObserverETWEventName = "ClusterObserverDataEvent";
         public const string DefaultEventSourceProviderName = "ClusterObserverETWProvider";
         public const string FabricObserverName = "FabricObserver";
+        public const string MaxArchivedLogFileLifetimeDays = "MaxArchivedLogFileLifetimeDays";
 
         // The name of the package that contains this Observer's configuration.
         public const string ObserverConfigurationPackageName = "Config";

@@ -23,6 +23,7 @@ using System.ComponentModel;
 using System.Runtime;
 using FabricObserver.Utilities.ServiceFabric;
 using ConfigurationSettings = System.Fabric.Description.ConfigurationSettings;
+using Microsoft.VisualBasic;
 
 namespace FabricObserver.Observers
 {
@@ -89,11 +90,6 @@ namespace FabricObserver.Observers
         {
             get; set;
         } = TimeSpan.FromMinutes(30);
-
-        private int MaxArchivedLogFileLifetimeDays
-        {
-            get;
-        }
 
         private DateTime LastTelemetrySendDate
         {
@@ -177,12 +173,17 @@ namespace FabricObserver.Observers
                 logFolderBasePath = logFolderBase;
             }
 
-            if (int.TryParse(GetConfigSettingValue(ObserverConstants.MaxArchivedLogFileLifetimeDaysParameter, null), out int maxArchivedLogFileLifetimeDays))
-            {
-                MaxArchivedLogFileLifetimeDays = maxArchivedLogFileLifetimeDays;
-            }
+            _ = int.TryParse(GetConfigSettingValue(ObserverConstants.MaxArchivedLogFileLifetimeDaysParameter, null), out int maxArchivedLogFileLifetimeDays);
+            _ = bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProvider, null), out bool enableEtwProvider);
+            _ = bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableVerboseLoggingParameter, null), out bool enableVerboseLogging);
+            EtwEnabled = enableEtwProvider;
 
-            Logger = new Logger("ObserverManager", logFolderBasePath, MaxArchivedLogFileLifetimeDays);
+            Logger = new Logger("ObserverManager", logFolderBasePath, maxArchivedLogFileLifetimeDays)
+            {
+                EnableETWLogging = enableEtwProvider,
+                EnableVerboseLogging = enableVerboseLogging
+            };
+
             SetPropertiesFromConfigurationParameters();
             Observers = serviceProvider.GetServices<ObserverBase>().ToList();
             HealthReporter = new ObserverHealthReporter(Logger);
@@ -928,8 +929,7 @@ namespace FabricObserver.Observers
                     string configSectionName = observer.ConfigurationSettings.ConfigSection.Name;
                     observer.ConfigPackage = e.NewPackage;
                     observer.ConfigurationSettings = new ConfigSettings(newSettings, configSectionName);
-                    observer.ObserverLogger.EnableVerboseLogging = observer.ConfigurationSettings.EnableVerboseLogging;
-                    observer.SetObserverEtwTelemetryConfiguration();
+                    observer.InitializeObserverLoggingInfra(isConfigUpdate: true);
                     
                     // Reset last run time so the observer restarts (if enabled) after the app parameter update completes.
                     observer.LastRunDateTime = DateTime.MinValue;
@@ -976,31 +976,43 @@ namespace FabricObserver.Observers
                 IsLvidCounterEnabled = IsLVIDPerfCounterEnabled(settings);
             }
 
-            // ETW.
-            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProvider, settings), out bool etwEnabled))
-            {
-                EtwEnabled = etwEnabled;
-
-                if (Logger != null)
-                {
-                    Logger.EnableETWLogging = etwEnabled;
-                }
-            }
-
             // Maximum time, in seconds, that an observer can run - Override.
             if (int.TryParse(GetConfigSettingValue(ObserverConstants.ObserverExecutionTimeout, settings), out int timeoutSeconds))
             {
                 ObserverExecutionTimeout = TimeSpan.FromSeconds(timeoutSeconds);
             }
 
-            // ObserverManager verbose logging - Override.
-            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableVerboseLoggingParameter, settings), out bool enableVerboseLogging))
+            // Logger settings - Overrides. Config update. \\
+
+            // settings are not null if this is running due to a config update. Could also check for isConfigurationUpdateInProgress.
+            if (settings != null && Logger != null)
             {
-                if (Logger != null)
+                // ObserverManager logger EnableETWLogging - Override.
+                _ = bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProvider, settings), out bool enableEtwProvider);
+                EtwEnabled = enableEtwProvider;
+                Logger.EnableETWLogging = enableEtwProvider;
+
+                // ObserverManager logger EnableVerboseLogging - Override.
+                _ = bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableVerboseLoggingParameter, settings), out bool enableVerboseLogging);
+                Logger.EnableVerboseLogging = enableVerboseLogging;
+
+                // ObserverManager/Observer logger MaxArchiveLifetimeDays - Override.
+                _ = int.TryParse(GetConfigSettingValue(ObserverConstants.EnableVerboseLoggingParameter, settings), out int maxArchiveLifetimeDays);
+                Logger.MaxArchiveFileLifetimeDays = maxArchiveLifetimeDays > 0 ? maxArchiveLifetimeDays : 7;
+
+                // ObserverManager/Observer logger ObserverLogPath - Override.
+                string loggerBasePath = GetConfigSettingValue(ObserverConstants.ObserverLogPathParameter, settings);
+
+                if (!string.IsNullOrWhiteSpace(loggerBasePath))
                 {
-                    Logger.EnableVerboseLogging = enableVerboseLogging;
+                    Logger.LogFolderBasePath = loggerBasePath;
                 }
+
+                // This will reset existing logger instance's config state and employ updated settings immediately. See Logger.cs.
+                Logger.InitializeLoggers(true);
             }
+
+            // End Logger settings - Overrides. \\
 
             if (int.TryParse(GetConfigSettingValue(ObserverConstants.ObserverLoopSleepTimeSeconds, settings), out int execFrequency))
             {

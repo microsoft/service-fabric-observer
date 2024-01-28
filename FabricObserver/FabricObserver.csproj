@@ -72,7 +72,7 @@
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
 		</None>
 		<None Update="install_lvid_perfcounter.bat">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</None>
 		<None Update="setcaps.sh">
 			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
