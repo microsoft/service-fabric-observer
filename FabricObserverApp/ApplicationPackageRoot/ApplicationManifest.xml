@@ -2,8 +2,8 @@
 <!-- You can try the XML diff/merge tool XmlDiffPatchSF (located in this repo) to make upgrading your base configurations to the latest version much easier. -->
 <ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.14" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
-    <!-- FO's Observer loop will sleep for at least 30s, regardless of this setting. So, setting to 0 to 29 would mean FO will sleep for 30 seconds between observer loop iterations. -->
     <!-- ObserverManager Configuration -->
+    <!-- FO's Observer loop will sleep for at least 30s, regardless of this setting. So, setting to 0 to 29 would mean FO will sleep for 30 seconds between observer loop iterations. -->
     <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="60" />
     <Parameter Name="ObserverManagerObserverExecutionTimeoutSeconds" DefaultValue="3600" />
     <Parameter Name="ObserverManagerEnableVerboseLogging" DefaultValue="false" />
@@ -22,13 +22,13 @@
          This is primarily useful for scenarios where you have multiple instances of FO running on a node and you want to ensure that each instance writes 
          ETW event data to different named sinks. This is more of an advanced scenario. In general, just leave this blank. -->
     <Parameter Name="ObserverManagerETWProviderName" DefaultValue="" />
-    <!-- Observer Telemetry -->
     <!-- If you want FO to transmit telemetry data events to ApplicationInsights or LogAnalytics, for example, then enable this setting. Otherwise, set this to false. -->
+    <!-- Observer Telemetry -->
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
     <!-- Telemetry Provider - AppInsights/LogAnalytics. Supported values are AzureApplicationInsights and AzureLogAnalytics. -->
     <Parameter Name="TelemetryProvider" DefaultValue="" />
     <!-- Application Insights -->
-    <Parameter Name="ApplicationInsightsConnectionString" DefaultValue="" />
+    <Parameter Name="AppInsightsConnectionString" DefaultValue="" />
     <!-- LogAnalytics -->
     <Parameter Name="LogAnalyticsWorkspaceId" DefaultValue="" />
     <Parameter Name="LogAnalyticsSharedKey" DefaultValue="" />
@@ -430,7 +430,7 @@
             <Parameter Name="ObserverLogPath" Value="[ObserverLogPath]" />
             <Parameter Name="TelemetryProvider" Value="[TelemetryProvider]" />
             <!-- Application Insights -->
-            <Parameter Name="AppInsightsConnectionString" Value="[ApplicationInsightsConnectionString]" />
+            <Parameter Name="AppInsightsConnectionString" Value="[AppInsightsConnectionString]" />
             <!-- LogAnalytics -->
             <Parameter Name="LogAnalyticsWorkspaceId" Value="[LogAnalyticsWorkspaceId]" />
             <Parameter Name="LogAnalyticsSharedKey" Value="[LogAnalyticsSharedKey]" />

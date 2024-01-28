@@ -950,7 +950,7 @@ namespace FabricObserver.Observers
                     HealthMessage = $"Error updating FabricObserver with new configuration settings:{Environment.NewLine}{ex}",
                     NodeName = FabricServiceContext.NodeContext.NodeName,
                     State = HealthState.Ok,
-                    Property = "Configuration_Upate_Error",
+                    Property = "FO_Configuration_Upate_Error",
                     EmitLogEvent = true
                 };
 

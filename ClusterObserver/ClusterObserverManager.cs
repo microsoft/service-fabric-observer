@@ -649,7 +649,7 @@ namespace ClusterObserver
                     HealthMessage = $"Error updating ClusterObserver with new configuration settings:{Environment.NewLine}{ex}",
                     NodeName = FabricServiceContext.NodeContext.NodeName,
                     State = HealthState.Ok,
-                    Property = "Configuration_Upate_Error",
+                    Property = "CO_Configuration_Upate_Error",
                     EmitLogEvent = true
                 };
 

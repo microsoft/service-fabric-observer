@@ -11,13 +11,13 @@
     <!-- ETW -->
     <Parameter Name="ObserverManagerEnableETWProvider" DefaultValue="true" />
     <Parameter Name="ObserverManagerETWProviderName" DefaultValue="ClusterObserverETWProvider" />
-    <!-- If you want to transmit telemetry events to ApplicationInsights or LogAnalytics, for example, then enable this setting. Otherwise, set this to false. -->
     <!-- Observer Telemetry -->
+    <!-- If you want to transmit telemetry events to ApplicationInsights or LogAnalytics, for example, then enable this setting. Otherwise, set this to false. -->
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
     <!-- Telemetry Provider - ApplicationInsights/LogAnalytics. Supported values are AzureApplicationInsights and AzureLogAnalytics. -->
     <Parameter Name="TelemetryProvider" DefaultValue="" />
     <!-- ApplicationInsights -->
-    <Parameter Name="ApplicationInsightsConnectionString" DefaultValue="" />
+    <Parameter Name="AppInsightsConnectionString" DefaultValue="" />
     <!-- LogAnalytics -->
     <Parameter Name="LogAnalyticsWorkspaceId" DefaultValue="" />
     <Parameter Name="LogAnalyticsSharedKey" DefaultValue="" />
@@ -60,7 +60,7 @@
             <Parameter Name="TelemetryProvider" Value="[TelemetryProvider]" />
             <Parameter Name="MaxArchivedLogFileLifetimeDays" Value="[MaxArchivedLogFileLifetimeDays]" />
             <!-- Application Insights -->
-            <Parameter Name="AppInsightsConnectionString" Value="[ApplicationInsightsConnectionString]" />
+            <Parameter Name="AppInsightsConnectionString" Value="[AppInsightsConnectionString]" />
             <!-- LogAnalytics -->
             <Parameter Name="LogAnalyticsWorkspaceId" Value="LogAnalyticsWorkspaceId]" />
             <Parameter Name="LogAnalyticsSharedKey" Value="[LogAnalyticsSharedKey]" />

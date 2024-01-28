@@ -4,7 +4,7 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.14</version>
 		<releaseNotes>
-Note: This is library is required for observer plugins that target FabricObserver 3.2.14.
+Note: This is library is required for observer plugins that target FabricObserver 3.2.14 or ClusterObserver 2.2.8.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
