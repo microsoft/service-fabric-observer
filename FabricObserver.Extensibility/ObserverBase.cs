@@ -320,38 +320,25 @@ namespace FabricObserver.Observers
 
         public TimeSpan CpuMonitorDuration
         {
-            get
-            {
-                return ConfigurationSettings.MonitorDuration > TimeSpan.FromSeconds(10)
-                    ? TimeSpan.FromSeconds(4)
-                    : ConfigurationSettings.MonitorDuration;
-            }
+            get => ConfigurationSettings?.CpuMonitorDuration ?? TimeSpan.FromSeconds(4);
             set
             {
                 if (ConfigurationSettings != null)
                 {
-                    // Prevent bad values. CPU measurements require multiple iterations of internal monitoring sequential while loop.
-                    // The calculation is expensive on Windows. Do not call it too many times per run. It's OK to be conservative here.
-                    ConfigurationSettings.MonitorDuration = 
-                        value > TimeSpan.Zero ? value : CpuMonitorLoopSleepDuration < TimeSpan.FromMilliseconds(1000) ? TimeSpan.FromSeconds(2) : TimeSpan.FromSeconds(4);
+                    ConfigurationSettings.CpuMonitorDuration = value;
                 }
             }
         }
 
         public TimeSpan CpuMonitorLoopSleepDuration
         {
-            get
-            {
-                return ConfigurationSettings.MonitorSleepDuration <= TimeSpan.FromMilliseconds(500)
-                    ? TimeSpan.FromMilliseconds(1000)
-                    : ConfigurationSettings.MonitorSleepDuration;
-            }
+            get => ConfigurationSettings?.CpuMonitorSleepDuration ?? TimeSpan.FromMilliseconds(1000);
             set
             {
                 if (ConfigurationSettings != null)
                 {
                     // Prevent bad values.
-                    ConfigurationSettings.MonitorSleepDuration = value >= TimeSpan.FromMilliseconds(500) ? value : TimeSpan.FromMilliseconds(1000);
+                    ConfigurationSettings.CpuMonitorSleepDuration = value >= TimeSpan.FromMilliseconds(500) ? value : TimeSpan.FromMilliseconds(1000);
                 }
             }
         }

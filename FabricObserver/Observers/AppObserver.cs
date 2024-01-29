@@ -3143,6 +3143,8 @@ namespace FabricObserver.Observers
 
                 Stopwatch timer = Stopwatch.StartNew();
                 SafeProcessHandle procHandle = null;
+                TimeSpan monitorDuration = CpuMonitorDuration;
+                TimeSpan monitorLoopSleepTime = CpuMonitorLoopSleepDuration;
                 
                 if (IsWindows)
                 {
@@ -3152,6 +3154,20 @@ namespace FabricObserver.Observers
                     {
                         return;
                     }
+
+                    // Guardrails to prevent runaway CPU usage when AppObserver is running in concurrent monitoring mode.
+                    if (EnableConcurrentMonitoring)
+                    {
+                        if (monitorDuration >= TimeSpan.FromSeconds(5))
+                        {
+                            monitorDuration = TimeSpan.FromSeconds(5);
+                        }
+
+                        if (monitorLoopSleepTime < TimeSpan.FromMilliseconds(500))
+                        {
+                            monitorLoopSleepTime = TimeSpan.FromMilliseconds(1000);
+                        }
+                    }
                 }
 
                 try
@@ -3159,7 +3175,7 @@ namespace FabricObserver.Observers
 #if DEBUG
                     ObserverLogger.LogInfo($"ComputeResourceUsage: Entering CPU monitor while loop. MonitorDuration = {CpuMonitorDuration}. CpuMonitorLoopSleepDuration = {CpuMonitorLoopSleepDuration}.");
 #endif
-                    while (timer.Elapsed <= CpuMonitorDuration)
+                    while (timer.Elapsed <= monitorDuration)
                     {
                         if (token.IsCancellationRequested)
                         {
@@ -3225,7 +3241,7 @@ namespace FabricObserver.Observers
                             }
                         }
 
-                        Thread.Sleep(CpuMonitorLoopSleepDuration);
+                        Thread.Sleep(monitorLoopSleepTime);
                     }
 #if DEBUG
                     ObserverLogger.LogInfo($"ComputeResourceUsage: Exiting CPU monitoring while loop. Ran for {timer.Elapsed}.");

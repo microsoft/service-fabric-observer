@@ -15,30 +15,26 @@ namespace FabricObserver.Observers.Utilities
 
         // \Processor(_Total)\% Processor Time
         // This counter includes all processors on the system. The value range is 0 - 100.
-        private static PerformanceCounter systemCpuPerfCtr = null;
-        
-        private static PerformanceCounter SystemMemoryPerfCtr
+        private static PerformanceCounter systemCpuPerfCounter = null;
+
+        private static PerformanceCounter SystemCpuPerfCounter
         {
             get 
             { 
-                if (systemCpuPerfCtr == null) 
-                {
-                    systemCpuPerfCtr = new(ProcessorCategoryName, ProcessorTimePct, ProcessorTimeInstanceName);
-                }
-
-                return systemCpuPerfCtr;
+                systemCpuPerfCounter ??= new(ProcessorCategoryName, ProcessorTimePct, ProcessorTimeInstanceName);
+                return systemCpuPerfCounter;
             }
         }
 
         public override float GetProcessorTimePercentage()
         {
-            return SystemMemoryPerfCtr.NextValue();
+            return SystemCpuPerfCounter.NextValue();
         }
 
         public override void Dispose()
         {
-            systemCpuPerfCtr?.Dispose();
-            systemCpuPerfCtr = null;
+            systemCpuPerfCounter?.Dispose();
+            systemCpuPerfCounter = null;
         }
     }
 }

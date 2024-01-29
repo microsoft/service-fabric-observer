@@ -1050,13 +1050,26 @@ namespace FabricObserver.Observers
                     }
 
                     Stopwatch timer = Stopwatch.StartNew();
-                    
+                    TimeSpan monitorDuration = CpuMonitorDuration;
+                    TimeSpan monitorLoopSleepTime = CpuMonitorLoopSleepDuration;
+
                     if (IsWindows)
                     {
                         procHandle = NativeMethods.GetSafeProcessHandle(procId);
+                        
+                        // Guardrails.
+                        if (monitorDuration >= TimeSpan.FromSeconds(5))
+                        {
+                            monitorDuration = TimeSpan.FromSeconds(5);
+                        }
+
+                        if (monitorLoopSleepTime < TimeSpan.FromMilliseconds(500))
+                        {
+                            monitorLoopSleepTime = TimeSpan.FromMilliseconds(1000);
+                        }
                     }
 
-                    while (timer.Elapsed <= CpuMonitorDuration)
+                    while (timer.Elapsed <= monitorDuration)
                     {
                         token.ThrowIfCancellationRequested();
 
@@ -1073,7 +1086,7 @@ namespace FabricObserver.Observers
                                 }
                             }
 
-                            await Task.Delay(CpuMonitorLoopSleepDuration, token);
+                            await Task.Delay(monitorLoopSleepTime, token);
                         }
                         catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
                         {

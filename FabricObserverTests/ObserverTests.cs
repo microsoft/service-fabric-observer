@@ -2615,11 +2615,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_NoWarningsOrErrors()
         {
-            var nodeList = await FabricClientSingleton.QueryManager.GetNodeListAsync();
-
-            // This is meant to be run on your dev machine's one node test cluster.
-            Assert.IsTrue(nodeList?.Count == 1);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -2650,11 +2645,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_MemoryWarningsOrErrorsDetected()
         {
-            var nodeList = await FabricClientSingleton.QueryManager.GetNodeListAsync();
-
-            // This is meant to be run on your dev machine's one node test cluster.
-            Assert.IsTrue(nodeList?.Count == 1);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -2681,11 +2671,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_ActiveTcpPortsWarningsOrErrorsDetected()
         {
-            var nodeList = await FabricClientSingleton.QueryManager.GetNodeListAsync();
-
-            // This is meant to be run on your dev machine's one node test cluster.
-            Assert.IsTrue(nodeList?.Count == 1);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -2714,11 +2699,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_EphemeralPortsWarningsOrErrorsDetected()
         {
-            var nodeList = await FabricClientSingleton.QueryManager.GetNodeListAsync();
-
-            // This is meant to be run on your dev machine's one node test cluster.
-            Assert.IsTrue(nodeList?.Count == 1);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -2747,11 +2727,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_ObserveAsync_Successful_IsHealthy_HandlesWarningsOrErrorsDetected()
         {
-            var nodeList = await FabricClientSingleton.QueryManager.GetNodeListAsync();
-
-            // This is meant to be run on your dev machine's one node test cluster.
-            Assert.IsTrue(nodeList?.Count == 1);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -2780,11 +2755,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_Negative_Integer_CPU_Warn_Threshold_No_Unhandled_Exception()
         {
-            var nodeList = await FabricClientSingleton.QueryManager.GetNodeListAsync();
-
-            // This is meant to be run on your dev machine's one node test cluster.
-            Assert.IsTrue(nodeList?.Count == 1);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
@@ -2813,11 +2783,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task FabricSystemObserver_Integer_Greater_Than_100_CPU_Warn_Threshold_No_Unhandled_Exception()
         {
-            var nodeList = await FabricClientSingleton.QueryManager.GetNodeListAsync();
-
-            // This is meant to be run on your dev machine's one node test cluster.
-            Assert.IsTrue(nodeList?.Count == 1);
-
             var startDateTime = DateTime.Now;
 
             ObserverManager.FabricServiceContext = TestServiceContext;
