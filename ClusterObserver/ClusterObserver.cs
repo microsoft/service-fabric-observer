@@ -816,7 +816,7 @@ namespace ClusterObserver
                             Description = healthEvent.HealthInformation.Description,
                             HealthState = healthEvent.HealthInformation.HealthState,
                             Source = healthEvent.HealthInformation.SourceId,
-                            ObserverName = ClusterObserverConstants.ClusterObserverName
+                            ObserverName = ObserverName
                         };
 
                         // Telemetry.
@@ -856,7 +856,7 @@ namespace ClusterObserver
                             Description = healthEvent.HealthInformation.Description,
                             HealthState = healthEvent.HealthInformation.HealthState,
                             Source = healthEvent.HealthInformation.SourceId,
-                            ObserverName = ClusterObserverConstants.ClusterObserverName
+                            ObserverName = ObserverName
                         };
 
                         // Telemetry.
@@ -909,7 +909,7 @@ namespace ClusterObserver
                             Description = healthEvent.HealthInformation.Description,
                             HealthState = healthEvent.HealthInformation.HealthState,
                             Source = healthEvent.HealthInformation.SourceId,
-                            ObserverName = ClusterObserverConstants.ClusterObserverName
+                            ObserverName = ObserverName
                         };
 
                         // Telemetry.
@@ -987,7 +987,7 @@ namespace ClusterObserver
                             Description = healthEvent.HealthInformation.Description,
                             HealthState = healthEvent.HealthInformation.HealthState,
                             Source = healthEvent.HealthInformation.SourceId,
-                            ObserverName = ClusterObserverConstants.ClusterObserverName
+                            ObserverName = ObserverName
                         };
 
                         // Telemetry.
@@ -1044,7 +1044,7 @@ namespace ClusterObserver
                             HealthState = healthEvent.HealthInformation.HealthState,
                             ServiceKind = serviceKind,
                             Source = healthEvent.HealthInformation.SourceId,
-                            ObserverName = ClusterObserverConstants.ClusterObserverName
+                            ObserverName = ObserverName
                         };
 
                         // Telemetry.
@@ -1104,7 +1104,7 @@ namespace ClusterObserver
                             Description = healthEvent.HealthInformation.Description,
                             HealthState = healthEvent.HealthInformation.HealthState,
                             Source = healthEvent.HealthInformation.SourceId,
-                            ObserverName = ClusterObserverConstants.ClusterObserverName
+                            ObserverName = ObserverName
                         };
 
                         // Telemetry.

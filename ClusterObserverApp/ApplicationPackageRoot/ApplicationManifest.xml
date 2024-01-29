@@ -11,8 +11,8 @@
     <!-- ETW -->
     <Parameter Name="ObserverManagerEnableETWProvider" DefaultValue="true" />
     <Parameter Name="ObserverManagerETWProviderName" DefaultValue="ClusterObserverETWProvider" />
-    <!-- If you want to transmit telemetry events to ApplicationInsights or LogAnalytics, for example, then enable this setting. Otherwise, set this to false. -->
     <!-- Observer Telemetry -->
+    <!-- If you want to transmit telemetry events to ApplicationInsights or LogAnalytics, for example, then enable this setting. Otherwise, set this to false. -->
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
     <!-- Telemetry Provider - ApplicationInsights/LogAnalytics. Supported values are AzureApplicationInsights and AzureLogAnalytics. -->
     <Parameter Name="TelemetryProvider" DefaultValue="" />
@@ -29,7 +29,7 @@
     <!-- ClusterObserver settings. -->
     <Parameter Name="ClusterObserverEnabled" DefaultValue="true" />
     <Parameter Name="ClusterObserverEnableETW" DefaultValue="false" />
-    <Parameter Name="ClusterObserverEnableTelemetry" DefaultValue="false" />
+    <Parameter Name="ClusterObserverEnableTelemetry" DefaultValue="true" />
     <Parameter Name="ClusterObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="MaxTimeNodeStatusNotOk" DefaultValue="02:00:00" />
     <Parameter Name="EmitHealthWarningEvaluationDetails" DefaultValue="true" />

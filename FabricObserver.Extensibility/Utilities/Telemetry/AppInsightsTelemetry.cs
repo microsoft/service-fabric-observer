@@ -338,7 +338,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 {
                     string source = "FabricObserver";
 
-                    if (telemetryData is ClusterTelemetryData)
+                    if (telemetryData.ObserverName == "ClusterObserver")
                     {
                         source = "ClusterObserver";
                     }
