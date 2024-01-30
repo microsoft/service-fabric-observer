@@ -4,7 +4,12 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.14</version>
 		<releaseNotes>
-Note: This is library is required for observer plugins that target FabricObserver 3.2.14 or ClusterObserver 2.2.8.
+This is version is required for observer plugins that target FabricObserver 3.2.14 or ClusterObserver 2.2.8.
+#### Changes
+- Updated Logger implementatio to fix app param update bug related to log path and max archive lifetime settings not being honored.
+- Updated ObserverBase to include guard rails to prevent high CPU consumption if an observer's MonitorDuration or MonitorSleepTimeMilliseconds settings are misconfigured (to high or too low, respectively).
+- Performance improvements.
+- Updated nuget package dependencies to latest versions.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
@@ -13,7 +18,7 @@ Note: This is library is required for observer plugins that target FabricObserve
 		<icon>icon.png</icon>
 		<readme>foextlib.md</readme>
 		<language>en-US</language>
-		<description>This package contains the FabricObserver Extensibility library (.NET 6) for use in building FabricObserver and ClusterObserver plugins. NOTE: This is no longer a .NET Standard 2.0 library.</description>
+		<description>This package contains the FabricObserver Extensibility library (.NET 6) for use in building FabricObserver and ClusterObserver observers and observer plugins. You need to ensure you use the same versions of this library and CO/FO if you are building observer plugins.</description>
 		<contentFiles>
 			<files include="**" buildAction="None" copyToOutput="true" />
 		</contentFiles>
