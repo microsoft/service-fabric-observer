@@ -86,8 +86,9 @@ namespace FabricObserver.Observers
         public override async Task ObserveAsync(CancellationToken token)
         {
             // Only run once per specified time in Settings.xml. (default is already set to 1 day for CertificateObserver)
-            if (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
+            if (RunInterval > TimeSpan.Zero && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
+                ObserverLogger.LogInfo($"ObserveAsync: RunInterval ({RunInterval}) has not elapsed. Exiting.");
                 return;
             }
 
@@ -192,7 +193,7 @@ namespace FabricObserver.Observers
                     NodeName = NodeName,
                     HealthMessage = "All cluster and monitored app certificates are healthy.",
                     State = HealthState.Ok,
-                    HealthReportTimeToLive = RunInterval > TimeSpan.MinValue ? RunInterval : HealthReportTimeToLive
+                    HealthReportTimeToLive = RunInterval > TimeSpan.Zero ? RunInterval : HealthReportTimeToLive
                 };
 
                 HasActiveFabricErrorOrWarning = false;
@@ -231,7 +232,7 @@ namespace FabricObserver.Observers
                     NodeName = NodeName,
                     HealthMessage = healthMessage,
                     State = HealthState.Warning,
-                    HealthReportTimeToLive = RunInterval > TimeSpan.MinValue ? RunInterval : HealthReportTimeToLive
+                    HealthReportTimeToLive = RunInterval > TimeSpan.Zero ? RunInterval : HealthReportTimeToLive
                 };
 
                 HasActiveFabricErrorOrWarning = true;

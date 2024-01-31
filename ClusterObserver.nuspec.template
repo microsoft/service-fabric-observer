@@ -2,10 +2,11 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
 	<metadata minClientVersion="3.3.0">
 		<id>%PACKAGE_ID%</id>
-		<version>2.2.7</version>
+		<version>2.2.8</version>
 		<releaseNotes>
-- Bug Fixes.
-- Performance and Code improvements.
+- *Breaking Change*: Telemetry configuration settings are now required to be overridden in ApplicationManifest.xml to support versionless, parameter-only application upgrades for telemetry settings. See [Issue 292](https://github.com/microsoft/service-fabric-observer/issues/292) for details. Just move your related settings' Value strings from Settings.xml to ApplicationManifest.xml app parameter (the names of these settings are the same).
+- Bug fix in app param update for log path and max archive lifetime settings.
+- Updated nuget package dependencies to latest versions.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

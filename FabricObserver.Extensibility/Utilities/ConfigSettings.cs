@@ -13,20 +13,23 @@ namespace FabricObserver.Observers.Utilities
 {
     public class ConfigSettings
     {
+        // Default run interval is 1m.
         public TimeSpan RunInterval
         {
             get; set;
-        }
+        } = TimeSpan.FromMinutes(1);
 
-        public TimeSpan MonitorDuration
+        // Default monitor duration is 4s.
+        public TimeSpan CpuMonitorDuration
         {
             get; set;
-        }
+        } = TimeSpan.FromSeconds(4);
 
-        public TimeSpan MonitorSleepDuration
+        // Default monitor sleep duration is 1000ms.
+        public TimeSpan CpuMonitorSleepDuration
         {
             get; set;
-        }
+        } = TimeSpan.FromMilliseconds(1000);
 
         // Default enablement for any observer is enabled (true).
         public bool IsEnabled
@@ -148,7 +151,7 @@ namespace FabricObserver.Observers.Utilities
                     ObserverConstants.MonitorDurationParameter),
                     out TimeSpan monitorDuration))
             {
-                MonitorDuration = monitorDuration;
+                CpuMonitorDuration = monitorDuration;
             }
 
             // Monitor sleep duration.
@@ -157,7 +160,7 @@ namespace FabricObserver.Observers.Utilities
                     ObserverConstants.MonitorSleepDurationParameter),
                     out int monitorSleepDuration))
             {
-                MonitorSleepDuration = TimeSpan.FromMilliseconds(monitorSleepDuration);
+                CpuMonitorSleepDuration = TimeSpan.FromMilliseconds(monitorSleepDuration);
             }
 
             // Async cluster operation timeout setting..
@@ -236,7 +239,7 @@ namespace FabricObserver.Observers.Utilities
                 {
                     if (TimeSpan.TryParse(prop.Value, out TimeSpan monitorDuration))
                     {
-                        MonitorDuration = monitorDuration;
+                        CpuMonitorDuration = monitorDuration;
                     }
                 }
 
@@ -245,7 +248,7 @@ namespace FabricObserver.Observers.Utilities
                 {
                     if (TimeSpan.TryParse(prop.Value, out TimeSpan monitorSleepDuration))
                     {
-                        MonitorSleepDuration = monitorSleepDuration;
+                        CpuMonitorSleepDuration = monitorSleepDuration;
                     }
                 }
 

@@ -7,6 +7,7 @@ using System;
 using System.Diagnostics.Tracing;
 using System.Fabric.Health;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using FabricObserver.Observers.Utilities.Telemetry;
 using NLog;
@@ -64,9 +65,9 @@ namespace FabricObserver.Observers.Utilities
         /// The maximum number of days that archive files will be stored.
         /// 0 means there is no limit set.
         /// </summary>
-        private int MaxArchiveFileLifetimeDays
+        public int MaxArchiveFileLifetimeDays
         {
-            get;
+            get; set;
         }
 
         /// <summary>
@@ -160,7 +161,7 @@ namespace FabricObserver.Observers.Utilities
             ServiceEventSource.Current.Write(new { data }, eventName, keywords);
         }
 
-        private void InitializeLoggers()
+        public void InitializeLoggers(bool isConfigUpdate = false)
         {
             string logFolderBase;
 
@@ -210,14 +211,13 @@ namespace FabricObserver.Observers.Utilities
             }
 
             FilePath = file;
-
-            var targetName = loggerName + "LogFile";
-
+            string targetName = loggerName + "LogFile";
             LogManager.Configuration ??= new LoggingConfiguration();
+            FileTarget target;
 
-            if ((FileTarget)LogManager.Configuration?.FindTargetByName(targetName) == null)
+            if (LogManager.Configuration.FindTargetByName(targetName) is not FileTarget)
             {
-                var target = new FileTarget
+                target = new FileTarget
                 {
                     Name = targetName,
                     ConcurrentWrites = true,
@@ -232,11 +232,43 @@ namespace FabricObserver.Observers.Utilities
                 };
 
                 LogManager.Configuration.AddTarget(loggerName + "LogFile", target);
-                var ruleInfo = new LoggingRule(loggerName, NLog.LogLevel.Debug, target);
+                LoggingRule ruleInfo = new(loggerName, NLog.LogLevel.Debug, target);
                 LogManager.Configuration.LoggingRules.Add(ruleInfo);
-                LogManager.ReconfigExistingLoggers();
+            }
+            else if (isConfigUpdate)
+            {
+                // Remove existing config.
+                LogManager.Configuration.RemoveTarget(targetName);
+                
+                target = new FileTarget
+                {
+                    Name = targetName,
+                    ConcurrentWrites = true,
+                    EnableFileDelete = true,
+                    FileName = file,
+                    Layout = "${longdate}--${uppercase:${level}}--${message}",
+                    OpenFileCacheTimeout = 5,
+                    ArchiveEvery = FileArchivePeriod.Day,
+                    ArchiveNumbering = ArchiveNumberingMode.DateAndSequence,
+                    MaxArchiveDays = MaxArchiveFileLifetimeDays <= 0 ? 7 : MaxArchiveFileLifetimeDays,
+                    AutoFlush = true
+                };
+                LogManager.Configuration.AddTarget(targetName, target);
+                LoggingRule rule;
+
+                if (LogManager.Configuration.LoggingRules.Any(r => r.LoggerNamePattern == loggerName))
+                {
+                    rule = LogManager.Configuration.LoggingRules.First(r => r.LoggerNamePattern == loggerName);
+                    rule.Targets.Add(target);
+                }
+                else
+                {
+                    rule = new(loggerName, NLog.LogLevel.Debug, target);
+                    LogManager.Configuration.LoggingRules.Add(rule);
+                }
             }
 
+            LogManager.ReconfigExistingLoggers();
             TimeSource.Current = new AccurateUtcTimeSource();
             OLogger = LogManager.GetLogger(loggerName);
 

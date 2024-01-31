@@ -39,7 +39,7 @@ namespace ClusterObserver
         private bool appParamsUpdating;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "2.2.7";
+        private const string InternalVersionNumber = "2.2.8";
 
         public bool EnableOperationalTelemetry
         {
@@ -129,9 +129,21 @@ namespace ClusterObserver
             }
 
             LogPath = logFolderBasePath;
+            _ = bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProvider, null), out bool enableEtwProvider);
+            EtwEnabled = enableEtwProvider;
 
-            // This logs error/warning/info messages for ObserverManager.
-            Logger = new Logger(ClusterObserverConstants.ClusterObserverManagerName, logFolderBasePath);
+            // ObserverManager logger EnableVerboseLogging.
+            _ = bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableVerboseLoggingParameter, null), out bool enableVerboseLogging);
+
+            // Log archive lifetime.
+            _ = int.TryParse(GetConfigSettingValue(ObserverConstants.MaxArchivedLogFileLifetimeDaysParameter, null), out int maxArchivedLogFileLifetimeDays);
+
+            // This logs error/warning/info messages for ClusterObserverManager (local text log and optionally ETW).
+            Logger = new Logger(ClusterObserverConstants.ClusterObserverManagerName, logFolderBasePath, maxArchivedLogFileLifetimeDays)
+            {
+                EnableETWLogging = EtwEnabled,
+                EnableVerboseLogging = enableVerboseLogging
+            };
             SetPropertiesFromConfigurationParameters();
         }
 
@@ -186,11 +198,37 @@ namespace ClusterObserver
                 observerExecTimeout = TimeSpan.FromSeconds(result);
             }
 
-            // Logger
-            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableVerboseLoggingParameter, settings), out bool enableVerboseLogging))
+            // Logger settings - Overrides. Config update. \\
+
+            // settings are not null if this is running due to a config update. Could also check for isConfigurationUpdateInProgress.
+            if (settings != null && Logger != null)
             {
+                // ObserverManager logger EnableETWLogging - Override.
+                _ = bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProvider, settings), out bool enableEtwProvider);
+                EtwEnabled = enableEtwProvider;
+                Logger.EnableETWLogging = enableEtwProvider;
+
+                // ObserverManager logger EnableVerboseLogging - Override.
+                _ = bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableVerboseLoggingParameter, settings), out bool enableVerboseLogging);
                 Logger.EnableVerboseLogging = enableVerboseLogging;
+
+                // ObserverManager/Observer logger MaxArchiveLifetimeDays - Override.
+                _ = int.TryParse(GetConfigSettingValue(ObserverConstants.EnableVerboseLoggingParameter, settings), out int maxArchiveLifetimeDays);
+                Logger.MaxArchiveFileLifetimeDays = maxArchiveLifetimeDays;
+
+                // ObserverManager/Observer logger ObserverLogPath - Override.
+                string loggerBasePath = GetConfigSettingValue(ObserverConstants.ObserverLogPathParameter, settings);
+
+                if (!string.IsNullOrWhiteSpace(loggerBasePath))
+                {
+                    Logger.LogFolderBasePath = loggerBasePath;
+                }
+
+                // This will reset existing logger instance's config state and employ updated settings immediately. See Logger.cs.
+                Logger.InitializeLoggers(true);
             }
+
+            // End Logger settings - Overrides. \\
 
             if (int.TryParse(GetConfigSettingValue(ClusterObserverConstants.ObserverLoopSleepTimeSecondsParameter, settings), out int execFrequency))
             {
@@ -220,55 +258,54 @@ namespace ClusterObserver
                 TelemetryEnabled = telemEnabled;
             }
 
-            if (TelemetryEnabled)
+            if (!TelemetryEnabled)
             {
-                string telemetryProviderType = GetConfigSettingValue(ClusterObserverConstants.TelemetryProviderTypeParameter, settings);
+                return;
+            }
 
-                if (string.IsNullOrWhiteSpace(telemetryProviderType))
-                {
-                    TelemetryEnabled = false;
-                    return;
-                }
+            string telemetryProviderType = GetConfigSettingValue(ClusterObserverConstants.TelemetryProviderTypeParameter, settings);
 
-                if (!Enum.TryParse(telemetryProviderType, out TelemetryProviderType telemetryProvider))
-                {
-                    TelemetryEnabled = false;
-                    return;
-                }
+            if (string.IsNullOrWhiteSpace(telemetryProviderType))
+            {
+                TelemetryEnabled = false;
+                return;
+            }
 
-                switch (telemetryProvider)
-                {
-                    case TelemetryProviderType.AzureLogAnalytics:
-                    
-                        string logAnalyticsLogType = GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter, settings) ?? "Application";
-                        string logAnalyticsSharedKey = GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter, settings);
-                        string logAnalyticsWorkspaceId = GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter, settings);
+            if (!Enum.TryParse(telemetryProviderType, out TelemetryProviderType telemetryProvider))
+            {
+                TelemetryEnabled = false;
+                return;
+            }
 
-                        if (string.IsNullOrWhiteSpace(logAnalyticsSharedKey) || string.IsNullOrWhiteSpace(logAnalyticsWorkspaceId))
-                        {
-                            TelemetryEnabled = false;
-                            return;
-                        }
+            switch (telemetryProvider)
+            {
+                case TelemetryProviderType.AzureLogAnalytics:
 
-                        TelemetryClient = new LogAnalyticsTelemetry(
-                                                logAnalyticsWorkspaceId,
-                                                logAnalyticsSharedKey,
-                                                logAnalyticsLogType);
-                        break;
-                    
-                    case TelemetryProviderType.AzureApplicationInsights:
+                    string logAnalyticsLogType = GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter, settings) ?? "Application";
+                    string logAnalyticsSharedKey = GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter, settings);
+                    string logAnalyticsWorkspaceId = GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter, settings);
 
-                        string aiConnString = GetConfigSettingValue(ObserverConstants.AppInsightsConnectionString, settings);
-                        
-                        if (string.IsNullOrWhiteSpace(aiConnString))
-                        {
-                            TelemetryEnabled = false;
-                            return;
-                        }
+                    if (string.IsNullOrWhiteSpace(logAnalyticsSharedKey) || string.IsNullOrWhiteSpace(logAnalyticsWorkspaceId))
+                    {
+                        TelemetryEnabled = false;
+                        return;
+                    }
 
-                        TelemetryClient = new AppInsightsTelemetry(aiConnString);
-                        break;
-                }
+                    TelemetryClient = new LogAnalyticsTelemetry(logAnalyticsWorkspaceId, logAnalyticsSharedKey, logAnalyticsLogType);
+                    break;
+
+                case TelemetryProviderType.AzureApplicationInsights:
+
+                    string aiConnString = GetConfigSettingValue(ObserverConstants.AppInsightsConnectionString, settings);
+
+                    if (string.IsNullOrWhiteSpace(aiConnString))
+                    {
+                        TelemetryEnabled = false;
+                        return;
+                    }
+
+                    TelemetryClient = new AppInsightsTelemetry(aiConnString);
+                    break;
             }
         }
 
@@ -574,13 +611,16 @@ namespace ClusterObserver
 
         private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
         {
-            Logger.LogWarning("Application Parameter upgrade started...");
-
             try
             {
+                Logger.LogWarning("Application Parameter upgrade started...");
+
                 appParamsUpdating = true;
                 await StopAsync(isAppParamUpdate: true);
                 var newSettings = e.NewPackage.Settings;
+
+                // ClusterObserverManager settings.
+                SetPropertiesFromConfigurationParameters(newSettings);
 
                 // ClusterObserver and plugin observer settings.
                 foreach (var observer in Observers)
@@ -588,14 +628,16 @@ namespace ClusterObserver
                     string configSectionName = observer.ConfigurationSettings.ConfigSection.Name;
                     observer.ConfigPackage = e.NewPackage;
                     observer.ConfigurationSettings = new ConfigSettings(newSettings, configSectionName);
-                    observer.ObserverLogger.EnableVerboseLogging = observer.ConfigurationSettings.EnableVerboseLogging;
+                    observer.InitializeObserverLoggingInfra(isConfigUpdate: true);
 
                     // Reset last run time so the observer restarts (if enabled) after the app parameter update completes.
                     observer.LastRunDateTime = DateTime.MinValue;
                 }
 
-                // ClusterObserverManager settings.
-                SetPropertiesFromConfigurationParameters(newSettings);
+                // Refresh CO CancellationTokenSources.
+                cts = new CancellationTokenSource();
+                linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, this.token);
+                Logger.LogWarning("Application Parameter upgrade completed...");
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
@@ -607,21 +649,17 @@ namespace ClusterObserver
                     HealthMessage = $"Error updating ClusterObserver with new configuration settings:{Environment.NewLine}{ex}",
                     NodeName = FabricServiceContext.NodeContext.NodeName,
                     State = HealthState.Ok,
-                    Property = "Configuration_Upate_Error",
+                    Property = "CO_Configuration_Upate_Error",
                     EmitLogEvent = true
                 };
 
                 ObserverHealthReporter healthReporter = new(Logger);
                 healthReporter.ReportHealthToServiceFabric(healthReport);
             }
-
-            // Refresh CO CancellationTokenSources.
-            cts?.Dispose();
-            linkedSFRuntimeObserverTokenSource?.Dispose();
-            cts = new CancellationTokenSource();
-            linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, this.token);
-            Logger.LogWarning("Application Parameter upgrade completed...");
-            appParamsUpdating = false;
+            finally
+            {
+                appParamsUpdating = false;
+            }
         }
 
         private void Dispose(bool disposing)

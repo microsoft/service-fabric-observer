@@ -83,6 +83,7 @@ namespace FabricObserver.Observers
                     "FabricDnsService",
                     "FabricFAS",
                     "FabricGateway",
+                    "FabricImage",
                     "FabricHost",
                     "FabricIS",
                     "FabricRM"
@@ -183,8 +184,9 @@ namespace FabricObserver.Observers
             }
 
             // If set, this observer will only run during the supplied interval.
-            if (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
+            if (RunInterval > TimeSpan.Zero && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
+                ObserverLogger.LogInfo($"ObserveAsync: RunInterval ({RunInterval}) has not elapsed. Exiting.");
                 return;
             }
 
@@ -355,7 +357,7 @@ namespace FabricObserver.Observers
                     return Task.CompletedTask;
                 }
 
-                // Windows Event Log
+                // OBSOLETE: Windows Event Log
                 if (IsWindows && IsObserverWebApiAppDeployed && monitorWinEventLog)
                 {
                     // SF Eventlog Errors?
@@ -588,9 +590,9 @@ namespace FabricObserver.Observers
             {
                 frudCapacity = DataCapacity > 0 ? DataCapacity : 5;
             }
-            else if (MonitorDuration > TimeSpan.MinValue)
+            else if (CpuMonitorDuration > TimeSpan.Zero)
             {
-                frudCapacity = (int)MonitorDuration.TotalSeconds * 4;
+                frudCapacity = (int)CpuMonitorDuration.TotalSeconds * 4;
             }
 
             stopwatch ??= new Stopwatch();
@@ -1010,7 +1012,7 @@ namespace FabricObserver.Observers
                 // KVS LVIDs
                 if (EnableKvsLvidMonitoring && (dotnetArg == "Fabric" || dotnetArg == "FabricRM"))
                 {
-                    double lvidPct = ProcessInfoProvider.Instance.GetProcessKvsLvidsUsagePercentage(dotnetArg, Token);
+                    double lvidPct = ProcessInfoProvider.Instance.GetProcessKvsLvidsUsagePercentage(dotnetArg, token);
 
                     // GetProcessKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
                     if (lvidPct > -1)
@@ -1025,7 +1027,7 @@ namespace FabricObserver.Observers
                 // Memory MB
                 if (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0)
                 {
-                    float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, dotnetArg, Token, checkPrivateWorkingSet);
+                    float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, dotnetArg, token, checkPrivateWorkingSet);
 
                     if (allMemData.ContainsKey(dotnetArg))
                     {
@@ -1041,33 +1043,26 @@ namespace FabricObserver.Observers
                     if (IsWindows)
                     {
                         cpuUsage = new CpuUsageWin32();
+                        procHandle = NativeMethods.GetSafeProcessHandle(procId);
                     }
                     else
                     {
                         cpuUsage = new CpuUsageProcess();
                     }
 
-                    TimeSpan duration = TimeSpan.FromSeconds(1);
-                    TimeSpan sleep = TimeSpan.FromMilliseconds(150);
-
-                    if (MonitorDuration > TimeSpan.MinValue)
-                    {
-                        duration = MonitorDuration;
-                    }
-
-                    if (MonitorSleepDuration > TimeSpan.MinValue)
-                    {
-                        sleep = MonitorSleepDuration;
-                    }
-
                     Stopwatch timer = Stopwatch.StartNew();
-                    
-                    if (IsWindows)
+                    TimeSpan cpuMonitorDuration = CpuMonitorDuration;
+                    TimeSpan cpuMonitorLoopSleepTime = CpuMonitorLoopSleepDuration;
+
+                    // At least one value is needed to compute CPU Time % (in fact, more than one is best on Windows). If the user misconfigures sleep time to be greater than monitor duration,
+                    // then we'll just set it to 1000 ms.
+                    if (cpuMonitorLoopSleepTime > cpuMonitorDuration)
                     {
-                        procHandle = NativeMethods.GetSafeProcessHandle(procId);
+                        // CpuMonitorDuration can't be set to less than 1 second.
+                        cpuMonitorLoopSleepTime = TimeSpan.FromMilliseconds(1000);
                     }
 
-                    while (timer.Elapsed <= duration)
+                    while (timer.Elapsed <= cpuMonitorDuration)
                     {
                         token.ThrowIfCancellationRequested();
 
@@ -1084,7 +1079,7 @@ namespace FabricObserver.Observers
                                 }
                             }
 
-                            await Task.Delay(sleep, Token);
+                            await Task.Delay(cpuMonitorLoopSleepTime, token);
                         }
                         catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
                         {

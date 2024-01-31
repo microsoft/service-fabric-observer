@@ -41,18 +41,15 @@ namespace FabricObserver.Observers
                 TargetApp = "fabric:/test",
                 Endpoints = new List<Endpoint>
                 {
-                    new Endpoint
-                    {
+                    new() {
                         HostName = "www.microsoft.com",
                         Port = 443
                     },
-                    new Endpoint
-                    {
+                    new() {
                         HostName = "www.facebook.com",
                         Port = 443
                     },
-                    new Endpoint
-                    {
+                    new() {
                         HostName = "www.google.com",
                         Port = 443
                     }
@@ -79,8 +76,9 @@ namespace FabricObserver.Observers
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
-            if (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
+            if (RunInterval > TimeSpan.Zero && DateTime.Now.Subtract(LastRunDateTime) < RunInterval)
             {
+                ObserverLogger.LogInfo($"ObserveAsync: RunInterval ({RunInterval}) has not elapsed. Exiting.");
                 return;
             }
 

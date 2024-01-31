@@ -1,19 +1,34 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.2.7" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.2.8" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- ClusterObserverManager settings. -->
     <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
     <Parameter Name="ObserverManagerObserverExecutionTimeout" DefaultValue="3600" />
+    <!-- We would really appreciate it if you kept this set to true. The information we collect contains no PII and helps us understand how FO is doing in the wild. 
+         NOTE: This setting is unrelated to Observer Telemetry, which you configure further down. -->
+    <Parameter Name="ObserverManagerEnableOperationalTelemetry" DefaultValue="true" />
     <Parameter Name="ObserverManagerEnableVerboseLogging" DefaultValue="false" />
+    <!-- ETW -->
     <Parameter Name="ObserverManagerEnableETWProvider" DefaultValue="true" />
     <Parameter Name="ObserverManagerETWProviderName" DefaultValue="ClusterObserverETWProvider" />
+    <!-- Observer Telemetry -->
+    <!-- If you want to transmit telemetry events to ApplicationInsights or LogAnalytics, for example, then enable this setting. Otherwise, set this to false. -->
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
-    <Parameter Name="ObserverManagerEnableOperationalTelemetry" DefaultValue="true" />
+    <!-- Telemetry Provider - ApplicationInsights/LogAnalytics. Supported values are AzureApplicationInsights and AzureLogAnalytics. -->
+    <Parameter Name="TelemetryProvider" DefaultValue="" />
+    <!-- ApplicationInsights -->
+    <Parameter Name="AppInsightsConnectionString" DefaultValue="" />
+    <!-- LogAnalytics -->
+    <Parameter Name="LogAnalyticsWorkspaceId" DefaultValue="" />
+    <Parameter Name="LogAnalyticsSharedKey" DefaultValue="" />
+    <Parameter Name="LogAnalyticsLogType" DefaultValue="ClusterObserver" />
+    <!-- End Telemetry -->
     <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
-    <Parameter Name="ClusterObserverLogPath" DefaultValue="s:\cluster_observer_logs" />
+    <Parameter Name="ClusterObserverLogPath" DefaultValue="cluster_observer_logs" />
+    <Parameter Name="MaxArchivedLogFileLifetimeDays" DefaultValue="7" />
     <!-- ClusterObserver settings. -->
     <Parameter Name="ClusterObserverEnabled" DefaultValue="true" />
-    <Parameter Name="ClusterObserverEnableETW" DefaultValue="true" />
+    <Parameter Name="ClusterObserverEnableETW" DefaultValue="false" />
     <Parameter Name="ClusterObserverEnableTelemetry" DefaultValue="true" />
     <Parameter Name="ClusterObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="MaxTimeNodeStatusNotOk" DefaultValue="02:00:00" />
@@ -28,7 +43,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.2.7" />
+    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.2.8" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -36,12 +51,20 @@
             <Parameter Name="EnableOperationalTelemetry" Value="[ObserverManagerEnableOperationalTelemetry]" />
             <Parameter Name="ObserverLoopSleepTimeSeconds" Value="[ObserverManagerObserverLoopSleepTimeSeconds]" />
             <Parameter Name="ObserverExecutionTimeout" Value="[ObserverManagerObserverExecutionTimeout]" />
+            <Parameter Name="ObserverFailureHealthStateLevel" Value="[ObserverManagerObserverFailureHealthStateLevel]" />
             <Parameter Name="ObserverLogPath" Value="[ClusterObserverLogPath]" />
             <Parameter Name="EnableVerboseLogging" Value="[ObserverManagerEnableVerboseLogging]" />
             <Parameter Name="EnableETWProvider" Value="[ObserverManagerEnableETWProvider]" />
             <Parameter Name="ETWProviderName" Value="[ObserverManagerETWProviderName]" />
             <Parameter Name="EnableTelemetryProvider" Value="[ObserverManagerEnableTelemetryProvider]" />
-            <Parameter Name="ObserverFailureHealthStateLevel" Value="[ObserverManagerObserverFailureHealthStateLevel]" />
+            <Parameter Name="TelemetryProvider" Value="[TelemetryProvider]" />
+            <Parameter Name="MaxArchivedLogFileLifetimeDays" Value="[MaxArchivedLogFileLifetimeDays]" />
+            <!-- Application Insights -->
+            <Parameter Name="AppInsightsConnectionString" Value="[AppInsightsConnectionString]" />
+            <!-- LogAnalytics -->
+            <Parameter Name="LogAnalyticsWorkspaceId" Value="LogAnalyticsWorkspaceId]" />
+            <Parameter Name="LogAnalyticsSharedKey" Value="[LogAnalyticsSharedKey]" />
+            <Parameter Name="LogAnalyticsLogType" Value="[LogAnalyticsLogType]" />
           </Section>
           <Section Name="ClusterObserverConfiguration">
             <Parameter Name="Enabled" Value="[ClusterObserverEnabled]" />

@@ -23,6 +23,7 @@ using System.ComponentModel;
 using System.Runtime;
 using FabricObserver.Utilities.ServiceFabric;
 using ConfigurationSettings = System.Fabric.Description.ConfigurationSettings;
+using Microsoft.VisualBasic;
 
 namespace FabricObserver.Observers
 {
@@ -46,7 +47,6 @@ namespace FabricObserver.Observers
         private readonly string sfVersion;
         private readonly bool isWindows;
         private readonly ConfigurationPackage configurationPackage;
-        private System.Fabric.Description.ConfigurationSection configurationSection;
         private volatile bool shutdownSignaled;
         private DateTime StartDateTime;
         private bool isConfigurationUpdateInProgress;
@@ -54,7 +54,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.2.13";
+        private const string InternalVersionNumber = "3.2.14";
 
         private static FabricClient FabricClientInstance => FabricClientUtilities.FabricClientSingleton;
 
@@ -91,11 +91,6 @@ namespace FabricObserver.Observers
             get; set;
         } = TimeSpan.FromMinutes(30);
 
-        private int MaxArchivedLogFileLifetimeDays
-        {
-            get;
-        }
-
         private DateTime LastTelemetrySendDate
         {
             get; set;
@@ -111,7 +106,7 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public static bool TelemetryEnabled
+        public static bool TelemetryProviderEnabled
         {
             get; set;
         }
@@ -163,7 +158,6 @@ namespace FabricObserver.Observers
             isWindows = OperatingSystem.IsWindows();
             sfVersion = GetServiceFabricRuntimeVersion();
             configurationPackage = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
-            configurationSection = configurationPackage.Settings.Sections[ObserverConstants.ObserverManagerConfigurationSectionName];
 
             // Observer Logger setup.
             string logFolderBasePath;
@@ -179,12 +173,17 @@ namespace FabricObserver.Observers
                 logFolderBasePath = logFolderBase;
             }
 
-            if (int.TryParse(GetConfigSettingValue(ObserverConstants.MaxArchivedLogFileLifetimeDaysParameter, null), out int maxArchivedLogFileLifetimeDays))
-            {
-                MaxArchivedLogFileLifetimeDays = maxArchivedLogFileLifetimeDays;
-            }
+            _ = int.TryParse(GetConfigSettingValue(ObserverConstants.MaxArchivedLogFileLifetimeDaysParameter, null), out int maxArchivedLogFileLifetimeDays);
+            _ = bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProvider, null), out bool enableEtwProvider);
+            _ = bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableVerboseLoggingParameter, null), out bool enableVerboseLogging);
+            EtwEnabled = enableEtwProvider;
 
-            Logger = new Logger("ObserverManager", logFolderBasePath, MaxArchivedLogFileLifetimeDays);
+            Logger = new Logger("ObserverManager", logFolderBasePath, maxArchivedLogFileLifetimeDays)
+            {
+                EnableETWLogging = enableEtwProvider,
+                EnableVerboseLogging = enableVerboseLogging
+            };
+
             SetPropertiesFromConfigurationParameters();
             Observers = serviceProvider.GetServices<ObserverBase>().ToList();
             HealthReporter = new ObserverHealthReporter(Logger);
@@ -196,11 +195,16 @@ namespace FabricObserver.Observers
             try
             {
                 var config = ServiceFabricConfiguration.Instance;
-                return config.FabricVersion;
+                return config.FabricVersion.Trim();
             }
-            catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
+            catch (Exception e) when (e is not OutOfMemoryException)
             {
-                Logger.LogWarning($"GetServiceFabricRuntimeVersion failure:{Environment.NewLine}{e.Message}");
+                if (e is TaskCanceledException or OperationCanceledException)
+                {
+                    throw;
+                }
+
+                Logger.LogWarning($"GetServiceFabricRuntimeVersion failure: {e.Message}");
             }
 
             return null;
@@ -228,64 +232,71 @@ namespace FabricObserver.Observers
                 // Observers run sequentially. See RunObservers impl.
                 while (true)
                 {
-                    if (!isConfigurationUpdateInProgress && (shutdownSignaled || runAsyncToken.IsCancellationRequested))
+                    try
                     {
-                        await ShutDownAsync();
-                        break;
-                    }
-
-                    await RunObserversAsync();
-
-                    // Identity-agnostic internal operational telemetry sent to Service Fabric team (only) for use in
-                    // understanding generic behavior of FH in the real world (no PII). This data is sent once a day and will be retained for no more
-                    // than 90 days.
-                    if (FabricObserverOperationalTelemetryEnabled && !(shutdownSignaled || runAsyncToken.IsCancellationRequested)
-                        && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
-                    {
-                        try
+                        if (!isConfigurationUpdateInProgress && (shutdownSignaled || runAsyncToken.IsCancellationRequested))
                         {
-                            using var telemetryEvents = new TelemetryEvents(nodeName);
-                            var foData = GetFabricObserverInternalTelemetryData();
+                            await ShutDownAsync();
+                            break;
+                        }
 
-                            if (foData != null)
+                        await RunObserversAsync();
+
+                        // Identity-agnostic internal operational telemetry sent to Service Fabric team (only) for use in
+                        // understanding generic behavior of FH in the real world (no PII). This data is sent once a day and will be retained for no more
+                        // than 90 days.
+                        if (FabricObserverOperationalTelemetryEnabled && !(shutdownSignaled || runAsyncToken.IsCancellationRequested)
+                            && DateTime.UtcNow.Subtract(LastTelemetrySendDate) >= OperationalTelemetryRunInterval)
+                        {
+                            try
                             {
-                                string filepath = Path.Combine(Logger.LogFolderBasePath, $"fo_operational_telemetry.log");
+                                using var telemetryEvents = new TelemetryEvents(nodeName);
+                                var foData = GetFabricObserverInternalTelemetryData();
 
-                                if (telemetryEvents.EmitFabricObserverOperationalEvent(foData, OperationalTelemetryRunInterval, filepath))
+                                if (foData != null)
                                 {
-                                    LastTelemetrySendDate = DateTime.UtcNow;
-                                    ResetInternalErrorWarningDataCounters();
+                                    string filepath = Path.Combine(Logger.LogFolderBasePath, $"fo_operational_telemetry.log");
+
+                                    if (telemetryEvents.EmitFabricObserverOperationalEvent(foData, OperationalTelemetryRunInterval, filepath))
+                                    {
+                                        LastTelemetrySendDate = DateTime.UtcNow;
+                                        ResetInternalErrorWarningDataCounters();
+                                    }
                                 }
                             }
+                            catch (Exception ex) when (ex is not OutOfMemoryException)
+                            {
+                                // Telemetry is non-critical and should *not* take down FO.
+                                Logger.LogWarning($"Unable to send internal diagnostic telemetry: {ex.Message}");
+                            }
                         }
-                        catch (Exception ex) when (ex is not OutOfMemoryException)
+
+                        // Check for new version once a day.
+                        if (!(shutdownSignaled || runAsyncToken.IsCancellationRequested) && DateTime.UtcNow.Subtract(LastVersionCheckDateTime) >= OperationalTelemetryRunInterval)
                         {
-                            // Telemetry is non-critical and should *not* take down FO.
-                            Logger.LogWarning($"Unable to send internal diagnostic telemetry: {ex.Message}");
+                            await CheckGithubForNewVersionAsync();
+                            LastVersionCheckDateTime = DateTime.UtcNow;
                         }
-                    }
 
-                    // Check for new version once a day.
-                    if (!(shutdownSignaled || runAsyncToken.IsCancellationRequested) && DateTime.UtcNow.Subtract(LastVersionCheckDateTime) >= OperationalTelemetryRunInterval)
-                    {
-                        await CheckGithubForNewVersionAsync();
-                        LastVersionCheckDateTime = DateTime.UtcNow;
-                    }
+                        // Time to tale a nap before running observers again. 30 seconds is the minimum sleep time.
+                        if (ObserverExecutionLoopSleepSeconds >= 30)
+                        {
+                            await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds), runAsyncToken);
+                        }
+                        else
+                        {
+                            // Prevent loop spinning. Let threads drain (in the case of AppObserver monitoring with concurrent Tasks). Be conservative here.
+                            await Task.Delay(TimeSpan.FromSeconds(30), runAsyncToken);
+                        }
 
-                    if (ObserverExecutionLoopSleepSeconds > 0)
-                    {
-                        await Task.Delay(TimeSpan.FromSeconds(ObserverExecutionLoopSleepSeconds), runAsyncToken);
+                        // All observers have run at this point. Try and empty the trash now.
+                        GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
+                        GC.Collect(2, GCCollectionMode.Forced, true, true);
                     }
-                    else if (Observers.Count == 1)
+                    catch (Exception e) when (e is FabricException or TimeoutException)
                     {
-                        // This protects against loop spinning when you run FO with one observer enabled and no sleep time set.
-                        await Task.Delay(TimeSpan.FromSeconds(5), runAsyncToken);
-                    }
 
-                    // All observers have run at this point. Try and empty the trash now.
-                    GCSettings.LargeObjectHeapCompactionMode = GCLargeObjectHeapCompactionMode.CompactOnce;
-                    GC.Collect(2, GCCollectionMode.Forced, true, true);
-                    await Task.Delay(TimeSpan.FromSeconds(5), runAsyncToken);
+                    }
                 }
             }
             catch (Exception e) when (e is OperationCanceledException or TaskCanceledException)
@@ -308,7 +319,7 @@ namespace FabricObserver.Observers
                 await ShutDownAsync();
 
                 // Telemetry.
-                if (TelemetryEnabled)
+                if (TelemetryProviderEnabled)
                 {
                     var telemetryData = new NodeTelemetryData()
                     {
@@ -319,23 +330,23 @@ namespace FabricObserver.Observers
                         Source = ObserverConstants.ObserverManagerName
                     };
 
-                    await TelemetryClient.ReportHealthAsync(telemetryData, runAsyncToken);
+                    await TelemetryClient.ReportHealthAsync(telemetryData, CancellationToken.None);
                 }
 
                 // ETW.
                 if (EtwEnabled)
                 {
                     Logger.LogEtw(
-                            ObserverConstants.FabricObserverETWEventName,
-                            new
-                            {
-                                Description = message,
-                                HealthState = "Error",
-                                Metric = $"{ObserverConstants.FabricObserverName}_ServiceHealth",
-                                NodeName = nodeName,
-                                ObserverName = ObserverConstants.ObserverManagerName,
-                                Source = ObserverConstants.FabricObserverName
-                            });
+                        ObserverConstants.FabricObserverETWEventName,
+                        new
+                        {
+                            Description = message,
+                            HealthState = "Error",
+                            Metric = $"{ObserverConstants.FabricObserverName}_ServiceHealth",
+                            NodeName = nodeName,
+                            ObserverName = ObserverConstants.ObserverManagerName,
+                            Source = ObserverConstants.FabricObserverName
+                        });
                 }
 
                 // Operational telemetry sent to FO developer for use in understanding generic behavior of FO in the real world (no PII).
@@ -440,7 +451,7 @@ namespace FabricObserver.Observers
                                     var healthReporter = new ObserverHealthReporter(Logger);
                                     healthReporter.ReportHealthToServiceFabric(healthReport);
                                 }
-                                catch (FabricException)
+                                catch (Exception e) when (e is FabricException or TimeoutException)
                                 {
 
                                 }
@@ -478,7 +489,7 @@ namespace FabricObserver.Observers
                                                     var healthReporter = new ObserverHealthReporter(Logger);
                                                     healthReporter.ReportHealthToServiceFabric(healthReport);
                                                 }
-                                                catch (FabricException)
+                                                catch (Exception e) when (e is FabricException or TimeoutException)
                                                 {
 
                                                 }
@@ -506,7 +517,7 @@ namespace FabricObserver.Observers
                                                     var healthReporter = new ObserverHealthReporter(Logger);
                                                     healthReporter.ReportHealthToServiceFabric(healthReport);
                                                 }
-                                                catch (FabricException)
+                                                catch (Exception e) when (e is FabricException or TimeoutException)
                                                 {
 
                                                 }
@@ -544,7 +555,7 @@ namespace FabricObserver.Observers
                                         var healthReporter = new ObserverHealthReporter(Logger);
                                         healthReporter.ReportHealthToServiceFabric(healthReport);
                                     }
-                                    catch (FabricException)
+                                    catch (Exception e) when (e is FabricException or TimeoutException)
                                     {
 
                                     }
@@ -564,28 +575,35 @@ namespace FabricObserver.Observers
                         observer.ObserverName == ObserverConstants.NodeObserverName ||
                         observer.ObserverName == ObserverConstants.OSObserverName)
                     {
-                        var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(observer.NodeName);
-                        var fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(observer.ObserverName));
-
-                        if (fabricObserverNodeHealthEvents != null && fabricObserverNodeHealthEvents.Any())
+                        try
                         {
-                            healthReport.EntityType = EntityType.Machine;
+                            var nodeHealth = await FabricClientInstance.HealthManager.GetNodeHealthAsync(observer.NodeName);
+                            var fabricObserverNodeHealthEvents = nodeHealth.HealthEvents?.Where(s => s.HealthInformation.SourceId.Contains(observer.ObserverName));
 
-                            foreach (var evt in fabricObserverNodeHealthEvents)
+                            if (fabricObserverNodeHealthEvents != null && fabricObserverNodeHealthEvents.Any())
                             {
-                                try
-                                {
-                                    healthReport.Property = evt.HealthInformation.Property;
-                                    healthReport.SourceId = evt.HealthInformation.SourceId;
+                                healthReport.EntityType = EntityType.Machine;
 
-                                    var healthReporter = new ObserverHealthReporter(Logger);
-                                    healthReporter.ReportHealthToServiceFabric(healthReport);
-                                }
-                                catch (FabricException)
+                                foreach (var evt in fabricObserverNodeHealthEvents)
                                 {
+                                    try
+                                    {
+                                        healthReport.Property = evt.HealthInformation.Property;
+                                        healthReport.SourceId = evt.HealthInformation.SourceId;
 
+                                        var healthReporter = new ObserverHealthReporter(Logger);
+                                        healthReporter.ReportHealthToServiceFabric(healthReport);
+                                    }
+                                    catch (Exception e) when (e is FabricException or TimeoutException)
+                                    {
+
+                                    }
                                 }
                             }
+                        }
+                        catch (Exception e) when (e is FabricException or TimeoutException)
+                        {
+
                         }
                     }
 
@@ -630,7 +648,7 @@ namespace FabricObserver.Observers
                             var healthReporter = new ObserverHealthReporter(Logger);
                             healthReporter.ReportHealthToServiceFabric(healthReport);
                         }
-                        catch (FabricException)
+                        catch (Exception e) when (e is FabricException or TimeoutException)
                         {
 
                         }
@@ -656,7 +674,7 @@ namespace FabricObserver.Observers
                             var healthReporter = new ObserverHealthReporter(Logger);
                             healthReporter.ReportHealthToServiceFabric(healthReport);
                         }
-                        catch (FabricException)
+                        catch (Exception e) when (e is FabricException or TimeoutException)
                         {
 
                         }
@@ -883,10 +901,10 @@ namespace FabricObserver.Observers
         /// <param name="e">Contains the information necessary for setting new config params from updated package.</param>
         private async void CodePackageActivationContext_ConfigurationPackageModifiedEvent(object sender, PackageModifiedEventArgs<ConfigurationPackage> e)
         {
-            Logger.LogWarning("Application Parameter upgrade started...");
-
             try
             {
+                Logger.LogWarning("Application Parameter upgrade started...");
+
                 // For Linux, we need to restart the FO process due to the Linux Capabilities impl that enables us to run docker and netstat commands as elevated user (FO Linux should always be run as standard user on Linux).
                 // During an upgrade event, SF touches the cap binaries which removes the cap settings so we need to run the FO app setup script again to reset them.
                 if (!isWindows)
@@ -902,20 +920,25 @@ namespace FabricObserver.Observers
                 await StopObserversAsync(false).ConfigureAwait(false);
                 var newSettings = e.NewPackage.Settings;
 
+                // ObserverManager settings.
+                SetPropertiesFromConfigurationParameters(newSettings);
+
                 // Observer settings.
                 foreach (var observer in Observers)
                 {
                     string configSectionName = observer.ConfigurationSettings.ConfigSection.Name;
                     observer.ConfigPackage = e.NewPackage;
                     observer.ConfigurationSettings = new ConfigSettings(newSettings, configSectionName);
-                    observer.ObserverLogger.EnableVerboseLogging = observer.ConfigurationSettings.EnableVerboseLogging;
-
+                    observer.InitializeObserverLoggingInfra(isConfigUpdate: true);
+                    
                     // Reset last run time so the observer restarts (if enabled) after the app parameter update completes.
                     observer.LastRunDateTime = DateTime.MinValue;
                 }
 
-                // ObserverManager settings.
-                SetPropertiesFromConfigurationParameters(newSettings);
+                // Refresh FO CancellationTokenSources.
+                cts = new CancellationTokenSource();
+                linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, runAsyncToken);
+                Logger.LogWarning("Application Parameter upgrade completed...");
             }
             catch (Exception ex) when (ex is not OutOfMemoryException)
             {
@@ -927,20 +950,16 @@ namespace FabricObserver.Observers
                     HealthMessage = $"Error updating FabricObserver with new configuration settings:{Environment.NewLine}{ex}",
                     NodeName = FabricServiceContext.NodeContext.NodeName,
                     State = HealthState.Ok,
-                    Property = "Configuration_Upate_Error",
+                    Property = "FO_Configuration_Upate_Error",
                     EmitLogEvent = true
                 };
 
                 HealthReporter.ReportHealthToServiceFabric(healthReport);
             }
-
-            // Refresh FO CancellationTokenSources.
-            cts?.Dispose();
-            linkedSFRuntimeObserverTokenSource?.Dispose();
-            cts = new CancellationTokenSource();
-            linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, runAsyncToken);
-            Logger.LogWarning("Application Parameter upgrade completed...");
-            isConfigurationUpdateInProgress = false;
+            finally
+            {
+                isConfigurationUpdateInProgress = false;
+            }
         }
 
         /// <summary>
@@ -957,31 +976,43 @@ namespace FabricObserver.Observers
                 IsLvidCounterEnabled = IsLVIDPerfCounterEnabled(settings);
             }
 
-            // ETW.
-            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProvider, settings), out bool etwEnabled))
-            {
-                EtwEnabled = etwEnabled;
-
-                if (Logger != null)
-                {
-                    Logger.EnableETWLogging = etwEnabled;
-                }
-            }
-
             // Maximum time, in seconds, that an observer can run - Override.
             if (int.TryParse(GetConfigSettingValue(ObserverConstants.ObserverExecutionTimeout, settings), out int timeoutSeconds))
             {
                 ObserverExecutionTimeout = TimeSpan.FromSeconds(timeoutSeconds);
             }
 
-            // ObserverManager verbose logging - Override.
-            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableVerboseLoggingParameter, settings), out bool enableVerboseLogging))
+            // Logger settings - Overrides. Config update. \\
+
+            // settings are not null if this is running due to a config update. Could also check for isConfigurationUpdateInProgress.
+            if (settings != null && Logger != null)
             {
-                if (Logger != null)
+                // ObserverManager logger EnableETWLogging - Override.
+                _ = bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableETWProvider, settings), out bool enableEtwProvider);
+                EtwEnabled = enableEtwProvider;
+                Logger.EnableETWLogging = enableEtwProvider;
+
+                // ObserverManager logger EnableVerboseLogging - Override.
+                _ = bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableVerboseLoggingParameter, settings), out bool enableVerboseLogging);
+                Logger.EnableVerboseLogging = enableVerboseLogging;
+
+                // ObserverManager/Observer logger MaxArchiveLifetimeDays - Override.
+                _ = int.TryParse(GetConfigSettingValue(ObserverConstants.EnableVerboseLoggingParameter, settings), out int maxArchiveLifetimeDays);
+                Logger.MaxArchiveFileLifetimeDays = maxArchiveLifetimeDays > 0 ? maxArchiveLifetimeDays : 7;
+
+                // ObserverManager/Observer logger ObserverLogPath - Override.
+                string loggerBasePath = GetConfigSettingValue(ObserverConstants.ObserverLogPathParameter, settings);
+
+                if (!string.IsNullOrWhiteSpace(loggerBasePath))
                 {
-                    Logger.EnableVerboseLogging = enableVerboseLogging;
+                    Logger.LogFolderBasePath = loggerBasePath;
                 }
+
+                // This will reset existing logger instance's config state and employ updated settings immediately. See Logger.cs.
+                Logger.InitializeLoggers(true);
             }
+
+            // End Logger settings - Overrides. \\
 
             if (int.TryParse(GetConfigSettingValue(ObserverConstants.ObserverLoopSleepTimeSeconds, settings), out int execFrequency))
             {
@@ -992,7 +1023,7 @@ namespace FabricObserver.Observers
             // This only makes sense when you have the FabricObserverWebApi app installed.
             string fqdn = GetConfigSettingValue(ObserverConstants.Fqdn, settings);
 
-            if (!string.IsNullOrEmpty(fqdn))
+            if (!string.IsNullOrWhiteSpace(fqdn))
             {
                 Fqdn = fqdn;
             }
@@ -1020,12 +1051,12 @@ namespace FabricObserver.Observers
             }
 
             // Telemetry (AppInsights, LogAnalytics, etc) - Override
-            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.TelemetryEnabled, settings), out bool telemEnabled))
+            if (bool.TryParse(GetConfigSettingValue(ObserverConstants.TelemetryProviderEnabled, settings), out bool telemProviderEnabled))
             {
-                TelemetryEnabled = telemEnabled;
+                TelemetryProviderEnabled = telemProviderEnabled;
             }
 
-            if (!TelemetryEnabled)
+            if (!TelemetryProviderEnabled)
             {
                 return;
             }
@@ -1034,13 +1065,13 @@ namespace FabricObserver.Observers
 
             if (string.IsNullOrEmpty(telemetryProviderType))
             {
-                TelemetryEnabled = false;
+                TelemetryProviderEnabled = false;
                 return;
             }
 
             if (!Enum.TryParse(telemetryProviderType, out TelemetryProviderType telemetryProvider))
             {
-                TelemetryEnabled = false;
+                TelemetryProviderEnabled = false;
                 return;
             }
 
@@ -1054,32 +1085,29 @@ namespace FabricObserver.Observers
 
                     if (string.IsNullOrEmpty(logAnalyticsWorkspaceId) || string.IsNullOrEmpty(logAnalyticsSharedKey))
                     {
-                        TelemetryEnabled = false;
+                        TelemetryProviderEnabled = false;
                         return;
                     }
 
-                    TelemetryClient = new LogAnalyticsTelemetry(
-                                            logAnalyticsWorkspaceId,
-                                            logAnalyticsSharedKey,
-                                            logAnalyticsLogType);
+                    TelemetryClient = new LogAnalyticsTelemetry(logAnalyticsWorkspaceId, logAnalyticsSharedKey, logAnalyticsLogType);
                     break;
                     
                 case TelemetryProviderType.AzureApplicationInsights:
                     
-                    string aiKey = GetConfigSettingValue(ObserverConstants.AiKey, settings);
+                    string aiConnString = GetConfigSettingValue(ObserverConstants.AppInsightsConnectionString, settings);
 
-                    if (string.IsNullOrEmpty(aiKey))
+                    if (string.IsNullOrEmpty(aiConnString))
                     {
-                        TelemetryEnabled = false;
+                        TelemetryProviderEnabled = false;
                         return;
                     }
 
-                    TelemetryClient = new AppInsightsTelemetry(aiKey);
+                    TelemetryClient = new AppInsightsTelemetry(aiConnString);
                     break;
 
                 default:
 
-                    TelemetryEnabled = false;
+                    TelemetryProviderEnabled = false;
                     break;
             }
         }
@@ -1159,7 +1187,7 @@ namespace FabricObserver.Observers
                         linkedSFRuntimeObserverTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cts.Token, runAsyncToken);
 
                         // Telemetry.
-                        if (TelemetryEnabled)
+                        if (TelemetryProviderEnabled)
                         {
                             var telemetryData = new NodeTelemetryData()
                             {
@@ -1359,7 +1387,7 @@ namespace FabricObserver.Observers
                     };
 
                     // Telemetry.
-                    if (TelemetryEnabled)
+                    if (TelemetryProviderEnabled)
                     {
                         await TelemetryClient?.ReportHealthAsync(telemetryData, runAsyncToken);
                     }
@@ -1383,7 +1411,7 @@ namespace FabricObserver.Observers
 
         private bool IsLVIDPerfCounterEnabled(ConfigurationSettings settings = null)
         {
-            if (!isWindows /*|| ServiceFabricConfiguration.Instance.FabricVersion.StartsWith("10")*/)
+            if (!isWindows)
             {
                 return false;
             }
@@ -1392,7 +1420,7 @@ namespace FabricObserver.Observers
             if (IsLvidCounterEnabled)
             {
                 // DEBUG
-                Logger.LogInfo("IsLVIDPerfCounterEnabled: Counter has already been determined to be enabled. Not running the check again..");
+                Logger.LogInfo("IsLVIDPerfCounterEnabled: Counter has already been determined to be enabled. Not running the check again.");
                 return true;
             }
 
@@ -1412,14 +1440,16 @@ namespace FabricObserver.Observers
             }
 
             // DEBUG
-            Logger.LogInfo("IsLVIDPerfCounterEnabled: Running check since a supported observer is enabled for LVID monitoring.");
+            Logger.LogInfo($"IsLVIDPerfCounterEnabled: Running check since a supported observer is enabled for LVID monitoring. Detected Fabric version is {sfVersion}");
             string categoryName = "Windows Fabric Database";
-            
 
-            if (sfVersion.StartsWith("1"))
-            {
+            if (sfVersion.StartsWith('1'))
+            { 
                 categoryName = "MSExchange Database";
             }
+
+            // DEBUG
+            Logger.LogInfo($"IsLVIDPerfCounterEnabled: using '{categoryName}' for CategoryName.");
 
             // If there is corrupted state on the machine with respect to performance counters, an AV can occur (in native code, then wrapped in AccessViolationException)
             // when calling PerformanceCounterCategory.Exists below. This is actually a symptom of a problem that extends beyond just this counter category..
@@ -1432,7 +1462,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (e is ArgumentException or InvalidOperationException or UnauthorizedAccessException or Win32Exception)
             {
-                Logger.LogWarning($"IsLVIDPerfCounterEnabled: Failed to determine LVID perf counter state: {e.Message}");
+                Logger.LogWarning($"IsLVIDPerfCounterEnabled: Failed to determine LVID perf counter state: {e.Message}. Detected SF Runtime Version: {sfVersion}");
             }
 
             return false;

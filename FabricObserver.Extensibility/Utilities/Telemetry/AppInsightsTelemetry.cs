@@ -336,7 +336,14 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
                 if (properties != null)
                 {
-                    telemetryClient.TrackEvent("FabricObserver.EntityHealthData", properties, metric);
+                    string source = "FabricObserver";
+
+                    if (telemetryData.ObserverName == "ClusterObserver")
+                    {
+                        source = "ClusterObserver";
+                    }
+
+                    telemetryClient.TrackEvent($"{source}.EntityHealthData", properties, metric);
                 }
             }
             catch (Exception e) when (e is not OutOfMemoryException)

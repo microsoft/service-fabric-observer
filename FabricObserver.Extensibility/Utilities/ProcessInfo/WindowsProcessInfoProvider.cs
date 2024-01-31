@@ -37,7 +37,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 try
                 {
-                    return ServiceFabricConfiguration.Instance.FabricVersion.StartsWith("1") ? "MSExchange Database" : "Windows Fabric Database";
+                    return ServiceFabricConfiguration.Instance.FabricVersion.StartsWith('1') ? "MSExchange Database" : "Windows Fabric Database";
                 }
                 catch (ArgumentException ae)
                 {
@@ -319,6 +319,10 @@ namespace FabricObserver.Observers.Utilities
 
                 using PerformanceCounter LvidCounter = new(WinFabDbCategoryName, LVIDCounterName, internalProcName, true);
                 float result = LvidCounter.NextValue();
+                
+                // DEBUG
+                //ProcessInfoLogger.LogInfo($"GetProcessKvsLvidsUsagePercentage: {internalProcName} LVIDs used: {result}. CategoryName: {WinFabDbCategoryName}");
+
                 double usedPct = (double)(result * 100) / int.MaxValue;
                 return usedPct;
             }

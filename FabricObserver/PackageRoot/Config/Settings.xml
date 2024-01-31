@@ -8,7 +8,7 @@
     <!-- Required: Amount of time, in seconds, for FO to sleep before the next iteration of the sequential observers run loop. 
          0 means run continuously with no pausing - not recommended. If you only enable one observer, FO will sleep for 10 seconds between runs, regardless
          of this setting. SF Error/Warning Reports have TTLs that are computed in part with this value. -->
-    <Parameter Name="ObserverLoopSleepTimeSeconds" Value="" MustOverride="true"/>
+    <Parameter Name="ObserverLoopSleepTimeSeconds" Value="" MustOverride="true" />
 
     <!-- Required: Location on disk to store observer data, including ObserverManager. 
          Each observer will write to their own directory on this path.
@@ -49,6 +49,30 @@
     <!-- Required: Diagnostic Telemetry. Azure ApplicationInsights and Azure LogAnalytics support is already implemented, 
          but you can implement whatever provider you want. See IObserverTelemetry interface. -->
     <Parameter Name="EnableTelemetryProvider" Value="" MustOverride="true" />
+	  
+    <!-- Telemetry - ApplicationInsights/LogAnalytics. NOTE: Values must now be set in ApplicationManifest.xml. This is a *breaking change* in version 3.2.14. -->
+	  
+    <!-- Required - Telemetry Provider. Supported values are AzureApplicationInsights or AzureLogAnalytics. 
+         NOTE: Value must now be set in ApplicationManifest.xml. This is a *breaking change* in version 3.2.14. -->
+    <Parameter Name="TelemetryProvider" Value="" MustOverride="true" />
+
+	<!-- Application Insights -->
+	<!-- Required-If TelemetryProvider is AzureApplicationInsights. Your AppInsights Connection String. 
+         NOTE: Value must now be set in ApplicationManifest.xml. This is a *breaking change* in version 3.2.14.-->
+	<Parameter Name="AppInsightsConnectionString" Value="" MustOverride="true" />
+	<!-- OBSOLETE. DO NOT USE. Use AppInsightsConnectionString instead. InstrumentationKey is no longer recommended for ApplicationInsights ingestion.
+	     NOTE: Specifying this has no effect as FabricObserver requires a ConnectionString for ApplicationInsights. -->
+	<Parameter Name="AppInsightsInstrumentationKey" Value="" />
+    
+	<!-- LogAnalytics -->
+    <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Workspace Id.
+         NOTE: Values must now be set in ApplicationManifest.xml. This is a *breaking change* in version 3.2.14. -->
+    <Parameter Name="LogAnalyticsWorkspaceId" Value="" MustOverride="true" />
+    <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Shared Key. -->
+    <Parameter Name="LogAnalyticsSharedKey" Value="" MustOverride="true" />
+    <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
+    <Parameter Name="LogAnalyticsLogType" Value="" MustOverride="true" />
+	<!-- End Telemetry Config -->
 
     <!-- Resource Governance. MustOverride is required to enable changing RG settings with app parameter updates.
     <Parameter Name="RGCPUCoresRequest" Value="" MustOverride="true" />
@@ -63,7 +87,7 @@
          **NOTE: For Linux runtime target, just supply the directory name(s)/path (not a path with drive letter like you do for Windows).** -->
     <Parameter Name="DataLogPath" Value="fabric_observer_csvdata" />
     
-    <!-- Optional: This is for use by the text logger to build node warning/error hyperlinks 
+    <!-- Optional (OBSOLETE): This is for use by the text logger to build node warning/error hyperlinks 
          that FabricObserverWebApi uses in html output. The API does not communicate directly with FabricObserver.
          It relies on the existence of local log files, across ObserverManager and individual observers (they log to their own folders). 
          This only makes sense if you enable secure (SSL) communication in FabricObserverWebApi. By default, it is an internal(node)-only 
@@ -87,25 +111,7 @@
          RunInterval setting for supported observer. Note that in either case, files will remain on disk for the number of days specified in MaxArchivedCsvFileLifetimeDays. -->
     <Parameter Name="CsvFileWriteFormat" Value="SingleFileWithArchives" />
     
-    <!-- Required: Supported Values are AzureApplicationInsights or AzureLogAnalytics as these providers are implemented. -->
-    <Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
-
-	<!-- Application Insights -->
-	<!-- Required-If TelemetryProvider is AzureApplicationInsights. Your AppInsights Connection String. -->
-	<Parameter Name="AppInsightsConnectionString" Value="" />
-	<!-- OBSOLETE. DO NOT USE. Use AppInsightsConnectionString instead. InstrumentationKey is no longer recommended for ApplicationInsights ingestion.
-	     NOTE: Specifying this has no effect as FabricObserver requires a ConnectionString for ApplicationInsights. -->
-	<Parameter Name="AppInsightsInstrumentationKey" Value="" />
-    
-	<!-- LogAnalytics -->
-    <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Workspace Id. -->
-    <Parameter Name="LogAnalyticsWorkspaceId" Value="" />
-    <!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Shared Key. -->
-    <Parameter Name="LogAnalyticsSharedKey" Value="" />
-    <!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
-    <Parameter Name="LogAnalyticsLogType" Value="FabricObserver" />
-	  
-    <!-- OBSOLETE: FabricObserverWebApi is no longer supported or maintained. This setting/feature exists for legacy purposes only. 
+	<!-- OBSOLETE: FabricObserverWebApi is no longer supported or maintained. This setting/feature exists for legacy purposes only. 
 	     If you deploy the FabricObserverWebApi app, set this to true. -->
     <Parameter Name="ObserverWebApiEnabled" Value="false" />
   </Section>

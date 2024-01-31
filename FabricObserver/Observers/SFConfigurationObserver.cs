@@ -54,8 +54,9 @@ namespace FabricObserver.Observers
 
         public override async Task ObserveAsync(CancellationToken token)
         {
-            if (!IsObserverWebApiAppDeployed || (RunInterval > TimeSpan.MinValue && DateTime.Now.Subtract(LastRunDateTime) < RunInterval))
+            if (!IsObserverWebApiAppDeployed || (RunInterval > TimeSpan.Zero && DateTime.Now.Subtract(LastRunDateTime) < RunInterval))
             {
+                ObserverLogger.LogInfo($"ObserveAsync: RunInterval ({RunInterval}) has not elapsed. Exiting.");
                 return;
             }
 

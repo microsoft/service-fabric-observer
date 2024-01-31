@@ -33,6 +33,17 @@ namespace FabricObserver.Observers
         private bool disposed;
         private ConcurrentDictionary<string, (int DumpCount, DateTime LastDumpDate)> ServiceDumpCountDictionary;
         private readonly object lockObj = new();
+
+        private bool IsTelemetryProviderEnabled
+        {
+            get; set;
+        }
+
+        protected ITelemetryProvider TelemetryClient
+        {
+            get; set;
+        }
+
         public volatile bool HasActiveFabricErrorOrWarning;
         public volatile int CurrentErrorCount;
         public volatile int CurrentWarningCount;
@@ -231,14 +242,6 @@ namespace FabricObserver.Observers
         }
 
         /// <summary>
-        /// The maximum number of days an archived observer log file will be stored. After this time, it will be deleted from disk.
-        /// </summary>
-        public int MaxLogArchiveFileLifetimeDays
-        {
-            get; set;
-        }
-
-        /// <summary>
         /// The maximum number of days a csv file produced by CsvLogger will be stored. After this time, it will be deleted from disk.
         /// </summary>
         public int MaxCsvArchiveFileLifetimeDays
@@ -261,11 +264,6 @@ namespace FabricObserver.Observers
             get; set;
         } = new ConcurrentQueue<string>();
 
-        public string ServiceNamesLogPath
-        {
-            get; set;
-        }
-
         public int MonitoredServiceProcessCount
         {
             get; set;
@@ -278,13 +276,13 @@ namespace FabricObserver.Observers
 
         public TimeSpan RunInterval
         {
-            get => ConfigurationSettings?.RunInterval ?? TimeSpan.MinValue;
+            get => ConfigurationSettings?.RunInterval ?? TimeSpan.FromMinutes(1);
 
             set
             {
                 if (ConfigurationSettings != null)
                 {
-                    ConfigurationSettings.RunInterval = value;
+                    ConfigurationSettings.RunInterval = value > TimeSpan.Zero ? value : TimeSpan.FromMinutes(1);
                 }
             }
         }
@@ -320,38 +318,29 @@ namespace FabricObserver.Observers
             }
         }
 
-        public TimeSpan MonitorDuration
+        public TimeSpan CpuMonitorDuration
         {
-            get => ConfigurationSettings?.MonitorDuration ?? TimeSpan.MinValue;
+            get => ConfigurationSettings?.CpuMonitorDuration ?? TimeSpan.FromSeconds(3);
             set
             {
                 if (ConfigurationSettings != null)
                 {
-                    ConfigurationSettings.MonitorDuration = value;
+                    ConfigurationSettings.CpuMonitorDuration = value;
                 }
             }
         }
 
-        public TimeSpan MonitorSleepDuration
+        public TimeSpan CpuMonitorLoopSleepDuration
         {
-            get => ConfigurationSettings?.MonitorSleepDuration ?? TimeSpan.MinValue;
+            get => ConfigurationSettings?.CpuMonitorSleepDuration ?? TimeSpan.FromMilliseconds(1000);
             set
             {
                 if (ConfigurationSettings != null)
                 {
-                    ConfigurationSettings.MonitorSleepDuration = value;
+                    // Prevent bad values.
+                    ConfigurationSettings.CpuMonitorSleepDuration = value >= TimeSpan.FromMilliseconds(500) ? value : TimeSpan.FromMilliseconds(1000);
                 }
             }
-        }
-
-        protected bool IsTelemetryProviderEnabled
-        {
-            get; set;
-        }
-
-        protected ITelemetryProvider TelemetryClient
-        {
-            get; set;
         }
 
         public bool IsEtwProviderEnabled
@@ -389,18 +378,30 @@ namespace FabricObserver.Observers
             ConfigPackage = serviceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
             CodePackage = serviceContext.CodePackageActivationContext.GetCodePackageObject("Code");
             FabricServiceContext = serviceContext;
-
-            SetObserverStaticConfiguration();
+            ConfigurationSettings = new ConfigSettings(ConfigPackage.Settings, ConfigurationSectionName);
 
             if (ObserverName == ObserverConstants.AppObserverName)
             {
                 ServiceNames.Enqueue(ServiceName.OriginalString);
             }
 
+            InitializeObserverLoggingInfra();
+
+            HealthReporter = new ObserverHealthReporter(ObserverLogger);
+
+            IsObserverWebApiAppDeployed =
+                bool.TryParse(
+                    GetSettingParameterValue(
+                        ObserverConstants.ObserverManagerConfigurationSectionName,
+                        ObserverConstants.ObserverWebApiEnabled), out bool obsWeb) && obsWeb && IsObserverWebApiAppInstalled();
+        }
+
+        public void InitializeObserverLoggingInfra(bool isConfigUpdate = false)
+        {
             // Observer Logger setup.
             string logFolderBasePath;
             string observerLogPath = GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.ObserverLogPathParameter);
-            
+
             if (!string.IsNullOrWhiteSpace(observerLogPath))
             {
                 logFolderBasePath = observerLogPath;
@@ -411,21 +412,30 @@ namespace FabricObserver.Observers
                 logFolderBasePath = logFolderBase;
             }
 
-            ObserverLogger = new Logger(ObserverName, logFolderBasePath, MaxLogArchiveFileLifetimeDays)
+            // Archive file lifetime - ObserverLogger files.
+            _ = int.TryParse(
+                 GetSettingParameterValue(
+                    ObserverConstants.ObserverManagerConfigurationSectionName,
+                    ObserverConstants.MaxArchivedLogFileLifetimeDaysParameter), out int maxFileArchiveLifetime);
+
+            SetObserverEtwTelemetryConfiguration();
+
+            if (ObserverLogger == null)
             {
-                EnableETWLogging = IsEtwProviderEnabled
-            };
-
-            ConfigurationSettings = new ConfigSettings(ConfigPackage.Settings, ConfigurationSectionName);
-            ObserverLogger.EnableVerboseLogging = ConfigurationSettings.EnableVerboseLogging;
-            HealthReporter = new ObserverHealthReporter(ObserverLogger);
-            IsObserverWebApiAppDeployed = 
-                bool.TryParse(
-                    GetSettingParameterValue(
-                        ObserverConstants.ObserverManagerConfigurationSectionName,
-                        ObserverConstants.ObserverWebApiEnabled), out bool obsWeb) && obsWeb && IsObserverWebApiAppInstalled();
-
-            ServiceNamesLogPath = Path.Combine(ObserverLogger.LogFolderBasePath, ObserverName, "ServiceNames", "Services.txt");
+                ObserverLogger = new Logger(ObserverName, logFolderBasePath, maxFileArchiveLifetime > 0 ? maxFileArchiveLifetime : 7)
+                {
+                    EnableETWLogging = IsEtwProviderEnabled && ConfigurationSettings.IsObserverEtwEnabled,
+                    EnableVerboseLogging = ConfigurationSettings.EnableVerboseLogging
+                };
+            }
+            else if (isConfigUpdate)
+            {
+                ObserverLogger.EnableETWLogging = IsEtwProviderEnabled && ConfigurationSettings.IsObserverEtwEnabled;
+                ObserverLogger.EnableVerboseLogging = ConfigurationSettings.EnableVerboseLogging;
+                ObserverLogger.LogFolderBasePath = logFolderBasePath;
+                ObserverLogger.MaxArchiveFileLifetimeDays = maxFileArchiveLifetime > 0 ? maxFileArchiveLifetime : 7;
+                ObserverLogger.InitializeLoggers(isConfigUpdate);
+            }
         }
 
         /// <summary>
@@ -1468,11 +1478,11 @@ namespace FabricObserver.Observers
             {
                 return TimeSpan.FromSeconds(obsSleepTime)
                         .Add(TimeSpan.FromMinutes(TtlAddMinutes))
-                        .Add(RunInterval > TimeSpan.MinValue ? RunInterval : TimeSpan.Zero);
+                        .Add(RunInterval > TimeSpan.Zero ? RunInterval : TimeSpan.Zero);
             }
 
             return DateTime.Now.Subtract(LastRunDateTime)
-                    .Add(TimeSpan.FromSeconds(RunDuration > TimeSpan.MinValue ? RunDuration.TotalSeconds : 0))
+                    .Add(TimeSpan.FromSeconds(RunDuration > TimeSpan.Zero ? RunDuration.TotalSeconds : 0))
                     .Add(TimeSpan.FromSeconds(obsSleepTime));
         }
 
@@ -1491,31 +1501,23 @@ namespace FabricObserver.Observers
             }
         }
 
-        // Non-App parameters settings (set in Settings.xml only).
-        private void SetObserverStaticConfiguration()
+        public void SetObserverEtwTelemetryConfiguration()
         {
-            // Archive file lifetime - ObserverLogger files.
-            if (int.TryParse(
-                GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.MaxArchivedLogFileLifetimeDaysParameter), out int maxFileArchiveLifetime))
-            {
-                MaxLogArchiveFileLifetimeDays = maxFileArchiveLifetime;
-            }
-
-            // ETW
+            // ETW Provider.
             if (bool.TryParse(
                 GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.EnableETWProvider), out bool etwProviderEnabled))
             {
                 IsEtwProviderEnabled = etwProviderEnabled;
             }
 
-            // Telemetry.
+            // Telemetry Provider.
             if (bool.TryParse(
-                GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.TelemetryEnabled), out bool telemEnabled))
+                GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.TelemetryProviderEnabled), out bool telemEnabled))
             {
                 IsTelemetryProviderEnabled = telemEnabled;
             }
 
-            if (!IsTelemetryProviderEnabled)
+            if (!IsTelemetryProviderEnabled || !IsTelemetryEnabled)
             {
                 return;
             }
@@ -1524,15 +1526,9 @@ namespace FabricObserver.Observers
                 GetSettingParameterValue(
                     ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.TelemetryProviderType);
 
-            if (string.IsNullOrWhiteSpace(telemetryProviderType))
+            if (string.IsNullOrWhiteSpace(telemetryProviderType) || !Enum.TryParse(telemetryProviderType, out TelemetryProviderType telemetryProvider))
             {
-                IsTelemetryProviderEnabled = false;
-                return;
-            }
-
-            if (!Enum.TryParse(telemetryProviderType, out TelemetryProviderType telemetryProvider))
-            {
-                IsTelemetryProviderEnabled = false;
+                IsTelemetryEnabled = false;
                 return;
             }
 
@@ -1554,7 +1550,7 @@ namespace FabricObserver.Observers
 
                     if (string.IsNullOrWhiteSpace(logAnalyticsWorkspaceId) || string.IsNullOrWhiteSpace(logAnalyticsSharedKey))
                     {
-                        IsTelemetryProviderEnabled = false;
+                        IsTelemetryEnabled = false;
                         return;
                     }
 
@@ -1568,7 +1564,7 @@ namespace FabricObserver.Observers
 
                     if (string.IsNullOrWhiteSpace(aiConnString))
                     {
-                        IsTelemetryProviderEnabled = false;
+                        IsTelemetryEnabled = false;
                         return;
                     }
 
@@ -1577,7 +1573,7 @@ namespace FabricObserver.Observers
 
                 default:
 
-                    IsTelemetryProviderEnabled = false;
+                    IsTelemetryEnabled = false;
                     break;
             }
         }

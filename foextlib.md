@@ -1,4 +1,4 @@
-## FabricObserver Extensibility Library 3.2.13
+## FabricObserver Extensibility Library 3.2.14
 
 FabricObserver.Extensibility is a .NET 6 library for building custom observers that extend FabricObserver's capabilities to match your needs. A custom observer is managed just like a built-in observer.
 
