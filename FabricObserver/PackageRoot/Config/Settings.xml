@@ -74,9 +74,9 @@
     <Parameter Name="LogAnalyticsLogType" Value="" MustOverride="true" />
 	<!-- End Telemetry Config -->
 
-    <!-- Resource Governance. MustOverride is required to enable changing RG settings with app parameter updates.
+    <!-- Resource Governance. MustOverride is required to enable changing RG settings with app parameter updates. -->
     <Parameter Name="RGCPUCoresRequest" Value="" MustOverride="true" />
-    <Parameter Name="RGMemoryInMBLimit" Value="" MustOverride="true" /> -->
+    <Parameter Name="RGMemoryInMB" Value="" MustOverride="true" />
     
     <!-- *** Non-Overridable Parameters - Set these in this file. *** -->
     
