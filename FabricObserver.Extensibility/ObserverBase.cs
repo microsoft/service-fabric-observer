@@ -320,12 +320,12 @@ namespace FabricObserver.Observers
 
         public TimeSpan CpuMonitorDuration
         {
-            get => ConfigurationSettings?.CpuMonitorDuration ?? TimeSpan.FromSeconds(4);
+            get => ConfigurationSettings?.CpuMonitorDuration ?? TimeSpan.FromSeconds(3);
             set
             {
                 if (ConfigurationSettings != null)
                 {
-                    ConfigurationSettings.CpuMonitorDuration = value >= TimeSpan.FromSeconds(1) ? value : TimeSpan.FromSeconds(1);
+                    ConfigurationSettings.CpuMonitorDuration = value;
                 }
             }
         }

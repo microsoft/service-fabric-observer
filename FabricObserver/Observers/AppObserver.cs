@@ -3130,44 +3130,8 @@ namespace FabricObserver.Observers
 
                 // CPU \\
 
-                ICpuUsage cpuUsage;
-
-                if (IsWindows)
-                {
-                    cpuUsage = new CpuUsageWin32();
-                }
-                else
-                {
-                    cpuUsage = new CpuUsageProcess();
-                }
-
-                Stopwatch timer = Stopwatch.StartNew();
                 SafeProcessHandle procHandle = null;
-
-                // CpuMonitorDuration can't be set to greater than 10s.
-                TimeSpan monitorDuration = CpuMonitorDuration <= TimeSpan.FromSeconds(10) ? CpuMonitorDuration : TimeSpan.FromSeconds(10);
-
-                // CpuMonitorLoopSleepDuration can't be set to less than 500 milliseconds.
-                TimeSpan monitorLoopSleepTime = CpuMonitorLoopSleepDuration;
-
-                // At least one value is needed to compute CPU Time % (in fact, more than one is best on Windows). If the user misconfigures sleep time to be greater than monitor duration,
-                // then we'll just set it to 1000 ms.
-                if (monitorLoopSleepTime > monitorDuration)
-                {
-                    monitorLoopSleepTime = TimeSpan.FromMilliseconds(1000);
-                }
-
-                // Limit high potential CPU usage by FO by limiting the duration of the CPU monitoring loop.
-                if (EnableConcurrentMonitoring)
-                {
-                    if (monitorDuration >= TimeSpan.FromSeconds(5))
-                    {
-                        monitorDuration = TimeSpan.FromSeconds(5);
-
-                        // Always force 1s sleep time for concurrent monitoring when duration is >= 5s.
-                        monitorLoopSleepTime = TimeSpan.FromSeconds(1000);
-                    }
-                }
+                ICpuUsage cpuUsage;
 
                 if (IsWindows)
                 {
@@ -3177,14 +3141,47 @@ namespace FabricObserver.Observers
                     {
                         return;
                     }
+
+                    cpuUsage = new CpuUsageWin32();
                 }
+                else
+                {
+                    cpuUsage = new CpuUsageProcess();
+                }
+
+                // CpuMonitorDuration can't be set to greater than 10s.
+                TimeSpan cpuMonitorDuration = CpuMonitorDuration <= TimeSpan.FromSeconds(10) ? CpuMonitorDuration : TimeSpan.FromSeconds(10);
+
+                // CpuMonitorLoopSleepDuration can't be set to less than 500 milliseconds.
+                TimeSpan cpuMonitorLoopSleepTime = CpuMonitorLoopSleepDuration;
+
+                // At least one value is needed to compute CPU Time % (in fact, more than one is best on Windows). If the user misconfigures sleep time to be greater than monitor duration,
+                // then we'll just set it to 1000 ms.
+                if (cpuMonitorLoopSleepTime > cpuMonitorDuration)
+                {
+                    cpuMonitorLoopSleepTime = TimeSpan.FromMilliseconds(1000);
+                }
+
+                // Limit potential for high CPU usage by throttling max duration when monitoring CPU usage with multiple threads.
+                if (EnableConcurrentMonitoring)
+                {
+                    if (cpuMonitorDuration >= TimeSpan.FromSeconds(5))
+                    {
+                        cpuMonitorDuration = TimeSpan.FromSeconds(5);
+
+                        // Always force 1s sleep time for concurrent monitoring when duration is >= 5s.
+                        cpuMonitorLoopSleepTime = TimeSpan.FromSeconds(1000);
+                    }
+                }
+
+                Stopwatch timer = Stopwatch.StartNew();
 
                 try
                 {
 #if DEBUG
                     ObserverLogger.LogInfo($"ComputeResourceUsage: Entering CPU monitor while loop. MonitorDuration = {CpuMonitorDuration}. CpuMonitorLoopSleepDuration = {CpuMonitorLoopSleepDuration}.");
 #endif
-                    while (timer.Elapsed <= monitorDuration)
+                    while (timer.Elapsed <= cpuMonitorDuration)
                     {
                         if (token.IsCancellationRequested)
                         {
@@ -3250,7 +3247,7 @@ namespace FabricObserver.Observers
                             }
                         }
 
-                        Thread.Sleep(monitorLoopSleepTime);
+                        Thread.Sleep(cpuMonitorLoopSleepTime);
                     }
 #if DEBUG
                     ObserverLogger.LogInfo($"ComputeResourceUsage: Exiting CPU monitoring while loop. Ran for {timer.Elapsed}.");

@@ -1043,6 +1043,7 @@ namespace FabricObserver.Observers
                     if (IsWindows)
                     {
                         cpuUsage = new CpuUsageWin32();
+                        procHandle = NativeMethods.GetSafeProcessHandle(procId);
                     }
                     else
                     {
@@ -1050,23 +1051,18 @@ namespace FabricObserver.Observers
                     }
 
                     Stopwatch timer = Stopwatch.StartNew();
-                    TimeSpan monitorDuration = CpuMonitorDuration;
-                    TimeSpan monitorLoopSleepTime = CpuMonitorLoopSleepDuration;
+                    TimeSpan cpuMonitorDuration = CpuMonitorDuration;
+                    TimeSpan cpuMonitorLoopSleepTime = CpuMonitorLoopSleepDuration;
 
                     // At least one value is needed to compute CPU Time % (in fact, more than one is best on Windows). If the user misconfigures sleep time to be greater than monitor duration,
                     // then we'll just set it to 1000 ms.
-                    if (monitorLoopSleepTime > monitorDuration)
+                    if (cpuMonitorLoopSleepTime > cpuMonitorDuration)
                     {
                         // CpuMonitorDuration can't be set to less than 1 second.
-                        monitorLoopSleepTime = TimeSpan.FromMilliseconds(1000);
+                        cpuMonitorLoopSleepTime = TimeSpan.FromMilliseconds(1000);
                     }
 
-                    if (IsWindows)
-                    {
-                        procHandle = NativeMethods.GetSafeProcessHandle(procId);
-                    }
-
-                    while (timer.Elapsed <= monitorDuration)
+                    while (timer.Elapsed <= cpuMonitorDuration)
                     {
                         token.ThrowIfCancellationRequested();
 
@@ -1083,7 +1079,7 @@ namespace FabricObserver.Observers
                                 }
                             }
 
-                            await Task.Delay(monitorLoopSleepTime, token);
+                            await Task.Delay(cpuMonitorLoopSleepTime, token);
                         }
                         catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
                         {
