@@ -117,7 +117,7 @@ namespace FabricObserverTests
             await DeployPortTestAppAsync();
 
             // Wait a little extra time for apps to be fully in ready state.
-            await Task.Delay(15000);
+            await Task.Delay(5000);
         }
 
         [ClassCleanup]

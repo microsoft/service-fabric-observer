@@ -325,7 +325,7 @@ namespace FabricObserver.Observers
             {
                 if (ConfigurationSettings != null)
                 {
-                    ConfigurationSettings.CpuMonitorDuration = value;
+                    ConfigurationSettings.CpuMonitorDuration = value >= TimeSpan.FromSeconds(1) ? value : TimeSpan.FromSeconds(1);
                 }
             }
         }

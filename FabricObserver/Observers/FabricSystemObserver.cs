@@ -1053,20 +1053,17 @@ namespace FabricObserver.Observers
                     TimeSpan monitorDuration = CpuMonitorDuration;
                     TimeSpan monitorLoopSleepTime = CpuMonitorLoopSleepDuration;
 
+                    // At least one value is needed to compute CPU Time % (in fact, more than one is best on Windows). If the user misconfigures sleep time to be greater than monitor duration,
+                    // then we'll just set it to 1000 ms.
+                    if (monitorLoopSleepTime > monitorDuration)
+                    {
+                        // CpuMonitorDuration can't be set to less than 1 second.
+                        monitorLoopSleepTime = TimeSpan.FromMilliseconds(1000);
+                    }
+
                     if (IsWindows)
                     {
                         procHandle = NativeMethods.GetSafeProcessHandle(procId);
-                        
-                        // Guardrails.
-                        if (monitorDuration >= TimeSpan.FromSeconds(5))
-                        {
-                            monitorDuration = TimeSpan.FromSeconds(5);
-                        }
-
-                        if (monitorLoopSleepTime < TimeSpan.FromMilliseconds(500))
-                        {
-                            monitorLoopSleepTime = TimeSpan.FromMilliseconds(1000);
-                        }
                     }
 
                     while (timer.Elapsed <= monitorDuration)

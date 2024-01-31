@@ -86,7 +86,10 @@
     <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
     <!-- Observer CPU Monitor Durations (TimeSpan format, e.g., 00:00:00): How long an observer should monitor CPU usage per target (process or machine).
-         This setting only applies to 3 observers. NOTE: Values greater than 10 seconds are no longer supported. -->
+         NOTE: If AppObserver is configured to monitor service processes concurrently, then any value greater than 5 seconds is ignored as 5 seconds CPU monitor duration will be the maximum executed value. 
+         This is to protect against AppObserver causing the FO process to abuse CPU, especially on Windows - where FO employs (indirectly) NtQuerySystemInformation API to collect process CPU usage data.
+         If AppObserver is not running in concurrent monitoring mode, then 10 seconds will be the max value employed, regardless of this setting. 
+         These contraints do not apply to FabricSystemObserver and NodeObserver. -->
     <Parameter Name="AppObserverMonitorDuration" DefaultValue="00:00:04" />
     <Parameter Name="FabricSystemObserverMonitorDuration" DefaultValue="00:00:04" />
     <Parameter Name="NodeObserverMonitorDuration" DefaultValue="00:00:04" />
