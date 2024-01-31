@@ -2,9 +2,9 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
 	<metadata minClientVersion="3.3.0">
 		<id>%PACKAGE_ID%</id>
-		<version>3.2.14</version>
+		<version>3.2.15</version>
 		<releaseNotes>
-This is version is required for observer plugins that target FabricObserver 3.2.14 or ClusterObserver 2.2.8.
+This is version is required for observer plugins that target FabricObserver 3.2.15 or ClusterObserver 2.2.8.
 #### Changes
 - Updated Logger implementatio to fix app param update bug related to log path and max archive lifetime settings not being honored.
 - Updated ObserverBase to include guard rails to prevent high CPU consumption if an observer's MonitorDuration or MonitorSleepTimeMilliseconds settings are misconfigured (to high or too low, respectively).
