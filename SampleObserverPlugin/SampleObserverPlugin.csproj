@@ -14,18 +14,18 @@
 	<!-- Copy files post-build. -->
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 		<!-- Polly.dll from packages (this file is only required only by this sample plugin, not FabricObserver itself..). -->
-		<Exec Command="copy &quot;$(SolutionDir)packages\polly\8.0.0\lib\netstandard2.0\Polly.dll&quot; &quot;$(OutDir)&quot;&#xD;&#xA;" />
+		<Exec Command="copy &quot;$(SolutionDir)packages\polly\8.2.1\lib\netstandard2.0\Polly.dll&quot; &quot;$(OutDir)&quot;&#xD;&#xA;" />
 		<!-- If you build with the full FO nuget pkg, uncomment the line below and comment out the Extensibility library package reference. -->
 		<!-- <Exec Command="copy &quot;$(OutDir)*.dll&quot; &quot;$(OutDir)FabricObserverPkg\Data\Plugins&quot;&#xD;&#xA;copy &quot;$(OutDir)*.pdb&quot; &quot;$(OutDir)FabricObserverPkg\Data\Plugins&quot;" /> -->
 	</Target>
     <ItemGroup>
-		<!-- To build with the full 3.2.15 FO nupkg. The output dir will contain a FabricObserverPkg folder with Code/Config/Data. 
+		<!-- To build with the full 3.2.14 FO nupkg. The output dir will contain a FabricObserverPkg folder with Code/Config/Data. 
              So, you can deploy FO directly from there. -->
 		
-		<!-- <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" Version="3.2.15" />
+		<!-- <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" Version="3.2.14" />
 		FabricObserver employs version 8.0.0 of Microsoft.Extensions.DependencyInjection.Abstractions, so you need to explicitly reference that version here. 
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" /> -->
-		
+
 		<!-- OR -->
 		
 		<!-- Build with *just* the FabricObserver.Extensibility library. There will be no FabricObserverPkg folder in outdir.. -->

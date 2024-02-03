@@ -576,11 +576,11 @@ namespace FabricObserver.Observers
                 if (Directory.Exists(DumpsPath) && Directory.GetFiles(DumpsPath, $"{dumpKey}*.dmp", SearchOption.AllDirectories).Length >= MaxDumps)
                 {
                     ObserverLogger.LogWarning($"Reached maximum number({MaxDumps}) of {dumpKey} dmp files stored on local disk. Will not create dmp file. " +
-                                              $"If enabled, please make sure that AzureStorageObserver is configured correctly. " +
-                                              $"Will attempt to delete old (>= 1 day) local files now.");
+                                              $"If enabled, please make sure that AzureStorageUploadObserver is configured correctly. " +
+                                              $"Will attempt to delete old (>= 1 day) local {dumpKey} files now.");
 
                     // Clean out old dmp files, if any. Generally, there will only be some dmp files remaining on disk if customer has not configured
-                    // AzureStorageObserver correctly or some error occurred during some stage of the upload process.
+                    // AzureStorageUploadObserver correctly or some error occurred during some stage of the upload process.
                     Logger.TryCleanFolder(DumpsPath, $"{dumpKey}*.dmp", TimeSpan.FromDays(1));
                     return false;
                 }
@@ -656,7 +656,7 @@ namespace FabricObserver.Observers
                     dumpFileName += $"_{DateTime.Now:ddMMyyyyHHmmssFFF}.dmp";
 
                         // Check disk space availability before writing dump file.
-                        string driveName = DumpsPath.Substring(0, 2);
+                        string driveName = DumpsPath[..2];
 
                         if (DiskUsage.GetCurrentDiskSpaceUsedPercent(driveName) > 90)
                         {
