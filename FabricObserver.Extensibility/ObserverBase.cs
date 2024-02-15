@@ -360,6 +360,8 @@ namespace FabricObserver.Observers
             get; set; 
         }
 
+        public bool EmitRawMetricTelemetry => ConfigurationSettings?.EmitRawMetricTelemetry ?? false;
+
         /// <summary>
         /// Base type constructor for all observers (both built-in and plugin impls).
         /// </summary>
@@ -909,7 +911,7 @@ namespace FabricObserver.Observers
                 // Telemetry - This is informational, per reading telemetry, healthstate is irrelevant here. If the process has children, then don't emit this raw data since it will already
                 // be contained in the ChildProcessTelemetry data instances and AppObserver will have already emitted it.
                 // Enable this for your observer if you want to send data to ApplicationInsights or LogAnalytics for each resource usage observation it makes per specified metric.
-                if (IsTelemetryEnabled && replicaOrInstance?.ChildProcesses == null)
+                if (IsTelemetryEnabled && replicaOrInstance?.ChildProcesses == null && EmitRawMetricTelemetry)
                 {
                      _ = TelemetryClient?.ReportMetricAsync(telemetryData, Token);
                 }
@@ -960,14 +962,14 @@ namespace FabricObserver.Observers
                     };
                 }
 
-                if (IsTelemetryEnabled)
-                {
-                    _ = TelemetryClient?.ReportMetricAsync(telemetryData, Token);
-                }
-
                 if (IsEtwEnabled)
                 {
                     ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, telemetryData);
+                }
+
+                if (IsTelemetryEnabled && EmitRawMetricTelemetry)
+                {
+                    _ = TelemetryClient?.ReportMetricAsync(telemetryData, Token);
                 }
             }
 
@@ -1453,7 +1455,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (e is Win32Exception or ArgumentException or InvalidOperationException)
             {
-                ObserverLogger.LogInfo($"Unable to get process start time: {e.Message}. This means process {processId} is no longer running or FO can't access it due to access rights.");
+                ObserverLogger.LogInfo($"Unable to get start time for process {processId}: {e.Message}.");
             }
 
             return DateTime.MinValue;

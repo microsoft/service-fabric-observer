@@ -592,6 +592,12 @@ namespace FabricObserver.Utilities.ServiceFabric
                     if (isWindows)
                     {
                         replicaInfo.HostProcessName = NativeMethods.GetProcessNameFromId((int)replicaInfo.HostProcessId);
+
+                        if (replicaInfo.HostProcessName == null) 
+                        {
+                            // Process no longer running or access denied.
+                            return;
+                        }
                     }
                     else
                     {
@@ -604,7 +610,8 @@ namespace FabricObserver.Utilities.ServiceFabric
                         }
                         catch (Exception e) when (e is ArgumentException or InvalidOperationException or NotSupportedException)
                         {
-
+                            // Process no longer running.
+                            return;
                         }
                     }
 

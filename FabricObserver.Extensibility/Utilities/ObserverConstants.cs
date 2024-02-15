@@ -166,6 +166,7 @@ namespace FabricObserver.Observers.Utilities
         public const string AppInsightsConnectionString = "AppInsightsConnectionString";
         public const string TelemetryProviderEnabled = "EnableTelemetryProvider";
         public const string TelemetryProviderType = "TelemetryProvider";
+        public const string EmitRawMetricTelemetry = "EmitRawMetricTelemetry";
         public const string LogAnalyticsLogTypeParameter = "LogAnalyticsLogType";
         public const string LogAnalyticsSharedKeyParameter = "LogAnalyticsSharedKey";
         public const string LogAnalyticsWorkspaceIdParameter = "LogAnalyticsWorkspaceId";

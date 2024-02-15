@@ -52,6 +52,11 @@ namespace FabricObserver.Observers.Utilities
             get; set;
         }
 
+        public bool EmitRawMetricTelemetry
+        {
+            get; set;
+        }
+
         public TimeSpan AsyncTimeout
         {
             get;
@@ -107,6 +112,15 @@ namespace FabricObserver.Observers.Utilities
                     out bool telemetryEnabled))
             {
                 IsObserverTelemetryEnabled = telemetryEnabled;
+            }
+
+            // Emit raw metric telemetry per run?
+            if (bool.TryParse(
+                   GetConfigSettingValue(
+                   ObserverConstants.EmitRawMetricTelemetry),
+                   out bool emitRawObserverTelemetry))
+            {
+                EmitRawMetricTelemetry = emitRawObserverTelemetry;
             }
 
             // Observer etw enabled?

@@ -8,17 +8,17 @@
 		<Parameter Name="ObserverExecutionTimeout" Value="" />
 		<Parameter Name="EnableVerboseLogging" Value="" />
 		<Parameter Name="EnableETWProvider" Value="true" />
+		<Parameter Name="EnableTelemetryProvider" Value="" />
 		<Parameter Name="EnableFabricObserverOperationalTelemetry" Value="" />
 		<Parameter Name="ObserverFailureHealthStateLevel" Value="" />
-		<Parameter Name="EnableTelemetryProvider" Value="" />
 		<Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="1" />
 		<Parameter Name="DataLogPath" Value="fabric_observer_csvdata" />
 		<Parameter Name="FQDN" Value="" />
 		<Parameter Name="MaxArchivedLogFileLifetimeDays" Value="3" />
 		<Parameter Name="MaxArchivedCsvFileLifetimeDays" Value="1" />
 		<Parameter Name="CsvFileWriteFormat" Value="SingleFileWithArchives" />
-		<Parameter Name="TelemetryProvider" Value="AzureLogAnalytics" />
-		<Parameter Name="AppInsightsInstrumentationKey" Value="" />
+		<Parameter Name="TelemetryProvider" Value="AzureApplicationInsights" />
+		<Parameter Name="AppInsightsConnectionString" Value="" />
 		<Parameter Name="LogAnalyticsWorkspaceId" Value="" />
 		<Parameter Name="LogAnalyticsSharedKey" Value="" />
 		<Parameter Name="LogAnalyticsLogType" Value="FabricObserver" />
@@ -30,7 +30,8 @@
 		<Parameter Name="MaxConcurrentTasks" Value="" />
 		<Parameter Name="EnableChildProcessMonitoring" Value="true" />
 		<Parameter Name="MaxChildProcTelemetryDataCount" Value="25" />
-		<Parameter Name="EnableTelemetry" Value="false" />
+		<Parameter Name="EnableTelemetry" Value="true" />
+		<Parameter Name="EmitRawMetricTelemetry" Value="false" />
 		<Parameter Name="EnableEtw" Value="true" />
 		<Parameter Name="EnableCSVDataLogging" Value="false" />
 		<Parameter Name="EnableKvsLvidMonitoring" Value="false" />
@@ -63,6 +64,7 @@
 	<Section Name="DiskObserverConfiguration">
 		<Parameter Name="Enabled" Value="true" />
 		<Parameter Name="EnableTelemetry" Value="" />
+		<Parameter Name="EmitRawMetricTelemetry" Value="false" />
 		<Parameter Name="EnableEtw" Value="true" />
 		<Parameter Name="EnableVerboseLogging" Value="false" />
 		<Parameter Name="RunInterval" Value="" />
@@ -78,6 +80,7 @@
 		<Parameter Name="Enabled" Value="true" />
 		<Parameter Name="EnableKvsLvidMonitoring" Value="" />
 		<Parameter Name="EnableTelemetry" Value="" />
+		<Parameter Name="EmitRawMetricTelemetry" Value="false" />
 		<Parameter Name="EnableEtw" Value="true" />
 		<Parameter Name="EnableCSVDataLogging" Value="" />
 		<Parameter Name="EnableVerboseLogging" Value="" />
@@ -112,7 +115,8 @@
 	</Section>
 	<Section Name="NodeObserverConfiguration">
 		<Parameter Name="Enabled" Value="true" />
-		<Parameter Name="EnableTelemetry" Value="true" />
+		<Parameter Name="EnableTelemetry" Value="false" />
+		<Parameter Name="EmitRawMetricTelemetry" Value="false" />
 		<Parameter Name="EnableEtw" Value="true" />
 		<Parameter Name="EnableCSVDataLogging" Value="" />
 		<Parameter Name="EnableNodeSnapshot" Value="true" />
@@ -177,8 +181,9 @@
 		<Parameter Name="MaxConcurrentTasks" Value="" />
 		<Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
 		<Parameter Name="EnableCSVDataLogging" Value="" />
-		<Parameter Name="EnableEtw" Value=""/>
+		<Parameter Name="EnableEtw" Value="" />
 		<Parameter Name="EnableTelemetry" Value="" />
+		<Parameter Name="EmitRawMetricTelemetry" Value="false" />
 		<Parameter Name="EnableVerboseLogging" Value="" />
 		<Parameter Name="RunInterval" Value="" />
 		<Parameter Name="ConfigurationFileName" Value="ContainerObserver.config.json" />

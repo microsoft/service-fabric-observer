@@ -10,12 +10,6 @@
     <StatelessServiceType ServiceTypeName="FabricObserverType" />
   </ServiceTypes>
   <CodePackage Name="Code" Version="3.2.15">
-	<SetupEntryPoint>
-	    <ExeHost>
-	        <Program>install_lvid_perfcounter.bat</Program>
-	        <WorkingFolder>CodePackage</WorkingFolder>
-	    </ExeHost>
-	</SetupEntryPoint>
     <EntryPoint>
         <ExeHost>
             <Program>FabricObserver</Program>

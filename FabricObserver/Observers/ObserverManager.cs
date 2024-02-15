@@ -42,6 +42,7 @@ namespace FabricObserver.Observers
         private const string LVIDCounterName = "Long-Value Maximum LID";
         private readonly string nodeName;
         private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
+        private readonly TimeSpan NewReleaseCheckInterval = TimeSpan.FromDays(7);
         private readonly CancellationToken runAsyncToken;
         private readonly string sfVersion;
         private readonly bool isWindows;
@@ -271,7 +272,7 @@ namespace FabricObserver.Observers
                         }
 
                         // Check for new version once a day.
-                        if (!(shutdownSignaled || runAsyncToken.IsCancellationRequested) && DateTime.UtcNow.Subtract(LastVersionCheckDateTime) >= OperationalTelemetryRunInterval)
+                        if (!(shutdownSignaled || runAsyncToken.IsCancellationRequested) && DateTime.UtcNow.Subtract(LastVersionCheckDateTime) >= NewReleaseCheckInterval)
                         {
                             await CheckGithubForNewVersionAsync();
                             LastVersionCheckDateTime = DateTime.UtcNow;

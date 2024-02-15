@@ -55,8 +55,8 @@
     <!-- Required - Telemetry Provider. Supported values are AzureApplicationInsights or AzureLogAnalytics. 
          NOTE: Value must now be set in ApplicationManifest.xml. This is a *breaking change* in version 3.2.15. -->
     <Parameter Name="TelemetryProvider" Value="" MustOverride="true" />
-
-	<!-- Application Insights -->
+	
+    <!-- Application Insights -->
 	<!-- Required-If TelemetryProvider is AzureApplicationInsights. Your AppInsights Connection String. 
          NOTE: Value must now be set in ApplicationManifest.xml. This is a *breaking change* in version 3.2.15.-->
 	<Parameter Name="AppInsightsConnectionString" Value="" MustOverride="true" />
@@ -74,9 +74,9 @@
     <Parameter Name="LogAnalyticsLogType" Value="" MustOverride="true" />
 	<!-- End Telemetry Config -->
 
-    <!-- Resource Governance. MustOverride is required to enable changing RG settings with app parameter updates. -->
+    <!-- Resource Governance. MustOverride is required to enable changing RG settings with app parameter updates.
     <Parameter Name="RGCPUCoresRequest" Value="" MustOverride="true" />
-    <Parameter Name="RGMemoryInMB" Value="" MustOverride="true" />
+    <Parameter Name="RGMemoryInMB" Value="" MustOverride="true" /> -->
     
     <!-- *** Non-Overridable Parameters - Set these in this file. *** -->
     
@@ -140,6 +140,10 @@
 	  
     <!-- Required: Whether the Observer should send all of its monitoring data and Warnings/Errors to configured Telemetry service. -->
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+
+    <!-- Whether or not you want all raw metric event data to be sent to ApplicationInsights or LogAnalytics service. 
+         This is in case you are getting too much telemetry from this observer and you only want data related to entity health states based on your metric Error/Warning threshold settings. -->
+    <Parameter Name="EmitRawMetricTelemetry" Value="" MustOverride="true" />
     
     <!-- Required: Whether the Observer should write EventSource traces containing all of its monitoring data and Warnings/Errors to configured. -->
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
@@ -239,6 +243,9 @@
   <Section Name="DiskObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    <!-- Whether or not you want all raw metric event data to be sent to ApplicationInsights or LogAnalytics service. 
+         This is in case you are getting too much telemetry from this observer and you only want data related to entity health states based on your metric Error/Warning threshold settings. -->
+    <Parameter Name="EmitRawMetricTelemetry" Value="" MustOverride="true" />
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <Parameter Name="RunInterval" Value="" MustOverride="true" />
@@ -257,6 +264,9 @@
 	     Enabling this will put fabric:/System into Warning when either Fabric or FabricRM have consumed 75% of Maximum number of LVIDs (which is int.MaxValue per process). -->
 	<Parameter Name="EnableKvsLvidMonitoring" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    <!-- Whether or not you want all raw metric event data to be sent to ApplicationInsights or LogAnalytics service. 
+         This is in case you are getting too much telemetry from this observer and you only want data related to entity health states based on your metric Error/Warning threshold settings. -->
+    <Parameter Name="EmitRawMetricTelemetry" Value="" MustOverride="true" />
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
@@ -309,6 +319,9 @@
   <Section Name="NodeObserverConfiguration">
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+    <!-- Whether or not you want all raw metric event data to be sent to ApplicationInsights or LogAnalytics service. 
+         This is in case you are getting too much telemetry from this observer and you only want data related to entity health states based on your metric Error/Warning threshold settings. -->
+    <Parameter Name="EmitRawMetricTelemetry" Value="" MustOverride="true" />
     <Parameter Name="EnableEtw" Value="" MustOverride="true" />
     <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
 	<Parameter Name="EnableNodeSnapshot" Value="" MustOverride="true" />
@@ -335,7 +348,6 @@
     <Parameter Name="NetworkWarningEphemeralPorts" Value="" MustOverride="true" />
     <Parameter Name="NetworkErrorEphemeralPortsPercentage" Value="" MustOverride="true" />
     <Parameter Name="NetworkWarningEphemeralPortsPercentage" Value="" MustOverride="true" />
-	  
     <!-- The below parameters only make sense for Linux, thus named accordingly. These settings are not useful for Windows. -->
     <Parameter Name="LinuxFileHandlesErrorLimitPercent" Value="" MustOverride="true"/>
     <Parameter Name="LinuxFileHandlesWarningLimitPercent" Value="" MustOverride="true"/>
@@ -388,6 +400,9 @@
      <Parameter Name="EnableCSVDataLogging" Value="" MustOverride="true" />
      <Parameter Name="EnableEtw" Value="" MustOverride="true"/>
      <Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
+     <!-- Whether or not you want all raw metric event data to be sent to ApplicationInsights or LogAnalytics service. 
+          This is in case you are getting too much telemetry from this observer and you only want data related to entity health states based on your metric Error/Warning threshold settings. -->
+     <Parameter Name="EmitRawMetricTelemetry" Value="" MustOverride="true" />
      <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
      <Parameter Name="RunInterval" Value="" MustOverride="true" />
      <Parameter Name="ConfigurationFileName" Value="" MustOverride="true" />
