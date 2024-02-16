@@ -28,9 +28,6 @@
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
     <!-- Telemetry Provider - Supported values are AzureApplicationInsights and AzureLogAnalytics. -->
     <Parameter Name="TelemetryProvider" DefaultValue="AzureApplicationInsights" />
-    <!-- If you set this to false, then only Warning/Error/Ok(recovery from previous unhealthy state) events will be emitted to ApplicationInsights or LogAnalytics service. 
-         This is in case you are getting too much telemetry from FabricObserver and you only want data related to entity health states based on your metric Error/Warning threshold settings. -->
-    <Parameter Name="ObserverManagerEmitRawObserverTelemetry" DefaultValue="true" />
     <!-- Application Insights -->
     <Parameter Name="AppInsightsConnectionString" DefaultValue="" />
     <!-- LogAnalytics -->
