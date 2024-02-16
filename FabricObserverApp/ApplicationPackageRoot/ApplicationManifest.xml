@@ -16,7 +16,7 @@
     <Parameter Name="ObserverLogPath" DefaultValue="fabric_observer_logs" />
     <!-- We would really appreciate it if you kept this set to true. The information we collect contains no PII and helps us understand how FO is doing in the wild. 
          NOTE: This setting is unrelated to Observer Telemetry, which you configure further down. -->
-    <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="false" />
+    <Parameter Name="ObserverManagerEnableOperationalFOTelemetry" DefaultValue="true" />
     <!-- If you want to transmit ETW events to Kusto, for example, then enable this setting. Otherwise, set this to false. Please see ETW.md for related documentation. -->
     <Parameter Name="ObserverManagerEnableETWProvider" DefaultValue="true" />
     <!-- You only need to set this if you want to use a different EventSource provider name than the default, FabricObserverETWProvider.
@@ -44,8 +44,8 @@
     <!-- Note: You must run FO as System or Admin user on Windows in order to run ContainerObserver on Windows. -->
     <Parameter Name="ContainerObserverEnabled" DefaultValue="false" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
-    <Parameter Name="NetworkObserverEnabled" DefaultValue="false" />
+    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="true" />
+    <Parameter Name="NetworkObserverEnabled" DefaultValue="true" />
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
     <!-- Deprecated: SFConfigurationObserver is only useful if you deploy the now-obsolete - and unsupported - FabricObserverWebApi application. -->
@@ -162,7 +162,7 @@
     <Parameter Name="AppObserverMonitorPrivateWorkingSet" DefaultValue="false" />
     <!-- *Windows-only*. AppObserver can monitor services with Service Fabric Resource Governance limits set (CPU and Memory) and put related services into Warning if they reach 90% of the specified limit. 
          If you do set Memory or CPU Resource Governance limits for your service code packages, then you should enable this feature. -->
-    <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="true" />
+    <Parameter Name="AppObserverMonitorResourceGovernanceLimits" DefaultValue="false" />
     <!-- CertificateObserver-->
     <Parameter Name="DaysUntilClusterExpiryWarningThreshold" DefaultValue="42" />
     <Parameter Name="DaysUntilAppExpiryWarningThreshold" DefaultValue="42" />
