@@ -360,7 +360,7 @@ namespace FabricObserver.Utilities.ServiceFabric
             {
                 DeployedCodePackageList codepackages =
                     FabricClientSingleton.QueryManager.GetDeployedCodePackageListAsync(
-                        this.nodeName,
+                        nodeName,
                         appName,
                         deployedReplica.ServiceManifestName,
                         null,
@@ -1116,36 +1116,38 @@ namespace FabricObserver.Utilities.ServiceFabric
                     {
                         try
                         {
+                            // FabricSystemObserver
                             if (app.ApplicationName.OriginalString == ObserverConstants.SystemAppName)
                             {
                                 await RemoveApplicationHealthReportsAsync(app, ignoreDefaultQueryTimeout, cancellationToken);
                             }
-
-                            var appHealth =
-                                await FabricClientSingleton.HealthManager.GetApplicationHealthAsync(
-                                        app.ApplicationName,
-                                        TimeSpan.FromSeconds(90),
-                                        cancellationToken);
-
-
-                            if (appHealth.ServiceHealthStates != null && 
-                                appHealth.ServiceHealthStates.Any(
-                                    s => s.AggregatedHealthState == HealthState.Error || s.AggregatedHealthState == HealthState.Warning))
+                            else
                             {
-                                foreach (var service in appHealth.ServiceHealthStates)
-                                {
-                                    if (service.AggregatedHealthState == HealthState.Ok)
-                                    {
-                                        continue;
-                                    }
+                                var appHealth =
+                                    await FabricClientSingleton.HealthManager.GetApplicationHealthAsync(
+                                            app.ApplicationName,
+                                            TimeSpan.FromSeconds(90),
+                                            cancellationToken);
 
-                                    await RemoveServiceHealthReportsAsync(service, ignoreDefaultQueryTimeout, cancellationToken);
+                                // AppObserver, ContainerObserver.
+                                if (appHealth.ServiceHealthStates != null &&
+                                    appHealth.ServiceHealthStates.Any(
+                                        s => s.AggregatedHealthState == HealthState.Error || s.AggregatedHealthState == HealthState.Warning))
+                                {
+                                    foreach (var service in appHealth.ServiceHealthStates)
+                                    {
+                                        if (service.AggregatedHealthState == HealthState.Ok)
+                                        {
+                                            continue;
+                                        }
+
+                                        await RemoveServiceHealthReportsAsync(service, ignoreDefaultQueryTimeout, cancellationToken);
+                                    }
                                 }
+
+                                // NetworkObserver/FSO.
+                                await RemoveApplicationHealthReportsAsync(app, ignoreDefaultQueryTimeout, cancellationToken);
                             }
-                            
-                            // NetworkObserver/FSO.
-                            await RemoveApplicationHealthReportsAsync(app, ignoreDefaultQueryTimeout, cancellationToken);
-                            
                         }
                         catch (Exception e) when (e is FabricException or TimeoutException)
                         {
@@ -1203,7 +1205,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                 serviceHealth.HealthEvents.Where(
                     e => 
                         JsonHelper.TryDeserializeObject(e.HealthInformation.Description, out TelemetryDataBase telemetryDataBase)
-                        && telemetryDataBase.NodeName == this.nodeName
+                        && telemetryDataBase.NodeName == nodeName
                         && (e.HealthInformation.SourceId.StartsWith(ObserverConstants.AppObserverName)
                             || e.HealthInformation.SourceId.StartsWith(ObserverConstants.ContainerObserverName))).ToList();
 
@@ -1255,7 +1257,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                 appHealth.HealthEvents.Where(
                     e => 
                        JsonHelper.TryDeserializeObject(e.HealthInformation.Description, out TelemetryDataBase telemetryDataBase)
-                       && telemetryDataBase.NodeName == this.nodeName
+                       && telemetryDataBase.NodeName == nodeName
                        && (e.HealthInformation.SourceId.StartsWith(ObserverConstants.AppObserverName)
                            || e.HealthInformation.SourceId.StartsWith(ObserverConstants.FabricSystemObserverName)
                            || e.HealthInformation.SourceId.StartsWith(ObserverConstants.NetworkObserverName))).ToList();
@@ -1295,7 +1297,7 @@ namespace FabricObserver.Utilities.ServiceFabric
         private async Task RemoveNodeHealthReportsAsync(IEnumerable<NodeHealthState> nodeHealthStates, bool ignoreDefaultQueryTimeout, CancellationToken cancellationToken)
         {
             // Scope to node where this FO instance is running.
-            nodeHealthStates = nodeHealthStates.Where(n => n.NodeName == this.nodeName);
+            nodeHealthStates = nodeHealthStates.Where(n => n.NodeName == nodeName);
 
             foreach (var nodeHealthState in nodeHealthStates)
             {
@@ -1327,7 +1329,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                     Code = FOErrorWarningCodes.Ok,
                     HealthMessage = $"Clearing existing FabricObserver Health Reports as the service is stopping or starting.",
                     State = HealthState.Ok,
-                    NodeName = this.nodeName,
+                    NodeName = nodeName,
                     EntityType = EntityType.Machine,
                     HealthReportTimeToLive = TimeSpan.FromSeconds(1)
                 };

@@ -3656,6 +3656,13 @@ namespace FabricObserver.Observers
                             ServiceName = serviceName
                         });
                 }
+
+                // This is used for managing health reports (clearing reports on start and on graceful close).
+                if (!ServiceNames.Any(a => a == FabricServiceContext.ServiceName.OriginalString))
+                {
+                    // Volatile state. This is used to clear health reports during a config upgrade or graceful close.
+                    ServiceNames.Enqueue(FabricServiceContext.ServiceName.OriginalString);
+                }
             }
         }
 
