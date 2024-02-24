@@ -3554,20 +3554,7 @@ namespace FabricObserver.Observers
                         }
                     }
 
-                    // This will be DateTime.MinValue when the target process is inaccessible due to user privilege, for example.
-                    // We shouldn't get here given the code above if some process is running at a higher priv than FO.. but if the process *is* inaccessible for some reason at this point,
-                    // then we'll not add the replica to the list.
                     replicaInfo.HostProcessStartTime = GetProcessStartTime((int)replicaInfo.HostProcessId);
-
-                    if (IsWindows)
-                    {
-                        int errorCode = Marshal.GetLastWin32Error();
-
-                        if (errorCode == NativeMethods.ERROR_ACCESS_DENIED)
-                        {
-                            SendServiceProcessElevatedWarning(replicaInfo.ApplicationName?.OriginalString, replicaInfo.ServiceName?.OriginalString);
-                        }
-                    }
 
                     if (replicaInfo.HostProcessStartTime == DateTime.MinValue)
                     {
