@@ -4,7 +4,8 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.15</version>
 		<releaseNotes>
-- Code cleanup and refactoring.
+- Added support for Observer raw metric telemetry disablement via configuration. This enables you to disable raw metric telemetry for any supported observer. This is useful if you are running FabricObserver in a non-production environment and do not want to send a raw telemetry data to Application Insights or Log Analytics. This feature is disabled by default. To enable it, you must set the [Observer name]EmitRawMetricTelemetry parameter to false in ApplicationManifest.xml.
+- Fixed a bug in AppObserver that can lead to FabricObserver incorrectly reporting that a target service process couldn't be monitored because it was running at a higher privilege level than FabricObserver.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
