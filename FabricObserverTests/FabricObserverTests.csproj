@@ -11,8 +11,6 @@
 	<Platforms>x64</Platforms>
   </PropertyGroup>
   <ItemGroup>
-	<PacakgeReference Include="Microsoft.ServiceFabric.Services" Version="6.0.1017" />
-	<PacakgeReference Include="Microsoft.ServiceFabric.Diagnostics.Internal" Version="6.0.1017" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
     <PackageReference Include="MSTest.TestAdapter" Version="3.2.2" />
     <PackageReference Include="MSTest.TestFramework" Version="3.2.2" />
