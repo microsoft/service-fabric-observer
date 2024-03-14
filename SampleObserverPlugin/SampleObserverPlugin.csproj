@@ -22,7 +22,7 @@
 		<!-- To build with the full 3.2.14 FO nupkg. The output dir will contain a FabricObserverPkg folder with Code/Config/Data. 
              So, you can deploy FO directly from there. -->
 		
-		<!-- <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" Version="3.2.14" />
+		<!-- <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" Version="3.2.15" />
 		FabricObserver employs version 8.0.0 of Microsoft.Extensions.DependencyInjection.Abstractions, so you need to explicitly reference that version here. 
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" /> -->
 
