@@ -710,7 +710,7 @@ $appParams = @{ "FabricSystemObserverEnabled" = "true"; "FabricSystemObserverMem
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.2.14 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.2.15 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```  
 
 **Important**: This action will overwrite previous app paramemter changes that were made in an earlier application upgrade, for example. If you want to preserve any earlier changes, then you will need to
@@ -718,7 +718,7 @@ supply those parameter values again along with the new ones. You do this in the 
 
 ```PowerShell
 $appName = "fabric:/FabricObserver"
-$appVersion = "3.2.14"
+$appVersion = "3.2.15"
 $application = Get-ServiceFabricApplication -ApplicationName $appName
 $appParamCollection = $application.ApplicationParameters
 $applicationParameterMap = @{}

@@ -2,14 +2,9 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
 	<metadata minClientVersion="3.3.0">
 		<id>%PACKAGE_ID%</id>
-		<version>3.2.14</version>
+		<version>3.2.15</version>
 		<releaseNotes>
-This is version is required for observer plugins that target FabricObserver 3.2.14 or ClusterObserver 2.2.8.
-#### Changes
-- Updated Logger implementatio to fix app param update bug related to log path and max archive lifetime settings not being honored.
-- Updated ObserverBase to include guard rails to prevent high CPU consumption if an observer's MonitorDuration or MonitorSleepTimeMilliseconds settings are misconfigured (to high or too low, respectively).
-- Performance improvements.
-- Updated nuget package dependencies to latest versions.
+
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
@@ -18,21 +13,21 @@ This is version is required for observer plugins that target FabricObserver 3.2.
 		<icon>icon.png</icon>
 		<readme>foextlib.md</readme>
 		<language>en-US</language>
-		<description>This package contains the FabricObserver Extensibility library (.NET 6) for use in building FabricObserver and ClusterObserver observers and observer plugins. You need to ensure you use the same versions of this library and CO/FO if you are building observer plugins.</description>
+		<description>This package contains the FabricObserver Extensibility library (.NET 6) for use in building FabricObserver and ClusterObserver observer plugins in Visual Studio. Each time a new version of FabricObserver is released, a new version of this library (same as FabricObserver's version) will be released to the nuget.org gallery. Unless specified as part of a release with breaking changes that would impact building a plugin (exceedingly rare), you can use earlier versions of this library to build your plugins and they will successfully work with higher versions of FabricObserver/ClusterObserver. In other words, you do not need to rebuild your plugins each time a new version of FabricObserver or ClusterObserver is released unless you are required to, which will be made clear.</description>
 		<contentFiles>
 			<files include="**" buildAction="None" copyToOutput="true" />
 		</contentFiles>
 		<dependencies>
 			<group targetFramework="net6.0">
 				<dependency id="Microsoft.ServiceFabric.Services" version="6.0.1017" />
-				<dependency id="Microsoft.ApplicationInsights" version="2.21.0" />
-				<dependency id="Microsoft.ApplicationInsights.NLogTarget" version="2.21.0" />
-				<dependency id="Microsoft.Extensions.DependencyInjection" version="7.0.0" />
-				<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="7.0.0" />
-				<dependency id="Newtonsoft.Json" version="13.0.2" />
-				<dependency id="NLog" version="5.1.0" />
-				<dependency id="System.Diagnostics.PerformanceCounter" version="7.0.0" />
-				<dependency id="System.Management" version="7.0.0" />
+				<dependency id="Microsoft.ApplicationInsights" version="2.22.0" />
+				<dependency id="Microsoft.ApplicationInsights.NLogTarget" version="2.22.0" />
+				<dependency id="Microsoft.Extensions.DependencyInjection" version="8.0.0" />
+				<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="8.0.0" />
+				<dependency id="Newtonsoft.Json" version="13.0.3" />
+				<dependency id="NLog" version="5.2.8" />
+				<dependency id="System.Diagnostics.PerformanceCounter" version="8.0.0" />
+				<dependency id="System.Management" version="8.0.0" />
 			</group>
 		</dependencies>
 		<projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>

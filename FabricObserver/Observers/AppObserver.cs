@@ -395,12 +395,6 @@ namespace FabricObserver.Observers
                             }
 
                             childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
-
-                            // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
-                            foreach (var item in childProcDictionary)
-                            {
-                                _ = AllAppCpuData.TryRemove(item);
-                            }
                         }
 
                         // Parent's and aggregated (summed) descendant process data (if any).
@@ -441,12 +435,6 @@ namespace FabricObserver.Observers
                             }
 
                             childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
-
-                            // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
-                            foreach (var item in childProcDictionary)
-                            {
-                                _ = AllAppMemDataMb.TryRemove(item);
-                            }
                         }
 
                         ProcessResourceDataReportHealth(
@@ -486,12 +474,6 @@ namespace FabricObserver.Observers
                             }
 
                             childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
-
-                            // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
-                            foreach (var item in childProcDictionary)
-                            {
-                                _ = AllAppMemDataPercent.TryRemove(item);
-                            }
                         }
 
                         ProcessResourceDataReportHealth(
@@ -533,12 +515,6 @@ namespace FabricObserver.Observers
                                 }
 
                                 childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
-
-                                // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
-                                foreach (var item in childProcDictionary)
-                                {
-                                    _ = AllAppPrivateBytesDataMb.TryRemove(item);
-                                }
                             }
 
                             ProcessResourceDataReportHealth(
@@ -581,12 +557,6 @@ namespace FabricObserver.Observers
                                 }
 
                                 childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
-
-                                // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
-                                foreach (var item in childProcDictionary)
-                                {
-                                    _ = AllAppPrivateBytesDataPercent.TryRemove(item);
-                                }
                             }
 
                             ProcessResourceDataReportHealth(
@@ -630,12 +600,6 @@ namespace FabricObserver.Observers
                                 }
 
                                 childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
-
-                                // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
-                                foreach (var item in childProcDictionary)
-                                {
-                                    _ = AllAppRGMemoryUsagePercent.TryRemove(item);
-                                }
                             }
 
                             ProcessResourceDataReportHealth(
@@ -675,12 +639,6 @@ namespace FabricObserver.Observers
                                 }
 
                                 childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
-
-                                // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
-                                foreach (var item in childProcDictionary)
-                                {
-                                    _ = AllAppRGMemoryUsagePercent.TryRemove(item);
-                                }
                             }
 
                             ProcessResourceDataReportHealth(
@@ -721,12 +679,6 @@ namespace FabricObserver.Observers
                             }
 
                             childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
-
-                            // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
-                            foreach (var item in childProcDictionary)
-                            {
-                                _ = AllAppTotalActivePortsData.TryRemove(item);
-                            }
                         }
 
                         ProcessResourceDataReportHealth(
@@ -766,12 +718,6 @@ namespace FabricObserver.Observers
                             }
 
                             childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
-
-                            // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
-                            foreach (var item in childProcDictionary)
-                            {
-                                _ = AllAppEphemeralPortsData.TryRemove(item);
-                            }
                         }
 
                         ProcessResourceDataReportHealth(
@@ -811,12 +757,6 @@ namespace FabricObserver.Observers
                             }
 
                             childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
-
-                            // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
-                            foreach (var item in childProcDictionary)
-                            {
-                                _ = AllAppEphemeralPortsDataPercent.TryRemove(item);
-                            }
                         }
 
                         ProcessResourceDataReportHealth(
@@ -856,12 +796,6 @@ namespace FabricObserver.Observers
                             }
 
                             childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
-
-                            // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
-                            foreach (var item in childProcDictionary)
-                            {
-                                _ = AllAppHandlesData.TryRemove(item);
-                            }
                         }
 
                         ProcessResourceDataReportHealth(
@@ -901,12 +835,6 @@ namespace FabricObserver.Observers
                             }
 
                             childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
-
-                            // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
-                            foreach (var item in childProcDictionary)
-                            {
-                                _ = AllAppThreadsData.TryRemove(item);
-                            }
                         }
 
                         ProcessResourceDataReportHealth(
@@ -946,12 +874,6 @@ namespace FabricObserver.Observers
                             }
 
                             childProcCount = ProcessChildProcs(ref childProcDictionary, ref childProcessTelemetryDataList, repOrInst, app, ref parentFrud, token);
-
-                            // Remove children from resource metric dictionary (we don't want to report on the child procs individually).
-                            foreach (var item in childProcDictionary)
-                            {
-                                _ = AllAppKvsLvidsData.TryRemove(item);
-                            }
                         }
 
                         // FO will warn if the stateful (Actor, for example) service process has used 75% or greater of available LVIDs. This is not configurable (and a temporary feature).
@@ -979,7 +901,7 @@ namespace FabricObserver.Observers
                                 ObserverLogger.LogEtw(ObserverConstants.FabricObserverETWEventName, childProcessTelemetryDataList.ToList());
                             }
 
-                            if (IsTelemetryEnabled)
+                            if (IsTelemetryEnabled && EmitRawMetricTelemetry)
                             {
                                 _ = TelemetryClient?.ReportMetricAsync(childProcessTelemetryDataList.ToList(), token);
                             }
@@ -3595,17 +3517,24 @@ namespace FabricObserver.Observers
 
                 if (replicaInfo != null && replicaInfo.HostProcessId > 0 && !ReplicaOrInstanceList.Any(r => r.HostProcessId == replicaInfo.HostProcessId))
                 {
-                    // This will be DateTime.MinValue when the target process is inaccessible due to user privilege.
-                    replicaInfo.HostProcessStartTime = GetProcessStartTime((int)replicaInfo.HostProcessId);
-
                     if (IsWindows)
                     {
-                        // This will be null if GetProcessNameFromId fails. It will fail when the target process is inaccessible due to user privilege.
+                        // This will be null if GetProcessNameFromId fails. It will fail when the target process is inaccessible due to user privilege, for example.
                         replicaInfo.HostProcessName = NativeMethods.GetProcessNameFromId((int)replicaInfo.HostProcessId);
+                        int errorCode = Marshal.GetLastWin32Error();
 
-                        if (replicaInfo.HostProcessName == null || replicaInfo.HostProcessStartTime == DateTime.MinValue)
+                        if (replicaInfo.HostProcessName == null)
                         {
-                            SendServiceProcessElevatedWarning(replicaInfo.ApplicationName.OriginalString, replicaInfo.ServiceName.OriginalString);
+                            // DEBUG (When AppObserverEnableVerboseLogging is true).
+                            ObserverLogger.LogInfo($"Unable to get information for process {replicaInfo.HostProcessId} ({replicaInfo.ServiceName.OriginalString}). Win32 Error Code: {errorCode}.");
+                            
+                            // Make sure the issue is a user privilege problem before emitting the related warning.
+                            if (errorCode == NativeMethods.ERROR_ACCESS_DENIED)
+                            {
+                                SendServiceProcessElevatedWarning(replicaInfo.ApplicationName?.OriginalString, replicaInfo.ServiceName?.OriginalString);
+                            }
+
+                            // Do not add replica to repOrInst list.
                             return;
                         }
                     }
@@ -3620,9 +3549,17 @@ namespace FabricObserver.Observers
                         }
                         catch (Exception e) when (e is ArgumentException or InvalidOperationException or NotSupportedException)
                         {
-                            // Do not add to repOrInst list..
+                            // Do not add replica to repOrInst list.
                             return;
                         }
+                    }
+
+                    replicaInfo.HostProcessStartTime = GetProcessStartTime((int)replicaInfo.HostProcessId);
+
+                    if (replicaInfo.HostProcessStartTime == DateTime.MinValue)
+                    {
+                        // Do not add replica to repOrInst list.
+                        return;
                     }
 
                     ProcessServiceConfiguration(appTypeName, deployedReplica.CodePackageName, replicaInfo);
@@ -3649,6 +3586,9 @@ namespace FabricObserver.Observers
             {
                 return;
             }
+
+            // DEBUG.
+            ObserverLogger.LogInfo($"{serviceName} is running as Admin or System user on Windows and can't be monitored by FabricObserver, which is running as Network Service.");
 
             if (ObserverManager.ObserverFailureHealthStateLevel != HealthState.Unknown)
             {
@@ -3702,6 +3642,13 @@ namespace FabricObserver.Observers
                             ObserverName,
                             ServiceName = serviceName
                         });
+                }
+
+                // This is used for managing health reports (clearing reports on start and on graceful close).
+                if (!ServiceNames.Any(a => a == FabricServiceContext.ServiceName.OriginalString))
+                {
+                    // Volatile state. This is used to clear health reports during a config upgrade or graceful close.
+                    ServiceNames.Enqueue(FabricServiceContext.ServiceName.OriginalString);
                 }
             }
         }

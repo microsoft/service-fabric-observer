@@ -176,7 +176,6 @@ namespace FabricObserver.Observers
                     EntityType.Service,
                     null,
                     repOrInst);
-
             });
 
             return Task.CompletedTask;

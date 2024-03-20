@@ -23,7 +23,6 @@ using System.ComponentModel;
 using System.Runtime;
 using FabricObserver.Utilities.ServiceFabric;
 using ConfigurationSettings = System.Fabric.Description.ConfigurationSettings;
-using Microsoft.VisualBasic;
 
 namespace FabricObserver.Observers
 {
@@ -43,6 +42,7 @@ namespace FabricObserver.Observers
         private const string LVIDCounterName = "Long-Value Maximum LID";
         private readonly string nodeName;
         private readonly TimeSpan OperationalTelemetryRunInterval = TimeSpan.FromDays(1);
+        private readonly TimeSpan NewReleaseCheckInterval = TimeSpan.FromDays(7);
         private readonly CancellationToken runAsyncToken;
         private readonly string sfVersion;
         private readonly bool isWindows;
@@ -54,7 +54,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.2.14";
+        private const string InternalVersionNumber = "3.2.15";
 
         private static FabricClient FabricClientInstance => FabricClientUtilities.FabricClientSingleton;
 
@@ -216,7 +216,7 @@ namespace FabricObserver.Observers
 
             try
             {
-                // Clear out any orphaned health reports left behind when FO ungracefully exits.
+                // Clear out any orphaned Error or Warning health reports left behind when FO ungracefully exited.
                 FabricClientUtilities fabricClientUtilities = new(nodeName);
                 await fabricClientUtilities.ClearFabricObserverHealthReportsAsync(true, CancellationToken.None);
 
@@ -272,7 +272,7 @@ namespace FabricObserver.Observers
                         }
 
                         // Check for new version once a day.
-                        if (!(shutdownSignaled || runAsyncToken.IsCancellationRequested) && DateTime.UtcNow.Subtract(LastVersionCheckDateTime) >= OperationalTelemetryRunInterval)
+                        if (!(shutdownSignaled || runAsyncToken.IsCancellationRequested) && DateTime.UtcNow.Subtract(LastVersionCheckDateTime) >= NewReleaseCheckInterval)
                         {
                             await CheckGithubForNewVersionAsync();
                             LastVersionCheckDateTime = DateTime.UtcNow;
@@ -427,7 +427,7 @@ namespace FabricObserver.Observers
                 HealthReportTimeToLive = TimeSpan.FromSeconds(1)
             };
 
-            foreach (var observer in Observers)
+            foreach (ObserverBase observer in Observers)
             {
                 try
                 {
@@ -458,13 +458,19 @@ namespace FabricObserver.Observers
                             }
                         }
                     }
-                    else if (observer.ObserverName == ObserverConstants.AppObserverName || observer.ObserverName == ObserverConstants.NetworkObserverName)
+                    
+                    if (observer.ObserverName == ObserverConstants.AppObserverName || observer.ObserverName == ObserverConstants.NetworkObserverName)
                     {
                         // Service Health reports.
                         if (observer.ServiceNames.Any(a => !string.IsNullOrWhiteSpace(a) && a.Contains("fabric:/")))
                         {
-                            foreach (var service in observer.ServiceNames)
+                            foreach (string service in observer.ServiceNames)
                             {
+                                if (string.IsNullOrWhiteSpace(service))
+                                {
+                                    continue;
+                                }
+
                                 try
                                 {
                                     // App Health reports. NetworkObserver only generates App health reports and stores app name in ServiceNames field (TODO: Change that).
@@ -532,8 +538,9 @@ namespace FabricObserver.Observers
                             }
                         }
                     }
+
                     // System reports (fabric:/System).
-                    else if (observer.ObserverName == ObserverConstants.FabricSystemObserverName)
+                    if (observer.ObserverName == ObserverConstants.FabricSystemObserverName)
                     {
                         try
                         {
@@ -614,6 +621,9 @@ namespace FabricObserver.Observers
                 {
 
                 }
+
+                // This only applies to AppObs, ContainerObs, NetworkObs, and FabricSystemObs.
+                observer.ServiceNames.Clear();
             }
         }
 

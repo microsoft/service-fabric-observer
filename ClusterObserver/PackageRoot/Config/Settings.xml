@@ -23,15 +23,15 @@
 		<Parameter Name="EnableOperationalTelemetry" Value="" MustOverride="true" />
 		<Parameter Name="MaxArchivedLogFileLifetimeDays" Value="" MustOverride="true" />
 
-		<!-- Telemetry - ApplicationInsights/LogAnalytics. NOTE: Values must now be set in ApplicationManifest.xml. This is a *breaking change* in version 3.2.14. -->
+		<!-- Telemetry - ApplicationInsights/LogAnalytics. NOTE: Values must now be set in ApplicationManifest.xml. This is a *breaking change* in version 3.2.15. -->
 
 		<!-- Required - Telemetry Provider. Supported values are AzureApplicationInsights or AzureLogAnalytics. 
-         NOTE: Value must now be set in ApplicationManifest.xml. This is a *breaking change* in version 3.2.14. -->
+         NOTE: Value must now be set in ApplicationManifest.xml. This is a *breaking change* in version 3.2.15. -->
 		<Parameter Name="TelemetryProvider" Value="" MustOverride="true" />
 
 		<!-- Application Insights -->
 		<!-- Required-If TelemetryProvider is AzureApplicationInsights. Your AppInsights Connection String. 
-         NOTE: Value must now be set in ApplicationManifest.xml. This is a *breaking change* in version 3.2.14.-->
+         NOTE: Value must now be set in ApplicationManifest.xml. This is a *breaking change* in version 3.2.15.-->
 		<Parameter Name="AppInsightsConnectionString" Value="" MustOverride="true" />
 		<!-- OBSOLETE. DO NOT USE. Use AppInsightsConnectionString instead. InstrumentationKey is no longer recommended for ApplicationInsights ingestion.
 	     NOTE: Specifying this has no effect as ClusterObserver requires a ConnectionString for ApplicationInsights. -->
@@ -39,7 +39,7 @@
 
 		<!-- LogAnalytics -->
 		<!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Workspace Id.
-         NOTE: Values must now be set in ApplicationManifest.xml. This is a *breaking change* in version 3.2.14. -->
+         NOTE: Values must now be set in ApplicationManifest.xml. This is a *breaking change* in version 3.2.15. -->
 		<Parameter Name="LogAnalyticsWorkspaceId" Value="" MustOverride="true" />
 		<!-- Required-If TelemetryProvider is AzureLogAnalytics. Your Shared Key. -->
 		<Parameter Name="LogAnalyticsSharedKey" Value="" MustOverride="true" />

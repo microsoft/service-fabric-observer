@@ -1,10 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <!-- You can try the XML diff/merge tool XmlDiffPatchSF (located in this repo) to make upgrading your base configurations to the latest version much easier. -->
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.14" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.15" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- ObserverManager Configuration -->
     <!-- FO's Observer loop will sleep for at least 30s, regardless of this setting. So, setting to 0 to 29 would mean FO will sleep for 30 seconds between observer loop iterations. -->
     <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="60" />
+    <!-- Increase this value if you monitoring a large number of services and can't do so (or don't want to) concurrently (See AppObserverEnableConcurrentMonitoring setting). -->
     <Parameter Name="ObserverManagerObserverExecutionTimeoutSeconds" DefaultValue="3600" />
     <Parameter Name="ObserverManagerEnableVerboseLogging" DefaultValue="false" />
     <!-- If an observer run fails due to timeout (ObserverExecutionTimeout is exceeded) or AppObserver can't monitor a service that runs at higher privilege, 
@@ -25,8 +26,8 @@
     <!-- If you want FO to transmit telemetry data events to ApplicationInsights or LogAnalytics, for example, then enable this setting. Otherwise, set this to false. -->
     <!-- Observer Telemetry -->
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
-    <!-- Telemetry Provider - AppInsights/LogAnalytics. Supported values are AzureApplicationInsights and AzureLogAnalytics. -->
-    <Parameter Name="TelemetryProvider" DefaultValue="" />
+    <!-- Telemetry Provider - Supported values are AzureApplicationInsights and AzureLogAnalytics. -->
+    <Parameter Name="TelemetryProvider" DefaultValue="AzureApplicationInsights" />
     <!-- Application Insights -->
     <Parameter Name="AppInsightsConnectionString" DefaultValue="" />
     <!-- LogAnalytics -->
@@ -57,6 +58,13 @@
     <Parameter Name="NodeObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
+    <!-- NEW (3.2.15): Observer Raw metric Telemetry (only applies if Telemetry is enabled for the observer) - whether or not FO should emit raw metric data per observer run - per metric, per entity - for an observer that monitors resource usage. This applies to 5 observers.
+         If you set to false, then only Warning/Error/Ok (recovery from previous Error/Warning state) data events will be sent to ApplicationInsights or LogAnalytics service. -->
+    <Parameter Name="AppObserverEmitRawMetricTelemetry" DefaultValue="true" />
+    <Parameter Name="ContainerObserverEmitRawMetricTelemetry" DefaultValue="true" />
+    <Parameter Name="DiskObserverEmitRawMetricTelemetry" DefaultValue="true" />
+    <Parameter Name="FabricSystemObserverEmitRawMetricTelemetry" DefaultValue="true" />
+    <Parameter Name="NodeObserverEmitRawMetricTelemetry" DefaultValue="true" />
     <!-- Observer ETW - Custom EventSource Tracing. Each observer can emit ETW. You can decide which ones. 
          Make sure to enable ObserverManagerEnableETWProvider above if you plan on enabling ETW for some observer below. -->
     <Parameter Name="AppObserverEnableEtw" DefaultValue="false" />
@@ -142,8 +150,7 @@
          Default value is 25. Please read the related documentation for more information on MaxDegreeOfParallelism. This setting is provided here so you can dial thread usage up and down based on your needs, if you need to.
          See https://learn.microsoft.com/dotnet/api/system.threading.tasks.paralleloptions.maxdegreeofparallelism?view=net-6.0 -->
     <Parameter Name="AppObserverMaxConcurrentTasks" DefaultValue="25" />
-    <!-- *Windows-only*: KVS LVID Usage Monitoring.
-         NOTE: If you monitor stateful Actor services, then you should set this to true. -->
+    <!-- *Windows-only*: KVS LVID Usage Monitoring. This is an advanced feature and should only be enabled if you have experienced KVS LVID (ESE) exhaustion on Windows. This is rare and generally not applicable to most customers. -->
     <Parameter Name="AppObserverEnableKvsLvidMonitoring" DefaultValue="false" />
     <!-- *Windows-only*: Process Working Set type for AppObserver to monitor.
          Note: You should consider monitoring process commit (warningPrivateBytesMb threshold setting) instead of Private Working Set for tracking potential leaks on Windows. 
@@ -180,8 +187,7 @@
     <Parameter Name="FabricSystemObserverUseCircularBuffer" DefaultValue="false" />
     <!-- Required-If UseCircularBuffer = True -->
     <Parameter Name="FabricSystemObserverResourceUsageDataCapacity" DefaultValue="" />
-    <!-- KVS LVID Usage Monitoring - Windows-only.
-         This is a temporary monitor since SF will eventually employ an updated Windows ESE libray that supports long.MaxValue number of LVIDs. -->
+    <!-- *Windows-only*: KVS LVID Usage Monitoring. This is an advanced feature and should only be enabled if you are experiencing KVS LVID (ESE) exhaustion on Windows. This is rare and generally not applicable to most customers. -->
     <Parameter Name="FabricSystemObserverEnableKvsLvidMonitoring" DefaultValue="false" />
     <Parameter Name="FabricSystemObserverMonitorPrivateWorkingSet" DefaultValue="false" />
     <!-- FabricSystemObserver Warning/Error Thresholds -->
@@ -241,15 +247,15 @@
     <Parameter Name="AzureStorageUploadObserverStorageAccountKey" DefaultValue="" />
     <!-- Zip file compression level to use: Optimal, Fastest or NoCompression. Default is Optimal if this is not set. We do not recommend NoCompression. -->
     <Parameter Name="AzureStorageUploadObserverZipFileCompressionLevel" DefaultValue="Optimal" />
-    <!-- Resource Governance 
-    <Parameter Name="RGCPUCoresRequest" DefaultValue="0.30" />
-    <Parameter Name="RGMemoryInMBLimit" DefaultValue="500" /> -->
+    <!-- Resource Governance
+    <Parameter Name="RGCPUCoresRequest" DefaultValue="0.5" />
+    <Parameter Name="RGMemoryInMB" DefaultValue="500" /> -->
   </Parameters>
   <!-- Import the ServiceManifest from the ServicePackage. The ServiceManifestName and ServiceManifestVersion 
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.2.14" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.2.15" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -258,6 +264,7 @@
             <Parameter Name="EnableConcurrentMonitoring" Value="[AppObserverEnableConcurrentMonitoring]" />
             <Parameter Name="EnableKvsLvidMonitoring" Value="[AppObserverEnableKvsLvidMonitoring]" />
             <Parameter Name="MaxConcurrentTasks" Value="[AppObserverMaxConcurrentTasks]" />
+            <Parameter Name="EmitRawMetricTelemetry" Value="[AppObserverEmitRawMetricTelemetry]" />
             <Parameter Name="EnableCSVDataLogging" Value="[AppObserverEnableCSVDataLogging]" />
             <Parameter Name="EnableEtw" Value="[AppObserverEnableEtw]" />
             <Parameter Name="EnableTelemetry" Value="[AppObserverEnableTelemetry]" />
@@ -278,9 +285,9 @@
             <Parameter Name="DumpType" Value="[AppObserverProcessDumpType]" />
             <Parameter Name="MaxDumps" Value="[AppObserverMaxProcessDumps]" />
             <Parameter Name="MaxDumpsTimeWindow" Value="[AppObserverMaxDumpsTimeWindow]" />
-            <!-- Resource Governance -->
-            <!-- <Parameter Name="RGCPUCoresRequest" Value="[RGCPUCoresRequest]" />
-                 <Parameter Name="RGMemoryInMBLimit" Value="[RGMemoryInMBLimit]" /> -->
+            <!-- Resource Governance
+            <Parameter Name="RGCPUCoresRequest" Value="[RGCPUCoresRequest]" />
+            <Parameter Name="RGMemoryInMB" Value="[RGMemoryInMB]" /> -->
           </Section>
           <Section Name="CertificateObserverConfiguration">
             <Parameter Name="Enabled" Value="[CertificateObserverEnabled]" />
@@ -297,6 +304,7 @@
           <Section Name="DiskObserverConfiguration">
             <Parameter Name="Enabled" Value="[DiskObserverEnabled]" />
             <Parameter Name="EnableTelemetry" Value="[DiskObserverEnableTelemetry]" />
+            <Parameter Name="EmitRawMetricTelemetry" Value="[DiskObserverEmitRawMetricTelemetry]" />
             <Parameter Name="EnableEtw" Value="[DiskObserverEnableEtw]" />
             <Parameter Name="EnableFolderSizeMonitoring" Value="[DiskObserverEnableFolderSizeMonitoring]" />
             <Parameter Name="EnableVerboseLogging" Value="[DiskObserverEnableVerboseLogging]" />
@@ -314,6 +322,7 @@
             <Parameter Name="EnableCSVDataLogging" Value="[FabricSystemObserverEnableCSVDataLogging]" />
             <Parameter Name="EnableEtw" Value="[FabricSystemObserverEnableEtw]" />
             <Parameter Name="EnableTelemetry" Value="[FabricSystemObserverEnableTelemetry]" />
+            <Parameter Name="EmitRawMetricTelemetry" Value="[FabricSystemObserverEmitRawMetricTelemetry]" />
             <Parameter Name="EnableVerboseLogging" Value="[FabricSystemObserverEnableVerboseLogging]" />
             <Parameter Name="MonitorDuration" Value="[FabricSystemObserverMonitorDuration]" />
             <Parameter Name="MonitorSleepDurationMilliseconds" Value="[FabricSystemObserverMonitorSleepDurationMilliseconds]" />
@@ -350,6 +359,7 @@
           <Section Name="NodeObserverConfiguration">
             <Parameter Name="Enabled" Value="[NodeObserverEnabled]" />
             <Parameter Name="EnableTelemetry" Value="[NodeObserverEnableTelemetry]" />
+            <Parameter Name="EmitRawMetricTelemetry" Value="[NodeObserverEmitRawMetricTelemetry]" />
             <Parameter Name="EnableCSVDataLogging" Value="[NodeObserverEnableCSVDataLogging]" />
             <Parameter Name="EnableEtw" Value="[NodeObserverEnableEtw]" />
             <Parameter Name="EnableNodeSnapshot" Value="[NodeObserverEnableNodeSnapshot]" />
@@ -416,6 +426,7 @@
             <Parameter Name="EnableConcurrentMonitoring" Value="[ContainerObserverEnableConcurrentMonitoring]" />
             <Parameter Name="MaxConcurrentTasks" Value="[ContainerObserverMaxConcurrentTasks]" />
             <Parameter Name="EnableTelemetry" Value="[ContainerObserverEnableTelemetry]" />
+            <Parameter Name="EmitRawMetricTelemetry" Value="[ContainerObserverEmitRawMetricTelemetry]" />
             <Parameter Name="EnableEtw" Value="[ContainerObserverEnableEtw]" />
             <Parameter Name="EnableVerboseLogging" Value="[ContainerObserverEnableVerboseLogging]" />
             <Parameter Name="EnableCSVDataLogging" Value="[ContainerObserverEnableCSVDataLogging]" />
@@ -444,12 +455,15 @@
       </ConfigOverride>
     </ConfigOverrides>
     <Policies>
-      <!-- FabricObserver runs a setup script during activation (Linux and Windows). It must be run as System user. 
-           Thus the below policy, which only impacts the Setup phase. The FabricObserver process itself runs as NetworkService on Windows and SFAppsUser on Linux. -->
-      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
       <!-- Resource Governance
       <ServicePackageResourceGovernancePolicy CpuCoresLimit="[RGCPUCoresRequest]" />
-      <ResourceGovernancePolicy CodePackageRef="Code" MemoryInMBLimit="[RGMemoryInMBLimit]" /> -->
+      <ResourceGovernancePolicy CodePackageRef="Code" MemoryInMB="[RGMemoryInMB]" /> -->
+      <!-- NOTE: FabricObserver runs a setup script during activation on Linux. It must be run as System user (root). 
+           Thus the below policy, which only impacts the Setup phase of FO, needs to be uncommented if you are deploying FO to a Linux cluster.
+           Other than the Setup script, FO does not need to (and therefore should not) run as a non-root user on Linux. Leave EntryPointType set to Setup.
+      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" /> -->
+      <!-- If you have to run FO process as SystemUser on Windows or root user on Linux, uncomment below. This is not recommended, generally.
+      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" /> -->
     </Policies>
   </ServiceManifestImport>
   <Principals>

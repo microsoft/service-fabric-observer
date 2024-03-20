@@ -54,6 +54,7 @@ namespace FabricObserver.Observers.Utilities
         private static Dictionary<int, List<(string childProcName, int childProcId, DateTime childProcStartTime)>> descendantsDictionary;
         private static Dictionary<int, string> currentSFServiceProcCache;
 
+        public const int ERROR_ACCESS_DENIED = 5;
 
         [Flags]
         public enum CreateToolhelp32SnapshotFlags : uint
@@ -1809,7 +1810,6 @@ namespace FabricObserver.Observers.Utilities
         /// </summary>
         /// <param name="procId">The id of the process.</param>
         /// <returns>The start time of the process.</returns>
-        /// <exception cref="Win32Exception">A Win32Exception exception will be thrown if this specified process id is not found or if it is non-accessible due to its access control level.</exception>
         public static DateTime GetProcessStartTime(int procId)
         {
             SafeProcessHandle procHandle = null;
@@ -1818,14 +1818,11 @@ namespace FabricObserver.Observers.Utilities
             {
                 procHandle = GetSafeProcessHandle(procId);
 
-                if (procHandle.IsInvalid || procHandle.IsClosed)
-                {
-                    throw new Win32Exception(Marshal.GetLastWin32Error());
-                }
-
                 if (!GetProcessTimes(procHandle, out FILETIME ftCreation, out _, out _, out _))
                 {
-                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                    // DEBUG.
+                    logger.LogInfo("GetProcessStartTime failed with Win32 error code " + Marshal.GetLastWin32Error() + " for process id " + procId + ".");
+                    return DateTime.MinValue;
                 }
 
                 try
