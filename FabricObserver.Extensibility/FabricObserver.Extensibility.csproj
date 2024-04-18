@@ -3,7 +3,7 @@
 		<TargetFramework>net6.0</TargetFramework>
 		<Platforms>x64</Platforms>
 		<RootNamespace>FabricObserver</RootNamespace>
-		<Copyright>Copyright © 2023</Copyright>
+		<Copyright>Copyright © 2024</Copyright>
 		<Product>FabricObserver</Product>
 		<Version>3.2.15</Version>
 		<FileVersion>3.2.15</FileVersion>

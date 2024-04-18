@@ -9,7 +9,7 @@
 		<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
 		<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
 		<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
-		<Copyright>Copyright © 2022</Copyright>
+		<Copyright>Copyright © 2024</Copyright>
 		<Product>FabricObserver</Product>
 		<Version>3.2.15</Version>
 		<FileVersion>3.2.15</FileVersion>

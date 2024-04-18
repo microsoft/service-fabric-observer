@@ -12,6 +12,7 @@
 		<Product>ClusterObserver</Product>
 		<Version>2.2.8</Version>
 		<FileVersion>2.2.8</FileVersion>
+		<Copyright>Copyright © 2024</Copyright>
 		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
 		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
 		<StartupObject>ClusterObserver.Program</StartupObject>
