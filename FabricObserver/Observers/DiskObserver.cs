@@ -180,7 +180,9 @@ namespace FabricObserver.Observers
                     // Also, this feature is not supported for Linux yet.
                     if (IsWindows && (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0))
                     {
+                        #pragma warning disable CA1416 // Validate platform compatibility: IsWindows check protects this code from being run on Linux.
                         DiskAverageQueueLengthData.Find(x => x.Id == id)?.AddData(DiskUsage.GetAverageDiskQueueLength(d.Name[..2]));
+                        #pragma warning restore CA1416 // Validate platform compatibility
                     }
 
                     if (DiskSpacePercentErrorThreshold > 0 || DiskSpacePercentWarningThreshold > 0)

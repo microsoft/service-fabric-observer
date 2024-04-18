@@ -4,6 +4,7 @@
 // ------------------------------------------------------------
 
 using System.Diagnostics;
+using System.Runtime.Versioning;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -17,6 +18,7 @@ namespace FabricObserver.Observers.Utilities
         // This counter includes all processors on the system. The value range is 0 - 100.
         private static PerformanceCounter systemCpuPerfCounter = null;
 
+        [SupportedOSPlatform("windows")]
         private static PerformanceCounter SystemCpuPerfCounter
         {
             get 
@@ -26,6 +28,7 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
+        [SupportedOSPlatform("windows")]
         public override float GetProcessorTimePercentage()
         {
             return SystemCpuPerfCounter.NextValue();

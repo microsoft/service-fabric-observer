@@ -688,10 +688,12 @@ namespace FabricObserver.Observers
                 // Firewall rules.
                 if (IsWindows && FirewallData != null)
                 {
+                    #pragma warning disable CA1416 // Validate platform compatibility: IsWindows solves this problem at runtime.
                     int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
                     FirewallData.AddData(firewalls);
+                    #pragma warning restore CA1416 // Validate platform compatibility
                 }
-                
+
                 // OS-level file handle monitoring only makes sense for Linux, where the Maximum system-wide number of handles the kernel will allocate is a user-configurable setting.
                 // Windows does not have a configurable setting for Max Handles as the number of handles available to the system is dynamic (even if the max per process is not). 
                 // As such, for Windows, GetMaximumConfiguredFileHandlesCount always return -1, by design. Also, GetTotalAllocatedFileHandlesCount is not implemented for Windows (just returns -1).

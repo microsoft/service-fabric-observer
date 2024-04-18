@@ -23,6 +23,7 @@ using System.ComponentModel;
 using System.Runtime;
 using FabricObserver.Utilities.ServiceFabric;
 using ConfigurationSettings = System.Fabric.Description.ConfigurationSettings;
+using System.Runtime.Versioning;
 
 namespace FabricObserver.Observers
 {
@@ -983,7 +984,9 @@ namespace FabricObserver.Observers
             // LVID monitoring.
             if (isWindows)
             {
+                #pragma warning disable CA1416 // Validate platform compatibility: IsWindows protects against this being called on Linux.
                 IsLvidCounterEnabled = IsLVIDPerfCounterEnabled(settings);
+                #pragma warning restore CA1416 // Validate platform compatibility
             }
 
             // Maximum time, in seconds, that an observer can run - Override.
@@ -1419,6 +1422,7 @@ namespace FabricObserver.Observers
             }
         }
 
+        [SupportedOSPlatform("windows")]
         private bool IsLVIDPerfCounterEnabled(ConfigurationSettings settings = null)
         {
             if (!isWindows)

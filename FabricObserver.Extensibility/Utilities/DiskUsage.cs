@@ -9,13 +9,15 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.Versioning;
 
 namespace FabricObserver.Observers.Utilities
 {
     public static class DiskUsage
     {
         private static PerformanceCounter _performanceCounter = null;
-        
+
+        [SupportedOSPlatform("windows")]
         private static PerformanceCounter QueueLengthCounter
         {
             get
@@ -111,6 +113,7 @@ namespace FabricObserver.Observers.Utilities
             return Math.Round(ConvertToSizeUnits(used, sizeUnit), 2);
         }
 
+        [SupportedOSPlatform("windows")]
         public static float GetAverageDiskQueueLength(string instance)
         {
             // We do not support this on Linux for now.
@@ -147,21 +150,15 @@ namespace FabricObserver.Observers.Utilities
 
         private static double ConvertToSizeUnits(double amount, SizeUnit sizeUnit)
         {
-            switch(sizeUnit) 
+            return sizeUnit switch
             {
-                case SizeUnit.Bytes:
-                    return amount;
-                case SizeUnit.Kilobytes:
-                    return amount / 1024;
-                case SizeUnit.Megabytes:
-                    return amount / 1024 / 1024;
-                case SizeUnit.Gigabytes:
-                    return amount / 1024 / 1024 / 1024;
-                case SizeUnit.Terabytes:
-                    return amount / 1024 / 1024 / 1024 / 1024;
-                default:
-                    return amount;
-            }
+                SizeUnit.Bytes => amount,
+                SizeUnit.Kilobytes => amount / 1024,
+                SizeUnit.Megabytes => amount / 1024 / 1024,
+                SizeUnit.Gigabytes => amount / 1024 / 1024 / 1024,
+                SizeUnit.Terabytes => amount / 1024 / 1024 / 1024 / 1024,
+                _ => amount,
+            };
         }
     }
 

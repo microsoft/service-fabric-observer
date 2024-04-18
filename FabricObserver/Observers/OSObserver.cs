@@ -13,6 +13,7 @@ using System.IO;
 using System.Linq;
 using System.Management;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Security;
 using System.Text;
 using System.Threading;
@@ -313,6 +314,7 @@ namespace FabricObserver.Observers
             return !string.IsNullOrEmpty(checkAU) && bool.TryParse(checkAU, out bool auChk) && auChk;
         }
 
+        [SupportedOSPlatform("windows")]
         private string GetWindowsHotFixes(bool generateKbUrl, CancellationToken token)
         {
             if (!IsWindows)
@@ -428,7 +430,14 @@ namespace FabricObserver.Observers
                                                                 : await FabricClientInstance.ClusterManager.GetClusterManifestAsync(AsyncClusterOperationTimeoutSeconds, Token);
 
                 (int lowPortApp, int highPortApp) = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(NodeType, clusterManifestXml);
-                int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
+                int firewalls = -1;
+
+                if (IsWindows)
+                {
+                    #pragma warning disable CA1416 // Validate platform compatibility: IsWindows protects against running this on linux at runtime.
+                    firewalls = NetworkUsage.GetActiveFirewallRulesCount();
+                    #pragma warning restore CA1416 // Validate platform compatibility
+                }
 
                 // OS info.
                 _ = sb.AppendLine($"OS Information:{Environment.NewLine}");
@@ -552,7 +561,9 @@ namespace FabricObserver.Observers
 
                 if (IsWindows)
                 {
+                    #pragma warning disable CA1416 // Validate platform compatibility: IsWindows protects against running this on linux at runtime.
                     osHotFixes = GetWindowsHotFixes(true, token);
+                    #pragma warning restore CA1416 // Validate platform compatibility
 
                     if (!string.IsNullOrWhiteSpace(osHotFixes))
                     {
@@ -567,7 +578,9 @@ namespace FabricObserver.Observers
 
                 if (IsWindows)
                 {
+                    #pragma warning disable CA1416 // Validate platform compatibility: IsWindows protects against running this on linux at runtime.
                     kbOnlyHotFixes = GetWindowsHotFixes(false, token)?.Replace($"{Environment.NewLine}", ", ").TrimEnd(',');
+                    #pragma warning restore CA1416 // Validate platform compatibility
                 }
 
                 var machineTelemetry = new MachineTelemetryData

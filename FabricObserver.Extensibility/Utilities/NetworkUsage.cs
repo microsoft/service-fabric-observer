@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using System.Management;
+using System.Runtime.Versioning;
 using System.Xml;
 
 namespace FabricObserver.Observers.Utilities
@@ -59,6 +60,7 @@ namespace FabricObserver.Observers.Utilities
             return (-1, -1);
         }
 
+        [SupportedOSPlatform("windows")]
         public static int GetActiveFirewallRulesCount()
         {
             int count = -1;

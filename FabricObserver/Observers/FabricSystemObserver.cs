@@ -21,6 +21,7 @@ using FabricObserver.Observers.Utilities.Telemetry;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 using FabricObserver.Interfaces;
 using Microsoft.Win32.SafeHandles;
+using System.Runtime.Versioning;
 
 namespace FabricObserver.Observers
 {
@@ -204,9 +205,12 @@ namespace FabricObserver.Observers
                 throw;
             }
 
+
             if (IsWindows && IsObserverWebApiAppDeployed && monitorWinEventLog)
             {
+                #pragma warning disable CA1416 // Validate platform compatibility: IsWindows protects against running this on linux at runtime.
                 ReadServiceFabricWindowsEventLog();
+                #pragma warning restore CA1416 // Validate platform compatibility
             }
 
             await ReportAsync(token);
@@ -363,6 +367,7 @@ namespace FabricObserver.Observers
                     // SF Eventlog Errors?
                     // Write this out to a new file, for use by the web front end log viewer.
                     // Format = HTML.
+                    #pragma warning disable CA1416 // Validate platform compatibility: IsWindows protects against running this on linux at runtime.
                     int count = evtRecordList.Count;
                     var logPath = Path.Combine(ObserverLogger.LogFolderBasePath, "EventVwrErrors.txt");
 
@@ -430,6 +435,7 @@ namespace FabricObserver.Observers
                     {
                         evtRecordList.Clear();
                     }
+                    #pragma warning restore CA1416 // Validate platform compatibility
                 }
             }
             catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
@@ -443,6 +449,7 @@ namespace FabricObserver.Observers
             return Task.CompletedTask;
         }
 
+        [SupportedOSPlatform("windows")]
         private void ReadServiceFabricWindowsEventLog()
         {
             if (!IsWindows)
@@ -691,7 +698,9 @@ namespace FabricObserver.Observers
 
             if (IsWindows && monitorWinEventLog && evtRecordList == null)
             {
+                #pragma warning disable CA1416 // Validate platform compatibility: IsWindows protects against running this on linux at runtime.
                 evtRecordList = new List<EventRecord>();
+                #pragma warning restore CA1416 // Validate platform compatibility
             }
         }
 
