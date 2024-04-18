@@ -16,7 +16,6 @@
 		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
 		<IsServiceFabricServiceProject>true</IsServiceFabricServiceProject>
 		<StartupObject>FabricObserver.Program</StartupObject>
-		<NoWarn>CA1822;$(NoWarn)</NoWarn>
 		<ResolveComReferenceSilent>true</ResolveComReferenceSilent>
 		<Platforms>x64</Platforms>
 	</PropertyGroup>
