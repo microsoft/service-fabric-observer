@@ -39,6 +39,7 @@ namespace FabricObserverTests
     {
         // Change this to suit your test env. These tests must be run on a 1-node dev cluster.
         private const string NodeName = "_Node_0";
+        private const string NodeType = "NodeType0";
         private static readonly Uri TestServiceName = new("fabric:/app/service");
         private static readonly CancellationToken Token = new();
         private static ICodePackageActivationContext CodePackageContext = null;
@@ -1843,6 +1844,7 @@ namespace FabricObserverTests
                 EntityType = EntityType.Service,
                 Metric = ErrorWarningProperty.PrivateBytesMb,
                 NodeName = NodeName,
+                NodeType = NodeType,
                 HealthState = HealthState.Warning,
                 ObserverName = ObserverConstants.AppObserverName,
                 Property = "ClusterObserver_App",
@@ -1906,6 +1908,7 @@ namespace FabricObserverTests
                 Assert.IsTrue(data.Description == "Service Test warning for CO test.");
                 Assert.IsTrue(data.Metric == ErrorWarningProperty.PrivateBytesMb);
                 Assert.IsTrue(data.NodeName == NodeName);
+                Assert.IsTrue(data.NodeType == NodeType);
                 Assert.IsTrue(data.ObserverName == ObserverConstants.AppObserverName);
                 Assert.IsTrue(data.Source == "FOTest");
                 Assert.IsTrue(data.Value == 1024);
@@ -1925,6 +1928,7 @@ namespace FabricObserverTests
                 EntityType = EntityType.Machine,
                 Metric = ErrorWarningProperty.MemoryConsumptionPercentage,
                 NodeName = NodeName,
+                NodeType = NodeType,
                 ObserverName = ObserverConstants.NodeObserverName,
                 HealthState = HealthState.Warning,
                 Property = "ClusterObserver_Node",
@@ -1977,7 +1981,7 @@ namespace FabricObserverTests
             Assert.IsNotNull(nodeTelemData);
             Assert.IsTrue(nodeTelemData.Count > 0);
 
-            foreach (var data in nodeTelemData.Where(d => d.Property == "NodeObserver_App"))
+            foreach (var data in nodeTelemData.Where(d => d.Property == "ClusterObserver_Node"))
             {
                 Assert.IsTrue(data.EntityType == EntityType.Machine);
                 Assert.IsTrue(data.HealthState == HealthState.Warning);
@@ -1985,6 +1989,7 @@ namespace FabricObserverTests
                 Assert.IsTrue(data.Description.Contains("Machine Test warning for CO test."));
                 Assert.IsTrue(data.Metric == ErrorWarningProperty.MemoryConsumptionPercentage);
                 Assert.IsTrue(data.NodeName == NodeName);
+                Assert.IsTrue(data.NodeType == NodeType);
                 Assert.IsTrue(data.ObserverName == ObserverConstants.NodeObserverName);
                 Assert.IsTrue(data.Property == "ClusterObserver_Node");
                 Assert.IsTrue(data.Source == "FOTest");

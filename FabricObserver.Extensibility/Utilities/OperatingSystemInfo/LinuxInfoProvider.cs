@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Management;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -383,6 +384,11 @@ namespace FabricObserver.Observers.Utilities
             process.WaitForExit();
 
             return (process.ExitCode, output);
+        }
+
+        public override int GetActiveFirewallRulesCount()
+        {
+            return -1;
         }
     }
 

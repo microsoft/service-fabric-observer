@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <!-- You can try the XML diff/merge tool XmlDiffPatchSF (located in this repo) to make upgrading your base configurations to the latest version much easier. -->
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.15" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.2.16" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- FO's Observer loop will sleep for at least 30s, regardless of this setting. So, setting to 0 to 29 would mean FO will sleep for 30 seconds between observer loop iterations. -->
     <!-- ObserverManager Configuration -->
@@ -58,7 +58,7 @@
     <Parameter Name="NodeObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
-    <!-- NEW (3.2.15): Observer Raw metric Telemetry (only applies if Telemetry is enabled for the observer) - whether or not FO should emit raw metric data per observer run - per metric, per entity - for an observer that monitors resource usage. This applies to 5 observers.
+    <!-- Observer Raw metric Telemetry (only applies if Telemetry is enabled for the observer) - whether or not FO should emit raw metric data per observer run - per metric, per entity - for an observer that monitors resource usage. This applies to 5 observers.
          If you set to false, then only Warning/Error/Ok (recovery from previous Error/Warning state) data events will be sent to ApplicationInsights or LogAnalytics service. -->
     <Parameter Name="AppObserverEmitRawMetricTelemetry" DefaultValue="true" />
     <Parameter Name="ContainerObserverEmitRawMetricTelemetry" DefaultValue="true" />
@@ -255,7 +255,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.2.15" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.2.16" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>

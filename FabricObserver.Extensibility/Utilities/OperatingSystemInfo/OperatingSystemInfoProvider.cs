@@ -136,5 +136,11 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="processId">Optional: Process identifier.</param>
         /// <returns>Count of current BOUND state TCP ports as an integer.</returns>
         public abstract int GetBoundStatePortCount(int processId = 0);
+
+        /// <summary>
+        /// Gets Firewall rules in place (Linux is not supported. Will always return -1).
+        /// </summary>
+        /// <returns></returns>
+        public abstract int GetActiveFirewallRulesCount();
     }
 }

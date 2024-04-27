@@ -2,10 +2,10 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
 	<metadata minClientVersion="3.3.0">
 		<id>%PACKAGE_ID%</id>
-		<version>3.2.15</version>
+		<version>3.2.16</version>
 		<releaseNotes>
-- Added support for Observer raw metric telemetry disablement via configuration. This enables you to disable raw metric telemetry for any supported observer. This is useful if you are running FabricObserver in a non-production environment and do not want to send a raw telemetry data to Application Insights or Log Analytics. This feature is disabled by default. To enable it, you must set the [Observer name]EmitRawMetricTelemetry parameter to false in ApplicationManifest.xml.
-- Fixed a bug in AppObserver that can lead to FabricObserver incorrectly reporting that a target service process couldn't be monitored because it was running at a higher privilege level than FabricObserver.
+- Removed global suppression for compiler warning related to cross platform visibility of functions that only support Windows.
+- Refactored/updated Windos-only code that led to compiler warnings for cross platform visibility.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
@@ -14,7 +14,7 @@
 		<icon>icon.png</icon>
 		<readme>fonuget.md</readme>
 		<language>en-US</language>
-		<description>This package contains the FabricObserver(FO) Application - built for .NET 6.0 and SF Runtime 9.x. FO a highly configurable and extensible resource usage watchdog service that is designed to be run in Azure Service Fabric Windows and Linux clusters. This package contains the entire application and can be used to build .NET Standard 2.0 observer plugins. NOTE: If you want to target .NET 6 for your plugins, then you must use Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.15 nuget package to build them.</description>
+		<description>This package contains the FabricObserver(FO) Application - built for .NET 6.0 and SF Runtime 9.x. FO a highly configurable and extensible resource usage watchdog service that is designed to be run in Azure Service Fabric Windows and Linux clusters. This package contains the entire application and can be used to build .NET Standard 2.0 observer plugins. NOTE: If you want to target .NET 6 for your plugins, then you must use Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.16 nuget package to build them.</description>
 		<contentFiles>
 			<files include="**" buildAction="None" copyToOutput="true" />
 		</contentFiles>

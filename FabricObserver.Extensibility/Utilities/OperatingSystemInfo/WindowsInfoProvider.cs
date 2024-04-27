@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Management;
+using System.Runtime.Versioning;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -710,6 +711,31 @@ namespace FabricObserver.Observers.Utilities
                 OSInfoLogger.LogWarning($"Failed to parse supplied netstat output row ({netstatOutputLine}): {e.Message}");
                 return (-1, -1, null);
             }
+        }
+
+        [SupportedOSPlatform("windows")]
+        public override int GetActiveFirewallRulesCount()
+        {
+            int count = 0;
+
+            try
+            {
+                var scope = new ManagementScope("\\\\.\\ROOT\\StandardCimv2");
+                var q = new ObjectQuery("SELECT * FROM MSFT_NetFirewallRule WHERE Enabled=1");
+                using (var searcher = new ManagementObjectSearcher(scope, q))
+                {
+                    using (var results = searcher.Get())
+                    {
+                        count = results.Count;
+                    }
+                }
+            }
+            catch (ManagementException)
+            {
+
+            }
+
+            return count;
         }
     }
 }

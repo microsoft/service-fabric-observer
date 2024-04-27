@@ -430,15 +430,8 @@ namespace FabricObserver.Observers
                                                                 : await FabricClientInstance.ClusterManager.GetClusterManifestAsync(AsyncClusterOperationTimeoutSeconds, Token);
 
                 (int lowPortApp, int highPortApp) = NetworkUsage.TupleGetFabricApplicationPortRangeForNodeType(NodeType, clusterManifestXml);
-                int firewalls = -1;
-
-                if (IsWindows)
-                {
-                    #pragma warning disable CA1416 // Validate platform compatibility: IsWindows protects against running this on linux at runtime.
-                    firewalls = NetworkUsage.GetActiveFirewallRulesCount();
-                    #pragma warning restore CA1416 // Validate platform compatibility
-                }
-
+                int firewalls = OSInfoProvider.Instance.GetActiveFirewallRulesCount();
+                
                 // OS info.
                 _ = sb.AppendLine($"OS Information:{Environment.NewLine}");
                 _ = sb.AppendLine($"Name: {osInfo.Name}");
