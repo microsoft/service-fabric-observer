@@ -75,10 +75,14 @@ For more information about **the design of FabricObserver**, please see the [Des
 
 ***Note: By default, FO runs as NetworkUser on Windows and sfappsuser on Linux. If you want to monitor SF service processes that run as elevated (System) on Windows, then you must also run FO as System on Windows. There is no reason to run as root on Linux under any circumstances (see the Capabilities binaries implementations, which allow for FO to run as sfappsuser and successfully execute specific commands that require elevated privilege).*** 
 
-For Linux deployments, we have ensured that FO will work as expected as normal user (non-root user). In order for us to do this, we had to implement a setup script that sets [Capabilities](https://man7.org/linux/man-pages/man7/capabilities.7.html) on three proxy binaries which can only run specific commands as root. 
-If you deploy from VS, then you will need to use FabricObserver/PackageRoot/ServiceManifest.linux.xml (just copy its contents into ServiceManifest.xml or add the new piece which is simply a SetupEntryPoint section).  
+**For Linux deployments**, we have ensured that FO will work as expected as normal user (non-root user). In order for us to do this, we had to implement a setup script that sets [Capabilities](https://man7.org/linux/man-pages/man7/capabilities.7.html) on three proxy binaries which can only run specific commands as root. 
+If you deploy from VS, then you will need to use FabricObserver/PackageRoot/ServiceManifest.linux.xml (just copy its contents into ServiceManifest.xml or add the new piece which is simply a SetupEntryPoint section). Further, you must uncomment the RunAsPolicy element in ApplicationManifest.xml so that Linux Capabilities can be set by a setup bash script that must run as root:  
 
-If you use the FO [build script](https://github.com/microsoft/service-fabric-observer/blob/main/Build-FabricObserver.ps1), then it will take care of any configuration modifications automatically for linux build output.
+```xml
+ <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
+```
+
+If you use the FO [build script](https://github.com/microsoft/service-fabric-observer/blob/main/Build-FabricObserver.ps1), then it will take care of any configuration modifications automatically for linux build output, but you will still need to modify ApplicationManifest.xml as described above.
 
 The build scripts include code build, sfpkg generation, and nupkg generation. They are all located in the top level directory of this repo.
 
@@ -149,6 +153,8 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -A
 ## Observer Model
 
 FO is composed of Observer objects (instance types) that are designed to observe, record, and report on several machine-level environmental conditions inside a Windows or Linux (Ubuntu) VM hosting a Service Fabric node.
+
+**NOTE:** ```SFConfigurationObserver```, which has been deprecated for several releases has been completely removed in 3.2.16. Further, all related settings have been removed from Settings.xml and ApplicationManifest.xml.
 
 Here are the current observers and what they monitor:  
 
