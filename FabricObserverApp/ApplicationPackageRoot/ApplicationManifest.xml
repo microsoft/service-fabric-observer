@@ -55,7 +55,6 @@
     <Parameter Name="NetworkObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="NodeObserverEnableTelemetry" DefaultValue="false" />
     <Parameter Name="OSObserverEnableTelemetry" DefaultValue="false" />
-    <Parameter Name="SFConfigurationObserverEnableTelemetry" DefaultValue="false" />
     <!-- Observer Raw metric Telemetry (only applies if Telemetry is enabled for the observer) - whether or not FO should emit raw metric data per observer run - per metric, per entity - for an observer that monitors resource usage. This applies to 5 observers.
          If you set to false, then only Warning/Error/Ok (recovery from previous Error/Warning state) data events will be sent to ApplicationInsights or LogAnalytics service. -->
     <Parameter Name="AppObserverEmitRawMetricTelemetry" DefaultValue="true" />
@@ -74,7 +73,6 @@
     <Parameter Name="NetworkObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="NodeObserverEnableEtw" DefaultValue="false" />
     <Parameter Name="OSObserverEnableEtw" DefaultValue="false" />
-    <Parameter Name="SFConfigurationObserverEnableEtw" DefaultValue="false" />
     <!-- Observer CSV Logging -->
     <Parameter Name="AppObserverEnableCSVDataLogging" DefaultValue="false" />
     <Parameter Name="ContainerObserverEnableCSVDataLogging" DefaultValue="false" />
@@ -90,7 +88,6 @@
     <Parameter Name="NetworkObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="NodeObserverEnableVerboseLogging" DefaultValue="false" />
     <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
-    <Parameter Name="SFConfigurationObserverEnableVerboseLogging" DefaultValue="false" />
     <!-- Observer CPU Monitor Durations (TimeSpan format, e.g., 00:00:00): How long an observer should monitor CPU usage per target (process or machine).
          NOTE: If AppObserver is configured to monitor service processes concurrently, then any value greater than 5 seconds is ignored as 5 seconds CPU monitor duration will be the maximum executed value. 
          This is to protect against AppObserver causing the FO process to abuse CPU, especially on Windows - where FO employs (indirectly) NtQuerySystemInformation API to collect process CPU usage data.
@@ -115,7 +112,6 @@
     <Parameter Name="NetworkObserverRunInterval" DefaultValue="" />
     <Parameter Name="NodeObserverRunInterval" DefaultValue="" />
     <Parameter Name="OSObserverRunInterval" DefaultValue="" />
-    <Parameter Name="SFConfigurationObserverRunInterval" DefaultValue="" />
     <!-- AppObserver -->
     <Parameter Name="AppObserverClusterOperationTimeoutSeconds" DefaultValue="120" />
     <!-- Note: CircularBufferCollection is not thread safe for writes. If you enable this AND enable concurrent monitoring, a ConcurrentQueue will be used. -->
@@ -392,13 +388,6 @@
             <Parameter Name="EnableVerboseLogging" Value="[OSObserverEnableVerboseLogging]" />
             <Parameter Name="EnableWindowsAutoUpdateCheck" Value="[OSObserverEnableWindowsAutoUpdateCheck]" />
             <Parameter Name="RunInterval" Value="[OSObserverRunInterval]" />
-          </Section>
-          <Section Name="SFConfigurationObserverConfiguration">
-            <Parameter Name="Enabled" Value="[SFConfigurationObserverEnabled]" />
-            <Parameter Name="EnableTelemetry" Value="[SFConfigurationObserverEnableTelemetry]" />
-            <Parameter Name="EnableEtw" Value="[SFConfigurationObserverEnableEtw]" />
-            <Parameter Name="EnableVerboseLogging" Value="[SFConfigurationObserverEnableVerboseLogging]" />
-            <Parameter Name="RunInterval" Value="[SFConfigurationObserverRunInterval]" />
           </Section>
           <Section Name="AzureStorageUploadObserverConfiguration">
             <Parameter Name="Enabled" Value="[AzureStorageUploadObserverEnabled]" />
