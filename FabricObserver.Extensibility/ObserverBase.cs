@@ -93,11 +93,6 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public bool IsObserverWebApiAppDeployed
-        {
-            get; set;
-        }
-
         public string NodeName
         {
             get; set;
@@ -390,12 +385,6 @@ namespace FabricObserver.Observers
             InitializeObserverLoggingInfra();
 
             HealthReporter = new ObserverHealthReporter(ObserverLogger);
-
-            IsObserverWebApiAppDeployed =
-                bool.TryParse(
-                    GetSettingParameterValue(
-                        ObserverConstants.ObserverManagerConfigurationSectionName,
-                        ObserverConstants.ObserverWebApiEnabled), out bool obsWeb) && obsWeb && IsObserverWebApiAppInstalled();
         }
 
         public void InitializeObserverLoggingInfra(bool isConfigUpdate = false)
@@ -1282,7 +1271,7 @@ namespace FabricObserver.Observers
                 {
                     AppName = appName,
                     Code = errorWarningCode,
-                    EmitLogEvent = EnableVerboseLogging || IsObserverWebApiAppDeployed,
+                    EmitLogEvent = EnableVerboseLogging,
                     HealthData = telemetryData,
                     HealthMessage = healthMessage.ToString(),
                     HealthReportTimeToLive = healthReportTtl,
@@ -1354,7 +1343,7 @@ namespace FabricObserver.Observers
                         AppName = appName,
                         ServiceName = serviceName,
                         Code = data.ActiveErrorOrWarningCode,
-                        EmitLogEvent = EnableVerboseLogging || IsObserverWebApiAppDeployed,
+                        EmitLogEvent = EnableVerboseLogging,
                         HealthData = telemetryData,
                         HealthMessage = $"{data.Property} is now within normal/expected range.",
                         HealthReportTimeToLive = default,
@@ -1611,23 +1600,6 @@ namespace FabricObserver.Observers
                 ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.DataLogPathParameter);
 
             CsvFileLogger.BaseDataLogFolderPath = !string.IsNullOrWhiteSpace(dataLogPath) ? Path.Combine(dataLogPath, ObserverName) : Path.Combine(Environment.CurrentDirectory, "fabric_observer_csvdata", ObserverName);
-        }
-
-        private static bool IsObserverWebApiAppInstalled()
-        {
-            try
-            {
-                var deployedObsWebApps =
-                    FabricClientInstance.QueryManager.GetApplicationListAsync(new Uri("fabric:/FabricObserverWebApi")).GetAwaiter().GetResult();
-
-                return deployedObsWebApps?.Count > 0;
-            }
-            catch (Exception e) when (e is FabricException or TimeoutException)
-            {
-
-            }
-
-            return false;
         }
     }
 }

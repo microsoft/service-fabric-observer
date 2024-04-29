@@ -331,7 +331,7 @@ namespace FabricObserver.Observers
                 }
 
                 // Windows Firewall Rules - Total number of rules in use.
-                if (FirewallData != null && IsWindows && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
+                if (IsWindows && FirewallData != null && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
                 {
                     ProcessResourceDataReportHealth(
                         FirewallData,
@@ -452,7 +452,7 @@ namespace FabricObserver.Observers
                     ErrorWarningProperty.MemoryConsumptionPercentage, ErrorWarningProperty.MemoryConsumptionPercentage.Replace(" ", string.Empty), frudCapacity, UseCircularBuffer);
             }
 
-            if (FirewallData == null && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
+            if (IsWindows && FirewallData == null && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
             {
                 FirewallData = new FabricResourceUsageData<int>(
                     ErrorWarningProperty.ActiveFirewallRules, ErrorWarningProperty.ActiveFirewallRules.Replace(" ", string.Empty), 1);

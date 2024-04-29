@@ -7,10 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Diagnostics.Eventing.Reader;
 using System.Fabric;
 using System.Fabric.Health;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -21,7 +19,6 @@ using FabricObserver.Observers.Utilities.Telemetry;
 using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 using FabricObserver.Interfaces;
 using Microsoft.Win32.SafeHandles;
-using System.Runtime.Versioning;
 
 namespace FabricObserver.Observers
 {
@@ -43,10 +40,6 @@ namespace FabricObserver.Observers
         private Dictionary<string, FabricResourceUsageData<float>> allHandlesData;
         private Dictionary<string, FabricResourceUsageData<int>> allThreadsData;
         private Dictionary<string, FabricResourceUsageData<double>> allAppKvsLvidsData;
-
-        // Windows only. (EventLog).
-        private List<EventRecord> evtRecordList = null;
-        private bool monitorWinEventLog;
 
         /// <summary>
         /// Creates a new instance of the type.
@@ -205,14 +198,6 @@ namespace FabricObserver.Observers
                 throw;
             }
 
-
-            if (IsWindows && IsObserverWebApiAppDeployed && monitorWinEventLog)
-            {
-                #pragma warning disable CA1416 // Validate platform compatibility: IsWindows protects against running this on linux at runtime.
-                ReadServiceFabricWindowsEventLog();
-                #pragma warning restore CA1416 // Validate platform compatibility
-            }
-
             await ReportAsync(token);
 
             // The time it took to run this observer to completion.
@@ -360,83 +345,6 @@ namespace FabricObserver.Observers
                 {
                     return Task.CompletedTask;
                 }
-
-                // OBSOLETE: Windows Event Log
-                if (IsWindows && IsObserverWebApiAppDeployed && monitorWinEventLog)
-                {
-                    // SF Eventlog Errors?
-                    // Write this out to a new file, for use by the web front end log viewer.
-                    // Format = HTML.
-                    #pragma warning disable CA1416 // Validate platform compatibility: IsWindows protects against running this on linux at runtime.
-                    int count = evtRecordList.Count;
-                    var logPath = Path.Combine(ObserverLogger.LogFolderBasePath, "EventVwrErrors.txt");
-
-                    // Remove existing file.
-                    if (File.Exists(logPath))
-                    {
-                        try
-                        {
-                            File.Delete(logPath);
-                        }
-                        catch (Exception e) when (e is ArgumentException or IOException or UnauthorizedAccessException)
-                        {
-
-                        }
-                    }
-
-                    if (count >= 10)
-                    {
-                        var sb = new StringBuilder();
-
-                        _ = sb.AppendLine("<br/><div><strong>" +
-                                          "<a href='javascript:toggle(\"evtContainer\")'>" +
-                                          "<div id=\"plus\" style=\"display: inline; font-size: 25px;\">+</div> " + count +
-                                          " Error Events in ServiceFabric and System</a> " +
-                                          "Event logs</strong>.<br/></div>");
-
-                        _ = sb.AppendLine("<div id='evtContainer' style=\"display: none;\">");
-
-                        foreach (var evt in evtRecordList.Distinct())
-                        {
-                            token.ThrowIfCancellationRequested();
-
-                            try
-                            {
-                                // Access event properties:
-                                _ = sb.AppendLine("<div>" + evt.LogName + "</div>");
-                                _ = sb.AppendLine("<div>" + evt.LevelDisplayName + "</div>");
-                                if (evt.TimeCreated.HasValue)
-                                {
-                                    _ = sb.AppendLine("<div>" + evt.TimeCreated.Value.ToShortDateString() + "</div>");
-                                }
-
-                                foreach (var prop in evt.Properties)
-                                {
-                                    if (prop.Value != null && Convert.ToString(prop.Value).Length > 0)
-                                    {
-                                        _ = sb.AppendLine("<div>" + prop.Value + "</div>");
-                                    }
-                                }
-                            }
-                            catch (EventLogException)
-                            {
-
-                            }
-                        }
-
-                        _ = sb.AppendLine("</div>");
-
-                        _ = ObserverLogger.TryWriteLogFile(logPath, sb.ToString());
-                        _ = sb.Clear();
-                    }
-
-                    // Clean up.
-                    if (count > 0)
-                    {
-                        evtRecordList.Clear();
-                    }
-                    #pragma warning restore CA1416 // Validate platform compatibility
-                }
             }
             catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
@@ -447,83 +355,6 @@ namespace FabricObserver.Observers
             }
 
             return Task.CompletedTask;
-        }
-
-        [SupportedOSPlatform("windows")]
-        private void ReadServiceFabricWindowsEventLog()
-        {
-            if (!IsWindows)
-            {
-                return;
-            }
-
-            string sfOperationalLogSource = "Microsoft-ServiceFabric/Operational";
-            string sfAdminLogSource = "Microsoft-ServiceFabric/Admin";
-            string systemLogSource = "System";
-            string sfLeaseAdminLogSource = "Microsoft-ServiceFabric-Lease/Admin";
-            string sfLeaseOperationalLogSource = "Microsoft-ServiceFabric-Lease/Operational";
-
-            var range2Days = DateTime.UtcNow.AddDays(-1);
-            var format = range2Days.ToString("yyyy-MM-ddTHH:mm:ss.fffffff00K", CultureInfo.InvariantCulture);
-            var datexQuery = $"*[System/TimeCreated/@SystemTime >='{format}']";
-
-            // Critical and Errors only.
-            string xQuery = "*[System/Level <= 2] and " + datexQuery;
-
-            // SF Admin Event Store.
-            var evtLogQuery = new EventLogQuery(sfAdminLogSource, PathType.LogName, xQuery);
-            using (var evtLogReader = new EventLogReader(evtLogQuery))
-            {
-                for (var eventInstance = evtLogReader.ReadEvent(); eventInstance != null; eventInstance = evtLogReader.ReadEvent())
-                {
-                    Token.ThrowIfCancellationRequested();
-                    evtRecordList.Add(eventInstance);
-                }
-            }
-
-            // SF Operational Event Store.
-            evtLogQuery = new EventLogQuery(sfOperationalLogSource, PathType.LogName, xQuery);
-            using (var evtLogReader = new EventLogReader(evtLogQuery))
-            {
-                for (var eventInstance = evtLogReader.ReadEvent(); eventInstance != null; eventInstance = evtLogReader.ReadEvent())
-                {
-                    Token.ThrowIfCancellationRequested();
-                    evtRecordList.Add(eventInstance);
-                }
-            }
-
-            // SF Lease Admin Event Store.
-            evtLogQuery = new EventLogQuery(sfLeaseAdminLogSource, PathType.LogName, xQuery);
-            using (var evtLogReader = new EventLogReader(evtLogQuery))
-            {
-                for (var eventInstance = evtLogReader.ReadEvent(); eventInstance != null; eventInstance = evtLogReader.ReadEvent())
-                {
-                    Token.ThrowIfCancellationRequested();
-                    evtRecordList.Add(eventInstance);
-                }
-            }
-
-            // SF Lease Operational Event Store.
-            evtLogQuery = new EventLogQuery(sfLeaseOperationalLogSource, PathType.LogName, xQuery);
-            using (var evtLogReader = new EventLogReader(evtLogQuery))
-            {
-                for (var eventInstance = evtLogReader.ReadEvent(); eventInstance != null; eventInstance = evtLogReader.ReadEvent())
-                {
-                    Token.ThrowIfCancellationRequested();
-                    evtRecordList.Add(eventInstance);
-                }
-            }
-
-            // System Event Store.
-            evtLogQuery = new EventLogQuery(systemLogSource, PathType.LogName, xQuery);
-            using (var evtLogReader = new EventLogReader(evtLogQuery))
-            {
-                for (var eventInstance = evtLogReader.ReadEvent(); eventInstance != null; eventInstance = evtLogReader.ReadEvent())
-                {
-                    Token.ThrowIfCancellationRequested();
-                    evtRecordList.Add(eventInstance);
-                }
-            }
         }
 
         private Process[] GetDotnetLinuxProcessesByFirstArgument(string argument)
@@ -695,13 +526,6 @@ namespace FabricObserver.Observers
                             proc, new FabricResourceUsageData<double>(ErrorWarningProperty.KvsLvidsPercent, proc, frudCapacity, UseCircularBuffer));
                 }
             }
-
-            if (IsWindows && monitorWinEventLog && evtRecordList == null)
-            {
-                #pragma warning disable CA1416 // Validate platform compatibility: IsWindows protects against running this on linux at runtime.
-                evtRecordList = new List<EventRecord>();
-                #pragma warning restore CA1416 // Validate platform compatibility
-            }
         }
 
         private void SetThresholdSFromConfiguration()
@@ -857,20 +681,6 @@ namespace FabricObserver.Observers
             {
                 // Observers that monitor LVIDs should ensure the static ObserverManager.CanInstallLvidCounter is true before attempting to monitor LVID usage.
                 EnableKvsLvidMonitoring = enableLvidMonitoring && ObserverManager.IsLvidCounterEnabled;
-            }
-
-            // Monitor Windows event log for SF and System Error/Critical events?
-            // This can be noisy. Use wisely. Return if running on Linux.
-            if (!IsWindows)
-            {
-                return;
-            }
-
-            var watchEvtLog = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverMonitorWindowsEventLog);
-
-            if (!string.IsNullOrWhiteSpace(watchEvtLog) && bool.TryParse(watchEvtLog, out bool watchEl))
-            {
-                monitorWinEventLog = watchEl;
             }
         }
 

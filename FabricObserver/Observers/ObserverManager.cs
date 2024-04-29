@@ -117,11 +117,6 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        public static bool ObserverWebAppDeployed
-        {
-            get; set;
-        }
-
         public static bool EtwEnabled
         {
             get; set;
@@ -698,27 +693,6 @@ namespace FabricObserver.Observers
             }
         }
 
-        private bool IsObserverWebApiAppInstalled()
-        {
-            try
-            {
-                var deployedObsWebApps =
-                        FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(
-                            nodeName,
-                            new Uri("fabric:/FabricObserverWebApi"),
-                            TimeSpan.FromSeconds(30),
-                            runAsyncToken).GetAwaiter().GetResult();
-
-                return deployedObsWebApps?.Count > 0;
-            }
-            catch (Exception e) when (e is FabricException or TaskCanceledException or TimeoutException)
-            {
-
-            }
-
-            return false;
-        }
-
         private string GetConfigSettingValue(string parameterName, ConfigurationSettings settings, string sectionName = null)
         {
             try
@@ -981,12 +955,12 @@ namespace FabricObserver.Observers
         {
             ApplicationName = FabricServiceContext.CodePackageActivationContext.ApplicationName;
 
-            // LVID monitoring.
+            // LVID monitoring. Windows-only feature.
             if (isWindows)
             {
-                #pragma warning disable CA1416 // Validate platform compatibility: IsWindows protects against this being called on Linux.
+#pragma warning disable CA1416 // Validate platform compatibility - Note the check for isWindows preceding this call...
                 IsLvidCounterEnabled = IsLVIDPerfCounterEnabled(settings);
-                #pragma warning restore CA1416 // Validate platform compatibility
+#pragma warning restore CA1416 // Validate platform compatibility
             }
 
             // Maximum time, in seconds, that an observer can run - Override.
@@ -1032,23 +1006,11 @@ namespace FabricObserver.Observers
                 ObserverExecutionLoopSleepSeconds = execFrequency;
             }
 
-            // FQDN for use in warning or error hyperlinks in HTML output
-            // This only makes sense when you have the FabricObserverWebApi app installed.
-            string fqdn = GetConfigSettingValue(ObserverConstants.Fqdn, settings);
-
-            if (!string.IsNullOrWhiteSpace(fqdn))
-            {
-                Fqdn = fqdn;
-            }
-
             // FabricObserver operational telemetry (No PII) - Override
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableFabricObserverOperationalTelemetry, settings), out bool foTelemEnabled))
             {
                 FabricObserverOperationalTelemetryEnabled = foTelemEnabled;
             }
-
-            // ObserverWebApi.
-            ObserverWebAppDeployed = bool.TryParse(GetConfigSettingValue(ObserverConstants.ObserverWebApiEnabled, settings), out bool obsWeb) && obsWeb && IsObserverWebApiAppInstalled();
 
             // ObserverFailure HealthState Level - Override \\
 
@@ -1255,38 +1217,6 @@ namespace FabricObserver.Observers
                     }
 
                     Logger.LogInfo($"Successfully ran {observer.ObserverName}.");
-
-                    if (!ObserverWebAppDeployed)
-                    {
-                        continue;
-                    }
-
-                    if (observer.HasActiveFabricErrorOrWarning)
-                    {
-                        var errWarnMsg = !string.IsNullOrEmpty(Fqdn) ? $"<a style=\"font-weight: bold; color: red;\" href=\"http://{Fqdn}/api/ObserverLog/{observer.ObserverName}/{observer.NodeName}/json\">One or more errors or warnings detected</a>." : $"One or more errors or warnings detected. Check {observer.ObserverName} logs for details.";
-                        Logger.LogWarning($"{observer.ObserverName}: " + errWarnMsg);
-                    }
-                    else
-                    {
-                        // Delete the observer's instance log (local file with Warn/Error details per run)..
-                        _ = observer.ObserverLogger.TryDeleteInstanceLogFile();
-
-                        try
-                        {
-                            if (File.Exists(Logger.FilePath))
-                            {
-                                // Replace the ObserverManager.log text that doesn't contain the observer Warn/Error line(s).
-                                await File.WriteAllLinesAsync(
-                                            Logger.FilePath,
-                                            File.ReadLines(Logger.FilePath)
-                                                .Where(line => !line.Contains(observer.ObserverName)).ToList(), runAsyncToken);
-                            }
-                        }
-                        catch (IOException)
-                        {
-
-                        }
-                    }
                 }
                 catch (AggregateException ae)
                 {
@@ -1425,6 +1355,7 @@ namespace FabricObserver.Observers
         [SupportedOSPlatform("windows")]
         private bool IsLVIDPerfCounterEnabled(ConfigurationSettings settings = null)
         {
+            // This function can only be called on Windows, so this check is redundant.
             if (!isWindows)
             {
                 return false;
@@ -1444,7 +1375,7 @@ namespace FabricObserver.Observers
 
             _ = bool.TryParse(
                 GetConfigSettingValue(ObserverConstants.EnableKvsLvidMonitoringParameter, settings, ObserverConstants.FabricSystemObserverConfigurationName), out bool isLvidEnabledFSO);
-            
+
             // If neither AO nor FSO are configured to monitor LVID usage, then do not proceed; it doesn't matter and this check is not cheap.
             if (!isLvidEnabledAO && !isLvidEnabledFSO)
             {
@@ -1458,7 +1389,7 @@ namespace FabricObserver.Observers
             string categoryName = "Windows Fabric Database";
 
             if (sfVersion.StartsWith('1'))
-            { 
+            {
                 categoryName = "MSExchange Database";
             }
 

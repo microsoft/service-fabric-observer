@@ -61,7 +61,6 @@ namespace FabricObserver.Observers
         private readonly Dictionary<string, bool> connEndpointTestResults = new();
         private readonly Stopwatch stopwatch;
         private HealthState healthState = HealthState.Ok;
-        private bool hasRun;
         private int tcpConnTestRetried;
 
         /// <summary>
@@ -113,7 +112,6 @@ namespace FabricObserver.Observers
 
             stopwatch.Reset();
             LastRunDateTime = DateTime.Now;
-            hasRun = true;
         }
 
         public override Task ReportAsync(CancellationToken token)
@@ -168,7 +166,7 @@ namespace FabricObserver.Observers
                             AppName = new Uri(conn.TargetApp),
                             Code = FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
                             EntityType = EntityType.Application,
-                            EmitLogEvent = EnableVerboseLogging || IsObserverWebApiAppDeployed,
+                            EmitLogEvent = EnableVerboseLogging,
                             HealthData = telemetryData,
                             HealthMessage = healthMessage,
                             HealthReportTimeToLive = timeToLiveWarning,
@@ -201,7 +199,7 @@ namespace FabricObserver.Observers
                         {
                             AppName = new Uri(conn.TargetApp),
                             Code = FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable,
-                            EmitLogEvent = EnableVerboseLogging || IsObserverWebApiAppDeployed,
+                            EmitLogEvent = EnableVerboseLogging,
                             HealthMessage = healthMessage,
                             HealthReportTimeToLive = default,
                             SourceId = $"{ObserverConstants.NetworkObserverName}({FOErrorWarningCodes.AppWarningNetworkEndpointUnreachable})",
@@ -308,20 +306,6 @@ namespace FabricObserver.Observers
         private async Task<bool> InitializeAsync()
         {
             Token.ThrowIfCancellationRequested();
-
-            // This only needs to be logged once.
-            // This file is used by the ObserverWebApi application.
-            if (IsObserverWebApiAppDeployed && !hasRun)
-            {
-                var logPath = Path.Combine(ObserverLogger.LogFolderBasePath, "NetInfo.txt");
-
-                Console.WriteLine($"logPath: {logPath}");
-
-                if (!ObserverLogger.TryWriteLogFile(logPath, GetNetworkInterfaceInfo(Token)))
-                {
-                    ObserverLogger.LogWarning("Unable to create NetInfo.txt file.");
-                }
-            }
 
             var networkObserverConfigFileName =
                 Path.Combine(ConfigPackage.Path, GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.ConfigurationFileNameParameter));

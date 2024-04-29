@@ -66,7 +66,6 @@ namespace FabricObserver
             _ = services.AddScoped(typeof(ObserverBase), s => new NetworkObserver(Context));
             _ = services.AddScoped(typeof(ObserverBase), s => new NodeObserver(Context));
             _ = services.AddScoped(typeof(ObserverBase), s => new OSObserver(Context));
-            _ = services.AddScoped(typeof(ObserverBase), s => new SFConfigurationObserver(Context));
             _ = services.AddSingleton(typeof(StatelessServiceContext), Context);
 
             LoadObserversFromPlugins(services);

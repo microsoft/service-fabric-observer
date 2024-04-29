@@ -13,6 +13,7 @@ using System.IO;
 using System.Linq;
 using System.Management;
 using System.Runtime.Versioning;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -36,6 +37,23 @@ namespace FabricObserver.Observers.Utilities
         private (int LowPort, int HighPort, int NumberOfPorts) windowsDynamicPortRange = (-1, -1, 0);
         private DateTime LastDynamicRangeCacheUpdate = DateTime.MinValue;
         private DateTime LastCacheUpdate = DateTime.MinValue;
+        private static PerformanceCounter _performanceCounter = null;
+
+        [SupportedOSPlatform("windows")]
+        private static PerformanceCounter QueueLengthCounter
+        {
+            get
+            {
+                _performanceCounter ??= new PerformanceCounter
+                {
+                    CategoryName = "LogicalDisk",
+                    CounterName = "Avg. Disk Queue Length",
+                    ReadOnly = true
+                };
+
+                return _performanceCounter;
+            }
+        }
 
         /// <summary>
         /// Windows OS info provider type.
@@ -736,6 +754,95 @@ namespace FabricObserver.Observers.Utilities
             }
 
             return count;
+        }
+
+        [SupportedOSPlatform("windows")]
+        public override string GetOSHotFixes(bool generateKbUrl, CancellationToken token)
+        {
+            ManagementObject[] resultsOrdered;
+            string ret = string.Empty;
+
+            token.ThrowIfCancellationRequested();
+
+            try
+            {
+                using var searcher = new ManagementObjectSearcher("SELECT HotFixID,InstalledOn FROM Win32_QuickFixEngineering");
+                var results = searcher.Get();
+
+                if (results.Count < 1)
+                {
+                    return string.Empty;
+                }
+
+                resultsOrdered = results.Cast<ManagementObject>()
+                                    .Where(obj => obj["InstalledOn"] != null && obj["InstalledOn"].ToString() != string.Empty)
+                                    .OrderByDescending(obj => DateTime.Parse(obj["InstalledOn"].ToString() ?? string.Empty)).ToArray();
+
+                var sb = new StringBuilder();
+                var baseUrl = "https://support.microsoft.com/help/";
+
+                for (int i = 0; i < resultsOrdered.Length; ++i)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    ManagementObject obj = resultsOrdered[i];
+
+                    try
+                    {
+                        _ = generateKbUrl ? sb.AppendLine(
+                            $"<a href=\"{baseUrl}{((string)obj["HotFixID"])?.ToLower().Replace("kb", string.Empty)}/\" target=\"_blank\">{obj["HotFixID"]}</a>   " +
+                            $"{obj["InstalledOn"]}") : sb.AppendLine($"{obj["HotFixID"]}");
+                    }
+                    catch (ArgumentException)
+                    {
+
+                    }
+                    finally
+                    {
+                        obj?.Dispose();
+                        obj = null;
+                    }
+                }
+
+                resultsOrdered = null;
+                ret = sb.ToString().Trim();
+                _ = sb.Clear();
+                sb = null;
+
+            }
+            catch (Exception e) when (e is not OutOfMemoryException)
+            {
+                OSInfoLogger.LogWarning($"Unhandled Exception processing Windows hotpatch information: {e.Message}");
+            }
+
+            return ret;
+        }
+
+        [SupportedOSPlatform("windows")]
+        public override float GetAverageDiskQueueLength(string instance)
+        {
+            try
+            {
+                QueueLengthCounter.InstanceName = instance;
+
+                // Warm up counter.
+                _ = QueueLengthCounter.RawValue;
+
+                return QueueLengthCounter.NextValue();
+            }
+            catch (Exception e)
+            {
+                if (e is ArgumentNullException or PlatformNotSupportedException or Win32Exception or UnauthorizedAccessException)
+                {
+                    OSInfoLogger.LogWarning($"{QueueLengthCounter.CategoryName} {QueueLengthCounter.CounterName} PerfCounter handled exception: " + e.Message);
+
+                    // Don't throw.
+                    return 0F;
+                }
+
+                OSInfoLogger.LogError($"{QueueLengthCounter.CategoryName} {QueueLengthCounter.CounterName} PerfCounter unhandled exception: " + e.Message);
+                throw;
+            }
         }
     }
 }

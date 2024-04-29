@@ -80,7 +80,6 @@ Here are the current observers and what they monitor:
 | Networking - general health and monitoring of availability of user-specified, per-app endpoints | NetworkObserver |
 | CPU/Memory/File Handles(Linux)/Firewalls(Windows)/TCP Ports usage at machine level | NodeObserver |
 | OS/Hardware - OS install date, OS health status, list of hot fixes, hardware configuration, AutoUpdate configuration, Ephemeral TCP port range, TCP ports in use, memory and disk space usage | OSObserver |
-| Service Fabric Configuration information | SFConfigurationObserver |
 | **Another resource you find important** | **Observer [that you implement](https://github.com/microsoft/service-fabric-observer/blob/main/Documentation/Plugins.md)** |
 
 To learn more about the current Observers and their configuration, please see the [Observers readme](https://github.com/microsoft/service-fabric-observer/blob/main/Documentation/Observers.md).  

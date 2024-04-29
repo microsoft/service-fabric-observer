@@ -31,7 +31,6 @@ namespace FabricObserver.Observers
         private List<FabricResourceUsageData<double>> DiskSpaceTotalMbData;
         private List<FabricResourceUsageData<double>> FolderSizeDataMb;
         private readonly Stopwatch stopWatch;
-        private StringBuilder diskInfo = new();
 
         public int DiskSpacePercentErrorThreshold
         {
@@ -95,11 +94,6 @@ namespace FabricObserver.Observers
             DriveInfo[] allDrives = DriveInfo.GetDrives();
             int driveCount = allDrives.Length;
 
-            if (IsObserverWebApiAppDeployed)
-            {
-                diskInfo = new StringBuilder();
-            }
-
             DiskSpaceUsagePercentageData ??= new List<FabricResourceUsageData<double>>(driveCount);
             DiskSpaceAvailableMbData ??= new List<FabricResourceUsageData<double>>(driveCount);
             DiskSpaceTotalMbData ??= new List<FabricResourceUsageData<double>>(driveCount);
@@ -119,22 +113,6 @@ namespace FabricObserver.Observers
                     if (!DiskUsage.ShouldCheckDrive(d))
                     {
                         continue;
-                    }
-
-                    // This section only needs to run if you have the FabricObserverWebApi app installed.
-                    if (IsObserverWebApiAppDeployed)
-                    {
-                        _ = diskInfo.AppendFormat("\n\nDrive Name: {0}\n", d.Name);
-
-                        // Logging.
-                        _ = diskInfo.AppendFormat("Drive Type: {0}\n", d.DriveType);
-                        _ = diskInfo.AppendFormat("  Volume Label   : {0}\n", d.VolumeLabel);
-                        _ = diskInfo.AppendFormat("  Filesystem     : {0}\n", d.DriveFormat);
-                        _ = diskInfo.AppendFormat("  Total Disk Size: {0} GB\n", d.TotalSize / 1024 / 1024 / 1024);
-                        _ = diskInfo.AppendFormat("  Root Directory : {0}\n", d.RootDirectory);
-                        _ = diskInfo.AppendFormat("  Free User : {0} GB\n", d.AvailableFreeSpace / 1024 / 1024 / 1024);
-                        _ = diskInfo.AppendFormat("  Free Total: {0} GB\n", d.TotalFreeSpace / 1024 / 1024 / 1024);
-                        _ = diskInfo.AppendFormat("  % Used    : {0}%\n", DiskUsage.GetCurrentDiskSpaceUsedPercent(d.Name));
                     }
 
                     string id = d.Name;
@@ -180,9 +158,7 @@ namespace FabricObserver.Observers
                     // Also, this feature is not supported for Linux yet.
                     if (IsWindows && (AverageQueueLengthErrorThreshold > 0 || AverageQueueLengthWarningThreshold > 0))
                     {
-                        #pragma warning disable CA1416 // Validate platform compatibility: IsWindows check protects this code from being run on Linux.
-                        DiskAverageQueueLengthData.Find(x => x.Id == id)?.AddData(DiskUsage.GetAverageDiskQueueLength(d.Name[..2]));
-                        #pragma warning restore CA1416 // Validate platform compatibility
+                        DiskAverageQueueLengthData.Find(x => x.Id == id)?.AddData(OSInfoProvider.Instance.GetAverageDiskQueueLength(d.Name[..2]));
                     }
 
                     if (DiskSpacePercentErrorThreshold > 0 || DiskSpacePercentWarningThreshold > 0)
@@ -192,20 +168,6 @@ namespace FabricObserver.Observers
 
                     DiskSpaceAvailableMbData.Find(x => x.Id == id)?.AddData(DiskUsage.GetAvailableDiskSpace(id, SizeUnit.Megabytes));
                     DiskSpaceTotalMbData.Find(x => x.Id == id)?.AddData(DiskUsage.GetTotalDiskSpace(id, SizeUnit.Megabytes));
-
-                    // This section only needs to run if you have the FabricObserverWebApi app installed.
-                    if (!IsObserverWebApiAppDeployed || !IsWindows)
-                    {
-                        continue;
-                    }
-
-                    token.ThrowIfCancellationRequested();
-
-                    _ = diskInfo.AppendFormat(
-                        "{0}",
-                        GetWindowsPerfCounterDetailsText(DiskAverageQueueLengthData.FirstOrDefault(
-                                                            x => d.Name.Length > 0 && x.Id == d.Name[..1])?.Data,
-                                                                 "Avg. Disk Queue Length"));
                 }
 
                 /* Process Folder size data. */
@@ -599,16 +561,6 @@ namespace FabricObserver.Observers
                 }
 
                 token.ThrowIfCancellationRequested();
-
-                // This section only needs to run if you have the FabricObserverWebApi app installed.
-                if (!IsObserverWebApiAppDeployed)
-                {
-                    return Task.CompletedTask;
-                }
-
-                var diskInfoPath = Path.Combine(ObserverLogger.LogFolderBasePath, "disks.txt");
-                _ = ObserverLogger.TryWriteLogFile(diskInfoPath, diskInfo.ToString());
-                _ = diskInfo.Clear();
             }
             catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {

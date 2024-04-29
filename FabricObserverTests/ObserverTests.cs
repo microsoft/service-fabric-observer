@@ -782,11 +782,6 @@ namespace FabricObserverTests
         [TestMethod]
         public void DiskObserver_Constructor_Test()
         {
-            
-
-
-            ObserverManager.ObserverWebAppDeployed = true;
-
             using var obs = new DiskObserver(TestServiceContext);
 
             Assert.IsTrue(obs.ObserverLogger != null);
@@ -811,11 +806,6 @@ namespace FabricObserverTests
         [TestMethod]
         public void NetworkObserver_Constructor_Test()
         {
-            
-
-
-            ObserverManager.ObserverWebAppDeployed = true;
-
             using var obs = new NetworkObserver(TestServiceContext);
 
             Assert.IsTrue(obs.ObserverLogger != null);
@@ -851,25 +841,6 @@ namespace FabricObserverTests
             Assert.IsTrue(obs.ObserverName == ObserverConstants.OSObserverName);
         }
 
-        [TestMethod]
-        public void SFConfigurationObserver_Constructor_Test()
-        {
-            using var client = new FabricClient();
-
-            
-
-
-
-            ObserverManager.ObserverWebAppDeployed = true;
-
-            using var obs = new SFConfigurationObserver(TestServiceContext);
-
-            // These are set in derived ObserverBase.
-            Assert.IsTrue(obs.ObserverLogger != null);
-            Assert.IsTrue(obs.HealthReporter != null);
-            Assert.IsTrue(obs.ObserverName == ObserverConstants.SFConfigurationObserverName);
-        }
-
         /* End Simple Tests */
 
         /* AppObserver Initialization */
@@ -877,10 +848,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_MalformedTargetAppValue_GeneratesWarning()
         {
-            
-
-
-
             using var obs = new AppObserver(TestServiceContext)
             {
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.targetAppMalformed.json")
@@ -895,10 +862,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_InvalidJson_GeneratesWarning()
         {
-            
-
-
-
             using var obs = new AppObserver(TestServiceContext)
             {
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.invalid.json")
@@ -913,10 +876,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_NoConfigFound_GeneratesWarning()
         {
-            
-
-
-
             using var obs = new AppObserver(TestServiceContext)
             {
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.empty.json")
@@ -933,10 +892,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetAppType_ServiceExcludeList_EnsureExcluded()
         {
-            
-
-
-
             using var obs = new AppObserver(TestServiceContext)
             {
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.apptype.exclude.json")
@@ -951,10 +906,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetApp_ServiceExcludeList_EnsureExcluded()
         {
-            
-
-
-
             using var obs = new AppObserver(TestServiceContext)
             {
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.app.exclude.json")
@@ -2187,7 +2138,6 @@ namespace FabricObserverTests
             using var obs = new OSObserver(TestServiceContext)
             {
                 ClusterManifestPath = Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml"),
-                IsObserverWebApiAppDeployed = true,
                 IsEtwProviderEnabled = true
             };
 
@@ -2203,16 +2153,6 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-
-            var outputFilePath = Path.Combine(Environment.CurrentDirectory, "fabric_observer_logs", "SysInfo.txt");
-
-            // Output log file was created successfully during test.
-            Assert.IsTrue(File.Exists(outputFilePath)
-                          && File.GetLastWriteTime(outputFilePath) > startDateTime
-                          && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
-
-            // Output file is not empty.
-            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath)).Length > 0);
         }
 
         [TestMethod]
@@ -2222,7 +2162,6 @@ namespace FabricObserverTests
             using var obs = new OSObserver(TestServiceContext)
             {
                 ClusterManifestPath = Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml"),
-                IsObserverWebApiAppDeployed = false,
                 IsEtwProviderEnabled = false
             };
 
@@ -2253,8 +2192,6 @@ namespace FabricObserverTests
 
             using var obs = new DiskObserver(TestServiceContext)
             {
-                // This is required since output files are only created if fo api app is also deployed to cluster..
-                IsObserverWebApiAppDeployed = true,
                 CpuMonitorDuration = TimeSpan.FromSeconds(1),
                 FolderSizeMonitoringEnabled = true,
                 FolderSizeConfigDataWarning = warningDictionary,
@@ -2271,16 +2208,6 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-
-            var outputFilePath = Path.Combine(Environment.CurrentDirectory, "fabric_observer_logs", "disks.txt");
-
-            // Output log file was created successfully during test.
-            Assert.IsTrue(File.Exists(outputFilePath)
-                          && File.GetLastWriteTime(outputFilePath) > startDateTime
-                          && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
-
-            // Output file is not empty.
-            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath)).Length > 0);
         }
 
         [TestMethod]
@@ -2305,10 +2232,7 @@ namespace FabricObserverTests
 
                 // Folder size monitoring. This will most likely generate a warning.
                 FolderSizeConfigDataWarning = warningDictionary,
-
-                // This is required since output files are only created if fo api app is also deployed to cluster..
-                IsObserverWebApiAppDeployed = true,
-                IsEtwProviderEnabled = true,
+                IsEtwProviderEnabled = true
             };
 
             IServiceCollection services = new ServiceCollection();
@@ -2334,16 +2258,6 @@ namespace FabricObserverTests
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
-            var outputFilePath = Path.Combine(Environment.CurrentDirectory, "fabric_observer_logs", "disks.txt");
-
-            // Output log file was created successfully during test.
-            Assert.IsTrue(File.Exists(outputFilePath)
-                          && File.GetLastWriteTime(outputFilePath) > startDateTime
-                          && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
-
-            // Output file is not empty.
-            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath)).Length > 0);
-
             // Stop clears health warning
             await obsMgr.StopObserversAsync();
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
@@ -2362,33 +2276,6 @@ namespace FabricObserverTests
             // The config file used for testing contains an endpoint that does not exist, so NetworkObserver
             // will put the related Application entity into Warning state.
             Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
-        }
-
-        [TestMethod]
-        public async Task NetworkObserver_ObserveAsync_Successful_WritesLocalFile_ObsWebDeployed()
-        {
-            var startDateTime = DateTime.Now;
-            using var obs = new NetworkObserver(TestServiceContext)
-            {
-                // This is required since output files are only created if fo api app is also deployed to cluster..
-                IsObserverWebApiAppDeployed = true
-            };
-
-            await obs.ObserveAsync(Token);
-
-            // Observer ran to completion with no errors.
-            // The supplied config does not include deployed app network configs, so
-            // ObserveAsync will return in milliseconds.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-            var outputFilePath = Path.Combine(_logger.LogFolderBasePath, "NetInfo.txt");
-
-            // Output log file was created successfully during test.
-            Assert.IsTrue(File.Exists(outputFilePath)
-                          && File.GetLastWriteTime(outputFilePath) > startDateTime
-                          && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
-
-            // Output file is not empty.
-            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath)).Length > 0);
         }
 
         [TestMethod]
@@ -2442,41 +2329,6 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-        }
-
-        [TestMethod]
-        public async Task SFConfigurationObserver_ObserveAsync_Successful_IsHealthy()
-        {
-            var startDateTime = DateTime.Now;
-            using var obs = new SFConfigurationObserver(TestServiceContext)
-            {
-                IsEnabled = true,
-
-                // This is required since output files are only created if fo api app is also deployed to cluster..
-                IsObserverWebApiAppDeployed = true,
-                ClusterManifestPath = Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml")
-            };
-
-            await obs.ObserveAsync(Token);
-
-            // observer ran to completion with no errors.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // observer detected no error conditions.
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-
-            var outputFilePath = Path.Combine(Environment.CurrentDirectory, "fabric_observer_logs", "SFInfraInfo.txt");
-
-            // Output log file was created successfully during test.
-            Assert.IsTrue(File.Exists(outputFilePath)
-                          && File.GetLastWriteTime(outputFilePath) > startDateTime
-                          && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
-
-            // Output file is not empty.
-            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath)).Length > 0);
         }
 
         [TestMethod]

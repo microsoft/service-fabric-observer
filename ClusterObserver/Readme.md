@@ -78,8 +78,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName $appName -ApplicationType
          **NOTE: For Linux runtime target, just supply the name of the directory (not a path with drive letter like you for Windows).** -->
 		<Parameter Name="ObserverLogPath" Value="" MustOverride="true" />
 		<!-- Required: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
-         will be locally logged. This is the recommended setting. Note that file logging is generally
-         only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
+         will be locally logged. This is the recommended setting. -->
 		<Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
 		<Parameter Name="ObserverFailureHealthStateLevel" Value="" MustOverride="true" />
 		<Parameter Name="EnableETWProvider" Value="" MustOverride="true" />
@@ -122,8 +121,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName $appName -ApplicationType
 		<!-- Required: To enable or not enable, that is the question.-->
 		<Parameter Name="Enabled" Value="" MustOverride="true" />
 		<!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
-         will be locally logged. This is the recommended setting. Note that file logging is generally
-         only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
+         will be locally logged. This is the recommended setting. -->
 		<Parameter Name="EnableEtw" Value="" MustOverride="true"/>
 		<Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
 		<Parameter Name="EnableTelemetry" Value="" MustOverride="true" />

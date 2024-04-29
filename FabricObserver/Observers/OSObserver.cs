@@ -10,10 +10,7 @@ using System.Fabric.Description;
 using System.Fabric.Health;
 using System.Fabric.Query;
 using System.IO;
-using System.Linq;
-using System.Management;
 using System.Runtime.InteropServices;
-using System.Runtime.Versioning;
 using System.Security;
 using System.Text;
 using System.Threading;
@@ -27,8 +24,6 @@ namespace FabricObserver.Observers
 {
     // This observer monitors OS health state and provides static and dynamic OS level information.
     // It will signal Ok Health Reports that will show up under node details in SFX as well as emit ETW events.
-    // If FabricObserverWebApi is installed, the output includes a local file that is used
-    // by the API service and returns Hardware/OS info as HTML (http://localhost:5000/api/ObserverManager).
     public sealed class OSObserver : ObserverBase
     {
         private const string AuStateUnknownMessage = "Unable to determine Windows AutoUpdate state.";
@@ -167,17 +162,6 @@ namespace FabricObserver.Observers
                     HasActiveFabricErrorOrWarning = false;
                 }
 
-                if (IsObserverWebApiAppDeployed)
-                {
-                    var logPath = Path.Combine(ObserverLogger.LogFolderBasePath, "SysInfo.txt");
-
-                    // This file is used by the web application (log reader.).
-                    if (!ObserverLogger.TryWriteLogFile(logPath, $"Last updated on {DateTime.UtcNow:M/d/yyyy HH:mm:ss} UTC<br/>{osReport}"))
-                    {
-                        ObserverLogger.LogWarning("Unable to create SysInfo.txt file.");
-                    }
-                }
-
                 var report = new HealthReport
                 {
                     Observer = ObserverName,
@@ -314,72 +298,7 @@ namespace FabricObserver.Observers
             return !string.IsNullOrEmpty(checkAU) && bool.TryParse(checkAU, out bool auChk) && auChk;
         }
 
-        [SupportedOSPlatform("windows")]
-        private string GetWindowsHotFixes(bool generateKbUrl, CancellationToken token)
-        {
-            if (!IsWindows)
-            {
-                return null;
-            }
-
-            ManagementObject[] resultsOrdered;
-            string ret = string.Empty;
-
-            token.ThrowIfCancellationRequested();
-
-            try
-            {
-                using var searcher = new ManagementObjectSearcher("SELECT HotFixID,InstalledOn FROM Win32_QuickFixEngineering");
-                var results = searcher.Get();
-
-                if (results.Count < 1)
-                {
-                    return string.Empty;
-                }
-
-                resultsOrdered = results.Cast<ManagementObject>()
-                                    .Where(obj => obj["InstalledOn"] != null && obj["InstalledOn"].ToString() != string.Empty)
-                                    .OrderByDescending(obj => DateTime.Parse(obj["InstalledOn"].ToString() ?? string.Empty)).ToArray();
-
-                var sb = new StringBuilder();
-                var baseUrl = "https://support.microsoft.com/help/";
-
-                for (int i = 0; i < resultsOrdered.Length; ++i)
-                {
-                    token.ThrowIfCancellationRequested();
-
-                    ManagementObject obj = resultsOrdered[i];
-
-                    try
-                    {
-                        _ = generateKbUrl ? sb.AppendLine(
-                            $"<a href=\"{baseUrl}{((string)obj["HotFixID"])?.ToLower().Replace("kb", string.Empty)}/\" target=\"_blank\">{obj["HotFixID"]}</a>   " +
-                            $"{obj["InstalledOn"]}") : sb.AppendLine($"{obj["HotFixID"]}");
-                    }
-                    catch (ArgumentException)
-                    {
-
-                    }
-                    finally
-                    {
-                        obj?.Dispose();
-                        obj = null;
-                    }
-                }
-
-                resultsOrdered = null;
-                ret = sb.ToString().Trim();
-                _ = sb.Clear();
-                sb = null;
-
-            }
-            catch (Exception e) when (e is not OutOfMemoryException)
-            {
-                ObserverLogger.LogWarning($"Unhandled Exception processing OS information: {e.Message}");
-            }
-
-            return ret;
-        }
+        
 
         private bool CheckWuAutoDownloadEnabled()
         {
@@ -554,9 +473,7 @@ namespace FabricObserver.Observers
 
                 if (IsWindows)
                 {
-                    #pragma warning disable CA1416 // Validate platform compatibility: IsWindows protects against running this on linux at runtime.
-                    osHotFixes = GetWindowsHotFixes(true, token);
-                    #pragma warning restore CA1416 // Validate platform compatibility
+                    osHotFixes = OSInfoProvider.Instance.GetOSHotFixes(true, token);
 
                     if (!string.IsNullOrWhiteSpace(osHotFixes))
                     {
@@ -571,9 +488,7 @@ namespace FabricObserver.Observers
 
                 if (IsWindows)
                 {
-                    #pragma warning disable CA1416 // Validate platform compatibility: IsWindows protects against running this on linux at runtime.
-                    kbOnlyHotFixes = GetWindowsHotFixes(false, token)?.Replace($"{Environment.NewLine}", ", ").TrimEnd(',');
-                    #pragma warning restore CA1416 // Validate platform compatibility
+                    kbOnlyHotFixes = OSInfoProvider.Instance.GetOSHotFixes(false, token)?.Replace($"{Environment.NewLine}", ", ").TrimEnd(',');
                 }
 
                 var machineTelemetry = new MachineTelemetryData

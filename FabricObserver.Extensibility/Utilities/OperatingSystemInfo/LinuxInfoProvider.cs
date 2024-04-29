@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Management;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -374,7 +373,7 @@ namespace FabricObserver.Observers.Utilities
 
             List<string> output = new();
             using Process process = Process.Start(startInfo);
-            
+
             string line;
             while (process != null && (line = await process.StandardOutput.ReadLineAsync()) != null)
             {
@@ -389,6 +388,16 @@ namespace FabricObserver.Observers.Utilities
         public override int GetActiveFirewallRulesCount()
         {
             return -1;
+        }
+
+        public override string GetOSHotFixes(bool generateKbUrl, CancellationToken token)
+        {
+            return null;
+        }
+
+        public override float GetAverageDiskQueueLength(string instance)
+        {
+            return 0F;
         }
     }
 
