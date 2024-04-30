@@ -153,12 +153,6 @@ namespace FabricObserver.Observers.Utilities
         public const string OSObserverName = "OSObserver";
         public const string EnableWindowsAutoUpdateCheck = "EnableWindowsAutoUpdateCheck";
 
-        // SFConfigurationObserver.
-        public const string SFConfigurationObserverName = "SFConfigurationObserver";
-        public const string SFConfigurationObserverVersionName = "InfrastructureConfigurationVersion";
-        public const string SFConfigurationObserverConfigurationSectionName = "SFConfigurationObserverConfiguration";
-        public const string SFConfigurationObserverRunIntervalParameterName = "RunInterval";
-
         // Telemetry Settings Parameters.
         public const string AiKey = "AppInsightsInstrumentationKey";
         public const string AppInsightsConnectionString = "AppInsightsConnectionString";

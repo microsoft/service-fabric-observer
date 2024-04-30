@@ -77,11 +77,6 @@ namespace FabricObserver.Observers
             get;
         }
 
-        private string Fqdn
-        {
-            get; set;
-        }
-
         private Logger Logger
         {
             get;
@@ -797,8 +792,7 @@ namespace FabricObserver.Observers
                 ObserverConstants.FabricSystemObserverName,
                 ObserverConstants.NetworkObserverName,
                 ObserverConstants.NodeObserverName,
-                ObserverConstants.OSObserverName,
-                ObserverConstants.SFConfigurationObserverName
+                ObserverConstants.OSObserverName
             };
 
             foreach (var obs in enabledObs)
