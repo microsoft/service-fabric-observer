@@ -7,6 +7,8 @@
 - Removed global suppression for compiler warning related to cross platform visibility of functions that only support Windows.
 - Refactored/updated Windows-only code that led to compiler warnings for cross platform visibility.
 - ServiceFabricConfigurationObserver no longer exists and all references to the defunct FabricObserverWebApi project have been deleted. Any related settings have also been deleted in ApplicationManifest and Settings.xml. Please note these changes.
+- FabricSystemObserver no longer monitors Windows Event Log as that feature was only to support the obsolete FabricObserverWebApi application (defunct).
+- Updated nuget package versions. Note that SF SDK version was bumped to highest 6.0 version (highest 9.0 Runtime, which you should no longer have deployed to production, anyway as it is unsupported).
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
