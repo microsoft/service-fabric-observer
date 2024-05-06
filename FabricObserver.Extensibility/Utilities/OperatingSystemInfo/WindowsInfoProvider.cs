@@ -21,6 +21,7 @@ using static FabricObserver.Observers.Utilities.NativeMethods;
 
 namespace FabricObserver.Observers.Utilities
 {
+    [SupportedOSPlatform("windows")]
     public class WindowsInfoProvider : OSInfoProvider
     {
         private const string TcpProtocol = "tcp";
@@ -39,7 +40,6 @@ namespace FabricObserver.Observers.Utilities
         private DateTime LastCacheUpdate = DateTime.MinValue;
         private static PerformanceCounter _performanceCounter = null;
 
-        [SupportedOSPlatform("windows")]
         private static PerformanceCounter QueueLengthCounter
         {
             get
@@ -731,7 +731,6 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        [SupportedOSPlatform("windows")]
         public override int GetActiveFirewallRulesCount()
         {
             int count = 0;
@@ -756,7 +755,6 @@ namespace FabricObserver.Observers.Utilities
             return count;
         }
 
-        [SupportedOSPlatform("windows")]
         public override string GetOSHotFixes(bool generateKbUrl, CancellationToken token)
         {
             ManagementObject[] resultsOrdered;
@@ -818,7 +816,6 @@ namespace FabricObserver.Observers.Utilities
             return ret;
         }
 
-        [SupportedOSPlatform("windows")]
         public override float GetAverageDiskQueueLength(string instance)
         {
             try

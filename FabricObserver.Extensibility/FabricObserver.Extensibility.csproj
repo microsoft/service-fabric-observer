@@ -11,11 +11,11 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.ApplicationInsights" Version="2.22.0" />
 		<PackageReference Include="Microsoft.ApplicationInsights.NLogTarget" Version="2.22.0" />
-		<PackageReference Include="Microsoft.ServiceFabric.Services" Version="6.0.1017" />
+		<PackageReference Include="Microsoft.ServiceFabric.Services" Version="6.0.1672" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-		<PackageReference Include="NLog" Version="5.3.1" />
+		<PackageReference Include="NLog" Version="5.3.2" />
 		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="8.0.0" />
 		<PackageReference Include="System.Management" Version="8.0.0" />
 	</ItemGroup>

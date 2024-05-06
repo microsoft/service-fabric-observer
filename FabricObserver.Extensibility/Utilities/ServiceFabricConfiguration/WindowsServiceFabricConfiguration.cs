@@ -11,17 +11,15 @@ using System.Security;
 
 namespace FabricObserver.Observers.Utilities
 {
+    [SupportedOSPlatform("windows")]
     public class WindowsServiceFabricConfiguration : ServiceFabricConfiguration
     {
         private const string ServiceFabricWindowsRegistryPath = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Service Fabric";
 
-        [SupportedOSPlatform("windows")]
         public override string FabricVersion => GetString(nameof(FabricVersion));
 
-        [SupportedOSPlatform("windows")]
         public override string FabricRoot => GetString(nameof(FabricRoot));
 
-        [SupportedOSPlatform("windows")]
         public override string GetString(string name)
         {
             try
@@ -34,7 +32,6 @@ namespace FabricObserver.Observers.Utilities
             }
         }
 
-        [SupportedOSPlatform("windows")]
         public override int GetInt32(string name)
         {
             try

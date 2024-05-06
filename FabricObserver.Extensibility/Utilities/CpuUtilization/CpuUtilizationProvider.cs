@@ -28,7 +28,7 @@ namespace FabricObserver.Observers.Utilities
                             {
                                 instance = new WindowsCpuUtilizationProvider();
                             }
-                            else
+                            else if (OperatingSystem.IsLinux())
                             {
                                 instance = new LinuxCpuUtilizationProvider();
                             }

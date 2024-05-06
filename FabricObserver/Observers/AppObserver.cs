@@ -1702,7 +1702,7 @@ namespace FabricObserver.Observers
                         target.TargetApp = target.TargetApp.Replace("://", ":/");
                     }
 
-                    if (target.TargetApp.Contains(" "))
+                    if (target.TargetApp.Contains(' '))
                     {
                         target.TargetApp = target.TargetApp.Replace(" ", string.Empty);
                     }

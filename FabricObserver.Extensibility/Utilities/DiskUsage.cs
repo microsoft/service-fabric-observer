@@ -7,7 +7,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Runtime.Versioning;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -93,7 +92,6 @@ namespace FabricObserver.Observers.Utilities
             return Math.Round(ConvertToSizeUnits(used, sizeUnit), 2);
         }
 
-        [SupportedOSPlatform("windows")]
         public static float GetAverageDiskQueueLength(string instance)
         {
             return OSInfoProvider.Instance.GetAverageDiskQueueLength(instance);

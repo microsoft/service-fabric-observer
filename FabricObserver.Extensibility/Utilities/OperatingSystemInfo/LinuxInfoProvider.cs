@@ -7,11 +7,13 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
+    [SupportedOSPlatform("linux")]
     public class LinuxInfoProvider : OSInfoProvider
     {
         /// <summary>

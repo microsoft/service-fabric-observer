@@ -12,7 +12,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights" Version="2.22.0" />
-	<PackageReference Include="Microsoft.ServiceFabric.Services" Version="6.0.1017" />
+	<PackageReference Include="Microsoft.ServiceFabric.Services" Version="6.0.1672" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 </Project>

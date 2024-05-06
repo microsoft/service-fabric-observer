@@ -24,6 +24,7 @@ using System.Runtime;
 using FabricObserver.Utilities.ServiceFabric;
 using ConfigurationSettings = System.Fabric.Description.ConfigurationSettings;
 using System.Runtime.Versioning;
+using StartupServicesModel;
 
 namespace FabricObserver.Observers
 {
@@ -46,7 +47,6 @@ namespace FabricObserver.Observers
         private readonly TimeSpan NewReleaseCheckInterval = TimeSpan.FromDays(7);
         private readonly CancellationToken runAsyncToken;
         private readonly string sfVersion;
-        private readonly bool isWindows;
         private readonly ConfigurationPackage configurationPackage;
         private volatile bool shutdownSignaled;
         private DateTime StartDateTime;
@@ -146,7 +146,6 @@ namespace FabricObserver.Observers
             linkedSFRuntimeObserverTokenSource.Token.Register(() => Logger.LogWarning("linkedSFRuntimeObserverTokenSource.Token token cancellation signalled."));
 #endif   
             nodeName = FabricServiceContext.NodeContext.NodeName;
-            isWindows = OperatingSystem.IsWindows();
             sfVersion = GetServiceFabricRuntimeVersion();
             configurationPackage = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
 
@@ -886,7 +885,7 @@ namespace FabricObserver.Observers
 
                 // For Linux, we need to restart the FO process due to the Linux Capabilities impl that enables us to run docker and netstat commands as elevated user (FO Linux should always be run as standard user on Linux).
                 // During an upgrade event, SF touches the cap binaries which removes the cap settings so we need to run the FO app setup script again to reset them.
-                if (!isWindows)
+                if (OperatingSystem.IsLinux())
                 {
                     // Graceful stop.
                     await StopObserversAsync(true, true).ConfigureAwait(false);
@@ -950,11 +949,9 @@ namespace FabricObserver.Observers
             ApplicationName = FabricServiceContext.CodePackageActivationContext.ApplicationName;
 
             // LVID monitoring. Windows-only feature.
-            if (isWindows)
+            if (OperatingSystem.IsWindows())
             {
-#pragma warning disable CA1416 // Validate platform compatibility - Note the check for isWindows preceding this call...
                 IsLvidCounterEnabled = IsLVIDPerfCounterEnabled(settings);
-#pragma warning restore CA1416 // Validate platform compatibility
             }
 
             // Maximum time, in seconds, that an observer can run - Override.
@@ -1349,12 +1346,6 @@ namespace FabricObserver.Observers
         [SupportedOSPlatform("windows")]
         private bool IsLVIDPerfCounterEnabled(ConfigurationSettings settings = null)
         {
-            // This function can only be called on Windows, so this check is redundant.
-            if (!isWindows)
-            {
-                return false;
-            }
-
             // We already figured this out the first time this function ran.
             if (IsLvidCounterEnabled)
             {

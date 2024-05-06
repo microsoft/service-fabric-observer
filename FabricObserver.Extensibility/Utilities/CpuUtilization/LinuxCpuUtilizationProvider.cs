@@ -4,9 +4,11 @@
 // ------------------------------------------------------------
 
 using System;
+using System.Runtime.Versioning;
 
 namespace FabricObserver.Observers.Utilities
 {
+    [SupportedOSPlatform("linux")]
     public class LinuxCpuUtilizationProvider : CpuUtilizationProvider
     {
         private float uptimeInSeconds;

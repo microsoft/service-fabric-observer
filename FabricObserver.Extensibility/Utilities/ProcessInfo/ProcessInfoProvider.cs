@@ -31,7 +31,7 @@ namespace FabricObserver.Observers.Utilities
                             {
                                 instance = new WindowsProcessInfoProvider();
                             }
-                            else
+                            else if (OperatingSystem.IsLinux())
                             {
                                 instance = new LinuxProcessInfoProvider();
                             }

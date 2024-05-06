@@ -33,6 +33,12 @@ namespace FabricObserver.Observers
         private bool disposed;
         private ConcurrentDictionary<string, (int DumpCount, DateTime LastDumpDate)> ServiceDumpCountDictionary;
         private readonly object lockObj = new();
+        private static readonly bool isWindows;
+
+        static ObserverBase()
+        {
+            isWindows = OperatingSystem.IsWindows();
+        }
 
         private bool IsTelemetryProviderEnabled
         {
@@ -53,7 +59,7 @@ namespace FabricObserver.Observers
             get; private set;
         }
 
-        public static bool IsWindows => OperatingSystem.IsWindows();
+        public static bool IsWindows => isWindows;
 
         // Process dump settings. Only AppObserver and Windows is supported. \\
         public string DumpsPath

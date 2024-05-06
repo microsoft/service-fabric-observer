@@ -7,10 +7,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.Versioning;
 using System.Threading;
 
 namespace FabricObserver.Observers.Utilities
 {
+    [SupportedOSPlatform("linux")]
     public class LinuxProcessInfoProvider : ProcessInfoProvider
     {
         private const int MaxDescendants = 50;

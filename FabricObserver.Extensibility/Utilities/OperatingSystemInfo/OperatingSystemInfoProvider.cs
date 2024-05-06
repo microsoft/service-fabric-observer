@@ -30,7 +30,7 @@ namespace FabricObserver.Observers.Utilities
                             {
                                 instance = new WindowsInfoProvider();
                             }
-                            else
+                            else if (OperatingSystem.IsLinux())
                             {
                                 instance = new LinuxInfoProvider();
                             }

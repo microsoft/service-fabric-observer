@@ -5,9 +5,11 @@
 
 using System.IO;
 using System.Linq;
+using System.Runtime.Versioning;
 
 namespace FabricObserver.Observers.Utilities
 {
+    [SupportedOSPlatform("linux")]
     public class LinuxServiceFabricConfiguration : ServiceFabricConfiguration
     {
         public override string FabricVersion
