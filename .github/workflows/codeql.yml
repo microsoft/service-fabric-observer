@@ -91,7 +91,7 @@ jobs:
     - if: matrix.language == 'csharp'
       shell: powershell
       run: |
-        Build-FabricObserver.ps1
+        ./Build-FabricObserver.ps1
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
