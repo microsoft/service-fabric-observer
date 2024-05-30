@@ -88,4 +88,5 @@ jobs:
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
       with:
+        setup: false #disables the default setup
         category: "/language:${{matrix.language}}"
