@@ -47,7 +47,7 @@ jobs:
         - language: c-cpp
           build-mode: manual
         - language: csharp
-          build-mode: autobuild
+          build-mode: manual
         # CodeQL supports the following values keywords for 'language': 'c-cpp', 'csharp', 'go', 'java-kotlin', 'javascript-typescript', 'python', 'ruby', 'swift'
         # Use `c-cpp` to analyze code written in C, C++ or both
         # Use 'java-kotlin' to analyze code written in Java, Kotlin or both
@@ -79,7 +79,7 @@ jobs:
     # to build your code.
     # ℹ️ Command-line programs to run using the OS shell.
     # 📚 See https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idstepsrun
-    - if: matrix.build-mode == 'manual'
+    - if: matrix.language == 'c-cpp'
       shell: bash
       run: |
         sudo apt-get install -y libcap-dev
@@ -87,6 +87,11 @@ jobs:
         gcc elevated_docker_stats.c -lcap -o elevated_docker_stats
         gcc elevated_netstat.c -lcap -o elevated_netstat
         gcc elevated_proc_fd.c -lcap -o elevated_proc_fd
+
+    - if: matrix.language == "csharp"
+      shell: powershell
+      run: |
+        Build-FabricObserver.ps1
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
