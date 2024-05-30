@@ -80,6 +80,8 @@ jobs:
       shell: bash
       run: |
         sudo apt-get install -y libcap-dev
+        echo pwd
+        cd FabricObserver
         gcc elevated_docker_stats.c -lcap -o elevated_docker_stats
         gcc elevated_netstat.c -lcap -o elevated_netstat
         gcc elevated_proc_fd.c -lcap -o elevated_proc_fd
