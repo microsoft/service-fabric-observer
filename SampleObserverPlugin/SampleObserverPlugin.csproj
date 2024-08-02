@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<!-- You could target netstandard2.0 instead, if you need to. But you probably do not need to. 
-             In the .NET 6+ age, moving away from netstandard2.0 is generally a good idea, in many cases; this being one of them. -->
+		<!-- NOTE: NET6 reaches EOL in 11/2024. So, this sample is targeting net8.0. -->
 		<TargetFramework>net8.0</TargetFramework>
 		<RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
 		<RootNamespace>FabricObserver.Observers</RootNamespace>
@@ -19,7 +18,7 @@
 		<!-- <Exec Command="copy &quot;$(OutDir)*.dll&quot; &quot;$(OutDir)FabricObserverPkg\Data\Plugins&quot;&#xD;&#xA;copy &quot;$(OutDir)*.pdb&quot; &quot;$(OutDir)FabricObserverPkg\Data\Plugins&quot;" /> -->
 	</Target>
     <ItemGroup>
-		<!-- To build with the full 3.2.14 FO nupkg. The output dir will contain a FabricObserverPkg folder with Code/Config/Data. 
+		<!-- To build with the full 3.2.15 FO nupkg. The output dir will contain a FabricObserverPkg folder with Code/Config/Data. 
              So, you can deploy FO directly from there. -->
 		
 		<!-- <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" Version="3.2.15" />

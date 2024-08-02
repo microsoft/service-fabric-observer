@@ -756,9 +756,9 @@ namespace FabricObserver.Observers
 
                 if (ActiveTcpPortCountError > 0 || ActiveTcpPortCountWarning > 0)
                 {
-                    if (allActiveTcpPortData.ContainsKey(dotnetArg))
+                    if (allActiveTcpPortData.TryGetValue(dotnetArg, out FabricResourceUsageData<int> tcpPortsFrud))
                     {
-                        allActiveTcpPortData[dotnetArg].AddData(activePortCount);
+                        tcpPortsFrud.AddData(activePortCount);
                     }
                 }
 
@@ -768,9 +768,9 @@ namespace FabricObserver.Observers
 
                 if (ActiveEphemeralPortCountError > 0 || ActiveEphemeralPortCountWarning > 0)
                 {
-                    if (allEphemeralTcpPortData.ContainsKey(dotnetArg))
+                    if (allEphemeralTcpPortData.TryGetValue(dotnetArg, out FabricResourceUsageData<int> ePortsFrud))
                     {
-                        allEphemeralTcpPortData[dotnetArg].AddData(activeEphemeralPortCount);
+                        ePortsFrud.AddData(activeEphemeralPortCount);
                     }
                 }
 
@@ -813,18 +813,18 @@ namespace FabricObserver.Observers
                 // Handles/FDs
                 if (AllocatedHandlesError > 0 || AllocatedHandlesWarning > 0)
                 {
-                    if (allHandlesData.ContainsKey(dotnetArg))
+                    if (allHandlesData.TryGetValue(dotnetArg, out FabricResourceUsageData<float> handlesFrud))
                     {
-                        allHandlesData[dotnetArg].AddData(handles);
+                        handlesFrud.AddData(handles);
                     }
                 }
 
                 // Threads
                 if (ThreadCountError > 0 || ThreadCountWarning > 0)
                 {
-                    if (allThreadsData.ContainsKey(dotnetArg))
+                    if (allThreadsData.TryGetValue(dotnetArg, out FabricResourceUsageData<int> threadsFrud))
                     {
-                        allThreadsData[dotnetArg].AddData(threads);
+                        threadsFrud.AddData(threads);
                     }
                 }
 
@@ -836,9 +836,9 @@ namespace FabricObserver.Observers
                     // GetProcessKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
                     if (lvidPct > -1)
                     {
-                        if (allAppKvsLvidsData.ContainsKey(dotnetArg))
+                        if (allAppKvsLvidsData.TryGetValue(dotnetArg, out FabricResourceUsageData<double> lvidsFrud))
                         {
-                            allAppKvsLvidsData[dotnetArg].AddData(lvidPct);
+                            lvidsFrud.AddData(lvidPct);
                         }
                     }
                 }
@@ -848,9 +848,9 @@ namespace FabricObserver.Observers
                 {
                     float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, dotnetArg, token, checkPrivateWorkingSet);
 
-                    if (allMemData.ContainsKey(dotnetArg))
+                    if (allMemData.TryGetValue(dotnetArg, out FabricResourceUsageData<float> memMbFrud))
                     {
-                        allMemData[dotnetArg].AddData(processMem);
+                        memMbFrud.AddData(processMem);
                     }
                 }
 
@@ -892,9 +892,9 @@ namespace FabricObserver.Observers
                             // process is no longer running if cpu == -1.
                             if (cpu >= 0)
                             {
-                                if (allCpuData.ContainsKey(dotnetArg))
+                                if (allCpuData.TryGetValue(dotnetArg, out FabricResourceUsageData<double> cpuFrud))
                                 {
-                                    allCpuData[dotnetArg].AddData(cpu);
+                                    cpuFrud.AddData(cpu);
                                 }
                             }
 

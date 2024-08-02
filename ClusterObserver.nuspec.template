@@ -4,7 +4,7 @@
 		<id>%PACKAGE_ID%</id>
 		<version>2.2.8</version>
 		<releaseNotes>
-- net8.0 implementation of ClusterObserver.
+NET8 impl.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

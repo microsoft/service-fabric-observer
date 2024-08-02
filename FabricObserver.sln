@@ -36,7 +36,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		SECURITY.md = SECURITY.md
 		Documentation\Deployment\service-fabric-cluster-observer.json = Documentation\Deployment\service-fabric-cluster-observer.json
 		Documentation\Deployment\service-fabric-observer.json = Documentation\Deployment\service-fabric-observer.json
-		Documentation\Deployment\service-fabric-cluster-observer.v2.2.8-net8.parameters.json = Documentation\Deployment\service-fabric-cluster-observer.v2.2.8-net8.parameters.json
+		Documentation\Deployment\service-fabric-cluster-observer.v2.2.8.parameters.json = Documentation\Deployment\service-fabric-cluster-observer.v2.2.8.parameters.json
 		Documentation\Deployment\service-fabric-observer.v3.2.16.parameters.json = Documentation\Deployment\service-fabric-observer.v3.2.16.parameters.json
 		Documentation\Using.md = Documentation\Using.md
 	EndProjectSection

@@ -2,7 +2,7 @@
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-observer%2Fmain%2FDocumentation%2FDeployment%2Fservice-fabric-observer.json)  
 
-[**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a production-ready watchdog service with an easy-to-use extensibility model, written as a stateless, singleton Service Fabric **.NET 8** application that by default 
+[**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a production-ready watchdog service with an easy-to-use extensibility model, written as a stateless, singleton Service Fabric **NET 8** application that by default 
 
 1. Monitors a broad range of physical machine resources that tend to be very important to all Service Fabric services and maps these metrics to the related Service Fabric entities.
 2. Runs on multiple versions of Windows Server and Ubuntu.

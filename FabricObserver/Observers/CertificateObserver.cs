@@ -117,7 +117,7 @@ namespace FabricObserver.Observers
                     CheckByThumbprint(store, SecurityConfiguration.ClusterCertThumbprintOrCommonName, DaysUntilClusterExpireWarningThreshold);
                 }
 
-                if (AppCertificateCommonNamesToObserve != null && AppCertificateCommonNamesToObserve.Any())
+                if (AppCertificateCommonNamesToObserve != null && AppCertificateCommonNamesToObserve.Count != 0)
                 {
                     // App certificates
                     foreach (string commonName in AppCertificateCommonNamesToObserve)
@@ -127,7 +127,7 @@ namespace FabricObserver.Observers
                     }
                 }
 
-                if (AppCertificateThumbprintsToObserve != null && AppCertificateThumbprintsToObserve.Any())
+                if (AppCertificateThumbprintsToObserve != null && AppCertificateThumbprintsToObserve.Count != 0)
                 {
                     // App certificates
                     foreach (string thumbprint in AppCertificateThumbprintsToObserve)
@@ -357,15 +357,15 @@ namespace FabricObserver.Observers
 
                 var certificateNode = xdoc.SelectNodes($"//sf:NodeType[@Name='{NodeType}']//sf:Certificates", nsmgr);
 
-                if (certificateNode != null ? certificateNode.Count == 0 : false)
+                if (certificateNode != null && certificateNode.Count == 0)
                 {
                     SecurityConfiguration.SecurityType = SecurityType.None;
                 }
                 else
                 {
-                    var clusterCertificateNode = certificateNode != null ? certificateNode.Item(0) != null ? certificateNode.Item(0).ChildNodes.Item(0) : null : null;
+                    var clusterCertificateNode = certificateNode?.Item(0)?.ChildNodes.Item(0);
 
-                    var commonNameAttribute = clusterCertificateNode != null ? clusterCertificateNode.Attributes != null ? clusterCertificateNode.Attributes.GetNamedItem("X509FindType") : null : null;
+                    var commonNameAttribute = clusterCertificateNode?.Attributes?.GetNamedItem("X509FindType");
                     if (commonNameAttribute != null)
                     {
                         if (commonNameAttribute.Value == "FindBySubjectName")
@@ -382,7 +382,7 @@ namespace FabricObserver.Observers
 
                     SecurityConfiguration.SecurityType = SecurityType.Thumbprint;
                     SecurityConfiguration.ClusterCertThumbprintOrCommonName = clusterCertificateNode != null ? clusterCertificateNode.Attributes != null ? clusterCertificateNode.Attributes.GetNamedItem("X509FindValue").Value : null : null;
-                    var secondaryThumbprintAttribute = clusterCertificateNode != null ? clusterCertificateNode.Attributes != null ? clusterCertificateNode.Attributes.GetNamedItem("X509FindValueSecondary") : null : null;
+                    var secondaryThumbprintAttribute = clusterCertificateNode != null ? clusterCertificateNode.Attributes?.GetNamedItem("X509FindValueSecondary") : null;
 
                     if (secondaryThumbprintAttribute != null)
                     {
