@@ -22,7 +22,11 @@ namespace FabricObserver.Observers
 {
     // DiskObserver monitors logical disk states (space consumption, queue length and folder sizes) and creates Service Fabric
     // Warning or Error Node-level health reports based on settings in ApplicationManifest.xml.
-    public sealed class DiskObserver : ObserverBase
+    /// <summary>
+    /// Creates a new instance of the type.
+    /// </summary>
+    /// <param name="context">The StatelessServiceContext instance.</param>
+    public sealed class DiskObserver(StatelessServiceContext context) : ObserverBase(null, context)
     {
         // Data storage containers for post run analysis.
         private List<FabricResourceUsageData<float>> DiskAverageQueueLengthData;
@@ -30,7 +34,7 @@ namespace FabricObserver.Observers
         private List<FabricResourceUsageData<double>> DiskSpaceAvailableMbData;
         private List<FabricResourceUsageData<double>> DiskSpaceTotalMbData;
         private List<FabricResourceUsageData<double>> FolderSizeDataMb;
-        private readonly Stopwatch stopWatch;
+        private readonly Stopwatch stopWatch = new Stopwatch();
 
         public int DiskSpacePercentErrorThreshold
         {
@@ -69,15 +73,6 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        /// <summary>
-        /// Creates a new instance of the type.
-        /// </summary>
-        /// <param name="context">The StatelessServiceContext instance.</param>
-        public DiskObserver(StatelessServiceContext context) : base(null, context)
-        {
-            stopWatch = new Stopwatch();
-        }
-
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
@@ -97,7 +92,7 @@ namespace FabricObserver.Observers
             DiskSpaceUsagePercentageData ??= new List<FabricResourceUsageData<double>>(driveCount);
             DiskSpaceAvailableMbData ??= new List<FabricResourceUsageData<double>>(driveCount);
             DiskSpaceTotalMbData ??= new List<FabricResourceUsageData<double>>(driveCount);
-            FolderSizeDataMb ??= new List<FabricResourceUsageData<double>>();
+            FolderSizeDataMb ??= [];
 
             if (IsWindows)
             {
@@ -215,7 +210,7 @@ namespace FabricObserver.Observers
             
             if (!string.IsNullOrWhiteSpace(FolderPathsErrorThresholdPairs))
             {
-                FolderSizeConfigDataError ??= new Dictionary<string, double>();
+                FolderSizeConfigDataError ??= [];
                 AddFolderSizeConfigData(FolderPathsErrorThresholdPairs, false);
             }
 
@@ -223,7 +218,7 @@ namespace FabricObserver.Observers
             
             if (!string.IsNullOrWhiteSpace(FolderPathsWarningThresholdPairs))
             {
-                FolderSizeConfigDataWarning ??= new Dictionary<string, double>();
+                FolderSizeConfigDataWarning ??= [];
                 AddFolderSizeConfigData(FolderPathsWarningThresholdPairs, true);
             }
         }

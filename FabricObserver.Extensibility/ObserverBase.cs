@@ -587,11 +587,11 @@ namespace FabricObserver.Observers
 
             }
 
-            if (!ServiceDumpCountDictionary.ContainsKey(dumpKey))
+            if (!ServiceDumpCountDictionary.TryGetValue(dumpKey, out (int DumpCount, DateTime LastDumpDate) value))
             {
                 _ = ServiceDumpCountDictionary.TryAdd(dumpKey, (0, DateTime.UtcNow));
             }
-            else if (DateTime.UtcNow.Subtract(ServiceDumpCountDictionary[dumpKey].LastDumpDate) >= MaxDumpsTimeWindow)
+            else if (DateTime.UtcNow.Subtract(value.LastDumpDate) >= MaxDumpsTimeWindow)
             {
                 ServiceDumpCountDictionary[dumpKey] = (0, DateTime.UtcNow);
             }

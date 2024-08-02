@@ -12,9 +12,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.MachineInfoModel;
@@ -31,16 +29,20 @@ namespace FabricObserver.Observers
     /// The output (a local file) is used by the API service and the HTML frontend (https://[domain:[port]]/api/ObserverManager).
     /// Health Report processor will also emit diagnostic telemetry if configured in Settings.xml.
     /// </summary>
-    public sealed class NetworkObserver : ObserverBase
+    /// <remarks>
+    /// Creates a new instance of the type.
+    /// </remarks>
+    /// <param name="context">The StatelessServiceContext instance.</param>
+    public sealed class NetworkObserver(StatelessServiceContext context) : ObserverBase(null, context)
     {
         private const int MaxTcpConnTestRetries = 5;
-        private readonly List<NetworkObserverConfig> defaultConfig = new()
-        {
+        private readonly List<NetworkObserverConfig> defaultConfig =
+        [
             new NetworkObserverConfig
             {
                 TargetApp = "fabric:/test",
-                Endpoints = new List<Endpoint>
-                {
+                Endpoints =
+                [
                     new() {
                         HostName = "www.microsoft.com",
                         Port = 443
@@ -53,24 +55,15 @@ namespace FabricObserver.Observers
                         HostName = "www.google.com",
                         Port = 443
                     }
-                }
+                ]
             }
-        };
-        private readonly List<NetworkObserverConfig> userConfig = new();
-        private readonly List<ConnectionState> connectionStatus = new();
-        private readonly Dictionary<string, bool> connEndpointTestResults = new();
-        private readonly Stopwatch stopwatch;
+        ];
+        private readonly List<NetworkObserverConfig> userConfig = [];
+        private readonly List<ConnectionState> connectionStatus = [];
+        private readonly Dictionary<string, bool> connEndpointTestResults = [];
+        private readonly Stopwatch stopwatch = new();
         private HealthState healthState = HealthState.Ok;
         private int tcpConnTestRetried;
-
-        /// <summary>
-        /// Creates a new instance of the type.
-        /// </summary>
-        /// <param name="context">The StatelessServiceContext instance.</param>
-        public NetworkObserver(StatelessServiceContext context) : base(null, context)
-        {
-            stopwatch = new Stopwatch();
-        }
 
         public override async Task ObserveAsync(CancellationToken token)
         {
@@ -253,56 +246,6 @@ namespace FabricObserver.Observers
             return Task.CompletedTask;
         }
 
-        private static string GetNetworkInterfaceInfo(CancellationToken token)
-        {
-            try
-            {
-                var iPGlobalProperties = IPGlobalProperties.GetIPGlobalProperties();
-                var nics = NetworkInterface.GetAllNetworkInterfaces();
-
-                if (nics.Length < 1)
-                {
-                    return string.Empty;
-                }
-
-                var interfaceInfo = new StringBuilder($"Network Interface information for {iPGlobalProperties.HostName}:{Environment.NewLine}     ");
-
-                foreach (var nic in nics)
-                {
-                    token.ThrowIfCancellationRequested();
-
-                    _ = interfaceInfo.Append($"{Environment.NewLine}{nic.Description}{Environment.NewLine}");
-                    _ = interfaceInfo.AppendFormat($"  Interface type    : {0}{Environment.NewLine}", nic.NetworkInterfaceType);
-                    _ = interfaceInfo.AppendFormat($"  Operational status: {0}{Environment.NewLine}", nic.OperationalStatus);
-
-                    // Traffic.
-                    if (nic.OperationalStatus != OperationalStatus.Up)
-                    {
-                        continue;
-                    }
-
-                    _ = interfaceInfo.AppendLine("  Traffic Info:");
-
-                    var stats = nic.GetIPv4Statistics();
-
-                    _ = interfaceInfo.AppendFormat($"    Bytes received: {0}{Environment.NewLine}", stats.BytesReceived);
-                    _ = interfaceInfo.AppendFormat($"    Bytes sent: {0}{Environment.NewLine}", stats.BytesSent);
-                    _ = interfaceInfo.AppendFormat($"    Incoming Packets With Errors: {0}{Environment.NewLine}", stats.IncomingPacketsWithErrors);
-                    _ = interfaceInfo.AppendFormat($"    Outgoing Packets With Errors: {0}{Environment.NewLine}", stats.OutgoingPacketsWithErrors);
-                    _ = interfaceInfo.AppendLine();
-                }
-
-                var s = interfaceInfo.ToString();
-                _ = interfaceInfo.Clear();
-
-                return s;
-            }
-            catch (NetworkInformationException)
-            {
-                return string.Empty;
-            }
-        }
-
         private async Task<bool> InitializeAsync()
         {
             Token.ThrowIfCancellationRequested();
@@ -373,9 +316,9 @@ namespace FabricObserver.Observers
                     }
 
                     // Don't re-test endpoint if it has already been tested for a different targetApp.
-                    if (connEndpointTestResults.ContainsKey(endpoint.HostName))
+                    if (connEndpointTestResults.TryGetValue(endpoint.HostName, out bool value))
                     {
-                        SetHealthState(endpoint, config.TargetApp, connEndpointTestResults[endpoint.HostName]);
+                        SetHealthState(endpoint, config.TargetApp, value);
                         continue;
                     }
 
@@ -437,11 +380,7 @@ namespace FabricObserver.Observers
                     }
 
                     SetHealthState(endpoint, config.TargetApp, passed);
-
-                    if (!connEndpointTestResults.ContainsKey(endpoint.HostName))
-                    {
-                        connEndpointTestResults.Add(endpoint.HostName, passed);
-                    }
+                    _ = connEndpointTestResults.TryAdd(endpoint.HostName, passed);
                 }
             }
         }

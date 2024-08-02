@@ -29,7 +29,11 @@ namespace FabricObserver.Observers
 {
     // This observer monitors the behavior of user SF service processes (and their children) and signals Warning and Error based on user-supplied resource thresholds
     // in AppObserver.config.json. This observer will also emit telemetry (ETW, LogAnalytics/AppInsights) if enabled in Settings.xml (ObserverManagerConfiguration) and ApplicationManifest.xml (AppObserverEnableEtw).
-    public sealed class AppObserver : ObserverBase
+    /// <summary>
+    /// Creates a new instance of the type.
+    /// </summary>
+    /// <param name="context">The StatelessServiceContext instance.</param>
+    public sealed class AppObserver(StatelessServiceContext context) : ObserverBase(null, context)
     {
         private const double KvsLvidsWarningPercentage = 75.0;
         private const double MaxRGMemoryInUsePercent = 90.0;
@@ -71,7 +75,7 @@ namespace FabricObserver.Observers
         // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
         private List<DeployedApplication> deployedApps;
 
-        private readonly Stopwatch stopwatch;
+        private readonly Stopwatch stopwatch = new();
         private readonly object lockObj = new();
         private FabricClientUtilities fabricClientUtilities;
         private ParallelOptions parallelOptions;
@@ -171,15 +175,6 @@ namespace FabricObserver.Observers
         public bool MonitorResourceGovernanceLimits
         {
             get; set;
-        }
-
-        /// <summary>
-        /// Creates a new instance of the type.
-        /// </summary>
-        /// <param name="context">The StatelessServiceContext instance.</param>
-        public AppObserver(StatelessServiceContext context) : base(null, context)
-        {
-            stopwatch = new Stopwatch();
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -903,7 +898,7 @@ namespace FabricObserver.Observers
 
                             if (IsTelemetryEnabled && EmitRawMetricTelemetry)
                             {
-                                _ = TelemetryClient?.ReportMetricAsync(childProcessTelemetryDataList.ToList(), token);
+                                _ = TelemetryClient?.ReportMetricAsync([.. childProcessTelemetryDataList], token);
                             }
                         }
                     }
@@ -925,9 +920,9 @@ namespace FabricObserver.Observers
         public async Task<bool> InitializeAsync()
         {
             ObserverLogger.LogInfo($"Initializing AppObserver.");
-            ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
-            userTargetList = new List<ApplicationInfo>();
-            deployedTargetList = new List<ApplicationInfo>();
+            ReplicaOrInstanceList = [];
+            userTargetList = [];
+            deployedTargetList = [];
 
             // NodeName is passed here to not break unit tests, which include a mock service fabric context.
             fabricClientUtilities = new FabricClientUtilities(NodeName);
@@ -1187,7 +1182,7 @@ namespace FabricObserver.Observers
                 }
             }
 
-            ApplicationParameterList parameters = new();
+            ApplicationParameterList parameters = [];
             FabricClientUtilities.AddParametersIfNotExists(parameters, appParameters);
             FabricClientUtilities.AddParametersIfNotExists(parameters, defaultParameters);
 
@@ -1683,7 +1678,7 @@ namespace FabricObserver.Observers
                     continue;
                 }
 
-                if (target.TargetApp == "*" || target.TargetApp.ToLower() == "all")
+                if (target.TargetApp == "*" || target.TargetApp.Equals("all", StringComparison.CurrentCultureIgnoreCase))
                 {
                     continue;
                 }
@@ -2103,7 +2098,7 @@ namespace FabricObserver.Observers
                 PartitionId = repOrInst.PartitionId.ToString(),
                 ReplicaId = repOrInst.ReplicaOrInstanceId,
                 ChildProcessCount = childProcs.Count,
-                ChildProcessInfo = new List<ChildProcessInfo>()
+                ChildProcessInfo = []
             };
 
             string appNameOrType = GetAppNameOrType(repOrInst);
@@ -3723,7 +3718,7 @@ namespace FabricObserver.Observers
 
                             if (!string.IsNullOrWhiteSpace(appManifest) && appManifest.Contains($"<{ObserverConstants.RGPolicyNodeName} ") || appManifest.Contains($"<{ObserverConstants.RGSvcPkgPolicyNodeName} "))
                             {
-                                ApplicationParameterList parameters = new();
+                                ApplicationParameterList parameters = [];
                                 FabricClientUtilities.AddParametersIfNotExists(parameters, appParameters);
                                 FabricClientUtilities.AddParametersIfNotExists(parameters, defaultParameters);
 

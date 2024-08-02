@@ -1289,7 +1289,7 @@ namespace FabricObserver.Observers.Utilities
         public static List<(string procName, int procId)> NtGetSFSystemServiceProcessInfo()
         {
             SYSTEM_PROCESS_INFORMATION[] procInfoList = NtGetSysProcInfo();
-            List<(string procName, int procId)> result = new();
+            List<(string procName, int procId)> result = [];
             uint fabricHostPid = 0;
 
             // If NtGetSysProcInfo returns null, it means that something went wrong (logged). FSO accounts for this and
@@ -1373,8 +1373,8 @@ namespace FabricObserver.Observers.Utilities
                 return false;
             }
             
-            descendantsDictionary = new();
-            currentSFServiceProcCache = new();
+            descendantsDictionary = [];
+            currentSFServiceProcCache = [];
 
             for (int i = 0; i < procInfoList.Count; ++i)
             {
@@ -1414,10 +1414,10 @@ namespace FabricObserver.Observers.Utilities
 
                         if (!descendantsDictionary.ContainsKey((int)parentPid))
                         {
-                            List<(string childProcName, int childProcId, DateTime childProcStartTime)> descendants = new()
-                            {
+                            List<(string childProcName, int childProcId, DateTime childProcStartTime)> descendants =
+                            [
                                 child
-                            };
+                            ];
 
                             _ = descendantsDictionary.TryAdd((int)parentPid, descendants);
                         }
@@ -1521,7 +1521,7 @@ namespace FabricObserver.Observers.Utilities
                     return null;
                 }
 
-                List<(string procName, int procId, DateTime processStartTime)> childProcs = new();
+                List<(string procName, int procId, DateTime processStartTime)> childProcs = [];
 
                 do
                 {
@@ -1948,7 +1948,7 @@ namespace FabricObserver.Observers.Utilities
                 return null;
             }
 
-            List<(string, uint)> ret = new();
+            List<(string, uint)> ret = [];
 
             for (int i = 0; i < currentProcIds.Length; ++i)
             {
@@ -2141,7 +2141,7 @@ namespace FabricObserver.Observers.Utilities
                 return null;
             }
 
-            List<SYSTEM_PROCESS_INFORMATION> procInfoList = new();
+            List<SYSTEM_PROCESS_INFORMATION> procInfoList = [];
 
             for (int i = 0; i < procInfo.Length; ++i)
             {
@@ -2308,7 +2308,7 @@ namespace FabricObserver.Observers.Utilities
         private static SYSTEM_PROCESS_INFORMATION[] NtGetSysProcInfo()
         {
             const int MAX_TRIES = 5;
-            ArrayList arrProcInfo = new();
+            ArrayList arrProcInfo = [];
             uint size = 1024;
             int tried = 0;
             IntPtr procInfoBuffer = IntPtr.Zero;

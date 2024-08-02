@@ -30,7 +30,7 @@ namespace FabricObserver.Observers
         private readonly string[] processNameWatchList;
         private Stopwatch stopwatch;
         private bool checkPrivateWorkingSet;
-        private List<(string procName, int procId)> fabricSystemProcInfo = new();
+        private List<(string procName, int procId)> fabricSystemProcInfo = [];
 
         // Health Report data container - For use in analysis to determine health state.
         private Dictionary<string, FabricResourceUsageData<double>> allCpuData;
@@ -50,8 +50,8 @@ namespace FabricObserver.Observers
             // Linux
             if (!IsWindows)
             {
-                processNameWatchList = new[]
-                {
+                processNameWatchList =
+                [
                     "Fabric",
                     "FabricDCA.dll",
                     "FabricDnsService",
@@ -62,13 +62,13 @@ namespace FabricObserver.Observers
                     "FabricIS.dll",
                     "FabricRM.exe",
                     "FabricUS.dll"
-                };
+                ];
             }
             else
             {
                 // Windows
-                processNameWatchList = new[]
-                {
+                processNameWatchList =
+                [
                     "EventStore.Service",
                     "Fabric",
                     "FabricApplicationGateway",
@@ -81,7 +81,7 @@ namespace FabricObserver.Observers
                     "FabricHost",
                     "FabricIS",
                     "FabricRM"
-                };
+                ];
             }
         }
 
@@ -383,7 +383,7 @@ namespace FabricObserver.Observers
 
                     if (cmdline.Contains(sfAppDir))
                     {
-                        string bin = cmdline[(cmdline.LastIndexOf("/", StringComparison.Ordinal) + 1)..];
+                        string bin = cmdline[(cmdline.LastIndexOf('/') + 1)..];
 
                         if (string.Equals(argument, bin, StringComparison.InvariantCulture))
                         {
@@ -440,7 +440,7 @@ namespace FabricObserver.Observers
             // CPU data
             if (allCpuData == null && (CpuErrorUsageThresholdPct > 0 || CpuWarnUsageThresholdPct > 0))
             {
-                allCpuData = new Dictionary<string, FabricResourceUsageData<double>>();
+                allCpuData = [];
 
                 foreach (var proc in processNameWatchList)
                 {
@@ -452,7 +452,7 @@ namespace FabricObserver.Observers
             // Memory data
             if (allMemData == null && (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0))
             {
-                allMemData = new Dictionary<string, FabricResourceUsageData<float>>();
+                allMemData = [];
 
                 foreach (var proc in processNameWatchList)
                 {
@@ -464,7 +464,7 @@ namespace FabricObserver.Observers
             // Ports
             if (allActiveTcpPortData == null && (ActiveTcpPortCountError > 0 || ActiveTcpPortCountWarning > 0))
             {
-                allActiveTcpPortData = new Dictionary<string, FabricResourceUsageData<int>>();
+                allActiveTcpPortData = [];
 
                 foreach (var proc in processNameWatchList)
                 {
@@ -475,7 +475,7 @@ namespace FabricObserver.Observers
 
             if (allEphemeralTcpPortData == null && (ActiveEphemeralPortCountError > 0 || ActiveEphemeralPortCountWarning > 0))
             {
-                allEphemeralTcpPortData = new Dictionary<string, FabricResourceUsageData<int>>();
+                allEphemeralTcpPortData = [];
 
                 foreach (var proc in processNameWatchList)
                 {
@@ -487,7 +487,7 @@ namespace FabricObserver.Observers
             // Handles
             if (allHandlesData == null && (AllocatedHandlesError > 0 || AllocatedHandlesWarning > 0))
             {
-                allHandlesData = new Dictionary<string, FabricResourceUsageData<float>>();
+                allHandlesData = [];
 
                 foreach (var proc in processNameWatchList)
                 {
@@ -499,7 +499,7 @@ namespace FabricObserver.Observers
             // Threads
             if (allThreadsData == null && (ThreadCountError > 0 || ThreadCountWarning > 0))
             {
-                allThreadsData = new Dictionary<string, FabricResourceUsageData<int>>();
+                allThreadsData = [];
 
                 foreach (var proc in processNameWatchList)
                 {
@@ -511,7 +511,7 @@ namespace FabricObserver.Observers
             // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
             if (EnableKvsLvidMonitoring && allAppKvsLvidsData == null)
             {
-                allAppKvsLvidsData = new Dictionary<string, FabricResourceUsageData<double>>();
+                allAppKvsLvidsData = [];
 
                 foreach (var proc in processNameWatchList)
                 {

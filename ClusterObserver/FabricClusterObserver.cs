@@ -17,13 +17,8 @@ namespace ClusterObserver
     /// <summary>
     /// An instance of this class is created for each service instance by the Service Fabric runtime.
     /// </summary>
-    internal sealed class FabricClusterObserver : StatelessService
+    internal sealed class FabricClusterObserver(StatelessServiceContext context) : StatelessService(context)
     {
-        public FabricClusterObserver(StatelessServiceContext context)
-            : base(context)
-        {
-
-        }
 
         /// <summary>
         /// This is the main entry point for your service instance.
@@ -68,7 +63,7 @@ namespace ClusterObserver
             }
 
             PluginLoader[] pluginLoaders = new PluginLoader[pluginDlls.Length];
-            Type[] sharedTypes = { typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup), typeof(IServiceCollection) };
+            Type[] sharedTypes = [typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup), typeof(IServiceCollection)];
 
             for (int i = 0; i < pluginDlls.Length; ++i)
             {

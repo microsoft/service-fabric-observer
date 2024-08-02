@@ -22,7 +22,11 @@ using FabricObserver.Observers.Utilities.Telemetry;
 
 namespace FabricObserver.Observers
 {
-    public sealed class ContainerObserver : ObserverBase
+    /// <summary>
+    /// Creates a new instance of the type.
+    /// </summary>
+    /// <param name="context">The StatelessServiceContext instance.</param>
+    public sealed class ContainerObserver(StatelessServiceContext context) : ObserverBase(null, context)
     {
         private const int MaxProcessExitWaitTimeMS = 60000;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> allCpuDataPercentage;
@@ -46,15 +50,6 @@ namespace FabricObserver.Observers
         public ParallelOptions ParallelOptions
         {
             get; private set;
-        }
-
-        /// <summary>
-        /// Creates a new instance of the type.
-        /// </summary>
-        /// <param name="context">The StatelessServiceContext instance.</param>
-        public ContainerObserver(StatelessServiceContext context) : base(null, context)
-        {
-            
         }
 
         // OsbserverManager passes in a special token to ObserveAsync and ReportAsync that enables it to stop this observer outside of
@@ -225,7 +220,7 @@ namespace FabricObserver.Observers
                 TaskScheduler = TaskScheduler.Default
             };
 
-            userTargetList = new List<ApplicationInfo>();
+            userTargetList = [];
             deployedTargetList = new ConcurrentQueue<ApplicationInfo>();
             ReplicaOrInstanceList = new ConcurrentQueue<ReplicaOrInstanceMonitoringInfo>();
 

@@ -1,7 +1,7 @@
-### ClusterObserver 2.2.8
-#### This version - and all subsequent versions - requires SF Runtime >= 9.0 and targets .NET 6
+### ClusterObserver 2.2.8-net8
+#### This version targets .NET 8
 
-ClusterObserver (CO) is a stateless singleton Service Fabric .NET 6 service that runs on one node in a cluster. CO observes cluster health (aggregated) 
+ClusterObserver (CO) is a stateless singleton Service Fabric .NET 8 service that runs on one node in a cluster. CO observes cluster health (aggregated) 
 and sends telemetry when a cluster is in Error or Warning. CO shares a very small subset of FabricObserver's (FO) code. It is designed to be completely independent from FO sources, 
 but lives in this repo (and SLN) because it is very useful to have both services deployed, especially for those who want cluster-level health observation and reporting in addition to 
 the node-level user-defined resource monitoring, health event creation, and health reporting done by FO. FabricObserver is designed to generate Service Fabric health events based on user-defined resource usage Warning and Error thresholds which ClusterObserver sends to your log analytics and alerting service.
@@ -30,7 +30,7 @@ Application Parameter Upgrade Example:
 ```Powershell
 
 $appName = "fabric:/ClusterObserver"
-$appVersion = "2.2.8"
+$appVersion = "2.2.8-net8"
 
 $application = Get-ServiceFabricApplication -ApplicationName $appName
 
@@ -159,7 +159,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName $appName -ApplicationType
 
 ``` XML
 <?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.2.8" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.2.8-net8" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- ClusterObserverManager settings. -->
     <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
@@ -188,7 +188,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName $appName -ApplicationType
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.2.8" />
+    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.2.8-net8" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>

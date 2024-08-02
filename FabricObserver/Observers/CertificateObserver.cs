@@ -21,7 +21,11 @@ using HealthReport = FabricObserver.Observers.Utilities.HealthReport;
 
 namespace FabricObserver.Observers
 {
-    public sealed class CertificateObserver : ObserverBase
+    /// <summary>
+    /// Creates a new instance of the type.
+    /// </summary>
+    /// <param name="context">The StatelessServiceContext instance.</param>
+    public sealed class CertificateObserver(StatelessServiceContext context) : ObserverBase(null, context)
     {
         private const string HowToUpdateCnCertsSfLinkHtml =
             "<a href=\"https://aka.ms/AA69ai7\" target=\"_blank\">Click here to learn how to update expiring/expired certificates.</a>";
@@ -47,15 +51,6 @@ namespace FabricObserver.Observers
         private List<string> ExpiringWarnings
         {
             get; set;
-        }
-
-        /// <summary>
-        /// Creates a new instance of the type.
-        /// </summary>
-        /// <param name="context">The StatelessServiceContext instance.</param>
-        public CertificateObserver(StatelessServiceContext context) : base (null, context)
-        {
-
         }
 
         public int DaysUntilClusterExpireWarningThreshold
@@ -101,9 +96,9 @@ namespace FabricObserver.Observers
 
             await Initialize(token);
             
-            ExpiredWarnings = new List<string>();
-            ExpiringWarnings = new List<string>();
-            NotFoundWarnings = new List<string>();
+            ExpiredWarnings = [];
+            ExpiringWarnings = [];
+            NotFoundWarnings = [];
 
             // Unix LocalMachine X509Store is limited to the Root and CertificateAuthority stores.
             var store = new X509Store(IsWindows ? StoreName.My : StoreName.Root, StoreLocation.LocalMachine);
@@ -325,7 +320,7 @@ namespace FabricObserver.Observers
                                                 ConfigurationSectionName,
                                                 ObserverConstants.CertificateObserverAppCertificateThumbprints);
 
-                AppCertificateThumbprintsToObserve = !string.IsNullOrEmpty(appThumbprintsToObserve) ? JsonHelper.ConvertFromString<List<string>>(appThumbprintsToObserve) : new List<string>();
+                AppCertificateThumbprintsToObserve = !string.IsNullOrEmpty(appThumbprintsToObserve) ? JsonHelper.ConvertFromString<List<string>>(appThumbprintsToObserve) : [];
             }
 
             if (AppCertificateCommonNamesToObserve == null)
@@ -334,7 +329,7 @@ namespace FabricObserver.Observers
                                                 ConfigurationSectionName,
                                                 ObserverConstants.CertificateObserverAppCertificateCommonNames);
 
-                AppCertificateCommonNamesToObserve = !string.IsNullOrEmpty(appCommonNamesToObserve) ? JsonHelper.ConvertFromString<List<string>>(appCommonNamesToObserve) : new List<string>();
+                AppCertificateCommonNamesToObserve = !string.IsNullOrEmpty(appCommonNamesToObserve) ? JsonHelper.ConvertFromString<List<string>>(appCommonNamesToObserve) : [];
             }
 
             await GetSecurityTypes(token);

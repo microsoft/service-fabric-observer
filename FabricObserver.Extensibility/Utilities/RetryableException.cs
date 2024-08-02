@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Runtime.Serialization;
 
 namespace FabricObserver.Observers.Utilities
 {
@@ -20,10 +19,6 @@ namespace FabricObserver.Observers.Utilities
         }
 
         public RetryableException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
-
-        protected RetryableException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
     }

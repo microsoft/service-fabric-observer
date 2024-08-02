@@ -22,19 +22,14 @@ namespace FabricObserver
     /// <summary>
     /// An instance of this class is created for each service instance by the Service Fabric runtime.
     /// </summary>
-    internal sealed class FabricObserverService : StatelessService
+    /// <remarks>
+    /// Initializes a new instance of the type.
+    /// </remarks>
+    /// <param name="context">StatelessServiceContext instance.</param>
+    internal sealed class FabricObserverService(StatelessServiceContext context) : StatelessService(context)
     {
         private ObserverManager observerManager;
-        private readonly Logger logger;
-
-        /// <summary>
-        /// Initializes a new instance of the type.
-        /// </summary>
-        /// <param name="context">StatelessServiceContext instance.</param>
-        public FabricObserverService(StatelessServiceContext context) : base(context)
-        {
-            logger = new Logger("FabricObserverService");
-        }
+        private readonly Logger logger = new("FabricObserverService");
 
         /// <summary>
         /// This is the main entry point for your service instance.
@@ -108,7 +103,7 @@ namespace FabricObserver
             }
 
             PluginLoader[] pluginLoaders = new PluginLoader[pluginDlls.Length];
-            Type[] sharedTypes = { typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup), typeof(IServiceCollection) };
+            Type[] sharedTypes = [typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup), typeof(IServiceCollection)];
             string dll = "";
 
             for (int i = 0; i < pluginDlls.Length; ++i)

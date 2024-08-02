@@ -4,7 +4,7 @@
 		<RootNamespace>ClusterObserver</RootNamespace>
 		<AssemblyName>ClusterObserver</AssemblyName>
 		<OutputType>Exe</OutputType>
-		<TargetFramework>net6.0</TargetFramework>
+		<TargetFramework>net8.0</TargetFramework>
 		<Nullable>disable</Nullable>
 		<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
 		<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>

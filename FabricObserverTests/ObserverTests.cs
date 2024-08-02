@@ -899,7 +899,7 @@ namespace FabricObserverTests
 
             await obs.InitializeAsync();
             var deployedTargets = obs.ReplicaOrInstanceList;
-            Assert.IsTrue(deployedTargets.Any());
+            Assert.IsTrue(deployedTargets.Count != 0);
             Assert.IsFalse(deployedTargets.Any(t => t.ServiceName.OriginalString.Contains("DoctorActorService")));
         }
 
@@ -913,7 +913,7 @@ namespace FabricObserverTests
 
             await obs.InitializeAsync();
             var deployedTargets = obs.ReplicaOrInstanceList;
-            Assert.IsTrue(deployedTargets.Any());
+            Assert.IsTrue(deployedTargets.Count != 0);
             Assert.IsFalse(deployedTargets.Any(t => t.ServiceName.OriginalString.Contains("DoctorActorServiceType")));
         }
 
@@ -927,7 +927,7 @@ namespace FabricObserverTests
 
             await obs.InitializeAsync();
             var deployedTargets = obs.ReplicaOrInstanceList;
-            Assert.IsTrue(deployedTargets.Any());
+            Assert.IsTrue(deployedTargets.Count != 0);
             Assert.IsTrue(deployedTargets.All(t => t.ServiceName.OriginalString.Contains("DoctorActorService")));
         }
 
@@ -941,7 +941,7 @@ namespace FabricObserverTests
 
             await obs.InitializeAsync();
             var deployedTargets = obs.ReplicaOrInstanceList;
-            Assert.IsTrue(deployedTargets.Any());
+            Assert.IsTrue(deployedTargets.Count != 0);
             Assert.IsTrue(deployedTargets.All(t => t.ServiceName.OriginalString.Contains("DoctorActorService")));
         }
 
@@ -957,7 +957,7 @@ namespace FabricObserverTests
 
             await obs.InitializeAsync();
             var serviceReplicas = obs.ReplicaOrInstanceList;
-            Assert.IsTrue(serviceReplicas.Any());
+            Assert.IsTrue(serviceReplicas.Count != 0);
 
             // You can't supply multiple Exclude lists for the same target app/type. None of the target services will be excluded..
             Assert.IsTrue(
@@ -976,7 +976,7 @@ namespace FabricObserverTests
 
             await obs.InitializeAsync();
             var serviceReplicas = obs.ReplicaOrInstanceList;
-            Assert.IsTrue(serviceReplicas.Any());
+            Assert.IsTrue(serviceReplicas.Count != 0);
 
             // You can't supply multiple Exclude lists for the same target app/type. None of the target services will be excluded..
             Assert.IsTrue(
@@ -995,7 +995,7 @@ namespace FabricObserverTests
 
             await obs.InitializeAsync();
             var serviceReplicas = obs.ReplicaOrInstanceList;
-            Assert.IsTrue(serviceReplicas.Any());
+            Assert.IsTrue(serviceReplicas.Count != 0);
             Assert.IsTrue(serviceReplicas.Count == 2);
         }
 
@@ -1009,11 +1009,11 @@ namespace FabricObserverTests
 
             await obs.InitializeAsync();
             var deployedTargets = obs.ReplicaOrInstanceList;
-            Assert.IsTrue(deployedTargets.Any());
+            Assert.IsTrue(deployedTargets.Count != 0);
 
             await obs.InitializeAsync();
             var serviceReplicas = obs.ReplicaOrInstanceList;
-            Assert.IsTrue(serviceReplicas.Any());
+            Assert.IsTrue(serviceReplicas.Count != 0);
             Assert.IsTrue(serviceReplicas.Count == 2);
         }
 
@@ -1297,7 +1297,7 @@ namespace FabricObserverTests
             var defaultParameters = applicationTypeList.First(a => a.ApplicationTypeVersion == "1.0.0").DefaultParameters;
             Assert.IsTrue(defaultParameters.Any());
 
-            ApplicationParameterList parameters = new();
+            ApplicationParameterList parameters = [];
 
             // Fill parameter list with app and default parameters. The position of these matters (first add app parameters. Then, add default parameters).
             FabricClientUtilities.AddParametersIfNotExists(parameters, appParameters);
@@ -1380,7 +1380,7 @@ namespace FabricObserverTests
             FabricClientUtilities fabricClientUtilities = new(NodeName);
             var services = await fabricClientUtilities.GetAllDeployedReplicasOrInstancesAsync(true, Token);
 
-            Assert.IsTrue(services.Any());
+            Assert.IsTrue(services.Count != 0);
 
             ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
             ConcurrentQueue<int> serviceProcs = new();
@@ -1422,7 +1422,7 @@ namespace FabricObserverTests
                 }
             });
 
-            Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
+            Assert.IsTrue(!AllAppCpuData.IsEmpty && !serviceProcs.IsEmpty);
             Assert.IsTrue(serviceProcs.Count == AllAppCpuData.Count);
 
             TimeSpan duration = TimeSpan.FromSeconds(3);
@@ -1458,7 +1458,7 @@ namespace FabricObserverTests
             FabricClientUtilities fabricClientUtilities = new(NodeName);
             var services = await fabricClientUtilities.GetAllDeployedReplicasOrInstancesAsync(true, Token);
 
-            Assert.IsTrue(services.Any());
+            Assert.IsTrue(services.Count != 0);
 
             ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
             ConcurrentQueue<int> serviceProcs = new();
@@ -1500,7 +1500,7 @@ namespace FabricObserverTests
                 }
             });
 
-            Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
+            Assert.IsTrue(!AllAppCpuData.IsEmpty && !serviceProcs.IsEmpty);
             Assert.IsTrue(serviceProcs.Count == AllAppCpuData.Count);
 
             TimeSpan duration = TimeSpan.FromSeconds(3);
@@ -1536,7 +1536,7 @@ namespace FabricObserverTests
             FabricClientUtilities fabricClientUtilities = new(NodeName);
             var services = await fabricClientUtilities.GetAllDeployedReplicasOrInstancesAsync(true, Token);
 
-            Assert.IsTrue(services.Any());
+            Assert.IsTrue(services.Count != 0);
 
             ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
             ConcurrentQueue<int> serviceProcs = new();
@@ -1578,7 +1578,7 @@ namespace FabricObserverTests
                 }
             });
 
-            Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
+            Assert.IsTrue(!AllAppCpuData.IsEmpty && !serviceProcs.IsEmpty);
             Assert.IsTrue(serviceProcs.Count == AllAppCpuData.Count);
 
             TimeSpan duration = TimeSpan.FromSeconds(3);
@@ -1614,7 +1614,7 @@ namespace FabricObserverTests
             FabricClientUtilities fabricClientUtilities = new(NodeName);
             var services = await fabricClientUtilities.GetAllDeployedReplicasOrInstancesAsync(true, Token);
 
-            Assert.IsTrue(services.Any());
+            Assert.IsTrue(services.Count != 0);
 
             ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
             ConcurrentQueue<int> serviceProcs = new();
@@ -1656,7 +1656,7 @@ namespace FabricObserverTests
                 }
             });
 
-            Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
+            Assert.IsTrue(!AllAppCpuData.IsEmpty && !serviceProcs.IsEmpty);
             Assert.IsTrue(serviceProcs.Count == AllAppCpuData.Count);
 
             TimeSpan duration = TimeSpan.FromSeconds(3);
@@ -1706,7 +1706,7 @@ namespace FabricObserverTests
 
             var dmps = Directory.GetFiles(obs.DumpsPath, "*.dmp");
 
-            Assert.IsTrue(dmps != null && dmps.Any());
+            Assert.IsTrue(dmps != null && dmps.Length != 0);
 
             // VotingData service, and two helper codepackage binaries.
             Assert.IsTrue(dmps.All(d => d.Contains("VotingData") || d.Contains("ConsoleApp6") || d.Contains("ConsoleApp7")));
@@ -1742,7 +1742,7 @@ namespace FabricObserverTests
 
             var dmps = Directory.GetFiles(obs.DumpsPath, "*.dmp");
 
-            Assert.IsTrue(dmps != null && dmps.Any());
+            Assert.IsTrue(dmps != null && dmps.Length != 0);
 
             // VotingData service, and two helper codepackage binaries.
             Assert.IsTrue(dmps.All(d => d.Contains("VotingData") || d.Contains("ConsoleApp6") || d.Contains("ConsoleApp7")));
@@ -2694,7 +2694,7 @@ namespace FabricObserverTests
             Assert.IsTrue(telemData.Count > 0);
 
             telemData = telemData.Where(t => t.ApplicationName == "fabric:/Voting").ToList();
-            Assert.IsTrue(telemData.Any());
+            Assert.IsTrue(telemData.Count != 0);
 
             foreach (var data in telemData)
             {
@@ -2754,7 +2754,7 @@ namespace FabricObserverTests
                 t => t.ApplicationName == "fabric:/Voting" && t.HealthState == HealthState.Warning).ToList();
 
             // 2 service code packages + 2 helper code packages (VotingData) * 2 metrics = 8 warnings...
-            Assert.IsTrue(telemData.Any() && telemData.Count == 8);
+            Assert.IsTrue(telemData.Count != 0 && telemData.Count == 8);
         }
 
         // Private Bytes
@@ -2875,7 +2875,7 @@ namespace FabricObserverTests
             Assert.IsTrue(telemData.Count > 0);
 
             telemData = telemData.Where(d => d.HealthState == HealthState.Warning).ToList();
-            Assert.IsTrue(telemData.Any());
+            Assert.IsTrue(telemData.Count != 0);
 
             foreach (var data in telemData)
             {
@@ -2954,7 +2954,7 @@ namespace FabricObserverTests
             Assert.IsTrue(telemData.Count > 0);
 
             telemData = telemData.Where(d => d.HealthState == HealthState.Warning).ToList();
-            Assert.IsTrue(telemData.Any());
+            Assert.IsTrue(telemData.Count != 0);
 
             foreach (var data in telemData)
             {
@@ -3059,7 +3059,7 @@ namespace FabricObserverTests
             Assert.IsTrue(telemData.Count > 0);
 
             telemData = telemData.Where(d => d.HealthState == HealthState.Warning).ToList();
-            Assert.IsTrue(telemData.Any());
+            Assert.IsTrue(telemData.Count != 0);
 
             foreach (var data in telemData)
             {

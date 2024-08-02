@@ -16,9 +16,13 @@ using FabricObserver.TelemetryLib;
 namespace FabricObserver.Observers
 {
     // This observer monitors machine level resource usage across CPU, Memory, TCP ports, (Linux) File handles, and (Windows) firewall rules.
-    public sealed class NodeObserver : ObserverBase
+    /// <summary>
+    /// Creates a new instance of the type.
+    /// </summary>
+    /// <param name="context">The StatelessServiceContext instance.</param>
+    public sealed class NodeObserver(StatelessServiceContext context) : ObserverBase(null, context)
     {
-        private readonly Stopwatch stopwatch;
+        private readonly Stopwatch stopwatch = new();
 
         // These are public properties because they are used in unit tests.
         public FabricResourceUsageData<float> MemDataInUse;
@@ -130,15 +134,6 @@ namespace FabricObserver.Observers
         public bool EnableNodeSnapshots 
         { 
             get; set; 
-        }
-
-        /// <summary>
-        /// Creates a new instance of the type.
-        /// </summary>
-        /// <param name="context">The StatelessServiceContext instance.</param>
-        public NodeObserver(StatelessServiceContext context) : base(null, context)
-        {
-            stopwatch = new Stopwatch();
         }
 
         public override async Task ObserveAsync(CancellationToken token)

@@ -2,7 +2,7 @@
 	<PropertyGroup>
 		<!-- You could target netstandard2.0 instead, if you need to. But you probably do not need to. 
              In the .NET 6+ age, moving away from netstandard2.0 is generally a good idea, in many cases; this being one of them. -->
-		<TargetFramework>net6.0</TargetFramework>
+		<TargetFramework>net8.0</TargetFramework>
 		<RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
 		<RootNamespace>FabricObserver.Observers</RootNamespace>
 		<AssemblyName>SampleNewObserver</AssemblyName>
@@ -32,6 +32,6 @@
 		<PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" Version="3.2.15" />
 		
 		<!-- This is an external nupkg that this plugin sample requires. This is unrelated to the above FO-related reference choices. -->
-		<PackageReference Include="Polly" Version="8.3.1" />
+		<PackageReference Include="Polly" Version="8.4.1" />
     </ItemGroup>
 </Project>

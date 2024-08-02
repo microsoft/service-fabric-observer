@@ -22,7 +22,7 @@
 			<files include="**" buildAction="None" copyToOutput="true" />
 		</contentFiles>
 		<dependencies>
-			<group targetFramework="net6.0">
+			<group targetFramework="net8.0">
 				<dependency id="Microsoft.ServiceFabric.Services" version="6.0.1017" />
 			</group>
 		</dependencies>
@@ -32,9 +32,9 @@
 	</metadata>
 	<files>
 		<file src="**" target="contentFiles\any\any" />
-		<file src="FabricObserverPkg\Code\FabricObserver.dll" target="lib\net6.0" />
-		<file src="FabricObserverPkg\Code\FabricObserver.Extensibility.dll" target="lib\net6.0" />
-		<file src="FabricObserverPkg\Code\TelemetryLib.dll" target="lib\net6.0" />
+		<file src="FabricObserverPkg\Code\FabricObserver.dll" target="lib\net8.0" />
+		<file src="FabricObserverPkg\Code\FabricObserver.Extensibility.dll" target="lib\net8.0" />
+		<file src="FabricObserverPkg\Code\TelemetryLib.dll" target="lib\net8.0" />
 		<file src="%ROOT_PATH%\icon.png" target="" />
 		<file src="%ROOT_PATH%\fonuget.md" target="" />
 	</files>
