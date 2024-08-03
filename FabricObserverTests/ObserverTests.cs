@@ -1453,7 +1453,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task Ensure_ConcurrentQueue_Collection_Has_Data_CPU_NET6ProcessImpl()
+        public async Task Ensure_ConcurrentQueue_Collection_Has_Data_CPU_NET8ProcessImpl()
         {
             FabricClientUtilities fabricClientUtilities = new(NodeName);
             var services = await fabricClientUtilities.GetAllDeployedReplicasOrInstancesAsync(true, Token);
@@ -1609,7 +1609,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task Ensure_CircularBuffer_Collection_Has_Data_CPU_NET6ProcessImpl()
+        public async Task Ensure_CircularBuffer_Collection_Has_Data_CPU_NET8ProcessImpl()
         {
             FabricClientUtilities fabricClientUtilities = new(NodeName);
             var services = await fabricClientUtilities.GetAllDeployedReplicasOrInstancesAsync(true, Token);
