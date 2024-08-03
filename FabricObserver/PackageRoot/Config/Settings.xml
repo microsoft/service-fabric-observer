@@ -400,7 +400,6 @@
   <Section Name="SampleNewObserverConfiguration">
     <Parameter Name="Enabled" Value="true" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
-    <Parameter Name="EnableCSVDataLogging" Value="false" />
     <Parameter Name="EnableEtw" Value="false" />
     <Parameter Name="EnableTelemetry" Value="false" />
     <Parameter Name="EnableVerboseLogging" Value="false" />

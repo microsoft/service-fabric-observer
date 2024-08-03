@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers;
 using FabricObserver.Observers.Utilities;
+using FabricObserver.Observers.Utilities.Telemetry;
 using FabricObserver.Utilities;
 using McMaster.NETCore.Plugins;
 using Microsoft.Extensions.DependencyInjection;
@@ -153,7 +154,7 @@ namespace FabricObserver
                             AppName = new Uri($"{Context.CodePackageActivationContext.ApplicationName}"),
                             EmitLogEvent = true,
                             HealthMessage = error,
-                            EntityType = Observers.Utilities.Telemetry.EntityType.Application,
+                            EntityType = EntityType.Application,
                             HealthReportTimeToLive = TimeSpan.FromMinutes(10),
                             State = System.Fabric.Health.HealthState.Warning,
                             Property = "FabricObserverPluginLoadError",
