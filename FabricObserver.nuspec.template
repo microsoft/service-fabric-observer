@@ -4,7 +4,9 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.16</version>
 		<releaseNotes>
-NET8 impl.
+			- .NET 8 implementation of FabricObserver. This version is built for .NET 8 and SF Runtime >= 9.1 (Self-Contained FO builds only). If you have deployed SF Runtime version >= 10.1 Cumulative Update 3.0 (CU3), then you can deploy the framework-dependent release build for the target platform (Windows or Linux). If you are not running SF Runtime version >= 10.1 CU3, then you must deploy the Self-Contained release build for the target platform (Windows or Linux). **If you can't upgrade to .NET 8 yet, then do not upgrade to this version.**
+			- The FabricObserverWebAPI project has been completely removed and all related usage in observers removed.
+			- FabricSystemObserver no longer monitors Windows Event Logs. Setting the related configuration values will have no effect.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
