@@ -53,6 +53,7 @@ namespace FabricObserverTests
         private static FabricClient FabricClientSingleton => FabricClientUtilities.FabricClientSingleton;
 
         [ClassInitialize]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Noise..")]
         public static async Task TestClassStartUp(TestContext testContext)
         {
             if (!IsLocalSFRuntimePresent())
@@ -480,7 +481,7 @@ namespace FabricObserverTests
 
                 StatelessServiceDescription serviceDescription = new()
                 {
-                    ServiceName = new Uri(appName + "/PortTestService"),
+                    ServiceName = new Uri($"{appName}/PortTestService"),
                     ServiceTypeName = "PortTestServiceType",
                     PartitionSchemeDescription = new SingletonPartitionSchemeDescription(),
                     ApplicationName = new Uri(appName),
@@ -489,8 +490,7 @@ namespace FabricObserverTests
                 };
 
                 await FabricClientSingleton.ServiceManager.CreateServiceAsync(serviceDescription);
-
-                await Task.Delay(TimeSpan.FromSeconds(15));
+                await Task.Delay(TimeSpan.FromSeconds(30));
             }
             catch (FabricException fe)
             {
