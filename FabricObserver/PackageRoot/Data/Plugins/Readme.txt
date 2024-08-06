@@ -7,8 +7,8 @@ Note that the observer API lives in its own library, FabricObserver.Extensibilit
 1. Create a new .NET 6 Library project.
 
 2. Install the same version of the Microsoft.ServiceFabricApps.FabricObserver.Extensibility nupkg from https://www.nuget.org/profiles/ServiceFabricApps as the version of FabricObserver you are deploying. 
-   E.g., 3.2.16 if you are going to deploy FO 3.2.16.
-   NOTE: You can also consume the entire FabricObserver 3.2.16 nupkg to build your plugin. Please see the SampleObserverPlugin project's csproj file for more information.
+   E.g., 3.3.0 if you are going to deploy FO 3.3.0.
+   NOTE: You can also consume the entire FabricObserver 3.3.0 nupkg to build your plugin. Please see the SampleObserverPlugin project's csproj file for more information.
 
 3. Write an observer!
 
@@ -68,5 +68,5 @@ cd C:\Users\me\source\repos\service-fabric-observer
 ./Build-FabricObserver
 ./Build-NugetPackages
 
-The output from the above commands contains FabricObserver platform-specific nupkgs and a package you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.16.nupkg. Nupkg files from above command would be located in 
+The output from the above commands contains FabricObserver platform-specific nupkgs and a package you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.3.0.nupkg. Nupkg files from above command would be located in 
 C:\Users\me\source\repos\service-fabric-observer\bin\release\FabricObserver\Nugets.

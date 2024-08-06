@@ -10,8 +10,8 @@
 		<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
 		<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
 		<Product>ClusterObserver</Product>
-		<Version>2.2.8</Version>
-		<FileVersion>2.2.8</FileVersion>
+		<Version>2.3.0</Version>
+		<FileVersion>2.3.0</FileVersion>
 		<Copyright>Copyright © 2024</Copyright>
 		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
 		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>

@@ -24,7 +24,6 @@ using System.Runtime;
 using FabricObserver.Utilities.ServiceFabric;
 using ConfigurationSettings = System.Fabric.Description.ConfigurationSettings;
 using System.Runtime.Versioning;
-using StartupServicesModel;
 
 namespace FabricObserver.Observers
 {
@@ -55,7 +54,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.2.16";
+        private const string InternalVersionNumber = "3.3.0";
 
         private static FabricClient FabricClientInstance => FabricClientUtilities.FabricClientSingleton;
 
