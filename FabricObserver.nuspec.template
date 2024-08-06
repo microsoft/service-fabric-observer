@@ -15,7 +15,7 @@
 		<icon>icon.png</icon>
 		<readme>fonuget.md</readme>
 		<language>en-US</language>
-		<description>This package contains the FabricObserver(FO) Application - built for NET8 and SF Runtime 9.x. FO a highly configurable and extensible resource usage watchdog service that is designed to be run in Azure Service Fabric Windows and Linux clusters. This package contains the entire application and can be used to build .NET Standard 2.0 observer plugins. NOTE: If you want to target .NET 6 for your plugins, then you must use Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.3.0 nuget package to build them.</description>
+		<description>This package contains the FabricObserver(FO) Application - built for NET8 and SF Runtime 9.x. FO a highly configurable and extensible resource usage watchdog service that is designed to be run in Azure Service Fabric Windows and Linux clusters. This package contains the entire application and can be used to build .NET Standard 2.0 or .NET 8 observer plugins.</description>
 		<contentFiles>
 			<files include="**" buildAction="None" copyToOutput="true" />
 		</contentFiles>
