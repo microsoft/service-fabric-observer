@@ -4,7 +4,7 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.2.16</version>
 		<releaseNotes>
-NET8 impl.
+This is the .NET 8 implementation of FabricObserver's Extensibility library. Use this library to build .NET 8 FabricObserver and ClusterObserver plugins.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

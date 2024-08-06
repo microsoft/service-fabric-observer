@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<!-- NOTE: NET6 reaches EOL in 11/2024. So, this sample is targeting net8.0. -->
+		<!-- NOTE: .NET 6 reaches EOL in 11/2024. So, this sample is targeting net8.0. Please upgrade your .NET 6 plugins to .NET 8 as soon as you can. -->
 		<TargetFramework>net8.0</TargetFramework>
 		<RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
 		<RootNamespace>FabricObserver.Observers</RootNamespace>
@@ -27,7 +27,7 @@
 
 		<!-- OR -->
 		
-		<!-- Build with *just* the FabricObserver.Extensibility library. There will be no FabricObserverPkg folder in outdir.. -->
+		<!-- Build with *just* the FabricObserver.Extensibility library. There will be no FabricObserverPkg folder in outdir. This is the preferred method. After you build, copy your plugin dll and its dependendencies into FabricObserver/ClusterObserver's PackageRoot\Data\Plugins folder.  -->
 		<PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" Version="3.2.15" />
 		
 		<!-- This is an external nupkg that this plugin sample requires. This is unrelated to the above FO-related reference choices. -->
