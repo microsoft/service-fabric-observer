@@ -114,11 +114,11 @@ namespace FabricObserverTests
 
         private static async Task DeployTestAppsAppsAsync()
         {
-            await DeployHealthMetricsAppAsync();
-            await DeployTestApp42Async();
-            await DeployVotingAppAsync();
-            await DeployCpuStressAppAsync();
-            await DeployPortTestAppAsync();
+            await DeployHealthMetricsAppAsync().ConfigureAwait(false);
+            await DeployTestApp42Async().ConfigureAwait(false);
+            await DeployVotingAppAsync().ConfigureAwait(false);
+            await DeployCpuStressAppAsync().ConfigureAwait(false);
+            await DeployPortTestAppAsync().ConfigureAwait(false);
 
             // Wait a little extra time for apps to be fully in ready state.
             await Task.Delay(5000);

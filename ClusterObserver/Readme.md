@@ -32,7 +32,7 @@ Application Parameter Upgrade Example:
 ```Powershell
 
 $appName = "fabric:/ClusterObserver"
-$appVersion = "2.3.0-net8"
+$appVersion = "2.3.0"
 
 $application = Get-ServiceFabricApplication -ApplicationName $appName
 
@@ -161,7 +161,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName $appName -ApplicationType
 
 ``` XML
 <?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.3.0-net8" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.3.0" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- ClusterObserverManager settings. -->
     <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
@@ -190,7 +190,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName $appName -ApplicationType
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.3.0-net8" />
+    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.3.0" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -262,8 +262,8 @@ Here is a full example of exactly what is sent in one of these telemetry events,
     "TaskName": "ClusterObserver",
     "ClusterId": "00000000-1111-1111-0000-00f00d000d",
     "ClusterType": "SFRP",
-    "COVersion": "2.2.0.960",
-    "Timestamp": "2022-07-12T19:02:04.4287671Z",
+    "COVersion": "2.3.0",
+    "Timestamp": "2024-06-06T19:02:04.4287671Z",
     "OS": "Windows"
 }
 ```
