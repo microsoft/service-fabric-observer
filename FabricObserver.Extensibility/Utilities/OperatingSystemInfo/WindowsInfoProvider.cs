@@ -22,7 +22,7 @@ using static FabricObserver.Observers.Utilities.NativeMethods;
 namespace FabricObserver.Observers.Utilities
 {
     [SupportedOSPlatform("windows")]
-    public class WindowsInfoProvider : OSInfoProvider
+    public partial class WindowsInfoProvider : OSInfoProvider
     {
         private const string TcpProtocol = "tcp";
         private const int portDataMaxCacheTimeSeconds = 45;
@@ -75,7 +75,7 @@ namespace FabricObserver.Observers.Utilities
             }
             else
             {
-                win32TcpConnInfo = new List<(ushort LocalPort, int OwningProcessId, MIB_TCP_STATE State)>();
+                win32TcpConnInfo = [];
             }
         }
 
@@ -278,11 +278,7 @@ namespace FabricObserver.Observers.Utilities
 
                                 if (process.WaitForExit(60000))
                                 {
-                                    Match match = Regex.Match(
-                                                    output,
-                                                    @"Start Port\s+:\s+(?<startPort>\d+).+?Number of Ports\s+:\s+(?<numberOfPorts>\d+)",
-                                                    RegexOptions.Singleline | RegexOptions.IgnoreCase);
-
+                                    Match match = PortRegex().Match(output);
                                     string startPort = match.Groups["startPort"].Value;
                                     string portCount = match.Groups["numberOfPorts"].Value;
                                     int exitStatus = process.ExitCode;
@@ -772,9 +768,9 @@ namespace FabricObserver.Observers.Utilities
                     return string.Empty;
                 }
 
-                resultsOrdered = results.Cast<ManagementObject>()
+                resultsOrdered = [.. results.Cast<ManagementObject>()
                                     .Where(obj => obj["InstalledOn"] != null && obj["InstalledOn"].ToString() != string.Empty)
-                                    .OrderByDescending(obj => DateTime.Parse(obj["InstalledOn"].ToString() ?? string.Empty)).ToArray();
+                                    .OrderByDescending(obj => DateTime.Parse(obj["InstalledOn"].ToString() ?? string.Empty))];
 
                 var sb = new StringBuilder();
                 var baseUrl = "https://support.microsoft.com/help/";
@@ -841,5 +837,8 @@ namespace FabricObserver.Observers.Utilities
                 throw;
             }
         }
+
+        [GeneratedRegex(@"Start Port\s+:\s+(?<startPort>\d+).+?Number of Ports\s+:\s+(?<numberOfPorts>\d+)", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+        private static partial Regex PortRegex();
     }
 }

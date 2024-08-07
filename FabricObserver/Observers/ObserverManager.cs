@@ -24,7 +24,6 @@ using System.Runtime;
 using FabricObserver.Utilities.ServiceFabric;
 using ConfigurationSettings = System.Fabric.Description.ConfigurationSettings;
 using System.Runtime.Versioning;
-using StartupServicesModel;
 
 namespace FabricObserver.Observers
 {
@@ -55,7 +54,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.2.16";
+        private const string InternalVersionNumber = "3.3.0";
 
         private static FabricClient FabricClientInstance => FabricClientUtilities.FabricClientSingleton;
 
@@ -781,8 +780,8 @@ namespace FabricObserver.Observers
         {
             var observerData = new Dictionary<string, ObserverData>();
             var enabledObs = Observers.Where(o => o.IsEnabled);
-            string[] builtInObservers = new string[]
-            {
+            string[] builtInObservers =
+            [
                 ObserverConstants.AppObserverName,
                 ObserverConstants.AzureStorageUploadObserverName,
                 ObserverConstants.CertificateObserverName,
@@ -792,7 +791,7 @@ namespace FabricObserver.Observers
                 ObserverConstants.NetworkObserverName,
                 ObserverConstants.NodeObserverName,
                 ObserverConstants.OSObserverName
-            };
+            ];
 
             foreach (var obs in enabledObs)
             {
@@ -808,7 +807,7 @@ namespace FabricObserver.Observers
                     ObserverConstants.NetworkObserverName or
                     ObserverConstants.FabricSystemObserverName)
                 {
-                    if (!observerData.ContainsKey(obs.ObserverName))
+                    if (!observerData.TryGetValue(obs.ObserverName, out ObserverData value))
                     {
                         _ = observerData.TryAdd(
                                 obs.ObserverName,
@@ -825,9 +824,9 @@ namespace FabricObserver.Observers
                     }
                     else
                     {
-                        observerData[obs.ObserverName].ErrorCount = obs.CurrentErrorCount;
-                        observerData[obs.ObserverName].WarningCount = obs.CurrentWarningCount;
-                        observerData[obs.ObserverName].ServiceData =
+                        value.ErrorCount = obs.CurrentErrorCount;
+                        value.WarningCount = obs.CurrentWarningCount;
+                        value.ServiceData =
                                 new ServiceData
                                 {
                                     MonitoredAppCount = obs.MonitoredAppCount,

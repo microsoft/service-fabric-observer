@@ -69,7 +69,7 @@ namespace FabricObserver.Observers.Utilities
             }
             catch (Exception e)
             {
-                ProcessInfoProvider.ProcessInfoLogger.LogWarning($"GetCurrentCpuUsagePercentage(NET6 Process impl) failure (pid = {procId}): {e.Message}");
+                ProcessInfoProvider.ProcessInfoLogger.LogWarning($"GetCurrentCpuUsagePercentage(NET8 Process impl) failure (pid = {procId}): {e.Message}");
                 throw;
             }
         }

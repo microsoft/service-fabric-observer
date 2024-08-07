@@ -24,34 +24,23 @@ namespace FabricObserver.Observers
     /// <summary>
     /// An observer plugin muse derive from ObserverBase and implement 2 abstract functions, ObserveAsync and ReportAsync.
     /// </summary>
-    public class SampleNewObserver : ObserverBase
+    /// <remarks>
+    /// 
+    /// </remarks>
+    /// <param name="fabricClient">FabricClient instance. This is managed by FabricObserver.</param>
+    /// <param name="context">StatelessServiceContext instance. This is managed by FabricObserver.</param>
+    public class SampleNewObserver(FabricClient fabricClient, StatelessServiceContext context) : ObserverBase(fabricClient, context)
     {
-        private readonly StringBuilder message;
-        private readonly AsyncRetryPolicy retryPolicy;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="fabricClient">FabricClient instance. This is managed by FabricObserver.</param>
-        /// <param name="context">StatelessServiceContext instance. This is managed by FabricObserver.</param>
-        public SampleNewObserver(FabricClient fabricClient, StatelessServiceContext context) : base(fabricClient, context)
-        {
-            message = new StringBuilder();
-            
-            // Polly retry policy for when FabricException or TimeoutException is thrown by its Execute predicate.
-            // The purpose of using Polly here is to show how you deal with external (to FO) dependencies (put them all in the same folder where your
-            // plugin dll lives, including the dependencies, if any, of the primary dependencies you employ).
-            retryPolicy = Policy.Handle<FabricException>()
+        private readonly StringBuilder message = new();
+        private readonly AsyncRetryPolicy retryPolicy = Policy.Handle<FabricException>()
                                     .Or<TimeoutException>()
                                     .WaitAndRetryAsync(
-                                        new[]
-                                        {
+                                        [
                                             TimeSpan.FromSeconds(1),
                                             TimeSpan.FromSeconds(3),
                                             TimeSpan.FromSeconds(5),
                                             TimeSpan.FromSeconds(10),
-                                        });
-        }
+                                        ]);
 
         public override async Task ObserveAsync(CancellationToken token)
         {
@@ -118,7 +107,7 @@ namespace FabricObserver.Observers
                                           ConfigurationSettings.AsyncTimeout,
                                           Token));
 
-                apps.AddRange(appList.ToList());
+                apps.AddRange([.. appList]);
 
                 // Wait a second before grabbing the next batch of apps..
                 await Task.Delay(TimeSpan.FromSeconds(1), Token);

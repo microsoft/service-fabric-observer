@@ -4,19 +4,21 @@
 		<RootNamespace>ClusterObserver</RootNamespace>
 		<AssemblyName>ClusterObserver</AssemblyName>
 		<OutputType>Exe</OutputType>
-		<TargetFramework>net6.0</TargetFramework>
+		<TargetFramework>net8.0</TargetFramework>
 		<Nullable>disable</Nullable>
 		<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
 		<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
 		<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
 		<Product>ClusterObserver</Product>
-		<Version>2.2.8</Version>
-		<FileVersion>2.2.8</FileVersion>
+		<Version>2.3.0</Version>
+		<FileVersion>2.3.0</FileVersion>
 		<Copyright>Copyright © 2024</Copyright>
 		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
 		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
 		<StartupObject>ClusterObserver.Program</StartupObject>
 		<Platforms>x64</Platforms>
+		<!-- In .NET 8, if you want to build self-contained in VS, you must uncomment and set this to true.
+		<SelfContained>True</SelfContained>-->
 	</PropertyGroup>
 	<ItemGroup>
 		<Compile Remove="Utilities\ClusterIdentificationUtility.cs" />

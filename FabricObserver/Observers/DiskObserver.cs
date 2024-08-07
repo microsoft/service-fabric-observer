@@ -22,7 +22,11 @@ namespace FabricObserver.Observers
 {
     // DiskObserver monitors logical disk states (space consumption, queue length and folder sizes) and creates Service Fabric
     // Warning or Error Node-level health reports based on settings in ApplicationManifest.xml.
-    public sealed class DiskObserver : ObserverBase
+    /// <summary>
+    /// Creates a new instance of the type.
+    /// </summary>
+    /// <param name="context">The StatelessServiceContext instance.</param>
+    public sealed partial class DiskObserver(StatelessServiceContext context) : ObserverBase(null, context)
     {
         // Data storage containers for post run analysis.
         private List<FabricResourceUsageData<float>> DiskAverageQueueLengthData;
@@ -30,7 +34,7 @@ namespace FabricObserver.Observers
         private List<FabricResourceUsageData<double>> DiskSpaceAvailableMbData;
         private List<FabricResourceUsageData<double>> DiskSpaceTotalMbData;
         private List<FabricResourceUsageData<double>> FolderSizeDataMb;
-        private readonly Stopwatch stopWatch;
+        private readonly Stopwatch stopWatch = new();
 
         public int DiskSpacePercentErrorThreshold
         {
@@ -69,15 +73,6 @@ namespace FabricObserver.Observers
             get; set;
         }
 
-        /// <summary>
-        /// Creates a new instance of the type.
-        /// </summary>
-        /// <param name="context">The StatelessServiceContext instance.</param>
-        public DiskObserver(StatelessServiceContext context) : base(null, context)
-        {
-            stopWatch = new Stopwatch();
-        }
-
         public override async Task ObserveAsync(CancellationToken token)
         {
             // If set, this observer will only run during the supplied interval.
@@ -97,7 +92,7 @@ namespace FabricObserver.Observers
             DiskSpaceUsagePercentageData ??= new List<FabricResourceUsageData<double>>(driveCount);
             DiskSpaceAvailableMbData ??= new List<FabricResourceUsageData<double>>(driveCount);
             DiskSpaceTotalMbData ??= new List<FabricResourceUsageData<double>>(driveCount);
-            FolderSizeDataMb ??= new List<FabricResourceUsageData<double>>();
+            FolderSizeDataMb ??= [];
 
             if (IsWindows)
             {
@@ -215,7 +210,7 @@ namespace FabricObserver.Observers
             
             if (!string.IsNullOrWhiteSpace(FolderPathsErrorThresholdPairs))
             {
-                FolderSizeConfigDataError ??= new Dictionary<string, double>();
+                FolderSizeConfigDataError ??= [];
                 AddFolderSizeConfigData(FolderPathsErrorThresholdPairs, false);
             }
 
@@ -223,7 +218,7 @@ namespace FabricObserver.Observers
             
             if (!string.IsNullOrWhiteSpace(FolderPathsWarningThresholdPairs))
             {
-                FolderSizeConfigDataWarning ??= new Dictionary<string, double>();
+                FolderSizeConfigDataWarning ??= [];
                 AddFolderSizeConfigData(FolderPathsWarningThresholdPairs, true);
             }
         }
@@ -257,7 +252,7 @@ namespace FabricObserver.Observers
                     // Contains env variable(s)?
                     if (path.Contains('%'))
                     {
-                        if (Regex.Match(path, @"^%[a-zA-Z0-9_]+%").Success)
+                        if (EnvRegex().Match(path).Success)
                         {
                             path = Environment.ExpandEnvironmentVariables(pairs[0]);
                         }
@@ -277,11 +272,11 @@ namespace FabricObserver.Observers
                     {
                         if (FolderSizeConfigDataWarning != null)
                         {
-                            if (!FolderSizeConfigDataWarning.ContainsKey(path))
+                            if (!FolderSizeConfigDataWarning.TryGetValue(path, out double folderSizeWarningThreshold))
                             {
                                 FolderSizeConfigDataWarning.Add(path, threshold);
                             }
-                            else if (FolderSizeConfigDataWarning[path] != threshold) // App Parameter upgrade?
+                            else if (folderSizeWarningThreshold != threshold) // App Parameter upgrade?
                             {
                                 FolderSizeConfigDataWarning[path] = threshold;  
                             }
@@ -289,11 +284,11 @@ namespace FabricObserver.Observers
                     }
                     else if (FolderSizeConfigDataError != null)
                     {
-                        if (!FolderSizeConfigDataError.ContainsKey(path))
+                        if (!FolderSizeConfigDataError.TryGetValue(path, out double folderSizeErrorThreshold))
                         {
                             FolderSizeConfigDataError.Add(path, threshold);
                         }
-                        else if (FolderSizeConfigDataError[path] != threshold) // App Parameter upgrade?
+                        else if (folderSizeErrorThreshold != threshold) // App Parameter upgrade?
                         {
                             FolderSizeConfigDataError[path] = threshold;
                         }
@@ -404,7 +399,7 @@ namespace FabricObserver.Observers
                     // Contains Windows env variable(s)?
                     if (IsWindows && path.Contains('%'))
                     {
-                        if (Regex.Match(path, @"^%[a-zA-Z0-9_]+%").Success)
+                        if (EnvRegex().Match(path).Success)
                         {
                             path = Environment.ExpandEnvironmentVariables(item.Key);
                         }
@@ -498,14 +493,14 @@ namespace FabricObserver.Observers
                     double errorThreshold = 0.0;
                     double warningThreshold = 0.0;
 
-                    if (FolderSizeConfigDataError?.Count > 0 && FolderSizeConfigDataError.ContainsKey(data.Id))
+                    if (FolderSizeConfigDataError?.Count > 0 && FolderSizeConfigDataError.TryGetValue(data.Id, out double fsDataSizeError))
                     {
-                        errorThreshold = FolderSizeConfigDataError[data.Id];
+                        errorThreshold = fsDataSizeError;
                     }
 
-                    if (FolderSizeConfigDataWarning?.Count > 0 && FolderSizeConfigDataWarning.ContainsKey(data.Id))
+                    if (FolderSizeConfigDataWarning?.Count > 0 && FolderSizeConfigDataWarning.TryGetValue(data.Id, out double fsDataSizeWarning))
                     {
-                        warningThreshold = FolderSizeConfigDataWarning[data.Id];
+                        warningThreshold = fsDataSizeWarning;
                     }
 
                     ProcessResourceDataReportHealth(
@@ -695,5 +690,8 @@ namespace FabricObserver.Observers
             }
             ObserverLogger.LogInfo("Completed CleanUp...");
         }
+
+        [GeneratedRegex(@"^%[a-zA-Z0-9_]+%")]
+        private static partial Regex EnvRegex();
     }
 }

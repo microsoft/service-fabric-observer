@@ -15,20 +15,13 @@ namespace FabricObserver.Observers.Utilities
     /// <summary>
     /// Reports health data to Service Fabric Health Manager and logs locally (optional).
     /// </summary>
-    public class ObserverHealthReporter
+    /// <remarks>
+    /// Initializes a new instance of the <see cref="ObserverHealthReporter"/> class.
+    /// </remarks>
+    /// to this constructor as the instance is not used anywhere in this type.</param>
+    public class ObserverHealthReporter(Logger logger)
     {
-        private readonly Logger logger;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ObserverHealthReporter"/> class.
-        /// </summary>
-        /// <param name="logger">File logger instance. Will throw ArgumentException if null.</param>
-        /// <param name="fabricClient">Unused. Exists for compatibility reasons for older plugin impls. Update your plugins to not pass a FabricClient instance
-        /// to this constructor as the instance is not used anywhere in this type.</param>
-        public ObserverHealthReporter(Logger logger, FabricClient fabricClient = null)
-        {
-            this.logger = logger;
-        }
+        private readonly Logger logger = logger;
 
         /// <summary>
         /// This function generates Service Fabric Health Reports that will show up in SFX. It supports generating health reports for the following SF entities:

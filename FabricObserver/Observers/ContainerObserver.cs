@@ -22,7 +22,11 @@ using FabricObserver.Observers.Utilities.Telemetry;
 
 namespace FabricObserver.Observers
 {
-    public sealed class ContainerObserver : ObserverBase
+    /// <summary>
+    /// Creates a new instance of the type.
+    /// </summary>
+    /// <param name="context">The StatelessServiceContext instance.</param>
+    public sealed class ContainerObserver(StatelessServiceContext context) : ObserverBase(null, context)
     {
         private const int MaxProcessExitWaitTimeMS = 60000;
         private ConcurrentDictionary<string, FabricResourceUsageData<double>> allCpuDataPercentage;
@@ -48,14 +52,7 @@ namespace FabricObserver.Observers
             get; private set;
         }
 
-        /// <summary>
-        /// Creates a new instance of the type.
-        /// </summary>
-        /// <param name="context">The StatelessServiceContext instance.</param>
-        public ContainerObserver(StatelessServiceContext context) : base(null, context)
-        {
-            
-        }
+        private static readonly char[] separator = new[] { ' ' };
 
         // OsbserverManager passes in a special token to ObserveAsync and ReportAsync that enables it to stop this observer outside of
         // of the SF runtime, but this token will also cancel when the runtime cancels the main token.
@@ -225,7 +222,7 @@ namespace FabricObserver.Observers
                 TaskScheduler = TaskScheduler.Default
             };
 
-            userTargetList = new List<ApplicationInfo>();
+            userTargetList = [];
             deployedTargetList = new ConcurrentQueue<ApplicationInfo>();
             ReplicaOrInstanceList = new ConcurrentQueue<ReplicaOrInstanceMonitoringInfo>();
 
@@ -512,7 +509,7 @@ namespace FabricObserver.Observers
                     }
                     else
                     {
-                        if (error.ToLower().Contains("permission denied"))
+                        if (error.Contains("permission denied", StringComparison.CurrentCultureIgnoreCase))
                         {
                             msg += "elevated_docker_stats Capabilities may have been removed. " +
                                    "This is most likely due to an SF runtime upgrade, which unsets Linux caps because SF re-acls (so, touches) all binaries in application Code folders as part of the upgrade process. " +
@@ -566,7 +563,7 @@ namespace FabricObserver.Observers
                     }
 
                     // Linux: Try and work around the unsetting of caps issues when SF runs a cluster upgrade.
-                    if (!IsWindows && error.ToLower().Contains("permission denied"))
+                    if (!IsWindows && error.Contains("permission denied", StringComparison.CurrentCultureIgnoreCase))
                     {
                         // Throwing LinuxPermissionException here will eventually take down FO (by design). The failure will be logged and telemetry will be emitted, then
                         // the exception will be re-thrown by ObserverManager and the FO process will fail fast exit. Then, SF will create a new instance of FO on the offending node which
@@ -613,7 +610,7 @@ namespace FabricObserver.Observers
                                 continue;
                             }
 
-                            string[] stats = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                            string[] stats = line.Split(separator, StringSplitOptions.RemoveEmptyEntries);
 
                             // Something went wrong if the collection size is less than 4 given the supplied output table format:
                             // {{.Container}}\t{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}
@@ -734,7 +731,7 @@ namespace FabricObserver.Observers
                     {
                         if (filterList != null && filterType != ServiceFilterType.None)
                         {
-                            bool isInFilterList = filterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+                            bool isInFilterList = filterList.Any(s => statefulReplica.ServiceName.OriginalString.Contains(s, StringComparison.CurrentCultureIgnoreCase));
 
                             switch (filterType)
                             {
@@ -765,7 +762,7 @@ namespace FabricObserver.Observers
                     {
                         if (filterList != null && filterType != ServiceFilterType.None)
                         {
-                            bool isInFilterList = filterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+                            bool isInFilterList = filterList.Any(s => statelessInstance.ServiceName.OriginalString.Contains(s, StringComparison.CurrentCultureIgnoreCase));
 
                             switch (filterType)
                             {

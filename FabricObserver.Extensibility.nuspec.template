@@ -2,9 +2,9 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
 	<metadata minClientVersion="3.3.0">
 		<id>%PACKAGE_ID%</id>
-		<version>3.2.16</version>
+		<version>3.3.0</version>
 		<releaseNotes>
-Refactored/Updated OSInfoProvider to prevent cross platform visibility compiler warnings.
+This is the .NET 8 implementation of FabricObserver's Extensibility library. Use this library to build .NET 8 FabricObserver and ClusterObserver plugins.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
@@ -13,12 +13,12 @@ Refactored/Updated OSInfoProvider to prevent cross platform visibility compiler 
 		<icon>icon.png</icon>
 		<readme>foextlib.md</readme>
 		<language>en-US</language>
-		<description>This package contains the FabricObserver Extensibility library (.NET 6) for use in building FabricObserver and ClusterObserver observer plugins in Visual Studio. Each time a new version of FabricObserver is released, a new version of this library (same as FabricObserver's version) will be released to the nuget.org gallery. Unless specified as part of a release with breaking changes that would impact building a plugin (exceedingly rare), you can use earlier versions of this library to build your plugins and they will successfully work with higher versions of FabricObserver/ClusterObserver. In other words, you do not need to rebuild your plugins each time a new version of FabricObserver or ClusterObserver is released unless you are required to, which will be made clear.</description>
+		<description>This package contains the FabricObserver Extensibility library (NET8) for use in building FabricObserver and ClusterObserver observer plugins in Visual Studio. Each time a new version of FabricObserver is released, a new version of this library (same as FabricObserver's version) will be released to the nuget.org gallery. Unless specified as part of a release with breaking changes that would impact building a plugin (exceedingly rare), you can use earlier versions of this library to build your plugins and they will successfully work with higher versions of FabricObserver/ClusterObserver. In other words, you do not need to rebuild your plugins each time a new version of FabricObserver or ClusterObserver is released unless you are required to, which will be made clear.</description>
 		<contentFiles>
 			<files include="**" buildAction="None" copyToOutput="true" />
 		</contentFiles>
 		<dependencies>
-			<group targetFramework="net6.0">
+			<group targetFramework="net8.0">
 				<dependency id="Microsoft.ServiceFabric.Services" version="6.0.1017" />
 				<dependency id="Microsoft.ApplicationInsights" version="2.22.0" />
 				<dependency id="Microsoft.ApplicationInsights.NLogTarget" version="2.22.0" />
@@ -35,8 +35,8 @@ Refactored/Updated OSInfoProvider to prevent cross platform visibility compiler 
 		<copyright>© Microsoft Corporation. All rights reserved.</copyright>
 	</metadata>
 	<files>
-		<file src="FabricObserverPkg\Code\FabricObserver.Extensibility.dll" target="lib\net6.0" />
-		<file src="FabricObserverPkg\Code\TelemetryLib.dll" target="lib\net6.0" />
+		<file src="FabricObserverPkg\Code\FabricObserver.Extensibility.dll" target="lib\net8.0" />
+		<file src="FabricObserverPkg\Code\TelemetryLib.dll" target="lib\net8.0" />
 		<file src="%ROOT_PATH%\icon.png" target="" />
 		<file src="%ROOT_PATH%\foextlib.md" target="" />
 	</files>

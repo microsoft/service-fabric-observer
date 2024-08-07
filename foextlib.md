@@ -1,10 +1,10 @@
-## FabricObserver Extensibility Library 3.2.16
+## FabricObserver Extensibility Library 3.3.0 (.NET 8)
 
-FabricObserver.Extensibility is a .NET 6 library for building custom observers that extend FabricObserver's capabilities to match your needs. A custom observer is managed just like a built-in observer.
+FabricObserver.Extensibility is a .NET 8 library for building custom observers that extend FabricObserver's and ClusterObserver's capabilities to match your needs. A custom observer is managed just like a built-in observer.
 
 ### How to implement an observer using FO's extensibility model
 
-1. Create a new .NET core library project. You should target net6.0 in your csproj because that is the target net SDK version that FabricObserver is built for.
+1. Create a new .NET core library project. You should target net8.0 in your csproj because that is the target net SDK version that FabricObserver 3.3.0 is built for.
 
 2. Install the latest Microsoft.ServiceFabricApps.FabricObserver.Extensibility nupkg from https://www.nuget.org/profiles/ServiceFabricApps into your plugin project.
 

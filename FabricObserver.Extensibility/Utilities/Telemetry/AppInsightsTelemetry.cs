@@ -187,7 +187,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
                 if (telemetryData is ServiceTelemetryData serviceTelemData)
                 {
-                    properties = new Dictionary<string, string>
+                    properties = new()
                     {
                         { "ClusterId", serviceTelemData.ClusterId },
                         { "EntityType", serviceTelemData.EntityType.ToString() },
@@ -216,7 +216,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 }
                 else if (telemetryData is NodeTelemetryData nodeTelemData)
                 {
-                    properties = new Dictionary<string, string>
+                    properties = new()
                     {
                         { "ClusterId", nodeTelemData.ClusterId },
                         { "EntityType", nodeTelemData.EntityType.ToString() },
@@ -231,7 +231,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 }
                 else if (telemetryData is DiskTelemetryData diskTelemData)
                 {
-                    properties = new Dictionary<string, string>
+                    properties = new()
                     {
                         { "ClusterId", diskTelemData.ClusterId },
                         { "EntityType", diskTelemData.EntityType.ToString() },
@@ -247,7 +247,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 }
                 else if (telemetryData is ClusterTelemetryData clusterTelemData)
                 {
-                    properties = new Dictionary<string, string>
+                    properties = new()
                     {
                         { "ClusterId", clusterTelemData.ClusterId },
                         { "EntityType", EntityType.Cluster.ToString() },
@@ -261,7 +261,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 }
                 else if (telemetryData is SystemServiceTelemetryData systemServiceTelemData)
                 {
-                    properties = new Dictionary<string, string>
+                    properties = new()
                     {
                         { "ApplicationName", systemServiceTelemData.ApplicationName },
                         { "ClusterId", systemServiceTelemData.ClusterId },
@@ -279,7 +279,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 }
                 else if (telemetryData is NetworkTelemetryData networkTelemData)
                 {
-                    properties = new Dictionary<string, string>
+                    properties = new()
                     {
                         { "ApplicationName", networkTelemData.ApplicationName },
                         { "ClusterId", networkTelemData.ClusterId },
@@ -293,7 +293,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 }
                 else if (telemetryData is ContainerTelemetryData containerTelemData)
                 {
-                    properties = new Dictionary<string, string>
+                    properties = new()
                     {
                         { "ApplicationName", containerTelemData.ApplicationName },
                         { "ServiceName", containerTelemData.ServiceName },
@@ -312,7 +312,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 }
                 else
                 {
-                    properties = new Dictionary<string, string>
+                    properties = new()
                     {
                         { "ClusterId", telemetryData.ClusterId },
                         { "EntityType", telemetryData.EntityType.ToString() },
@@ -399,7 +399,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
                 if (telemetryData is ServiceTelemetryData serviceTelemData)
                 {
-                    properties = new Dictionary<string, string>
+                    properties = new()
                     {
                         { "ClusterId", serviceTelemData.ClusterId },
                         { "EntityType", serviceTelemData.EntityType.ToString() },
@@ -428,7 +428,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 }
                 else if (telemetryData is NodeTelemetryData nodeTelemData)
                 {
-                    properties = new Dictionary<string, string>
+                    properties = new()
                     {
                         { "ClusterId", nodeTelemData.ClusterId },
                         { "EntityType", nodeTelemData.EntityType.ToString() },
@@ -443,7 +443,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 }
                 else if (telemetryData is DiskTelemetryData diskTelemData)
                 {
-                    properties = new Dictionary<string, string>
+                    properties = new()
                     {
                         { "ClusterId", diskTelemData.ClusterId },
                         { "EntityType", diskTelemData.EntityType.ToString() },
@@ -459,7 +459,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 }
                 else if (telemetryData is ClusterTelemetryData clusterTelemData)
                 {
-                    properties = new Dictionary<string, string>
+                    properties = new()
                     {
                         { "ClusterId", clusterTelemData.ClusterId },
                         { "EntityType", EntityType.Cluster.ToString() },
@@ -472,7 +472,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 }
                 else if (telemetryData is SystemServiceTelemetryData systemServiceTelemData)
                 {
-                    properties = new Dictionary<string, string>
+                    properties = new()
                     {
                         { "ApplicationName", systemServiceTelemData.ApplicationName },
                         { "ClusterId", systemServiceTelemData.ClusterId },
@@ -489,7 +489,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 }
                 else if (telemetryData is NetworkTelemetryData networkTelemData)
                 {
-                    properties = new Dictionary<string, string>
+                    properties = new()
                     {
                         { "ApplicationName", networkTelemData.ApplicationName },
                         { "ClusterId", networkTelemData.ClusterId },
@@ -503,7 +503,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 }
                 else if (telemetryData is ContainerTelemetryData containerTelemData)
                 {
-                    properties = new Dictionary<string, string>
+                    properties = new()
                     {
                         { "ApplicationName", containerTelemData.ApplicationName },
                         { "ServiceName", containerTelemData.ServiceName },
@@ -522,7 +522,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 }
                 else
                 {
-                    properties = new Dictionary<string, string>
+                    properties = new()
                     {
                         { "ClusterId", telemetryData.ClusterId },
                         { "EntityType", telemetryData.EntityType.ToString() },
@@ -704,7 +704,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             try
             {
-                IDictionary<string, string> eventProperties = new Dictionary<string, string>
+                Dictionary<string, string> eventProperties = new()
                 {
                     { "EventName", "ClusterUpgradeEvent" },
                     { "TaskName", eventData.TaskName },
@@ -749,7 +749,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             try
             {
-                IDictionary<string, string> eventProperties = new Dictionary<string, string>
+                Dictionary<string, string> eventProperties = new()
                 {
                     { "EventName", "ApplicationUpgradeEvent" },
                     { "TaskName", eventData.TaskName },

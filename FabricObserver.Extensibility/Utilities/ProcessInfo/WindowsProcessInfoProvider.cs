@@ -57,10 +57,7 @@ namespace FabricObserver.Observers.Utilities
                 {
                     lock (lockObj)
                     {
-                        if (performanceCounterCategory == null)
-                        {
-                            performanceCounterCategory = new(ProcessCategoryName);
-                        }
+                        performanceCounterCategory ??= new(ProcessCategoryName);
                     }
                 }
                 return performanceCounterCategory;

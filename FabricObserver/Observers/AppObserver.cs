@@ -29,7 +29,11 @@ namespace FabricObserver.Observers
 {
     // This observer monitors the behavior of user SF service processes (and their children) and signals Warning and Error based on user-supplied resource thresholds
     // in AppObserver.config.json. This observer will also emit telemetry (ETW, LogAnalytics/AppInsights) if enabled in Settings.xml (ObserverManagerConfiguration) and ApplicationManifest.xml (AppObserverEnableEtw).
-    public sealed class AppObserver : ObserverBase
+    /// <summary>
+    /// Creates a new instance of the type.
+    /// </summary>
+    /// <param name="context">The StatelessServiceContext instance.</param>
+    public sealed class AppObserver(StatelessServiceContext context) : ObserverBase(null, context)
     {
         private const double KvsLvidsWarningPercentage = 75.0;
         private const double MaxRGMemoryInUsePercent = 90.0;
@@ -71,7 +75,7 @@ namespace FabricObserver.Observers
         // List<T> is thread-safe for concurrent reads. There are no concurrent writes to this List.
         private List<DeployedApplication> deployedApps;
 
-        private readonly Stopwatch stopwatch;
+        private readonly Stopwatch stopwatch = new();
         private readonly object lockObj = new();
         private FabricClientUtilities fabricClientUtilities;
         private ParallelOptions parallelOptions;
@@ -171,15 +175,6 @@ namespace FabricObserver.Observers
         public bool MonitorResourceGovernanceLimits
         {
             get; set;
-        }
-
-        /// <summary>
-        /// Creates a new instance of the type.
-        /// </summary>
-        /// <param name="context">The StatelessServiceContext instance.</param>
-        public AppObserver(StatelessServiceContext context) : base(null, context)
-        {
-            stopwatch = new Stopwatch();
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -373,9 +368,9 @@ namespace FabricObserver.Observers
                 try
                 {
                     // CPU Time (Percent)
-                    if (AllAppCpuData != null && AllAppCpuData.ContainsKey(id))
+                    if (AllAppCpuData != null && AllAppCpuData.TryGetValue(id, out FabricResourceUsageData<double> cpuPctFrud))
                     {
-                        var parentFrud = AllAppCpuData[id];
+                        var parentFrud = cpuPctFrud;
                         int childProcCount = 0;
 
                         if (hasChildProcs)
@@ -413,9 +408,9 @@ namespace FabricObserver.Observers
                     }
 
                     // Working Set (MB)
-                    if (AllAppMemDataMb != null && AllAppMemDataMb.ContainsKey(id))
+                    if (AllAppMemDataMb != null && AllAppMemDataMb.TryGetValue(id, out FabricResourceUsageData<float> memMbFrud))
                     {
-                        var parentFrud = AllAppMemDataMb[id];
+                        var parentFrud = memMbFrud;
                         int childProcCount = 0;
 
                         if (hasChildProcs)
@@ -452,9 +447,9 @@ namespace FabricObserver.Observers
                     }
 
                     // Working Set (Percent)
-                    if (AllAppMemDataPercent != null && AllAppMemDataPercent.ContainsKey(id))
+                    if (AllAppMemDataPercent != null && AllAppMemDataPercent.TryGetValue(id, out FabricResourceUsageData<double> memPctFrud))
                     {
-                        var parentFrud = AllAppMemDataPercent[id];
+                        var parentFrud = memPctFrud;
                         int childProcCount = 0;
 
                         if (hasChildProcs)
@@ -491,11 +486,11 @@ namespace FabricObserver.Observers
                     }
 
                     // Private Bytes (MB)
-                    if (AllAppPrivateBytesDataMb != null && AllAppPrivateBytesDataMb.ContainsKey(id))
+                    if (AllAppPrivateBytesDataMb != null && AllAppPrivateBytesDataMb.TryGetValue(id, out FabricResourceUsageData<float> privateBytesMbFrud))
                     {
                         if (app.WarningPrivateBytesMb > 0 || app.ErrorPrivateBytesMb > 0)
                         {
-                            var parentFrud = AllAppPrivateBytesDataMb[id];
+                            var parentFrud = privateBytesMbFrud;
                             int childProcCount = 0;
 
                             if (hasChildProcs)
@@ -533,11 +528,11 @@ namespace FabricObserver.Observers
                     }
 
                     // Private Bytes (Percent)
-                    if (AllAppPrivateBytesDataPercent != null && AllAppPrivateBytesDataPercent.ContainsKey(id))
+                    if (AllAppPrivateBytesDataPercent != null && AllAppPrivateBytesDataPercent.TryGetValue(id, out FabricResourceUsageData<double> privateBytesPctFrud))
                     {
                         if (app.WarningPrivateBytesPercent > 0 || app.ErrorPrivateBytesPercent > 0)
                         {
-                            var parentFrud = AllAppPrivateBytesDataPercent[id];
+                            var parentFrud = privateBytesPctFrud;
                             int childProcCount = 0;
 
                             if (hasChildProcs)
@@ -578,9 +573,9 @@ namespace FabricObserver.Observers
                     if (MonitorResourceGovernanceLimits)
                     {
                         // RG Memory Monitoring (Private Bytes Percent)
-                        if (repOrInst.RGMemoryEnabled && AllAppRGMemoryUsagePercent != null && AllAppRGMemoryUsagePercent.ContainsKey(id))
+                        if (repOrInst.RGMemoryEnabled && AllAppRGMemoryUsagePercent != null && AllAppRGMemoryUsagePercent.TryGetValue(id, out FabricResourceUsageData<double> rgMemPctFrud))
                         {
-                            var parentFrud = AllAppRGMemoryUsagePercent[id];
+                            var parentFrud = rgMemPctFrud;
                             int childProcCount = 0;
 
                             if (hasChildProcs)
@@ -617,9 +612,9 @@ namespace FabricObserver.Observers
                         }
 
                         // RG CPU Monitoring (CPU Time Percent)
-                        if (repOrInst.RGCpuEnabled && AllAppRGCpuUsagePercent != null && AllAppRGCpuUsagePercent.ContainsKey(id))
+                        if (repOrInst.RGCpuEnabled && AllAppRGCpuUsagePercent != null && AllAppRGCpuUsagePercent.TryGetValue(id, out FabricResourceUsageData<double> rgCpuPctFrud))
                         {
-                            var parentFrud = AllAppRGCpuUsagePercent[id];
+                            var parentFrud = rgCpuPctFrud;
                             int childProcCount = 0;
 
                             if (hasChildProcs)
@@ -657,9 +652,9 @@ namespace FabricObserver.Observers
                     }
 
                     // TCP Ports - Active
-                    if (AllAppTotalActivePortsData != null && AllAppTotalActivePortsData.ContainsKey(id))
+                    if (AllAppTotalActivePortsData != null && AllAppTotalActivePortsData.TryGetValue(id, out FabricResourceUsageData<int> tcpPortsFrud))
                     {
-                        var parentFrud = AllAppTotalActivePortsData[id];
+                        var parentFrud = tcpPortsFrud;
                         int childProcCount = 0;
 
                         if (hasChildProcs)
@@ -696,9 +691,9 @@ namespace FabricObserver.Observers
                     }
 
                     // TCP Ports Total - Ephemeral (port numbers fall in the dynamic range)
-                    if (AllAppEphemeralPortsData != null && AllAppEphemeralPortsData.ContainsKey(id))
+                    if (AllAppEphemeralPortsData != null && AllAppEphemeralPortsData.TryGetValue(id, out FabricResourceUsageData<int> ePortsRawFrud))
                     {
-                        var parentFrud = AllAppEphemeralPortsData[id];
+                        var parentFrud = ePortsRawFrud;
                         int childProcCount = 0;
 
                         if (hasChildProcs)
@@ -735,9 +730,9 @@ namespace FabricObserver.Observers
                     }
 
                     // TCP Ports Percentage - Ephemeral (port numbers fall in the dynamic range)
-                    if (AllAppEphemeralPortsDataPercent != null && AllAppEphemeralPortsDataPercent.ContainsKey(id))
+                    if (AllAppEphemeralPortsDataPercent != null && AllAppEphemeralPortsDataPercent.TryGetValue(id, out FabricResourceUsageData<double> ePortsPctFrud))
                     {
-                        var parentFrud = AllAppEphemeralPortsDataPercent[id];
+                        var parentFrud = ePortsPctFrud;
                         int childProcCount = 0;
 
                         if (hasChildProcs)
@@ -774,9 +769,9 @@ namespace FabricObserver.Observers
                     }
 
                     // Handles
-                    if (AllAppHandlesData != null && AllAppHandlesData.ContainsKey(id))
+                    if (AllAppHandlesData != null && AllAppHandlesData.TryGetValue(id, out FabricResourceUsageData<float> handlesFrud))
                     {
-                        var parentFrud = AllAppHandlesData[id];
+                        var parentFrud = handlesFrud;
                         int childProcCount = 0;
 
                         if (hasChildProcs)
@@ -813,9 +808,9 @@ namespace FabricObserver.Observers
                     }
 
                     // Threads
-                    if (AllAppThreadsData != null && AllAppThreadsData.ContainsKey(id))
+                    if (AllAppThreadsData != null && AllAppThreadsData.TryGetValue(id, out FabricResourceUsageData<int> threadsFrud))
                     {
-                        var parentFrud = AllAppThreadsData[id];
+                        var parentFrud = threadsFrud;
                         int childProcCount = 0;
 
                         if (hasChildProcs)
@@ -852,9 +847,9 @@ namespace FabricObserver.Observers
                     }
 
                     // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
-                    if (EnableKvsLvidMonitoring && AllAppKvsLvidsData != null && AllAppKvsLvidsData.ContainsKey(id))
+                    if (EnableKvsLvidMonitoring && AllAppKvsLvidsData != null && AllAppKvsLvidsData.TryGetValue(id, out FabricResourceUsageData<double> lvidsFrud))
                     {
-                        var parentFrud = AllAppKvsLvidsData[id];
+                        var parentFrud = lvidsFrud;
                         int childProcCount = 0;
 
                         if (hasChildProcs)
@@ -903,7 +898,7 @@ namespace FabricObserver.Observers
 
                             if (IsTelemetryEnabled && EmitRawMetricTelemetry)
                             {
-                                _ = TelemetryClient?.ReportMetricAsync(childProcessTelemetryDataList.ToList(), token);
+                                _ = TelemetryClient?.ReportMetricAsync([.. childProcessTelemetryDataList], token);
                             }
                         }
                     }
@@ -925,9 +920,9 @@ namespace FabricObserver.Observers
         public async Task<bool> InitializeAsync()
         {
             ObserverLogger.LogInfo($"Initializing AppObserver.");
-            ReplicaOrInstanceList = new List<ReplicaOrInstanceMonitoringInfo>();
-            userTargetList = new List<ApplicationInfo>();
-            deployedTargetList = new List<ApplicationInfo>();
+            ReplicaOrInstanceList = [];
+            userTargetList = [];
+            deployedTargetList = [];
 
             // NodeName is passed here to not break unit tests, which include a mock service fabric context.
             fabricClientUtilities = new FabricClientUtilities(NodeName);
@@ -1187,7 +1182,7 @@ namespace FabricObserver.Observers
                 }
             }
 
-            ApplicationParameterList parameters = new();
+            ApplicationParameterList parameters = [];
             FabricClientUtilities.AddParametersIfNotExists(parameters, appParameters);
             FabricClientUtilities.AddParametersIfNotExists(parameters, defaultParameters);
 
@@ -1683,7 +1678,7 @@ namespace FabricObserver.Observers
                     continue;
                 }
 
-                if (target.TargetApp == "*" || target.TargetApp.ToLower() == "all")
+                if (target.TargetApp == "*" || target.TargetApp.Equals("all", StringComparison.CurrentCultureIgnoreCase))
                 {
                     continue;
                 }
@@ -2103,7 +2098,7 @@ namespace FabricObserver.Observers
                 PartitionId = repOrInst.PartitionId.ToString(),
                 ReplicaId = repOrInst.ReplicaOrInstanceId,
                 ChildProcessCount = childProcs.Count,
-                ChildProcessInfo = new List<ChildProcessInfo>()
+                ChildProcessInfo = []
             };
 
             string appNameOrType = GetAppNameOrType(repOrInst);
@@ -2466,9 +2461,9 @@ namespace FabricObserver.Observers
                         _ = AllAppCpuData.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.CpuTime, id, capacity, UseCircularBuffer, EnableConcurrentMonitoring));
                     }
 
-                    if (AllAppCpuData != null && AllAppCpuData.ContainsKey(id))
+                    if (AllAppCpuData != null && AllAppCpuData.TryGetValue(id, out FabricResourceUsageData<double> cpuDataFrud))
                     {
-                        AllAppCpuData[id].ClearData();
+                        cpuDataFrud.ClearData();
                         checkCpu = true;
                     }
 
@@ -2478,9 +2473,9 @@ namespace FabricObserver.Observers
                         _ = AllAppMemDataMb.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.MemoryConsumptionMb, id, capacity, UseCircularBuffer, EnableConcurrentMonitoring));
                     }
 
-                    if (AllAppMemDataMb != null && AllAppMemDataMb.ContainsKey(id))
+                    if (AllAppMemDataMb != null && AllAppMemDataMb.TryGetValue(id, out FabricResourceUsageData<float> memDataMbFrud))
                     {
-                        AllAppMemDataMb[id].ClearData();
+                        memDataMbFrud.ClearData();
                         checkMemMb = true;
                     }
 
@@ -2490,9 +2485,9 @@ namespace FabricObserver.Observers
                         _ = AllAppMemDataPercent.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.MemoryConsumptionPercentage, id, capacity, UseCircularBuffer, EnableConcurrentMonitoring));
                     }
 
-                    if (AllAppMemDataPercent != null && AllAppMemDataPercent.ContainsKey(id))
+                    if (AllAppMemDataPercent != null && AllAppMemDataPercent.TryGetValue(id, out FabricResourceUsageData<double> memDataPctFrud))
                     {
-                        AllAppMemDataPercent[id].ClearData();
+                        memDataPctFrud.ClearData();
                         checkMemPct = true;
                     }
 
@@ -2502,9 +2497,9 @@ namespace FabricObserver.Observers
                         _ = AllAppPrivateBytesDataMb.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.PrivateBytesMb, id, 1, false, EnableConcurrentMonitoring));
                     }
 
-                    if (IsWindows && AllAppPrivateBytesDataMb != null && AllAppPrivateBytesDataMb.ContainsKey(id))
+                    if (IsWindows && AllAppPrivateBytesDataMb != null && AllAppPrivateBytesDataMb.TryGetValue(id, out FabricResourceUsageData<float> prBytesMbFrud))
                     {
-                        AllAppPrivateBytesDataMb[id].ClearData();
+                        prBytesMbFrud.ClearData();
                         checkMemPrivateBytes = true;
                     }
 
@@ -2514,9 +2509,9 @@ namespace FabricObserver.Observers
                         _ = AllAppPrivateBytesDataPercent.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.PrivateBytesPercent, id, 1, false, EnableConcurrentMonitoring));
                     }
 
-                    if (IsWindows && AllAppPrivateBytesDataPercent != null && AllAppPrivateBytesDataPercent.ContainsKey(id))
+                    if (IsWindows && AllAppPrivateBytesDataPercent != null && AllAppPrivateBytesDataPercent.TryGetValue(id, out FabricResourceUsageData<double> prBytesPctFrud))
                     {
-                        AllAppPrivateBytesDataPercent[id].ClearData();
+                        prBytesPctFrud.ClearData();
                         checkMemPrivateBytesPct = true;
                     }
 
@@ -2526,7 +2521,7 @@ namespace FabricObserver.Observers
                         _ = AllAppRGMemoryUsagePercent.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.RGMemoryUsagePercent, id, 1, false, EnableConcurrentMonitoring));
                     }
 
-                    if (IsWindows && AllAppRGMemoryUsagePercent != null && AllAppRGMemoryUsagePercent.ContainsKey(id))
+                    if (IsWindows && AllAppRGMemoryUsagePercent != null && AllAppRGMemoryUsagePercent.TryGetValue(id, out FabricResourceUsageData<double> rgMemPctFrud))
                     {
                         rgMemoryPercentThreshold = application.WarningRGMemoryLimitPercent;
 
@@ -2542,7 +2537,7 @@ namespace FabricObserver.Observers
                             rgMemoryPercentThreshold = MaxRGMemoryInUsePercent; // Default: 90%.
                         }
 
-                        AllAppRGMemoryUsagePercent[id].ClearData();
+                        rgMemPctFrud.ClearData();
                     }
 
                     // CPU - RG monitoring. Windows-only for now.
@@ -2551,7 +2546,7 @@ namespace FabricObserver.Observers
                         _ = AllAppRGCpuUsagePercent.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.RGCpuUsagePercent, id, 1, false, EnableConcurrentMonitoring));
                     }
 
-                    if (IsWindows && AllAppRGCpuUsagePercent != null && AllAppRGCpuUsagePercent.ContainsKey(id))
+                    if (IsWindows && AllAppRGCpuUsagePercent != null && AllAppRGCpuUsagePercent.TryGetValue(id, out FabricResourceUsageData<double> rgCpuPctDataFrud))
                     {
                         rgCpuPercentThreshold = application.WarningRGCpuLimitPercent;
 
@@ -2566,6 +2561,8 @@ namespace FabricObserver.Observers
                         {
                             rgCpuPercentThreshold = MaxRGCpuInUsePercent; // Default: 90%.
                         }
+
+                        rgCpuPctDataFrud.ClearData();
                     }
 
                     // Active TCP Ports
@@ -2574,9 +2571,9 @@ namespace FabricObserver.Observers
                         _ = AllAppTotalActivePortsData.TryAdd(id, new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveTcpPorts, id, 1, false, EnableConcurrentMonitoring));
                     }
 
-                    if (AllAppTotalActivePortsData != null && AllAppTotalActivePortsData.ContainsKey(id))
+                    if (AllAppTotalActivePortsData != null && AllAppTotalActivePortsData.TryGetValue(id, out FabricResourceUsageData<int> totalActivePortsDataFrud))
                     {
-                        AllAppTotalActivePortsData[id].ClearData();
+                        totalActivePortsDataFrud.ClearData();
                         checkAllPorts = true;
                     }
 
@@ -2586,9 +2583,9 @@ namespace FabricObserver.Observers
                         _ = AllAppEphemeralPortsData.TryAdd(id, new FabricResourceUsageData<int>(ErrorWarningProperty.ActiveEphemeralPorts, id, 1, false, EnableConcurrentMonitoring));
                     }
 
-                    if (AllAppEphemeralPortsData != null && AllAppEphemeralPortsData.ContainsKey(id))
+                    if (AllAppEphemeralPortsData != null && AllAppEphemeralPortsData.TryGetValue(id, out FabricResourceUsageData<int> ePortsDataFrud))
                     {
-                        AllAppEphemeralPortsData[id].ClearData();
+                        ePortsDataFrud.ClearData();
                         checkEphemeralPorts = true;
                     }
 
@@ -2598,9 +2595,9 @@ namespace FabricObserver.Observers
                         _ = AllAppEphemeralPortsDataPercent.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.ActiveEphemeralPortsPercentage, id, 1, false, EnableConcurrentMonitoring));
                     }
 
-                    if (AllAppEphemeralPortsDataPercent != null && AllAppEphemeralPortsDataPercent.ContainsKey(id))
+                    if (AllAppEphemeralPortsDataPercent != null && AllAppEphemeralPortsDataPercent.TryGetValue(id, out FabricResourceUsageData<double> ePortsPctDataFrud))
                     {
-                        AllAppEphemeralPortsDataPercent[id].ClearData();
+                        ePortsPctDataFrud.ClearData();
                         checkPercentageEphemeralPorts = true;
                     }
 
@@ -2611,9 +2608,9 @@ namespace FabricObserver.Observers
                         _ = AllAppHandlesData.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.HandleCount, id, 1, false, EnableConcurrentMonitoring));
                     }
 
-                    if (AllAppHandlesData != null && AllAppHandlesData.ContainsKey(id))
+                    if (AllAppHandlesData != null && AllAppHandlesData.TryGetValue(id, out FabricResourceUsageData<float> handlesDataFrud))
                     {
-                        AllAppHandlesData[id].ClearData();
+                        handlesDataFrud.ClearData();
                         checkHandles = true;
                     }
 
@@ -2623,9 +2620,9 @@ namespace FabricObserver.Observers
                         _ = AllAppThreadsData.TryAdd(id, new FabricResourceUsageData<int>(ErrorWarningProperty.ThreadCount, id, 1, false, EnableConcurrentMonitoring));
                     }
 
-                    if (AllAppThreadsData != null && AllAppThreadsData.ContainsKey(id))
+                    if (AllAppThreadsData != null && AllAppThreadsData.TryGetValue(id, out FabricResourceUsageData<int> threadsDataFrud))
                     {
-                        AllAppThreadsData[id].ClearData();
+                        threadsDataFrud.ClearData();
                         checkThreads = true;
                     }
 
@@ -2636,9 +2633,9 @@ namespace FabricObserver.Observers
                         _ = AllAppKvsLvidsData.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.KvsLvidsPercent, id, 1, false, EnableConcurrentMonitoring));
                     }
 
-                    if (AllAppKvsLvidsData != null && AllAppKvsLvidsData.ContainsKey(id))
+                    if (AllAppKvsLvidsData != null && AllAppKvsLvidsData.TryGetValue(id, out FabricResourceUsageData<double> lvidsDataFrud))
                     {
-                        AllAppKvsLvidsData[id].ClearData();
+                        lvidsDataFrud.ClearData();
                         checkLvids = true;
                     }
 
@@ -3326,7 +3323,7 @@ namespace FabricObserver.Observers
                                                 ConfigurationSettings.AsyncTimeout,
                                                 Token);
 
-            if (deployedReplicaList == null || !deployedReplicaList.Any())
+            if (deployedReplicaList == null || deployedReplicaList.Count == 0)
             {
                 return null;
             }
@@ -3408,7 +3405,7 @@ namespace FabricObserver.Observers
                     {
                         if (filterList != null && filterType != ServiceFilterType.None)
                         {
-                            bool isInFilterList = filterList.Any(s => statefulReplica.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+                            bool isInFilterList = filterList.Any(s => statefulReplica.ServiceName.OriginalString.Contains(s, StringComparison.CurrentCultureIgnoreCase));
 
                             switch (filterType)
                             {
@@ -3464,7 +3461,7 @@ namespace FabricObserver.Observers
                     {
                         if (filterList != null && filterType != ServiceFilterType.None)
                         {
-                            bool isInFilterList = filterList.Any(s => statelessInstance.ServiceName.OriginalString.ToLower().Contains(s.ToLower()));
+                            bool isInFilterList = filterList.Any(s => statelessInstance.ServiceName.OriginalString.Contains(s, StringComparison.CurrentCultureIgnoreCase));
 
                             switch (filterType)
                             {
@@ -3723,7 +3720,7 @@ namespace FabricObserver.Observers
 
                             if (!string.IsNullOrWhiteSpace(appManifest) && appManifest.Contains($"<{ObserverConstants.RGPolicyNodeName} ") || appManifest.Contains($"<{ObserverConstants.RGSvcPkgPolicyNodeName} "))
                             {
-                                ApplicationParameterList parameters = new();
+                                ApplicationParameterList parameters = [];
                                 FabricClientUtilities.AddParametersIfNotExists(parameters, appParameters);
                                 FabricClientUtilities.AddParametersIfNotExists(parameters, defaultParameters);
 
@@ -3968,45 +3965,45 @@ namespace FabricObserver.Observers
 
                 // Memory - Working set \\
 
-                if (AllAppMemDataMb != null && AllAppMemDataMb.ContainsKey(key))
+                if (AllAppMemDataMb != null && AllAppMemDataMb.TryGetValue(key, out FabricResourceUsageData<float> memDataMbLogFrud))
                 {
                     CsvFileLogger.LogData(
                         fileName,
                         key,
                         ErrorWarningProperty.MemoryConsumptionMb,
                         "Average",
-                        AllAppMemDataMb[key].AverageDataValue);
+                        memDataMbLogFrud.AverageDataValue);
 
                     CsvFileLogger.LogData(
                         fileName,
                         key,
                         ErrorWarningProperty.MemoryConsumptionMb,
                         "Peak",
-                        AllAppMemDataMb[key].MaxDataValue);
+                        memDataMbLogFrud.MaxDataValue);
                 }
 
-                if (AllAppMemDataPercent != null && AllAppMemDataPercent.ContainsKey(key))
+                if (AllAppMemDataPercent != null && AllAppMemDataPercent.TryGetValue(key, out FabricResourceUsageData<double> memDataPctLogFrud))
                 {
                     CsvFileLogger.LogData(
                        fileName,
                        key,
                        ErrorWarningProperty.MemoryConsumptionPercentage,
                        "Average",
-                       AllAppMemDataPercent[key].AverageDataValue);
+                       memDataPctLogFrud.AverageDataValue);
 
                     CsvFileLogger.LogData(
                         fileName,
                         key,
                         ErrorWarningProperty.MemoryConsumptionPercentage,
                         "Peak",
-                        AllAppMemDataPercent[key].MaxDataValue);
+                        memDataPctLogFrud.MaxDataValue);
                 }
 
                 // Memory - Private Bytes \\
 
                 if (IsWindows)
                 {
-                    if (AllAppPrivateBytesDataMb != null && AllAppPrivateBytesDataMb.ContainsKey(key))
+                    if (AllAppPrivateBytesDataMb != null && AllAppPrivateBytesDataMb.TryGetValue(key, out FabricResourceUsageData<float> privBytesMbDataLogFrud))
                     {
                         if (AllAppPrivateBytesDataMb.Any(x => x.Key == key))
                         {
@@ -4015,18 +4012,18 @@ namespace FabricObserver.Observers
                                 key,
                                 ErrorWarningProperty.PrivateBytesMb,
                                 "Average",
-                                AllAppPrivateBytesDataMb[key].AverageDataValue);
+                                privBytesMbDataLogFrud.AverageDataValue);
 
                             CsvFileLogger.LogData(
                                 fileName,
                                 key,
                                 ErrorWarningProperty.PrivateBytesMb,
                                 "Peak",
-                                AllAppPrivateBytesDataMb[key].MaxDataValue);
+                                privBytesMbDataLogFrud.MaxDataValue);
                         }
                     }
 
-                    if (AllAppPrivateBytesDataPercent != null && AllAppPrivateBytesDataPercent.ContainsKey(key))
+                    if (AllAppPrivateBytesDataPercent != null && AllAppPrivateBytesDataPercent.TryGetValue(key, out FabricResourceUsageData<double> privBytesPctLogFrud))
                     {
                         if (AllAppPrivateBytesDataPercent.Any(x => x.Key == key))
                         {
@@ -4035,60 +4032,60 @@ namespace FabricObserver.Observers
                                key,
                                ErrorWarningProperty.PrivateBytesPercent,
                                "Average",
-                               AllAppPrivateBytesDataPercent[key].AverageDataValue);
+                               privBytesPctLogFrud.AverageDataValue);
 
                             CsvFileLogger.LogData(
                                 fileName,
                                 key,
                                 ErrorWarningProperty.PrivateBytesPercent,
                                 "Peak",
-                                AllAppPrivateBytesDataPercent[key].MaxDataValue);
+                                privBytesPctLogFrud.MaxDataValue);
                         }
                     }
                 }
 
                 // Ports \\
 
-                if (AllAppTotalActivePortsData != null && AllAppTotalActivePortsData.ContainsKey(key))
+                if (AllAppTotalActivePortsData != null && AllAppTotalActivePortsData.TryGetValue(key, out FabricResourceUsageData<int> activePortsLogFrod))
                 {
                     CsvFileLogger.LogData(
                         fileName,
                         key,
                         ErrorWarningProperty.ActiveTcpPorts,
                         "Total",
-                        AllAppTotalActivePortsData[key].MaxDataValue);
+                        activePortsLogFrod.MaxDataValue);
                 }
 
-                if (AllAppEphemeralPortsData != null && AllAppEphemeralPortsData.ContainsKey(key))
+                if (AllAppEphemeralPortsData != null && AllAppEphemeralPortsData.TryGetValue(key, out FabricResourceUsageData<int> ePortsLogFrud))
                 {
                     CsvFileLogger.LogData(
                         fileName,
                         key,
                         ErrorWarningProperty.ActiveEphemeralPorts,
                         "Total",
-                        AllAppEphemeralPortsData[key].MaxDataValue);
+                        ePortsLogFrud.MaxDataValue);
                 }
 
                 // Handles
-                if (AllAppHandlesData != null && AllAppHandlesData.ContainsKey(key))
+                if (AllAppHandlesData != null && AllAppHandlesData.TryGetValue(key, out FabricResourceUsageData<float> handlesLogFrud))
                 {
                     CsvFileLogger.LogData(
                         fileName,
                         key,
                         ErrorWarningProperty.AllocatedFileHandles,
                         "Total",
-                        AllAppHandlesData[key].MaxDataValue);
+                        handlesLogFrud.MaxDataValue);
                 }
 
                 // Threads
-                if (AllAppThreadsData != null && AllAppThreadsData.ContainsKey(key))
+                if (AllAppThreadsData != null && AllAppThreadsData.TryGetValue(key, out FabricResourceUsageData<int> threadsLogFrud))
                 {
                     CsvFileLogger.LogData(
                         fileName,
                         key,
                         ErrorWarningProperty.ThreadCount,
                         "Total",
-                        AllAppHandlesData[key].MaxDataValue);
+                        threadsLogFrud.MaxDataValue);
                 }
             }
             catch (Exception e) when (e is ArgumentException or KeyNotFoundException or InvalidOperationException)

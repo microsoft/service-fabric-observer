@@ -58,7 +58,7 @@ namespace FabricObserver.TelemetryLib
             {
                 _ = TryGetHashStringSha256(nodeName, out string nodeHashString);
 
-                IDictionary<string, string> eventProperties = new Dictionary<string, string>
+                Dictionary<string, string> eventProperties = new()
                 {
                     { "EventName", OperationalEventName},
                     { "TaskName", FOTaskName},
@@ -82,7 +82,7 @@ namespace FabricObserver.TelemetryLib
                     }
                 }
 
-                IDictionary<string, double> metrics = new Dictionary<string, double>
+                Dictionary<string, double> metrics = new()
                 {
                     { "EnabledObserverCount", foData.EnabledObserverCount }
                 };
@@ -126,9 +126,9 @@ namespace FabricObserver.TelemetryLib
                             // Since we log the telemetry data to disk, check to make sure we don't send the same data again across FO restarts if the data has not changed.
                             if (File.Exists(logFilePath) && TryDeserializeFOEventData(File.ReadAllText(logFilePath), out FabricObserverOperationalEventData foEventDataFromLogFile))
                             {
-                                if (foEventDataFromLogFile.ObserverData != null && foEventDataFromLogFile.ObserverData.ContainsKey(obData.Key))
+                                if (foEventDataFromLogFile.ObserverData != null && foEventDataFromLogFile.ObserverData.TryGetValue(obData.Key, out ObserverData value))
                                 {
-                                    if (foEventDataFromLogFile?.ObserverData != null && foEventDataFromLogFile?.ObserverData[obData.Key]?.ServiceData?.MonitoredAppCount == data)
+                                    if (value?.ServiceData?.MonitoredAppCount == data)
                                     {
                                         addMetric = false;
                                     }
@@ -153,9 +153,9 @@ namespace FabricObserver.TelemetryLib
                             // Since we log the telemetry data to disk, check to make sure we don't send the same data again across FO restarts if the data has not changed.
                             if (File.Exists(logFilePath) && TryDeserializeFOEventData(File.ReadAllText(logFilePath), out FabricObserverOperationalEventData foEventDataFromLogFile))
                             {
-                                if (foEventDataFromLogFile.ObserverData != null && foEventDataFromLogFile.ObserverData.ContainsKey(obData.Key))
+                                if (foEventDataFromLogFile.ObserverData != null && foEventDataFromLogFile.ObserverData.TryGetValue(obData.Key, out ObserverData value))
                                 {
-                                    if (foEventDataFromLogFile.ObserverData[obData.Key].ServiceData.MonitoredServiceProcessCount == data)
+                                    if (value.ServiceData.MonitoredServiceProcessCount == data)
                                     {
                                         addMetric = false;
                                     }
@@ -239,7 +239,7 @@ namespace FabricObserver.TelemetryLib
 
             try
             {
-                IDictionary<string, string> eventProperties = new Dictionary<string, string>
+                Dictionary<string, string> eventProperties = new()
                 {
                     { "EventName", CriticalErrorEventName},
                     { "TaskName", source},
@@ -338,7 +338,7 @@ namespace FabricObserver.TelemetryLib
 
             try
             {
-                IDictionary<string, string> eventProperties = new Dictionary<string, string>
+                Dictionary<string, string> eventProperties = new()
                 {
                     { "EventName", OperationalEventName},
                     { "TaskName", COTaskName},
@@ -397,16 +397,12 @@ namespace FabricObserver.TelemetryLib
             try
             {
                 StringBuilder Sb = new();
+                Encoding enc = Encoding.UTF8;
+                byte[] byteVal = SHA256.HashData(enc.GetBytes(source));
 
-                using (var hash = SHA256.Create())
+                foreach (byte b in byteVal)
                 {
-                    Encoding enc = Encoding.UTF8;
-                    byte[] byteVal = hash.ComputeHash(enc.GetBytes(source));
-
-                    foreach (byte b in byteVal)
-                    {
-                        Sb.Append(b.ToString("x2"));
-                    }
+                    Sb.Append(b.ToString("x2"));
                 }
 
                 result = Sb.ToString();
