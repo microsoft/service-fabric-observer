@@ -7,11 +7,13 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
+    [SupportedOSPlatform("linux")]
     public class LinuxInfoProvider : OSInfoProvider
     {
         /// <summary>
@@ -148,7 +150,7 @@ namespace FabricObserver.Observers.Utilities
                 ** Example:
                 ** Description:\tUbuntu 18.04.2 LTS
                 */
-                osInfo.Name = outputLines[0].Split(new[] { ':' }, 2)[1].Trim();
+                osInfo.Name = outputLines[0].Split([':'], 2)[1].Trim();
             }
 
             osInfo.Version = File.ReadAllText("/proc/version");
@@ -271,7 +273,7 @@ namespace FabricObserver.Observers.Utilities
                 if (process?.ExitCode != 0)
                 {
                     // Try and work around the unsetting of caps issues when SF runs a cluster upgrade.
-                    if (error.ToLower().Contains("permission denied"))
+                    if (error.Contains("permission denied", StringComparison.CurrentCultureIgnoreCase))
                     {
                         // Throwing LinuxPermissionException here will eventually take down FO (by design). The failure will be logged and telemetry will be emitted, then
                         // the exception will be re-thrown by ObserverManager and the FO process will fail fast exit. Then, SF will create a new instance of FO on the offending node which
@@ -371,9 +373,9 @@ namespace FabricObserver.Observers.Utilities
                 RedirectStandardError = false
             };
 
-            List<string> output = new();
+            List<string> output = [];
             using Process process = Process.Start(startInfo);
-            
+
             string line;
             while (process != null && (line = await process.StandardOutput.ReadLineAsync()) != null)
             {
@@ -383,6 +385,21 @@ namespace FabricObserver.Observers.Utilities
             process.WaitForExit();
 
             return (process.ExitCode, output);
+        }
+
+        public override int GetActiveFirewallRulesCount()
+        {
+            return -1;
+        }
+
+        public override string GetOSHotFixes(bool generateKbUrl, CancellationToken token)
+        {
+            return null;
+        }
+
+        public override float GetAverageDiskQueueLength(string instance)
+        {
+            return 0F;
         }
     }
 

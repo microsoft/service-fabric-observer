@@ -23,9 +23,13 @@ namespace FabricObserver.Observers
     // configured to do so - assuming correctly encrypted and specified ConnectionString for an Azure Storage Account, a container name, and other basic settings.
     // Since only Windows is supported for dumping service processes today by FO, this observer is not useful for Liunx in this version. 
     // So, if you are deploying FO to Linux servers, then don't enable this observer (it won't do anything if it is enabled, so no need have it resident in memory).
-    public sealed class AzureStorageUploadObserver : ObserverBase
+    /// <summary>
+    /// Creates a new instance of the type.
+    /// </summary>
+    /// <param name="context">The StatelessServiceContext instance.</param>
+    public sealed class AzureStorageUploadObserver(StatelessServiceContext context) : ObserverBase(null, context)
     {
-        private readonly Stopwatch stopwatch;
+        private readonly Stopwatch stopwatch = new();
 
         // Only AppObserver is supported today. No other observers generate dmp files.
         private const string AppObserverDumpFolder = "MemoryDumps";
@@ -60,15 +64,6 @@ namespace FabricObserver.Observers
         {
             get; set;
         } = CompressionLevel.Optimal;
-
-        /// <summary>
-        /// Creates a new instance of the type.
-        /// </summary>
-        /// <param name="context">The StatelessServiceContext instance.</param>
-        public AzureStorageUploadObserver(StatelessServiceContext context) : base(null, context)
-        {
-            stopwatch = new Stopwatch();
-        }
 
         public override async Task ObserveAsync(CancellationToken token)
         {
@@ -105,7 +100,7 @@ namespace FabricObserver.Observers
             }
 
             // In case upload failed, also try and upload any zip files that remained in target local directory.
-            await ProcessFilesAsync(appObsDumpFolderPath, new[] { "*.zip", "*.dmp" }, token);
+            await ProcessFilesAsync(appObsDumpFolderPath, ["*.zip", "*.dmp"], token);
             await ReportAsync(token);
 
             CleanUp();

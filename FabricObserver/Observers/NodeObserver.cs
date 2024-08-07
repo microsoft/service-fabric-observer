@@ -16,9 +16,13 @@ using FabricObserver.TelemetryLib;
 namespace FabricObserver.Observers
 {
     // This observer monitors machine level resource usage across CPU, Memory, TCP ports, (Linux) File handles, and (Windows) firewall rules.
-    public sealed class NodeObserver : ObserverBase
+    /// <summary>
+    /// Creates a new instance of the type.
+    /// </summary>
+    /// <param name="context">The StatelessServiceContext instance.</param>
+    public sealed class NodeObserver(StatelessServiceContext context) : ObserverBase(null, context)
     {
-        private readonly Stopwatch stopwatch;
+        private readonly Stopwatch stopwatch = new();
 
         // These are public properties because they are used in unit tests.
         public FabricResourceUsageData<float> MemDataInUse;
@@ -130,15 +134,6 @@ namespace FabricObserver.Observers
         public bool EnableNodeSnapshots 
         { 
             get; set; 
-        }
-
-        /// <summary>
-        /// Creates a new instance of the type.
-        /// </summary>
-        /// <param name="context">The StatelessServiceContext instance.</param>
-        public NodeObserver(StatelessServiceContext context) : base(null, context)
-        {
-            stopwatch = new Stopwatch();
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -331,7 +326,7 @@ namespace FabricObserver.Observers
                 }
 
                 // Windows Firewall Rules - Total number of rules in use.
-                if (FirewallData != null && IsWindows && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
+                if (IsWindows && FirewallData != null && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
                 {
                     ProcessResourceDataReportHealth(
                         FirewallData,
@@ -452,7 +447,7 @@ namespace FabricObserver.Observers
                     ErrorWarningProperty.MemoryConsumptionPercentage, ErrorWarningProperty.MemoryConsumptionPercentage.Replace(" ", string.Empty), frudCapacity, UseCircularBuffer);
             }
 
-            if (FirewallData == null && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
+            if (IsWindows && FirewallData == null && (FirewallRulesErrorThreshold > 0 || FirewallRulesWarningThreshold > 0))
             {
                 FirewallData = new FabricResourceUsageData<int>(
                     ErrorWarningProperty.ActiveFirewallRules, ErrorWarningProperty.ActiveFirewallRules.Replace(" ", string.Empty), 1);
@@ -688,10 +683,10 @@ namespace FabricObserver.Observers
                 // Firewall rules.
                 if (IsWindows && FirewallData != null)
                 {
-                    int firewalls = NetworkUsage.GetActiveFirewallRulesCount();
+                    int firewalls = OSInfoProvider.Instance.GetActiveFirewallRulesCount();
                     FirewallData.AddData(firewalls);
                 }
-                
+
                 // OS-level file handle monitoring only makes sense for Linux, where the Maximum system-wide number of handles the kernel will allocate is a user-configurable setting.
                 // Windows does not have a configurable setting for Max Handles as the number of handles available to the system is dynamic (even if the max per process is not). 
                 // As such, for Windows, GetMaximumConfiguredFileHandlesCount always return -1, by design. Also, GetTotalAllocatedFileHandlesCount is not implemented for Windows (just returns -1).

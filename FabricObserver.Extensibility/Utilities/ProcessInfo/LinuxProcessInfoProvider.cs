@@ -7,10 +7,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.Versioning;
 using System.Threading;
 
 namespace FabricObserver.Observers.Utilities
 {
+    [SupportedOSPlatform("linux")]
     public class LinuxProcessInfoProvider : ProcessInfoProvider
     {
         private const int MaxDescendants = 50;
@@ -82,7 +84,7 @@ namespace FabricObserver.Observers.Utilities
                     ProcessInfoLogger.LogWarning($"elevated_proc_fd exited with: {process.ExitCode}");
                     
                     // Try and work around the unsetting of caps issues when SF runs a cluster upgrade.
-                    if (error.ToLower().Contains("permission denied"))
+                    if (error.Contains("permission denied", StringComparison.CurrentCultureIgnoreCase))
                     {
                         // Throwing LinuxPermissionException here will eventually take down FO (by design). The failure will be logged and telemetry will be emitted, then
                         // the exception will be re-thrown by ObserverManager and the FO process will fail fast exit. Then, SF will create a new instance of FO on the offending node which

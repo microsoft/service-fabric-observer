@@ -1,8 +1,8 @@
-## FabricObserver 3.2.15
+## FabricObserver 3.3.0 (.NET 8)
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-observer%2Fmain%2FDocumentation%2FDeployment%2Fservice-fabric-observer.json)  
 
-[**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a production-ready watchdog service with an easy-to-use extensibility model, written as a stateless, singleton Service Fabric **.NET 6** application that by default 
+[**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a production-ready watchdog service with an easy-to-use extensibility model, written as a stateless, singleton Service Fabric **.NET 8** application that by default 
 
 1. Monitors a broad range of physical machine resources that tend to be very important to all Service Fabric services and maps these metrics to the related Service Fabric entities.
 2. Runs on multiple versions of Windows Server and Ubuntu.
@@ -10,7 +10,7 @@
 4. Supports [Configuration Setting Application Updates](/Documentation/Using.md#parameterUpdates) for any observer for any supported setting. 
 5. Is actively developed in the open.
 
-> FabricObserver targets SF runtime versions 9 and higher. 
+> FabricObserver targets SF runtime versions 9.1 and higher. Starting with version 3.3.0, you must deploy the self-contained release package unless you are deploying to a cluster running SF Version 10.1 CU3 or higher, then you can deploy framework-dependent release.
 
 FO is a Stateless Service Fabric Application composed of a single service that runs on every node in your cluster, so it can be deployed and run alongside your applications without any changes to them. Each FO service instance knows nothing about other FO instances in the cluster, by design. 
 
@@ -75,10 +75,14 @@ For more information about **the design of FabricObserver**, please see the [Des
 
 ***Note: By default, FO runs as NetworkUser on Windows and sfappsuser on Linux. If you want to monitor SF service processes that run as elevated (System) on Windows, then you must also run FO as System on Windows. There is no reason to run as root on Linux under any circumstances (see the Capabilities binaries implementations, which allow for FO to run as sfappsuser and successfully execute specific commands that require elevated privilege).*** 
 
-For Linux deployments, we have ensured that FO will work as expected as normal user (non-root user). In order for us to do this, we had to implement a setup script that sets [Capabilities](https://man7.org/linux/man-pages/man7/capabilities.7.html) on three proxy binaries which can only run specific commands as root. 
-If you deploy from VS, then you will need to use FabricObserver/PackageRoot/ServiceManifest.linux.xml (just copy its contents into ServiceManifest.xml or add the new piece which is simply a SetupEntryPoint section).  
+**For Linux deployments**, we have ensured that FO will work as expected as normal user (non-root user). In order for us to do this, we had to implement a setup script that sets [Capabilities](https://man7.org/linux/man-pages/man7/capabilities.7.html) on three proxy binaries which can only run specific commands as root. 
+If you deploy from VS, then you will need to use FabricObserver/PackageRoot/ServiceManifest.linux.xml (just copy its contents into ServiceManifest.xml or add the new piece which is simply a SetupEntryPoint section). Further, you must uncomment the RunAsPolicy element in ApplicationManifest.xml so that Linux Capabilities can be set by a setup bash script that must run as root:  
 
-If you use the FO [build script](https://github.com/microsoft/service-fabric-observer/blob/main/Build-FabricObserver.ps1), then it will take care of any configuration modifications automatically for linux build output.
+```xml
+ <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
+```
+
+If you use the FO [build script](https://github.com/microsoft/service-fabric-observer/blob/main/Build-FabricObserver.ps1), then it will take care of any configuration modifications automatically for linux build output, but you will still need to modify ApplicationManifest.xml as described above.
 
 The build scripts include code build, sfpkg generation, and nupkg generation. They are all located in the top level directory of this repo.
 
@@ -87,7 +91,7 @@ see [FOAzurePipeline.yaml](/FOAzurePipeline.yaml) for msazure devops build tasks
 .net6 installed (if you deploy VM images from Azure gallery, then they will not have .net6 installed), then you must deploy the SelfContained package.</strong>
 
 ### Deploy FabricObserver
-**Note: You must deploy this version (3.2.15) to clusters that are running SF 9.0 and above. This version also requires .NET 6.**
+**Note: You must deploy this version (3.3.0) to clusters that are running SF 9.0 and above. This version also requires .NET 6.**
 You can deploy FabricObserver (and ClusterObserver) using Visual Studio (if you build the sources yourself), PowerShell or ARM. Please note that this version of FabricObserver no longer supports the DefaultServices node in ApplicationManifest.xml.
 This means that should you deploy using PowerShell, you must create an instance of the service as the last command in your script. This was done to support ARM deployment, specifically.
 The StartupServices.xml file you see in the FabricHealerApp project now contains the service information once held in ApplicationManifest's DefaultServices node. Note that this information is primarily useful for deploying from Visual Studio.
@@ -127,15 +131,15 @@ Connect-ServiceFabricCluster -ConnectionEndpoint @('sf-win-cluster.westus2.cloud
 
 #Copy $path contents (FO app package) to server:
 
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FO3215 -TimeoutSec 1800
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FO330 -TimeoutSec 1800
 
 #Register FO ApplicationType:
 
-Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO3215
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO330
 
 #Create FO application (if not already deployed at lesser version):
 
-New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.2.15   
+New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.3.0   
 
 #Create the Service instances (-1 means all nodes, which is what is required for FO):  
 
@@ -143,12 +147,14 @@ New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName f
 
 #OR if updating existing version:  
 
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.2.15 -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.3.0 -Monitored -FailureAction rollback
 ```  
 
 ## Observer Model
 
 FO is composed of Observer objects (instance types) that are designed to observe, record, and report on several machine-level environmental conditions inside a Windows or Linux (Ubuntu) VM hosting a Service Fabric node.
+
+**NOTE:** ```SFConfigurationObserver```, which has been deprecated for several releases has been completely removed in 3.3.0. Further, all related settings have been removed from Settings.xml and ApplicationManifest.xml.
 
 Here are the current observers and what they monitor:  
 
@@ -163,7 +169,6 @@ Here are the current observers and what they monitor:
 | Networking - general health and monitoring of availability of user-specified, per-app endpoints | NetworkObserver |
 | CPU/Memory/File Handles(Linux)/Firewalls(Windows)/TCP Ports usage at machine level | NodeObserver |
 | OS/Hardware - OS install date, OS health status, list of hot fixes, hardware configuration, AutoUpdate configuration, Ephemeral TCP port range, TCP ports in use, memory and disk space usage | OSObserver |
-| Service Fabric Configuration information | SFConfigurationObserver |
 | **Another resource you find important** | **Observer [that you implement](./Documentation/Plugins.md)** |
 
 To learn more about the current Observers and their configuration, please see the [Observers readme](./Documentation/Observers.md).  

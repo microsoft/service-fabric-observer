@@ -1,7 +1,7 @@
-### ClusterObserver 2.2.8
-#### This version requires SF Runtime >= 9.0 and targets .NET 6.
+### ClusterObserver 2.3.0 (.NET 8)
+#### This version requires SF Runtime >= 9.1 and targets .NET 8.
 
-[ClusterObserver (CO)](https://github.com/microsoft/service-fabric-observer/tree/main/ClusterObserver) is a stateless singleton Service Fabric .NET 6 service that runs on one node in a cluster. CO observes cluster health (aggregated) 
+[ClusterObserver (CO)](https://github.com/microsoft/service-fabric-observer/tree/main/ClusterObserver) is a stateless singleton Service Fabric .NET 8 application that runs on one node in a cluster. CO observes cluster health (aggregated) 
 and sends telemetry when a cluster is in Error or Warning. CO shares a very small subset of FabricObserver's (FO) code. It is designed to be completely independent from FO sources, 
 but lives in this repo (and SLN) because it is very useful to have both services deployed, especially for those who want cluster-level health observation and reporting in addition to 
 the node-level user-defined resource monitoring, health event creation, and health reporting done by FO. FabricObserver is designed to generate Service Fabric health events based on user-defined resource usage Warning and Error thresholds which ClusterObserver sends to your log analytics and alerting service.
@@ -32,7 +32,7 @@ $appParams = @{ "RunInterval" = "00:10:00"; "MaxTimeNodeStatusNotOk" = "04:00:00
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -ApplicationTypeVersion 2.2.1.960 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -ApplicationTypeVersion 2.3.0 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```
 
 Example Configuration:  
@@ -53,8 +53,7 @@ Example Configuration:
          **NOTE: For Linux runtime target, just supply the name of the directory (not a path with drive letter like you for Windows).** -->
 		<Parameter Name="ObserverLogPath" Value="" MustOverride="true" />
 		<!-- Required: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
-         will be locally logged. This is the recommended setting. Note that file logging is generally
-         only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
+         will be locally logged. This is the recommended setting. -->
 		<Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
 		<Parameter Name="ObserverFailureHealthStateLevel" Value="" MustOverride="true" />
 		<Parameter Name="EnableETWProvider" Value="" MustOverride="true" />
@@ -97,8 +96,7 @@ Example Configuration:
 		<!-- Required: To enable or not enable, that is the question.-->
 		<Parameter Name="Enabled" Value="" MustOverride="true" />
 		<!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
-         will be locally logged. This is the recommended setting. Note that file logging is generally
-         only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
+         will be locally logged. This is the recommended setting. -->
 		<Parameter Name="EnableEtw" Value="" MustOverride="true"/>
 		<Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
 		<Parameter Name="EnableTelemetry" Value="" MustOverride="true" />

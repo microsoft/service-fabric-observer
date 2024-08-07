@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Runtime.Serialization;
 
 namespace FabricObserver.Utilities
 {
@@ -20,10 +19,6 @@ namespace FabricObserver.Utilities
         }
 
         public InvalidPluginException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
-
-        protected InvalidPluginException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
     }

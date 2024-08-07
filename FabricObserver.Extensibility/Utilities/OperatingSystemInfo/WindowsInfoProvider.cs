@@ -12,6 +12,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Management;
+using System.Runtime.Versioning;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,7 +21,8 @@ using static FabricObserver.Observers.Utilities.NativeMethods;
 
 namespace FabricObserver.Observers.Utilities
 {
-    public class WindowsInfoProvider : OSInfoProvider
+    [SupportedOSPlatform("windows")]
+    public partial class WindowsInfoProvider : OSInfoProvider
     {
         private const string TcpProtocol = "tcp";
         private const int portDataMaxCacheTimeSeconds = 45;
@@ -35,6 +38,22 @@ namespace FabricObserver.Observers.Utilities
         private (int LowPort, int HighPort, int NumberOfPorts) windowsDynamicPortRange = (-1, -1, 0);
         private DateTime LastDynamicRangeCacheUpdate = DateTime.MinValue;
         private DateTime LastCacheUpdate = DateTime.MinValue;
+        private static PerformanceCounter _performanceCounter = null;
+
+        private static PerformanceCounter QueueLengthCounter
+        {
+            get
+            {
+                _performanceCounter ??= new PerformanceCounter
+                {
+                    CategoryName = "LogicalDisk",
+                    CounterName = "Avg. Disk Queue Length",
+                    ReadOnly = true
+                };
+
+                return _performanceCounter;
+            }
+        }
 
         /// <summary>
         /// Windows OS info provider type.
@@ -56,7 +75,7 @@ namespace FabricObserver.Observers.Utilities
             }
             else
             {
-                win32TcpConnInfo = new List<(ushort LocalPort, int OwningProcessId, MIB_TCP_STATE State)>();
+                win32TcpConnInfo = [];
             }
         }
 
@@ -259,11 +278,7 @@ namespace FabricObserver.Observers.Utilities
 
                                 if (process.WaitForExit(60000))
                                 {
-                                    Match match = Regex.Match(
-                                                    output,
-                                                    @"Start Port\s+:\s+(?<startPort>\d+).+?Number of Ports\s+:\s+(?<numberOfPorts>\d+)",
-                                                    RegexOptions.Singleline | RegexOptions.IgnoreCase);
-
+                                    Match match = PortRegex().Match(output);
                                     string startPort = match.Groups["startPort"].Value;
                                     string portCount = match.Groups["numberOfPorts"].Value;
                                     int exitStatus = process.ExitCode;
@@ -711,5 +726,119 @@ namespace FabricObserver.Observers.Utilities
                 return (-1, -1, null);
             }
         }
+
+        public override int GetActiveFirewallRulesCount()
+        {
+            int count = 0;
+
+            try
+            {
+                var scope = new ManagementScope("\\\\.\\ROOT\\StandardCimv2");
+                var q = new ObjectQuery("SELECT * FROM MSFT_NetFirewallRule WHERE Enabled=1");
+                using (var searcher = new ManagementObjectSearcher(scope, q))
+                {
+                    using (var results = searcher.Get())
+                    {
+                        count = results.Count;
+                    }
+                }
+            }
+            catch (ManagementException)
+            {
+
+            }
+
+            return count;
+        }
+
+        public override string GetOSHotFixes(bool generateKbUrl, CancellationToken token)
+        {
+            ManagementObject[] resultsOrdered;
+            string ret = string.Empty;
+
+            token.ThrowIfCancellationRequested();
+
+            try
+            {
+                using var searcher = new ManagementObjectSearcher("SELECT HotFixID,InstalledOn FROM Win32_QuickFixEngineering");
+                var results = searcher.Get();
+
+                if (results.Count < 1)
+                {
+                    return string.Empty;
+                }
+
+                resultsOrdered = [.. results.Cast<ManagementObject>()
+                                    .Where(obj => obj["InstalledOn"] != null && obj["InstalledOn"].ToString() != string.Empty)
+                                    .OrderByDescending(obj => DateTime.Parse(obj["InstalledOn"].ToString() ?? string.Empty))];
+
+                var sb = new StringBuilder();
+                var baseUrl = "https://support.microsoft.com/help/";
+
+                for (int i = 0; i < resultsOrdered.Length; ++i)
+                {
+                    token.ThrowIfCancellationRequested();
+
+                    ManagementObject obj = resultsOrdered[i];
+
+                    try
+                    {
+                        _ = generateKbUrl ? sb.AppendLine(
+                            $"<a href=\"{baseUrl}{((string)obj["HotFixID"])?.ToLower().Replace("kb", string.Empty)}/\" target=\"_blank\">{obj["HotFixID"]}</a>   " +
+                            $"{obj["InstalledOn"]}") : sb.AppendLine($"{obj["HotFixID"]}");
+                    }
+                    catch (ArgumentException)
+                    {
+
+                    }
+                    finally
+                    {
+                        obj?.Dispose();
+                        obj = null;
+                    }
+                }
+
+                resultsOrdered = null;
+                ret = sb.ToString().Trim();
+                _ = sb.Clear();
+                sb = null;
+
+            }
+            catch (Exception e) when (e is not OutOfMemoryException)
+            {
+                OSInfoLogger.LogWarning($"Unhandled Exception processing Windows hotpatch information: {e.Message}");
+            }
+
+            return ret;
+        }
+
+        public override float GetAverageDiskQueueLength(string instance)
+        {
+            try
+            {
+                QueueLengthCounter.InstanceName = instance;
+
+                // Warm up counter.
+                _ = QueueLengthCounter.RawValue;
+
+                return QueueLengthCounter.NextValue();
+            }
+            catch (Exception e)
+            {
+                if (e is ArgumentNullException or PlatformNotSupportedException or Win32Exception or UnauthorizedAccessException)
+                {
+                    OSInfoLogger.LogWarning($"{QueueLengthCounter.CategoryName} {QueueLengthCounter.CounterName} PerfCounter handled exception: " + e.Message);
+
+                    // Don't throw.
+                    return 0F;
+                }
+
+                OSInfoLogger.LogError($"{QueueLengthCounter.CategoryName} {QueueLengthCounter.CounterName} PerfCounter unhandled exception: " + e.Message);
+                throw;
+            }
+        }
+
+        [GeneratedRegex(@"Start Port\s+:\s+(?<startPort>\d+).+?Number of Ports\s+:\s+(?<numberOfPorts>\d+)", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+        private static partial Regex PortRegex();
     }
 }

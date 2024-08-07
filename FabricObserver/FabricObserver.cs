@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers;
 using FabricObserver.Observers.Utilities;
+using FabricObserver.Observers.Utilities.Telemetry;
 using FabricObserver.Utilities;
 using McMaster.NETCore.Plugins;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,19 +23,14 @@ namespace FabricObserver
     /// <summary>
     /// An instance of this class is created for each service instance by the Service Fabric runtime.
     /// </summary>
-    internal sealed class FabricObserverService : StatelessService
+    /// <remarks>
+    /// Initializes a new instance of the type.
+    /// </remarks>
+    /// <param name="context">StatelessServiceContext instance.</param>
+    internal sealed class FabricObserverService(StatelessServiceContext context) : StatelessService(context)
     {
         private ObserverManager observerManager;
-        private readonly Logger logger;
-
-        /// <summary>
-        /// Initializes a new instance of the type.
-        /// </summary>
-        /// <param name="context">StatelessServiceContext instance.</param>
-        public FabricObserverService(StatelessServiceContext context) : base(context)
-        {
-            logger = new Logger("FabricObserverService");
-        }
+        private readonly Logger logger = new("FabricObserverService");
 
         /// <summary>
         /// This is the main entry point for your service instance.
@@ -66,7 +62,6 @@ namespace FabricObserver
             _ = services.AddScoped(typeof(ObserverBase), s => new NetworkObserver(Context));
             _ = services.AddScoped(typeof(ObserverBase), s => new NodeObserver(Context));
             _ = services.AddScoped(typeof(ObserverBase), s => new OSObserver(Context));
-            _ = services.AddScoped(typeof(ObserverBase), s => new SFConfigurationObserver(Context));
             _ = services.AddSingleton(typeof(StatelessServiceContext), Context);
 
             LoadObserversFromPlugins(services);
@@ -109,7 +104,7 @@ namespace FabricObserver
             }
 
             PluginLoader[] pluginLoaders = new PluginLoader[pluginDlls.Length];
-            Type[] sharedTypes = { typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup), typeof(IServiceCollection) };
+            Type[] sharedTypes = [typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup), typeof(IServiceCollection)];
             string dll = "";
 
             for (int i = 0; i < pluginDlls.Length; ++i)
@@ -159,7 +154,7 @@ namespace FabricObserver
                             AppName = new Uri($"{Context.CodePackageActivationContext.ApplicationName}"),
                             EmitLogEvent = true,
                             HealthMessage = error,
-                            EntityType = Observers.Utilities.Telemetry.EntityType.Application,
+                            EntityType = EntityType.Application,
                             HealthReportTimeToLive = TimeSpan.FromMinutes(10),
                             State = System.Fabric.Health.HealthState.Warning,
                             Property = "FabricObserverPluginLoadError",

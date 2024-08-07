@@ -11,19 +11,17 @@ using FabricObserver.Observers;
 using System.Reflection;
 using System.Linq;
 using FabricObserver.Utilities;
+using FabricObserver.Observers.Utilities;
+using FabricObserver.Observers.Utilities.Telemetry;
 
 namespace ClusterObserver
 {
     /// <summary>
     /// An instance of this class is created for each service instance by the Service Fabric runtime.
     /// </summary>
-    internal sealed class FabricClusterObserver : StatelessService
+    internal sealed class FabricClusterObserver(StatelessServiceContext context) : StatelessService(context)
     {
-        public FabricClusterObserver(StatelessServiceContext context)
-            : base(context)
-        {
-
-        }
+        private readonly Logger logger = new("ClusterObserverService");
 
         /// <summary>
         /// This is the main entry point for your service instance.
@@ -68,11 +66,12 @@ namespace ClusterObserver
             }
 
             PluginLoader[] pluginLoaders = new PluginLoader[pluginDlls.Length];
-            Type[] sharedTypes = { typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup), typeof(IServiceCollection) };
+            Type[] sharedTypes = [typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup), typeof(IServiceCollection)];
+            string dll = "";
 
             for (int i = 0; i < pluginDlls.Length; ++i)
             {
-                string dll = pluginDlls[i];
+                dll = pluginDlls[i];
                 PluginLoader loader = PluginLoader.CreateFromAssemblyFile(dll, sharedTypes, a => a.IsUnloadable = false);
                 pluginLoaders[i] = loader;
             }
@@ -109,7 +108,32 @@ namespace ClusterObserver
                 }
                 catch (Exception e) when (e is ArgumentException or BadImageFormatException or IOException)
                 {
+                    if (e is IOException)
+                    {
+                        string error = $"Plugin dll {dll} could not be loaded. {e.Message}";
+                        HealthReport healthReport = new()
+                        {
+                            AppName = new Uri($"{Context.CodePackageActivationContext.ApplicationName}"),
+                            EmitLogEvent = true,
+                            HealthMessage = error,
+                            EntityType = EntityType.Application,
+                            HealthReportTimeToLive = TimeSpan.FromMinutes(10),
+                            State = System.Fabric.Health.HealthState.Warning,
+                            Property = "ClusterObserverPluginLoadError",
+                            SourceId = $"ClusterObserverService-{Context.NodeContext.NodeName}",
+                            NodeName = Context.NodeContext.NodeName,
+                        };
+
+                        ObserverHealthReporter observerHealth = new(logger);
+                        observerHealth.ReportHealthToServiceFabric(healthReport);
+                    }
+
                     continue;
+                }
+                catch (Exception e) when (e is not OutOfMemoryException)
+                {
+                    logger.LogError($"Unhandled exception in ClusterObserverService Instance: {e.Message}");
+                    throw;
                 }
             }
         }

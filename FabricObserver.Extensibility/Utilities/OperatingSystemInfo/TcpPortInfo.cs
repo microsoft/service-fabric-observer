@@ -52,6 +52,8 @@ namespace FabricObserver.Observers.Utilities
             get; private set;
         }
 
+        private static readonly char[] separator = [' '];
+
         /// <summary>
         /// Creates a new instance of TcpPortInfo and set properties based on supplied netstat out row string.
         /// </summary>
@@ -64,7 +66,7 @@ namespace FabricObserver.Observers.Utilities
                 throw new ArgumentException("netstatOutputLine value must be a valid nestat output row");
             }
 
-            string[] stats = netstatOutputLine.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] stats = netstatOutputLine.Split(separator, StringSplitOptions.RemoveEmptyEntries);
 
             if (stats.Length != 5 || !int.TryParse(stats[4], out int pid))
             {

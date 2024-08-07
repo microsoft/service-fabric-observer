@@ -176,7 +176,7 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// <returns>A List of ReplicaOrInstanceMonitoringInfo objects representing all replicas in any status (consumer should filter Status per need) on the local (or specified) node.</returns>
         public async Task<List<ReplicaOrInstanceMonitoringInfo>> GetAllDeployedReplicasOrInstancesAsync(bool includeChildProcesses, CancellationToken token, string nodeName = null)
         {
-            List<ReplicaOrInstanceMonitoringInfo> repList = new();
+            List<ReplicaOrInstanceMonitoringInfo> repList = [];
             List<DeployedApplication> appList = await GetAllDeployedAppsAsync(token);
 
             if (isWindows && !NativeMethods.RefreshSFUserProcessDataCache(getChildProcesses: includeChildProcesses))
@@ -204,7 +204,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                         var deployedReplicaList = 
                             await FabricClientSingleton.QueryManager.GetDeployedReplicaListAsync(nodeName ?? this.nodeName, app.ApplicationName, null, null, TimeSpan.FromSeconds(60), token);
 
-                        if (deployedReplicaList == null || !deployedReplicaList.Any())
+                        if (deployedReplicaList == null || deployedReplicaList.Count == 0)
                         {
                             // Application has no deployed replicas.
                             continue;
@@ -637,7 +637,7 @@ namespace FabricObserver.Utilities.ServiceFabric
         /// <returns>A List of tuple (string ServiceName, string ProcName, int Pid) representing all services supplied in the ReplicaOrInstanceMonitoringInfo instance, including child processes of each service, if any.</returns>
         public List<(string ServiceName, string ProcName, int Pid, DateTime ProcessStartTime)> GetServiceProcessInfo(List<ReplicaOrInstanceMonitoringInfo> repOrInsts)
         {
-            List<(string ServiceName, string ProcName, int Pid, DateTime ProcessStartTime)> pids = new();
+            List<(string ServiceName, string ProcName, int Pid, DateTime ProcessStartTime)> pids = [];
 
             foreach (var repOrInst in repOrInsts)
             {
@@ -761,7 +761,7 @@ namespace FabricObserver.Utilities.ServiceFabric
             }
 
             // Application parameter value specified as a Service Fabric Application Manifest variable.
-            if (appParamValue.StartsWith("["))
+            if (appParamValue.StartsWith('['))
             {
                 appParamValue = appParamValue.Replace("[", string.Empty).Replace("]", string.Empty);
 
@@ -782,7 +782,7 @@ namespace FabricObserver.Utilities.ServiceFabric
         public static void AddParametersIfNotExists(ApplicationParameterList toParameters, ApplicationParameterList fromParameters)
         {
             // If toParameters is passed in as null, then make it a new instance.
-            toParameters ??= new ApplicationParameterList();
+            toParameters ??= [];
 
             if (fromParameters != null)
             {
@@ -1209,7 +1209,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                         && (e.HealthInformation.SourceId.StartsWith(ObserverConstants.AppObserverName)
                             || e.HealthInformation.SourceId.StartsWith(ObserverConstants.ContainerObserverName))).ToList();
 
-            if (!serviceHealthEvents.Any())
+            if (serviceHealthEvents.Count == 0)
             {
                 return;
             }
@@ -1262,7 +1262,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                            || e.HealthInformation.SourceId.StartsWith(ObserverConstants.FabricSystemObserverName)
                            || e.HealthInformation.SourceId.StartsWith(ObserverConstants.NetworkObserverName))).ToList();
 
-            if (!appHealthEvents.Any())
+            if (appHealthEvents.Count == 0)
             {
                 return;
             }
@@ -1319,7 +1319,7 @@ namespace FabricObserver.Utilities.ServiceFabric
                           || e.HealthInformation.SourceId.StartsWith(ObserverConstants.NodeObserverName)
                           || e.HealthInformation.SourceId.StartsWith(ObserverConstants.OSObserverName)).ToList();
 
-                if (!nodeHealthEvents.Any())
+                if (nodeHealthEvents.Count == 0)
                 {
                     return;
                 }

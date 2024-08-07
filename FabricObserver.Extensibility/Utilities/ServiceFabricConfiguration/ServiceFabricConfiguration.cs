@@ -32,7 +32,7 @@ namespace FabricObserver.Observers.Utilities
                             {
                                 instance = new WindowsServiceFabricConfiguration();
                             }
-                            else
+                            else if (OperatingSystem.IsLinux())
                             {
                                 instance = new LinuxServiceFabricConfiguration();
                             }

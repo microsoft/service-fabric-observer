@@ -6,10 +6,12 @@
 using Microsoft.Win32;
 using System;
 using System.IO;
+using System.Runtime.Versioning;
 using System.Security;
 
 namespace FabricObserver.Observers.Utilities
 {
+    [SupportedOSPlatform("windows")]
     public class WindowsServiceFabricConfiguration : ServiceFabricConfiguration
     {
         private const string ServiceFabricWindowsRegistryPath = @"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Service Fabric";

@@ -7,10 +7,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Diagnostics.Eventing.Reader;
 using System.Fabric;
 using System.Fabric.Health;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -32,7 +30,7 @@ namespace FabricObserver.Observers
         private readonly string[] processNameWatchList;
         private Stopwatch stopwatch;
         private bool checkPrivateWorkingSet;
-        private List<(string procName, int procId)> fabricSystemProcInfo = new();
+        private List<(string procName, int procId)> fabricSystemProcInfo = [];
 
         // Health Report data container - For use in analysis to determine health state.
         private Dictionary<string, FabricResourceUsageData<double>> allCpuData;
@@ -43,10 +41,6 @@ namespace FabricObserver.Observers
         private Dictionary<string, FabricResourceUsageData<int>> allThreadsData;
         private Dictionary<string, FabricResourceUsageData<double>> allAppKvsLvidsData;
 
-        // Windows only. (EventLog).
-        private List<EventRecord> evtRecordList = null;
-        private bool monitorWinEventLog;
-
         /// <summary>
         /// Creates a new instance of the type.
         /// </summary>
@@ -56,8 +50,8 @@ namespace FabricObserver.Observers
             // Linux
             if (!IsWindows)
             {
-                processNameWatchList = new[]
-                {
+                processNameWatchList =
+                [
                     "Fabric",
                     "FabricDCA.dll",
                     "FabricDnsService",
@@ -68,13 +62,13 @@ namespace FabricObserver.Observers
                     "FabricIS.dll",
                     "FabricRM.exe",
                     "FabricUS.dll"
-                };
+                ];
             }
             else
             {
                 // Windows
-                processNameWatchList = new[]
-                {
+                processNameWatchList =
+                [
                     "EventStore.Service",
                     "Fabric",
                     "FabricApplicationGateway",
@@ -87,7 +81,7 @@ namespace FabricObserver.Observers
                     "FabricHost",
                     "FabricIS",
                     "FabricRM"
-                };
+                ];
             }
         }
 
@@ -202,11 +196,6 @@ namespace FabricObserver.Observers
 
                 // Fix the bug..
                 throw;
-            }
-
-            if (IsWindows && IsObserverWebApiAppDeployed && monitorWinEventLog)
-            {
-                ReadServiceFabricWindowsEventLog();
             }
 
             await ReportAsync(token);
@@ -356,81 +345,6 @@ namespace FabricObserver.Observers
                 {
                     return Task.CompletedTask;
                 }
-
-                // OBSOLETE: Windows Event Log
-                if (IsWindows && IsObserverWebApiAppDeployed && monitorWinEventLog)
-                {
-                    // SF Eventlog Errors?
-                    // Write this out to a new file, for use by the web front end log viewer.
-                    // Format = HTML.
-                    int count = evtRecordList.Count;
-                    var logPath = Path.Combine(ObserverLogger.LogFolderBasePath, "EventVwrErrors.txt");
-
-                    // Remove existing file.
-                    if (File.Exists(logPath))
-                    {
-                        try
-                        {
-                            File.Delete(logPath);
-                        }
-                        catch (Exception e) when (e is ArgumentException or IOException or UnauthorizedAccessException)
-                        {
-
-                        }
-                    }
-
-                    if (count >= 10)
-                    {
-                        var sb = new StringBuilder();
-
-                        _ = sb.AppendLine("<br/><div><strong>" +
-                                          "<a href='javascript:toggle(\"evtContainer\")'>" +
-                                          "<div id=\"plus\" style=\"display: inline; font-size: 25px;\">+</div> " + count +
-                                          " Error Events in ServiceFabric and System</a> " +
-                                          "Event logs</strong>.<br/></div>");
-
-                        _ = sb.AppendLine("<div id='evtContainer' style=\"display: none;\">");
-
-                        foreach (var evt in evtRecordList.Distinct())
-                        {
-                            token.ThrowIfCancellationRequested();
-
-                            try
-                            {
-                                // Access event properties:
-                                _ = sb.AppendLine("<div>" + evt.LogName + "</div>");
-                                _ = sb.AppendLine("<div>" + evt.LevelDisplayName + "</div>");
-                                if (evt.TimeCreated.HasValue)
-                                {
-                                    _ = sb.AppendLine("<div>" + evt.TimeCreated.Value.ToShortDateString() + "</div>");
-                                }
-
-                                foreach (var prop in evt.Properties)
-                                {
-                                    if (prop.Value != null && Convert.ToString(prop.Value).Length > 0)
-                                    {
-                                        _ = sb.AppendLine("<div>" + prop.Value + "</div>");
-                                    }
-                                }
-                            }
-                            catch (EventLogException)
-                            {
-
-                            }
-                        }
-
-                        _ = sb.AppendLine("</div>");
-
-                        _ = ObserverLogger.TryWriteLogFile(logPath, sb.ToString());
-                        _ = sb.Clear();
-                    }
-
-                    // Clean up.
-                    if (count > 0)
-                    {
-                        evtRecordList.Clear();
-                    }
-                }
             }
             catch (Exception e) when (e is not (OperationCanceledException or TaskCanceledException))
             {
@@ -441,82 +355,6 @@ namespace FabricObserver.Observers
             }
 
             return Task.CompletedTask;
-        }
-
-        private void ReadServiceFabricWindowsEventLog()
-        {
-            if (!IsWindows)
-            {
-                return;
-            }
-
-            string sfOperationalLogSource = "Microsoft-ServiceFabric/Operational";
-            string sfAdminLogSource = "Microsoft-ServiceFabric/Admin";
-            string systemLogSource = "System";
-            string sfLeaseAdminLogSource = "Microsoft-ServiceFabric-Lease/Admin";
-            string sfLeaseOperationalLogSource = "Microsoft-ServiceFabric-Lease/Operational";
-
-            var range2Days = DateTime.UtcNow.AddDays(-1);
-            var format = range2Days.ToString("yyyy-MM-ddTHH:mm:ss.fffffff00K", CultureInfo.InvariantCulture);
-            var datexQuery = $"*[System/TimeCreated/@SystemTime >='{format}']";
-
-            // Critical and Errors only.
-            string xQuery = "*[System/Level <= 2] and " + datexQuery;
-
-            // SF Admin Event Store.
-            var evtLogQuery = new EventLogQuery(sfAdminLogSource, PathType.LogName, xQuery);
-            using (var evtLogReader = new EventLogReader(evtLogQuery))
-            {
-                for (var eventInstance = evtLogReader.ReadEvent(); eventInstance != null; eventInstance = evtLogReader.ReadEvent())
-                {
-                    Token.ThrowIfCancellationRequested();
-                    evtRecordList.Add(eventInstance);
-                }
-            }
-
-            // SF Operational Event Store.
-            evtLogQuery = new EventLogQuery(sfOperationalLogSource, PathType.LogName, xQuery);
-            using (var evtLogReader = new EventLogReader(evtLogQuery))
-            {
-                for (var eventInstance = evtLogReader.ReadEvent(); eventInstance != null; eventInstance = evtLogReader.ReadEvent())
-                {
-                    Token.ThrowIfCancellationRequested();
-                    evtRecordList.Add(eventInstance);
-                }
-            }
-
-            // SF Lease Admin Event Store.
-            evtLogQuery = new EventLogQuery(sfLeaseAdminLogSource, PathType.LogName, xQuery);
-            using (var evtLogReader = new EventLogReader(evtLogQuery))
-            {
-                for (var eventInstance = evtLogReader.ReadEvent(); eventInstance != null; eventInstance = evtLogReader.ReadEvent())
-                {
-                    Token.ThrowIfCancellationRequested();
-                    evtRecordList.Add(eventInstance);
-                }
-            }
-
-            // SF Lease Operational Event Store.
-            evtLogQuery = new EventLogQuery(sfLeaseOperationalLogSource, PathType.LogName, xQuery);
-            using (var evtLogReader = new EventLogReader(evtLogQuery))
-            {
-                for (var eventInstance = evtLogReader.ReadEvent(); eventInstance != null; eventInstance = evtLogReader.ReadEvent())
-                {
-                    Token.ThrowIfCancellationRequested();
-                    evtRecordList.Add(eventInstance);
-                }
-            }
-
-            // System Event Store.
-            evtLogQuery = new EventLogQuery(systemLogSource, PathType.LogName, xQuery);
-            using (var evtLogReader = new EventLogReader(evtLogQuery))
-            {
-                for (var eventInstance = evtLogReader.ReadEvent(); eventInstance != null; eventInstance = evtLogReader.ReadEvent())
-                {
-                    Token.ThrowIfCancellationRequested();
-                    evtRecordList.Add(eventInstance);
-                }
-            }
         }
 
         private Process[] GetDotnetLinuxProcessesByFirstArgument(string argument)
@@ -545,7 +383,7 @@ namespace FabricObserver.Observers
 
                     if (cmdline.Contains(sfAppDir))
                     {
-                        string bin = cmdline[(cmdline.LastIndexOf("/", StringComparison.Ordinal) + 1)..];
+                        string bin = cmdline[(cmdline.LastIndexOf('/') + 1)..];
 
                         if (string.Equals(argument, bin, StringComparison.InvariantCulture))
                         {
@@ -602,7 +440,7 @@ namespace FabricObserver.Observers
             // CPU data
             if (allCpuData == null && (CpuErrorUsageThresholdPct > 0 || CpuWarnUsageThresholdPct > 0))
             {
-                allCpuData = new Dictionary<string, FabricResourceUsageData<double>>();
+                allCpuData = [];
 
                 foreach (var proc in processNameWatchList)
                 {
@@ -614,7 +452,7 @@ namespace FabricObserver.Observers
             // Memory data
             if (allMemData == null && (MemErrorUsageThresholdMb > 0 || MemWarnUsageThresholdMb > 0))
             {
-                allMemData = new Dictionary<string, FabricResourceUsageData<float>>();
+                allMemData = [];
 
                 foreach (var proc in processNameWatchList)
                 {
@@ -626,7 +464,7 @@ namespace FabricObserver.Observers
             // Ports
             if (allActiveTcpPortData == null && (ActiveTcpPortCountError > 0 || ActiveTcpPortCountWarning > 0))
             {
-                allActiveTcpPortData = new Dictionary<string, FabricResourceUsageData<int>>();
+                allActiveTcpPortData = [];
 
                 foreach (var proc in processNameWatchList)
                 {
@@ -637,7 +475,7 @@ namespace FabricObserver.Observers
 
             if (allEphemeralTcpPortData == null && (ActiveEphemeralPortCountError > 0 || ActiveEphemeralPortCountWarning > 0))
             {
-                allEphemeralTcpPortData = new Dictionary<string, FabricResourceUsageData<int>>();
+                allEphemeralTcpPortData = [];
 
                 foreach (var proc in processNameWatchList)
                 {
@@ -649,7 +487,7 @@ namespace FabricObserver.Observers
             // Handles
             if (allHandlesData == null && (AllocatedHandlesError > 0 || AllocatedHandlesWarning > 0))
             {
-                allHandlesData = new Dictionary<string, FabricResourceUsageData<float>>();
+                allHandlesData = [];
 
                 foreach (var proc in processNameWatchList)
                 {
@@ -661,7 +499,7 @@ namespace FabricObserver.Observers
             // Threads
             if (allThreadsData == null && (ThreadCountError > 0 || ThreadCountWarning > 0))
             {
-                allThreadsData = new Dictionary<string, FabricResourceUsageData<int>>();
+                allThreadsData = [];
 
                 foreach (var proc in processNameWatchList)
                 {
@@ -673,7 +511,7 @@ namespace FabricObserver.Observers
             // KVS LVIDs - Windows-only (EnableKvsLvidMonitoring will always be false otherwise)
             if (EnableKvsLvidMonitoring && allAppKvsLvidsData == null)
             {
-                allAppKvsLvidsData = new Dictionary<string, FabricResourceUsageData<double>>();
+                allAppKvsLvidsData = [];
 
                 foreach (var proc in processNameWatchList)
                 {
@@ -687,11 +525,6 @@ namespace FabricObserver.Observers
                     _ = allAppKvsLvidsData.TryAdd(
                             proc, new FabricResourceUsageData<double>(ErrorWarningProperty.KvsLvidsPercent, proc, frudCapacity, UseCircularBuffer));
                 }
-            }
-
-            if (IsWindows && monitorWinEventLog && evtRecordList == null)
-            {
-                evtRecordList = new List<EventRecord>();
             }
         }
 
@@ -849,20 +682,6 @@ namespace FabricObserver.Observers
                 // Observers that monitor LVIDs should ensure the static ObserverManager.CanInstallLvidCounter is true before attempting to monitor LVID usage.
                 EnableKvsLvidMonitoring = enableLvidMonitoring && ObserverManager.IsLvidCounterEnabled;
             }
-
-            // Monitor Windows event log for SF and System Error/Critical events?
-            // This can be noisy. Use wisely. Return if running on Linux.
-            if (!IsWindows)
-            {
-                return;
-            }
-
-            var watchEvtLog = GetSettingParameterValue(ConfigurationSectionName, ObserverConstants.FabricSystemObserverMonitorWindowsEventLog);
-
-            if (!string.IsNullOrWhiteSpace(watchEvtLog) && bool.TryParse(watchEvtLog, out bool watchEl))
-            {
-                monitorWinEventLog = watchEl;
-            }
         }
 
         private async Task GetProcessInfoAsync(string procName, CancellationToken token)
@@ -937,9 +756,9 @@ namespace FabricObserver.Observers
 
                 if (ActiveTcpPortCountError > 0 || ActiveTcpPortCountWarning > 0)
                 {
-                    if (allActiveTcpPortData.ContainsKey(dotnetArg))
+                    if (allActiveTcpPortData.TryGetValue(dotnetArg, out FabricResourceUsageData<int> tcpPortsFrud))
                     {
-                        allActiveTcpPortData[dotnetArg].AddData(activePortCount);
+                        tcpPortsFrud.AddData(activePortCount);
                     }
                 }
 
@@ -949,9 +768,9 @@ namespace FabricObserver.Observers
 
                 if (ActiveEphemeralPortCountError > 0 || ActiveEphemeralPortCountWarning > 0)
                 {
-                    if (allEphemeralTcpPortData.ContainsKey(dotnetArg))
+                    if (allEphemeralTcpPortData.TryGetValue(dotnetArg, out FabricResourceUsageData<int> ePortsFrud))
                     {
-                        allEphemeralTcpPortData[dotnetArg].AddData(activeEphemeralPortCount);
+                        ePortsFrud.AddData(activeEphemeralPortCount);
                     }
                 }
 
@@ -994,18 +813,18 @@ namespace FabricObserver.Observers
                 // Handles/FDs
                 if (AllocatedHandlesError > 0 || AllocatedHandlesWarning > 0)
                 {
-                    if (allHandlesData.ContainsKey(dotnetArg))
+                    if (allHandlesData.TryGetValue(dotnetArg, out FabricResourceUsageData<float> handlesFrud))
                     {
-                        allHandlesData[dotnetArg].AddData(handles);
+                        handlesFrud.AddData(handles);
                     }
                 }
 
                 // Threads
                 if (ThreadCountError > 0 || ThreadCountWarning > 0)
                 {
-                    if (allThreadsData.ContainsKey(dotnetArg))
+                    if (allThreadsData.TryGetValue(dotnetArg, out FabricResourceUsageData<int> threadsFrud))
                     {
-                        allThreadsData[dotnetArg].AddData(threads);
+                        threadsFrud.AddData(threads);
                     }
                 }
 
@@ -1017,9 +836,9 @@ namespace FabricObserver.Observers
                     // GetProcessKvsLvidsUsedPercentage internally handles exceptions and will always return -1 when it fails.
                     if (lvidPct > -1)
                     {
-                        if (allAppKvsLvidsData.ContainsKey(dotnetArg))
+                        if (allAppKvsLvidsData.TryGetValue(dotnetArg, out FabricResourceUsageData<double> lvidsFrud))
                         {
-                            allAppKvsLvidsData[dotnetArg].AddData(lvidPct);
+                            lvidsFrud.AddData(lvidPct);
                         }
                     }
                 }
@@ -1029,9 +848,9 @@ namespace FabricObserver.Observers
                 {
                     float processMem = ProcessInfoProvider.Instance.GetProcessWorkingSetMb(procId, dotnetArg, token, checkPrivateWorkingSet);
 
-                    if (allMemData.ContainsKey(dotnetArg))
+                    if (allMemData.TryGetValue(dotnetArg, out FabricResourceUsageData<float> memMbFrud))
                     {
-                        allMemData[dotnetArg].AddData(processMem);
+                        memMbFrud.AddData(processMem);
                     }
                 }
 
@@ -1073,9 +892,9 @@ namespace FabricObserver.Observers
                             // process is no longer running if cpu == -1.
                             if (cpu >= 0)
                             {
-                                if (allCpuData.ContainsKey(dotnetArg))
+                                if (allCpuData.TryGetValue(dotnetArg, out FabricResourceUsageData<double> cpuFrud))
                                 {
-                                    allCpuData[dotnetArg].AddData(cpu);
+                                    cpuFrud.AddData(cpu);
                                 }
                             }
 

@@ -71,11 +71,11 @@ namespace ClusterObserver
             get; set; 
         }
 
-        public ClusterObserver(StatelessServiceContext serviceContext, bool ignoreDefaultQueryTimeout = false) 
+        public ClusterObserver(StatelessServiceContext serviceContext, bool ignoreDefaultQueryTimeout = false)
             : base (null, serviceContext)
         {
-            NodeStatusDictionary = new Dictionary<string, (NodeStatus NodeStatus, DateTime FirstDetectedTime, DateTime LastDetectedTime)>();
-            ApplicationUpgradesCompletedStatus = new Dictionary<string, bool>();
+            NodeStatusDictionary = [];
+            ApplicationUpgradesCompletedStatus = [];
             
             this.ignoreDefaultQueryTimeout = ignoreDefaultQueryTimeout;
 
@@ -400,7 +400,7 @@ namespace ClusterObserver
         {
             ServiceFabricUpgradeEventData appUpgradeInfo =
                     await FabricClientRetryHelper.ExecuteFabricActionWithRetryAsync(
-                            () => UpgradeChecker.GetApplicationUpgradeDetailsAsync(FabricClientInstance, Token, appName),
+                            () => UpgradeChecker.GetApplicationUpgradeDetailsAsync(FabricClientInstance, appName, Token),
                             Token);
 
             if (appUpgradeInfo?.ApplicationUpgradeProgress == null || Token.IsCancellationRequested)
@@ -534,7 +534,7 @@ namespace ClusterObserver
                 appHealth.HealthEvents.Where(
                     e => e.HealthInformation.HealthState is HealthState.Error or HealthState.Warning).ToList();
 
-            if (!appHealthEvents.Any())
+            if (appHealthEvents.Count == 0)
             {
                 return;
             }

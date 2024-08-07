@@ -1,10 +1,12 @@
-### ClusterObserver 2.2.8
-#### This version - and all subsequent versions - requires SF Runtime >= 9.0 and targets .NET 6
+### ClusterObserver 2.3.0 (.NET 8)
+#### This version targets .NET 8 and SF Runtime >= 9.1.
 
-ClusterObserver (CO) is a stateless singleton Service Fabric .NET 6 service that runs on one node in a cluster. CO observes cluster health (aggregated) 
+ClusterObserver (CO) is a stateless singleton Service Fabric .NET 8 service that runs on one node in a cluster. CO observes cluster health (aggregated) 
 and sends telemetry when a cluster is in Error or Warning. CO shares a very small subset of FabricObserver's (FO) code. It is designed to be completely independent from FO sources, 
 but lives in this repo (and SLN) because it is very useful to have both services deployed, especially for those who want cluster-level health observation and reporting in addition to 
 the node-level user-defined resource monitoring, health event creation, and health reporting done by FO. FabricObserver is designed to generate Service Fabric health events based on user-defined resource usage Warning and Error thresholds which ClusterObserver sends to your log analytics and alerting service.
+
+Starting with version 2.3.0, you must deploy the self-contained release package unless you are deploying to a cluster running SF Version >= 10.1 CU3 or higher, then you can deploy framework-dependent release. 
 
 By design, CO will send an Ok health state report when a cluster goes from Warning or Error state to Ok.
 
@@ -30,7 +32,7 @@ Application Parameter Upgrade Example:
 ```Powershell
 
 $appName = "fabric:/ClusterObserver"
-$appVersion = "2.2.8"
+$appVersion = "2.3.0"
 
 $application = Get-ServiceFabricApplication -ApplicationName $appName
 
@@ -78,8 +80,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName $appName -ApplicationType
          **NOTE: For Linux runtime target, just supply the name of the directory (not a path with drive letter like you for Windows).** -->
 		<Parameter Name="ObserverLogPath" Value="" MustOverride="true" />
 		<!-- Required: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
-         will be locally logged. This is the recommended setting. Note that file logging is generally
-         only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
+         will be locally logged. This is the recommended setting. -->
 		<Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
 		<Parameter Name="ObserverFailureHealthStateLevel" Value="" MustOverride="true" />
 		<Parameter Name="EnableETWProvider" Value="" MustOverride="true" />
@@ -122,8 +123,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName $appName -ApplicationType
 		<!-- Required: To enable or not enable, that is the question.-->
 		<Parameter Name="Enabled" Value="" MustOverride="true" />
 		<!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
-         will be locally logged. This is the recommended setting. Note that file logging is generally
-         only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
+         will be locally logged. This is the recommended setting. -->
 		<Parameter Name="EnableEtw" Value="" MustOverride="true"/>
 		<Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
 		<Parameter Name="EnableTelemetry" Value="" MustOverride="true" />
@@ -161,7 +161,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName $appName -ApplicationType
 
 ``` XML
 <?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.2.8" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.3.0" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- ClusterObserverManager settings. -->
     <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
@@ -190,7 +190,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName $appName -ApplicationType
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.2.8" />
+    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.3.0" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -262,8 +262,8 @@ Here is a full example of exactly what is sent in one of these telemetry events,
     "TaskName": "ClusterObserver",
     "ClusterId": "00000000-1111-1111-0000-00f00d000d",
     "ClusterType": "SFRP",
-    "COVersion": "2.2.0.960",
-    "Timestamp": "2022-07-12T19:02:04.4287671Z",
+    "COVersion": "2.3.0",
+    "Timestamp": "2024-06-06T19:02:04.4287671Z",
     "OS": "Windows"
 }
 ```

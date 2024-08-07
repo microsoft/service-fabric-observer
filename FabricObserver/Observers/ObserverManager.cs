@@ -23,6 +23,7 @@ using System.ComponentModel;
 using System.Runtime;
 using FabricObserver.Utilities.ServiceFabric;
 using ConfigurationSettings = System.Fabric.Description.ConfigurationSettings;
+using System.Runtime.Versioning;
 
 namespace FabricObserver.Observers
 {
@@ -45,7 +46,6 @@ namespace FabricObserver.Observers
         private readonly TimeSpan NewReleaseCheckInterval = TimeSpan.FromDays(7);
         private readonly CancellationToken runAsyncToken;
         private readonly string sfVersion;
-        private readonly bool isWindows;
         private readonly ConfigurationPackage configurationPackage;
         private volatile bool shutdownSignaled;
         private DateTime StartDateTime;
@@ -54,7 +54,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.2.15";
+        private const string InternalVersionNumber = "3.3.0";
 
         private static FabricClient FabricClientInstance => FabricClientUtilities.FabricClientSingleton;
 
@@ -74,11 +74,6 @@ namespace FabricObserver.Observers
         private ObserverHealthReporter HealthReporter
         {
             get;
-        }
-
-        private string Fqdn
-        {
-            get; set;
         }
 
         private Logger Logger
@@ -112,11 +107,6 @@ namespace FabricObserver.Observers
         }
 
         public static bool IsLvidCounterEnabled
-        {
-            get; set;
-        }
-
-        public static bool ObserverWebAppDeployed
         {
             get; set;
         }
@@ -155,7 +145,6 @@ namespace FabricObserver.Observers
             linkedSFRuntimeObserverTokenSource.Token.Register(() => Logger.LogWarning("linkedSFRuntimeObserverTokenSource.Token token cancellation signalled."));
 #endif   
             nodeName = FabricServiceContext.NodeContext.NodeName;
-            isWindows = OperatingSystem.IsWindows();
             sfVersion = GetServiceFabricRuntimeVersion();
             configurationPackage = FabricServiceContext.CodePackageActivationContext.GetConfigurationPackageObject("Config");
 
@@ -697,27 +686,6 @@ namespace FabricObserver.Observers
             }
         }
 
-        private bool IsObserverWebApiAppInstalled()
-        {
-            try
-            {
-                var deployedObsWebApps =
-                        FabricClientInstance.QueryManager.GetDeployedApplicationListAsync(
-                            nodeName,
-                            new Uri("fabric:/FabricObserverWebApi"),
-                            TimeSpan.FromSeconds(30),
-                            runAsyncToken).GetAwaiter().GetResult();
-
-                return deployedObsWebApps?.Count > 0;
-            }
-            catch (Exception e) when (e is FabricException or TaskCanceledException or TimeoutException)
-            {
-
-            }
-
-            return false;
-        }
-
         private string GetConfigSettingValue(string parameterName, ConfigurationSettings settings, string sectionName = null)
         {
             try
@@ -812,8 +780,8 @@ namespace FabricObserver.Observers
         {
             var observerData = new Dictionary<string, ObserverData>();
             var enabledObs = Observers.Where(o => o.IsEnabled);
-            string[] builtInObservers = new string[]
-            {
+            string[] builtInObservers =
+            [
                 ObserverConstants.AppObserverName,
                 ObserverConstants.AzureStorageUploadObserverName,
                 ObserverConstants.CertificateObserverName,
@@ -822,9 +790,8 @@ namespace FabricObserver.Observers
                 ObserverConstants.FabricSystemObserverName,
                 ObserverConstants.NetworkObserverName,
                 ObserverConstants.NodeObserverName,
-                ObserverConstants.OSObserverName,
-                ObserverConstants.SFConfigurationObserverName
-            };
+                ObserverConstants.OSObserverName
+            ];
 
             foreach (var obs in enabledObs)
             {
@@ -840,7 +807,7 @@ namespace FabricObserver.Observers
                     ObserverConstants.NetworkObserverName or
                     ObserverConstants.FabricSystemObserverName)
                 {
-                    if (!observerData.ContainsKey(obs.ObserverName))
+                    if (!observerData.TryGetValue(obs.ObserverName, out ObserverData value))
                     {
                         _ = observerData.TryAdd(
                                 obs.ObserverName,
@@ -857,9 +824,9 @@ namespace FabricObserver.Observers
                     }
                     else
                     {
-                        observerData[obs.ObserverName].ErrorCount = obs.CurrentErrorCount;
-                        observerData[obs.ObserverName].WarningCount = obs.CurrentWarningCount;
-                        observerData[obs.ObserverName].ServiceData =
+                        value.ErrorCount = obs.CurrentErrorCount;
+                        value.WarningCount = obs.CurrentWarningCount;
+                        value.ServiceData =
                                 new ServiceData
                                 {
                                     MonitoredAppCount = obs.MonitoredAppCount,
@@ -917,7 +884,7 @@ namespace FabricObserver.Observers
 
                 // For Linux, we need to restart the FO process due to the Linux Capabilities impl that enables us to run docker and netstat commands as elevated user (FO Linux should always be run as standard user on Linux).
                 // During an upgrade event, SF touches the cap binaries which removes the cap settings so we need to run the FO app setup script again to reset them.
-                if (!isWindows)
+                if (OperatingSystem.IsLinux())
                 {
                     // Graceful stop.
                     await StopObserversAsync(true, true).ConfigureAwait(false);
@@ -980,8 +947,8 @@ namespace FabricObserver.Observers
         {
             ApplicationName = FabricServiceContext.CodePackageActivationContext.ApplicationName;
 
-            // LVID monitoring.
-            if (isWindows)
+            // LVID monitoring. Windows-only feature.
+            if (OperatingSystem.IsWindows())
             {
                 IsLvidCounterEnabled = IsLVIDPerfCounterEnabled(settings);
             }
@@ -1029,23 +996,11 @@ namespace FabricObserver.Observers
                 ObserverExecutionLoopSleepSeconds = execFrequency;
             }
 
-            // FQDN for use in warning or error hyperlinks in HTML output
-            // This only makes sense when you have the FabricObserverWebApi app installed.
-            string fqdn = GetConfigSettingValue(ObserverConstants.Fqdn, settings);
-
-            if (!string.IsNullOrWhiteSpace(fqdn))
-            {
-                Fqdn = fqdn;
-            }
-
             // FabricObserver operational telemetry (No PII) - Override
             if (bool.TryParse(GetConfigSettingValue(ObserverConstants.EnableFabricObserverOperationalTelemetry, settings), out bool foTelemEnabled))
             {
                 FabricObserverOperationalTelemetryEnabled = foTelemEnabled;
             }
-
-            // ObserverWebApi.
-            ObserverWebAppDeployed = bool.TryParse(GetConfigSettingValue(ObserverConstants.ObserverWebApiEnabled, settings), out bool obsWeb) && obsWeb && IsObserverWebApiAppInstalled();
 
             // ObserverFailure HealthState Level - Override \\
 
@@ -1252,38 +1207,6 @@ namespace FabricObserver.Observers
                     }
 
                     Logger.LogInfo($"Successfully ran {observer.ObserverName}.");
-
-                    if (!ObserverWebAppDeployed)
-                    {
-                        continue;
-                    }
-
-                    if (observer.HasActiveFabricErrorOrWarning)
-                    {
-                        var errWarnMsg = !string.IsNullOrEmpty(Fqdn) ? $"<a style=\"font-weight: bold; color: red;\" href=\"http://{Fqdn}/api/ObserverLog/{observer.ObserverName}/{observer.NodeName}/json\">One or more errors or warnings detected</a>." : $"One or more errors or warnings detected. Check {observer.ObserverName} logs for details.";
-                        Logger.LogWarning($"{observer.ObserverName}: " + errWarnMsg);
-                    }
-                    else
-                    {
-                        // Delete the observer's instance log (local file with Warn/Error details per run)..
-                        _ = observer.ObserverLogger.TryDeleteInstanceLogFile();
-
-                        try
-                        {
-                            if (File.Exists(Logger.FilePath))
-                            {
-                                // Replace the ObserverManager.log text that doesn't contain the observer Warn/Error line(s).
-                                await File.WriteAllLinesAsync(
-                                            Logger.FilePath,
-                                            File.ReadLines(Logger.FilePath)
-                                                .Where(line => !line.Contains(observer.ObserverName)).ToList(), runAsyncToken);
-                            }
-                        }
-                        catch (IOException)
-                        {
-
-                        }
-                    }
                 }
                 catch (AggregateException ae)
                 {
@@ -1419,13 +1342,9 @@ namespace FabricObserver.Observers
             }
         }
 
+        [SupportedOSPlatform("windows")]
         private bool IsLVIDPerfCounterEnabled(ConfigurationSettings settings = null)
         {
-            if (!isWindows)
-            {
-                return false;
-            }
-
             // We already figured this out the first time this function ran.
             if (IsLvidCounterEnabled)
             {
@@ -1440,7 +1359,7 @@ namespace FabricObserver.Observers
 
             _ = bool.TryParse(
                 GetConfigSettingValue(ObserverConstants.EnableKvsLvidMonitoringParameter, settings, ObserverConstants.FabricSystemObserverConfigurationName), out bool isLvidEnabledFSO);
-            
+
             // If neither AO nor FSO are configured to monitor LVID usage, then do not proceed; it doesn't matter and this check is not cheap.
             if (!isLvidEnabledAO && !isLvidEnabledFSO)
             {
@@ -1454,7 +1373,7 @@ namespace FabricObserver.Observers
             string categoryName = "Windows Fabric Database";
 
             if (sfVersion.StartsWith('1'))
-            { 
+            {
                 categoryName = "MSExchange Database";
             }
 

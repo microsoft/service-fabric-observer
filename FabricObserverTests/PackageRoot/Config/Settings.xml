@@ -13,7 +13,6 @@
 		<Parameter Name="ObserverFailureHealthStateLevel" Value="" />
 		<Parameter Name="ObserverShutdownGracePeriodInSeconds" Value="1" />
 		<Parameter Name="DataLogPath" Value="fabric_observer_csvdata" />
-		<Parameter Name="FQDN" Value="" />
 		<Parameter Name="MaxArchivedLogFileLifetimeDays" Value="3" />
 		<Parameter Name="MaxArchivedCsvFileLifetimeDays" Value="1" />
 		<Parameter Name="CsvFileWriteFormat" Value="SingleFileWithArchives" />
@@ -22,7 +21,6 @@
 		<Parameter Name="LogAnalyticsWorkspaceId" Value="" />
 		<Parameter Name="LogAnalyticsSharedKey" Value="" />
 		<Parameter Name="LogAnalyticsLogType" Value="FabricObserver" />
-		<Parameter Name="ObserverWebApiEnabled" Value="true" />
 	</Section>
 	<Section Name="AppObserverConfiguration">
 		<Parameter Name="Enabled" Value="true" />
@@ -90,7 +88,6 @@
 		<Parameter Name="MonitorPrivateWorkingSet" Value="true" />
 		<Parameter Name="UseCircularBuffer" Value="" />
 		<Parameter Name="ResourceUsageDataCapacity" Value=""/>
-		<Parameter Name="MonitorWindowsEventLog" Value="" />
 		<Parameter Name="CpuErrorLimitPercent" Value="" />
 		<Parameter Name="CpuWarningLimitPercent" Value="" />
 		<Parameter Name="MemoryErrorLimitMb" Value="" />

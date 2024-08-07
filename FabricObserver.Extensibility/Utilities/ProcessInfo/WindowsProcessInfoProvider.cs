@@ -12,11 +12,13 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace FabricObserver.Observers.Utilities
 {
+    [SupportedOSPlatform("windows")]
     public class WindowsProcessInfoProvider : ProcessInfoProvider
     {
         private const int MaxDescendants = 50;
@@ -55,10 +57,7 @@ namespace FabricObserver.Observers.Utilities
                 {
                     lock (lockObj)
                     {
-                        if (performanceCounterCategory == null)
-                        {
-                            performanceCounterCategory = new(ProcessCategoryName);
-                        }
+                        performanceCounterCategory ??= new(ProcessCategoryName);
                     }
                 }
                 return performanceCounterCategory;

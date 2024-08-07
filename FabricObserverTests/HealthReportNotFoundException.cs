@@ -4,7 +4,6 @@
 // ------------------------------------------------------------
 
 using System;
-using System.Runtime.Serialization;
 
 namespace FabricObserverTests
 {
@@ -35,15 +34,6 @@ namespace FabricObserverTests
         /// <param name="message">Error message that describes the problem.</param>
         /// <param name="innerException">InnerException instance.</param>
         public HealthReportNotFoundException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
-
-        /// <summary>
-        /// Creates an instance of HealthReportNotFoundException.
-        /// </summary>
-        /// <param name="info">SerializationInfo</param>
-        /// <param name="context">StreamingContext</param>
-        protected HealthReportNotFoundException(SerializationInfo info, StreamingContext context) : base(info, context)
         {
         }
     }

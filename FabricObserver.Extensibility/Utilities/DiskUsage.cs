@@ -5,8 +5,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -14,23 +12,6 @@ namespace FabricObserver.Observers.Utilities
 {
     public static class DiskUsage
     {
-        private static PerformanceCounter _performanceCounter = null;
-        
-        private static PerformanceCounter QueueLengthCounter
-        {
-            get
-            {
-                _performanceCounter ??= new PerformanceCounter
-                {
-                    CategoryName = "LogicalDisk",
-                    CounterName = "Avg. Disk Queue Length",
-                    ReadOnly = true
-                };
-
-                return _performanceCounter;
-            }
-        }
-
         public static bool ShouldCheckDrive(DriveInfo driveInfo)
         {
             if (!driveInfo.IsReady)
@@ -113,55 +94,20 @@ namespace FabricObserver.Observers.Utilities
 
         public static float GetAverageDiskQueueLength(string instance)
         {
-            // We do not support this on Linux for now.
-            if (OperatingSystem.IsLinux())
-            {
-                return 0F;
-            }
-
-            try
-            {
-                QueueLengthCounter.InstanceName = instance;
-
-                // Warm up counter.
-                _ = QueueLengthCounter.RawValue;
-
-                return QueueLengthCounter.NextValue();
-            }
-            catch (Exception e)
-            {
-                Logger logger = new("Utilities");
-
-                if (e is ArgumentNullException or PlatformNotSupportedException or Win32Exception or UnauthorizedAccessException)
-                {
-                    logger.LogWarning($"{QueueLengthCounter.CategoryName} {QueueLengthCounter.CounterName} PerfCounter handled exception: " + e);
-
-                    // Don't throw.
-                    return 0F;
-                }
-
-                logger.LogError($"{QueueLengthCounter.CategoryName} {QueueLengthCounter.CounterName} PerfCounter unhandled exception: " + e);
-                throw;
-            }
+            return OSInfoProvider.Instance.GetAverageDiskQueueLength(instance);
         }
 
         private static double ConvertToSizeUnits(double amount, SizeUnit sizeUnit)
         {
-            switch(sizeUnit) 
+            return sizeUnit switch
             {
-                case SizeUnit.Bytes:
-                    return amount;
-                case SizeUnit.Kilobytes:
-                    return amount / 1024;
-                case SizeUnit.Megabytes:
-                    return amount / 1024 / 1024;
-                case SizeUnit.Gigabytes:
-                    return amount / 1024 / 1024 / 1024;
-                case SizeUnit.Terabytes:
-                    return amount / 1024 / 1024 / 1024 / 1024;
-                default:
-                    return amount;
-            }
+                SizeUnit.Bytes => amount,
+                SizeUnit.Kilobytes => amount / 1024,
+                SizeUnit.Megabytes => amount / 1024 / 1024,
+                SizeUnit.Gigabytes => amount / 1024 / 1024 / 1024,
+                SizeUnit.Terabytes => amount / 1024 / 1024 / 1024 / 1024,
+                _ => amount,
+            };
         }
     }
 

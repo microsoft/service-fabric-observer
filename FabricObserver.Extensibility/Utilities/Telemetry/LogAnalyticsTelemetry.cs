@@ -21,27 +21,30 @@ using Newtonsoft.Json;
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
     // LogAnalyticsTelemetry class is partially (SendTelemetryAsync/GetSignature) based on public sample: https://dejanstojanovic.net/aspnet/2018/february/send-data-to-azure-log-analytics-from-c-code/
-    public class LogAnalyticsTelemetry : ITelemetryProvider
+    public class LogAnalyticsTelemetry(
+            string workspaceId,
+            string sharedKey,
+            string logType) : ITelemetryProvider
     {
         private const string ApiVersion = "2016-04-01";
-        private readonly Logger logger;
+        private readonly Logger logger = new Logger("TelemetryLogger");
 
         private string WorkspaceId
         {
             get;
-        }
+        } = workspaceId;
 
         private string LogType
         {
             get;
-        }
+        } = logType;
 
         private string TargetUri => $"https://{WorkspaceId}.ods.opinsights.azure.com/api/logs?api-version={ApiVersion}";
 
         public string Key
         {
             get; set;
-        }
+        } = sharedKey;
 
         /// <summary>
         /// Sends telemetry data to Azure LogAnalytics via REST.
@@ -109,17 +112,6 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             using HMACSHA256 encryptor = new(Convert.FromBase64String(Key));
 
             return $"SharedKey {WorkspaceId}:{Convert.ToBase64String(encryptor.ComputeHash(bytes))}";
-        }
-
-        public LogAnalyticsTelemetry(
-                string workspaceId,
-                string sharedKey,
-                string logType)
-        {
-            WorkspaceId = workspaceId;
-            Key = sharedKey;
-            LogType = logType;
-            logger = new Logger("TelemetryLogger");
         }
 
         public async Task ReportHealthAsync(

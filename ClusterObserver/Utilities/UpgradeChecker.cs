@@ -23,7 +23,7 @@ namespace ClusterObserver.Utilities
         /// <param name="token">CancellationToken</param>
         /// <param name="app">ApplicationName (Uri)</param>
         /// <returns>An instance of ServiceFabricUpgradeEventData containing ApplicationUpgradeProgress instance.</returns>
-        internal static async Task<ServiceFabricUpgradeEventData> GetApplicationUpgradeDetailsAsync(FabricClient fabricClient, CancellationToken token, Uri app)
+        internal static async Task<ServiceFabricUpgradeEventData> GetApplicationUpgradeDetailsAsync(FabricClient fabricClient, Uri app, CancellationToken token)
         {
             if (token.IsCancellationRequested)
             {

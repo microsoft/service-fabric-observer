@@ -30,7 +30,7 @@ namespace FabricObserver.Observers.Utilities
                             {
                                 instance = new WindowsInfoProvider();
                             }
-                            else
+                            else if (OperatingSystem.IsLinux())
                             {
                                 instance = new LinuxInfoProvider();
                             }
@@ -136,5 +136,26 @@ namespace FabricObserver.Observers.Utilities
         /// <param name="processId">Optional: Process identifier.</param>
         /// <returns>Count of current BOUND state TCP ports as an integer.</returns>
         public abstract int GetBoundStatePortCount(int processId = 0);
+
+        /// <summary>
+        /// Gets Firewall rules in place (Linux is not supported. Will always return -1).
+        /// </summary>
+        /// <returns></returns>
+        public abstract int GetActiveFirewallRulesCount();
+
+        /// <summary>
+        /// Gets latest OS hot fixes/patches installed on the machine. This is not yet implemented for Linux.
+        /// </summary>
+        /// <param name="generateKbUrl">Whether or not to generate hyperlinks to related kb articles.</param>
+        /// <param name="token">CancellationToken instance.</param>
+        /// <returns>Formatted string containing hot fix numbers, optionally containing hyperlink markup (HTML).</returns>
+        public abstract string GetOSHotFixes(bool generateKbUrl, CancellationToken token);
+
+        /// <summary>
+        /// Gets the average disk queue length for the specified disk. Linux is not currently supported.
+        /// </summary>
+        /// <param name="instance">Disk name.</param>
+        /// <returns>Current disk queue length as a float value.</returns>
+        public abstract float GetAverageDiskQueueLength(string instance);
     }
 }

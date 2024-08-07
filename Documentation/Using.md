@@ -623,8 +623,7 @@ ClusterObserver's ObserverManager config (Settings.xml). These are not overridab
          **NOTE: For Linux runtime target, just supply the name of the directory (not a path with drive letter like you for Windows).** -->
     <Parameter Name="ObserverLogPath" Value="clusterobserver_logs" />
     <!-- Required: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
-         will be locally logged. This is the recommended setting. Note that file logging is generally
-         only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
+         will be locally logged. This is the recommended setting. -->
     <Parameter Name="EnableVerboseLogging" Value="False" />
     <Parameter Name="EnableEventSourceProvider" Value="True" />
     <!-- Required: Whether the Observer should send all of its monitoring data and Warnings/Errors to configured Telemetry service. This can be overriden by the setting 
@@ -662,8 +661,7 @@ Example Configuration:
     <!-- Required: To enable or not enable, that is the question.-->
     <Parameter Name="Enabled" Value="" MustOverride="true" />
     <!-- Optional: Enabling this will generate noisy logs. Disabling it means only Warning and Error information 
-         will be locally logged. This is the recommended setting. Note that file logging is generally
-         only useful for FabricObserverWebApi, which is an optional log reader service that ships in this repo. -->
+         will be locally logged. This is the recommended setting. -->
     <Parameter Name="EnableVerboseLogging" Value="" MustOverride="true" />
     <!-- Optional: Emit health details for both Warning and Error for aggregated cluster health? 
          Aggregated Error evaluations will always be transmitted regardless of this setting. -->
@@ -710,7 +708,7 @@ $appParams = @{ "FabricSystemObserverEnabled" = "true"; "FabricSystemObserverMem
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.2.15 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.3.0 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```  
 
 **Important**: This action will overwrite previous app paramemter changes that were made in an earlier application upgrade, for example. If you want to preserve any earlier changes, then you will need to
@@ -718,7 +716,7 @@ supply those parameter values again along with the new ones. You do this in the 
 
 ```PowerShell
 $appName = "fabric:/FabricObserver"
-$appVersion = "3.2.15"
+$appVersion = "3.3.0"
 $application = Get-ServiceFabricApplication -ApplicationName $appName
 $appParamCollection = $application.ApplicationParameters
 $applicationParameterMap = @{}

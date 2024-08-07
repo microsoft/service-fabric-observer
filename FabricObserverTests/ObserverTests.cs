@@ -39,6 +39,7 @@ namespace FabricObserverTests
     {
         // Change this to suit your test env. These tests must be run on a 1-node dev cluster.
         private const string NodeName = "_Node_0";
+        private const string NodeType = "NodeType0";
         private static readonly Uri TestServiceName = new("fabric:/app/service");
         private static readonly CancellationToken Token = new();
         private static ICodePackageActivationContext CodePackageContext = null;
@@ -52,6 +53,7 @@ namespace FabricObserverTests
         private static FabricClient FabricClientSingleton => FabricClientUtilities.FabricClientSingleton;
 
         [ClassInitialize]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "Noise..")]
         public static async Task TestClassStartUp(TestContext testContext)
         {
             if (!IsLocalSFRuntimePresent())
@@ -112,11 +114,11 @@ namespace FabricObserverTests
 
         private static async Task DeployTestAppsAppsAsync()
         {
-            await DeployHealthMetricsAppAsync();
-            await DeployTestApp42Async();
-            await DeployVotingAppAsync();
-            await DeployCpuStressAppAsync();
-            await DeployPortTestAppAsync();
+            await DeployHealthMetricsAppAsync().ConfigureAwait(false);
+            await DeployTestApp42Async().ConfigureAwait(false);
+            await DeployVotingAppAsync().ConfigureAwait(false);
+            await DeployCpuStressAppAsync().ConfigureAwait(false);
+            await DeployPortTestAppAsync().ConfigureAwait(false);
 
             // Wait a little extra time for apps to be fully in ready state.
             await Task.Delay(5000);
@@ -479,7 +481,7 @@ namespace FabricObserverTests
 
                 StatelessServiceDescription serviceDescription = new()
                 {
-                    ServiceName = new Uri(appName + "/PortTestService"),
+                    ServiceName = new Uri($"{appName}/PortTestService"),
                     ServiceTypeName = "PortTestServiceType",
                     PartitionSchemeDescription = new SingletonPartitionSchemeDescription(),
                     ApplicationName = new Uri(appName),
@@ -488,8 +490,7 @@ namespace FabricObserverTests
                 };
 
                 await FabricClientSingleton.ServiceManager.CreateServiceAsync(serviceDescription);
-
-                await Task.Delay(TimeSpan.FromSeconds(15));
+                await Task.Delay(TimeSpan.FromSeconds(30));
             }
             catch (FabricException fe)
             {
@@ -781,11 +782,6 @@ namespace FabricObserverTests
         [TestMethod]
         public void DiskObserver_Constructor_Test()
         {
-            
-
-
-            ObserverManager.ObserverWebAppDeployed = true;
-
             using var obs = new DiskObserver(TestServiceContext);
 
             Assert.IsTrue(obs.ObserverLogger != null);
@@ -810,11 +806,6 @@ namespace FabricObserverTests
         [TestMethod]
         public void NetworkObserver_Constructor_Test()
         {
-            
-
-
-            ObserverManager.ObserverWebAppDeployed = true;
-
             using var obs = new NetworkObserver(TestServiceContext);
 
             Assert.IsTrue(obs.ObserverLogger != null);
@@ -850,25 +841,6 @@ namespace FabricObserverTests
             Assert.IsTrue(obs.ObserverName == ObserverConstants.OSObserverName);
         }
 
-        [TestMethod]
-        public void SFConfigurationObserver_Constructor_Test()
-        {
-            using var client = new FabricClient();
-
-            
-
-
-
-            ObserverManager.ObserverWebAppDeployed = true;
-
-            using var obs = new SFConfigurationObserver(TestServiceContext);
-
-            // These are set in derived ObserverBase.
-            Assert.IsTrue(obs.ObserverLogger != null);
-            Assert.IsTrue(obs.HealthReporter != null);
-            Assert.IsTrue(obs.ObserverName == ObserverConstants.SFConfigurationObserverName);
-        }
-
         /* End Simple Tests */
 
         /* AppObserver Initialization */
@@ -876,10 +848,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_MalformedTargetAppValue_GeneratesWarning()
         {
-            
-
-
-
             using var obs = new AppObserver(TestServiceContext)
             {
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.targetAppMalformed.json")
@@ -894,10 +862,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_InvalidJson_GeneratesWarning()
         {
-            
-
-
-
             using var obs = new AppObserver(TestServiceContext)
             {
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.invalid.json")
@@ -912,10 +876,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_NoConfigFound_GeneratesWarning()
         {
-            
-
-
-
             using var obs = new AppObserver(TestServiceContext)
             {
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.empty.json")
@@ -932,10 +892,6 @@ namespace FabricObserverTests
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetAppType_ServiceExcludeList_EnsureExcluded()
         {
-            
-
-
-
             using var obs = new AppObserver(TestServiceContext)
             {
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.apptype.exclude.json")
@@ -943,17 +899,13 @@ namespace FabricObserverTests
 
             await obs.InitializeAsync();
             var deployedTargets = obs.ReplicaOrInstanceList;
-            Assert.IsTrue(deployedTargets.Any());
+            Assert.IsTrue(deployedTargets.Count != 0);
             Assert.IsFalse(deployedTargets.Any(t => t.ServiceName.OriginalString.Contains("DoctorActorService")));
         }
 
         [TestMethod]
         public async Task AppObserver_InitializeAsync_TargetApp_ServiceExcludeList_EnsureExcluded()
         {
-            
-
-
-
             using var obs = new AppObserver(TestServiceContext)
             {
                 JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.app.exclude.json")
@@ -961,7 +913,7 @@ namespace FabricObserverTests
 
             await obs.InitializeAsync();
             var deployedTargets = obs.ReplicaOrInstanceList;
-            Assert.IsTrue(deployedTargets.Any());
+            Assert.IsTrue(deployedTargets.Count != 0);
             Assert.IsFalse(deployedTargets.Any(t => t.ServiceName.OriginalString.Contains("DoctorActorServiceType")));
         }
 
@@ -975,7 +927,7 @@ namespace FabricObserverTests
 
             await obs.InitializeAsync();
             var deployedTargets = obs.ReplicaOrInstanceList;
-            Assert.IsTrue(deployedTargets.Any());
+            Assert.IsTrue(deployedTargets.Count != 0);
             Assert.IsTrue(deployedTargets.All(t => t.ServiceName.OriginalString.Contains("DoctorActorService")));
         }
 
@@ -989,7 +941,7 @@ namespace FabricObserverTests
 
             await obs.InitializeAsync();
             var deployedTargets = obs.ReplicaOrInstanceList;
-            Assert.IsTrue(deployedTargets.Any());
+            Assert.IsTrue(deployedTargets.Count != 0);
             Assert.IsTrue(deployedTargets.All(t => t.ServiceName.OriginalString.Contains("DoctorActorService")));
         }
 
@@ -1005,7 +957,7 @@ namespace FabricObserverTests
 
             await obs.InitializeAsync();
             var serviceReplicas = obs.ReplicaOrInstanceList;
-            Assert.IsTrue(serviceReplicas.Any());
+            Assert.IsTrue(serviceReplicas.Count != 0);
 
             // You can't supply multiple Exclude lists for the same target app/type. None of the target services will be excluded..
             Assert.IsTrue(
@@ -1024,7 +976,7 @@ namespace FabricObserverTests
 
             await obs.InitializeAsync();
             var serviceReplicas = obs.ReplicaOrInstanceList;
-            Assert.IsTrue(serviceReplicas.Any());
+            Assert.IsTrue(serviceReplicas.Count != 0);
 
             // You can't supply multiple Exclude lists for the same target app/type. None of the target services will be excluded..
             Assert.IsTrue(
@@ -1043,7 +995,7 @@ namespace FabricObserverTests
 
             await obs.InitializeAsync();
             var serviceReplicas = obs.ReplicaOrInstanceList;
-            Assert.IsTrue(serviceReplicas.Any());
+            Assert.IsTrue(serviceReplicas.Count != 0);
             Assert.IsTrue(serviceReplicas.Count == 2);
         }
 
@@ -1057,11 +1009,11 @@ namespace FabricObserverTests
 
             await obs.InitializeAsync();
             var deployedTargets = obs.ReplicaOrInstanceList;
-            Assert.IsTrue(deployedTargets.Any());
+            Assert.IsTrue(deployedTargets.Count != 0);
 
             await obs.InitializeAsync();
             var serviceReplicas = obs.ReplicaOrInstanceList;
-            Assert.IsTrue(serviceReplicas.Any());
+            Assert.IsTrue(serviceReplicas.Count != 0);
             Assert.IsTrue(serviceReplicas.Count == 2);
         }
 
@@ -1345,7 +1297,7 @@ namespace FabricObserverTests
             var defaultParameters = applicationTypeList.First(a => a.ApplicationTypeVersion == "1.0.0").DefaultParameters;
             Assert.IsTrue(defaultParameters.Any());
 
-            ApplicationParameterList parameters = new();
+            ApplicationParameterList parameters = [];
 
             // Fill parameter list with app and default parameters. The position of these matters (first add app parameters. Then, add default parameters).
             FabricClientUtilities.AddParametersIfNotExists(parameters, appParameters);
@@ -1428,7 +1380,7 @@ namespace FabricObserverTests
             FabricClientUtilities fabricClientUtilities = new(NodeName);
             var services = await fabricClientUtilities.GetAllDeployedReplicasOrInstancesAsync(true, Token);
 
-            Assert.IsTrue(services.Any());
+            Assert.IsTrue(services.Count != 0);
 
             ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
             ConcurrentQueue<int> serviceProcs = new();
@@ -1470,7 +1422,7 @@ namespace FabricObserverTests
                 }
             });
 
-            Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
+            Assert.IsTrue(!AllAppCpuData.IsEmpty && !serviceProcs.IsEmpty);
             Assert.IsTrue(serviceProcs.Count == AllAppCpuData.Count);
 
             TimeSpan duration = TimeSpan.FromSeconds(3);
@@ -1501,12 +1453,12 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task Ensure_ConcurrentQueue_Collection_Has_Data_CPU_NET6ProcessImpl()
+        public async Task Ensure_ConcurrentQueue_Collection_Has_Data_CPU_NET8ProcessImpl()
         {
             FabricClientUtilities fabricClientUtilities = new(NodeName);
             var services = await fabricClientUtilities.GetAllDeployedReplicasOrInstancesAsync(true, Token);
 
-            Assert.IsTrue(services.Any());
+            Assert.IsTrue(services.Count != 0);
 
             ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
             ConcurrentQueue<int> serviceProcs = new();
@@ -1548,7 +1500,7 @@ namespace FabricObserverTests
                 }
             });
 
-            Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
+            Assert.IsTrue(!AllAppCpuData.IsEmpty && !serviceProcs.IsEmpty);
             Assert.IsTrue(serviceProcs.Count == AllAppCpuData.Count);
 
             TimeSpan duration = TimeSpan.FromSeconds(3);
@@ -1584,7 +1536,7 @@ namespace FabricObserverTests
             FabricClientUtilities fabricClientUtilities = new(NodeName);
             var services = await fabricClientUtilities.GetAllDeployedReplicasOrInstancesAsync(true, Token);
 
-            Assert.IsTrue(services.Any());
+            Assert.IsTrue(services.Count != 0);
 
             ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
             ConcurrentQueue<int> serviceProcs = new();
@@ -1626,7 +1578,7 @@ namespace FabricObserverTests
                 }
             });
 
-            Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
+            Assert.IsTrue(!AllAppCpuData.IsEmpty && !serviceProcs.IsEmpty);
             Assert.IsTrue(serviceProcs.Count == AllAppCpuData.Count);
 
             TimeSpan duration = TimeSpan.FromSeconds(3);
@@ -1657,12 +1609,12 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task Ensure_CircularBuffer_Collection_Has_Data_CPU_NET6ProcessImpl()
+        public async Task Ensure_CircularBuffer_Collection_Has_Data_CPU_NET8ProcessImpl()
         {
             FabricClientUtilities fabricClientUtilities = new(NodeName);
             var services = await fabricClientUtilities.GetAllDeployedReplicasOrInstancesAsync(true, Token);
 
-            Assert.IsTrue(services.Any());
+            Assert.IsTrue(services.Count != 0);
 
             ConcurrentDictionary<string, FabricResourceUsageData<double>> AllAppCpuData = new();
             ConcurrentQueue<int> serviceProcs = new();
@@ -1704,7 +1656,7 @@ namespace FabricObserverTests
                 }
             });
 
-            Assert.IsTrue(AllAppCpuData.Any() && serviceProcs.Any());
+            Assert.IsTrue(!AllAppCpuData.IsEmpty && !serviceProcs.IsEmpty);
             Assert.IsTrue(serviceProcs.Count == AllAppCpuData.Count);
 
             TimeSpan duration = TimeSpan.FromSeconds(3);
@@ -1754,7 +1706,7 @@ namespace FabricObserverTests
 
             var dmps = Directory.GetFiles(obs.DumpsPath, "*.dmp");
 
-            Assert.IsTrue(dmps != null && dmps.Any());
+            Assert.IsTrue(dmps != null && dmps.Length != 0);
 
             // VotingData service, and two helper codepackage binaries.
             Assert.IsTrue(dmps.All(d => d.Contains("VotingData") || d.Contains("ConsoleApp6") || d.Contains("ConsoleApp7")));
@@ -1790,7 +1742,7 @@ namespace FabricObserverTests
 
             var dmps = Directory.GetFiles(obs.DumpsPath, "*.dmp");
 
-            Assert.IsTrue(dmps != null && dmps.Any());
+            Assert.IsTrue(dmps != null && dmps.Length != 0);
 
             // VotingData service, and two helper codepackage binaries.
             Assert.IsTrue(dmps.All(d => d.Contains("VotingData") || d.Contains("ConsoleApp6") || d.Contains("ConsoleApp7")));
@@ -1843,6 +1795,7 @@ namespace FabricObserverTests
                 EntityType = EntityType.Service,
                 Metric = ErrorWarningProperty.PrivateBytesMb,
                 NodeName = NodeName,
+                NodeType = NodeType,
                 HealthState = HealthState.Warning,
                 ObserverName = ObserverConstants.AppObserverName,
                 Property = "ClusterObserver_App",
@@ -1906,6 +1859,7 @@ namespace FabricObserverTests
                 Assert.IsTrue(data.Description == "Service Test warning for CO test.");
                 Assert.IsTrue(data.Metric == ErrorWarningProperty.PrivateBytesMb);
                 Assert.IsTrue(data.NodeName == NodeName);
+                Assert.IsTrue(data.NodeType == NodeType);
                 Assert.IsTrue(data.ObserverName == ObserverConstants.AppObserverName);
                 Assert.IsTrue(data.Source == "FOTest");
                 Assert.IsTrue(data.Value == 1024);
@@ -1925,6 +1879,7 @@ namespace FabricObserverTests
                 EntityType = EntityType.Machine,
                 Metric = ErrorWarningProperty.MemoryConsumptionPercentage,
                 NodeName = NodeName,
+                NodeType = NodeType,
                 ObserverName = ObserverConstants.NodeObserverName,
                 HealthState = HealthState.Warning,
                 Property = "ClusterObserver_Node",
@@ -1977,7 +1932,7 @@ namespace FabricObserverTests
             Assert.IsNotNull(nodeTelemData);
             Assert.IsTrue(nodeTelemData.Count > 0);
 
-            foreach (var data in nodeTelemData.Where(d => d.Property == "NodeObserver_App"))
+            foreach (var data in nodeTelemData.Where(d => d.Property == "ClusterObserver_Node"))
             {
                 Assert.IsTrue(data.EntityType == EntityType.Machine);
                 Assert.IsTrue(data.HealthState == HealthState.Warning);
@@ -1985,6 +1940,7 @@ namespace FabricObserverTests
                 Assert.IsTrue(data.Description.Contains("Machine Test warning for CO test."));
                 Assert.IsTrue(data.Metric == ErrorWarningProperty.MemoryConsumptionPercentage);
                 Assert.IsTrue(data.NodeName == NodeName);
+                Assert.IsTrue(data.NodeType == NodeType);
                 Assert.IsTrue(data.ObserverName == ObserverConstants.NodeObserverName);
                 Assert.IsTrue(data.Property == "ClusterObserver_Node");
                 Assert.IsTrue(data.Source == "FOTest");
@@ -2182,7 +2138,6 @@ namespace FabricObserverTests
             using var obs = new OSObserver(TestServiceContext)
             {
                 ClusterManifestPath = Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml"),
-                IsObserverWebApiAppDeployed = true,
                 IsEtwProviderEnabled = true
             };
 
@@ -2198,16 +2153,6 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-
-            var outputFilePath = Path.Combine(Environment.CurrentDirectory, "fabric_observer_logs", "SysInfo.txt");
-
-            // Output log file was created successfully during test.
-            Assert.IsTrue(File.Exists(outputFilePath)
-                          && File.GetLastWriteTime(outputFilePath) > startDateTime
-                          && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
-
-            // Output file is not empty.
-            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath)).Length > 0);
         }
 
         [TestMethod]
@@ -2217,7 +2162,6 @@ namespace FabricObserverTests
             using var obs = new OSObserver(TestServiceContext)
             {
                 ClusterManifestPath = Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml"),
-                IsObserverWebApiAppDeployed = false,
                 IsEtwProviderEnabled = false
             };
 
@@ -2248,8 +2192,6 @@ namespace FabricObserverTests
 
             using var obs = new DiskObserver(TestServiceContext)
             {
-                // This is required since output files are only created if fo api app is also deployed to cluster..
-                IsObserverWebApiAppDeployed = true,
                 CpuMonitorDuration = TimeSpan.FromSeconds(1),
                 FolderSizeMonitoringEnabled = true,
                 FolderSizeConfigDataWarning = warningDictionary,
@@ -2266,16 +2208,6 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-
-            var outputFilePath = Path.Combine(Environment.CurrentDirectory, "fabric_observer_logs", "disks.txt");
-
-            // Output log file was created successfully during test.
-            Assert.IsTrue(File.Exists(outputFilePath)
-                          && File.GetLastWriteTime(outputFilePath) > startDateTime
-                          && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
-
-            // Output file is not empty.
-            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath)).Length > 0);
         }
 
         [TestMethod]
@@ -2300,10 +2232,7 @@ namespace FabricObserverTests
 
                 // Folder size monitoring. This will most likely generate a warning.
                 FolderSizeConfigDataWarning = warningDictionary,
-
-                // This is required since output files are only created if fo api app is also deployed to cluster..
-                IsObserverWebApiAppDeployed = true,
-                IsEtwProviderEnabled = true,
+                IsEtwProviderEnabled = true
             };
 
             IServiceCollection services = new ServiceCollection();
@@ -2329,16 +2258,6 @@ namespace FabricObserverTests
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
 
-            var outputFilePath = Path.Combine(Environment.CurrentDirectory, "fabric_observer_logs", "disks.txt");
-
-            // Output log file was created successfully during test.
-            Assert.IsTrue(File.Exists(outputFilePath)
-                          && File.GetLastWriteTime(outputFilePath) > startDateTime
-                          && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
-
-            // Output file is not empty.
-            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath)).Length > 0);
-
             // Stop clears health warning
             await obsMgr.StopObserversAsync();
             Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
@@ -2357,33 +2276,6 @@ namespace FabricObserverTests
             // The config file used for testing contains an endpoint that does not exist, so NetworkObserver
             // will put the related Application entity into Warning state.
             Assert.IsTrue(obs.HasActiveFabricErrorOrWarning);
-        }
-
-        [TestMethod]
-        public async Task NetworkObserver_ObserveAsync_Successful_WritesLocalFile_ObsWebDeployed()
-        {
-            var startDateTime = DateTime.Now;
-            using var obs = new NetworkObserver(TestServiceContext)
-            {
-                // This is required since output files are only created if fo api app is also deployed to cluster..
-                IsObserverWebApiAppDeployed = true
-            };
-
-            await obs.ObserveAsync(Token);
-
-            // Observer ran to completion with no errors.
-            // The supplied config does not include deployed app network configs, so
-            // ObserveAsync will return in milliseconds.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-            var outputFilePath = Path.Combine(_logger.LogFolderBasePath, "NetInfo.txt");
-
-            // Output log file was created successfully during test.
-            Assert.IsTrue(File.Exists(outputFilePath)
-                          && File.GetLastWriteTime(outputFilePath) > startDateTime
-                          && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
-
-            // Output file is not empty.
-            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath)).Length > 0);
         }
 
         [TestMethod]
@@ -2437,41 +2329,6 @@ namespace FabricObserverTests
 
             // observer did not have any internal errors during run.
             Assert.IsFalse(obs.IsUnhealthy);
-        }
-
-        [TestMethod]
-        public async Task SFConfigurationObserver_ObserveAsync_Successful_IsHealthy()
-        {
-            var startDateTime = DateTime.Now;
-            using var obs = new SFConfigurationObserver(TestServiceContext)
-            {
-                IsEnabled = true,
-
-                // This is required since output files are only created if fo api app is also deployed to cluster..
-                IsObserverWebApiAppDeployed = true,
-                ClusterManifestPath = Path.Combine(Environment.CurrentDirectory, "clusterManifest.xml")
-            };
-
-            await obs.ObserveAsync(Token);
-
-            // observer ran to completion with no errors.
-            Assert.IsTrue(obs.LastRunDateTime > startDateTime);
-
-            // observer detected no error conditions.
-            Assert.IsFalse(obs.HasActiveFabricErrorOrWarning);
-
-            // observer did not have any internal errors during run.
-            Assert.IsFalse(obs.IsUnhealthy);
-
-            var outputFilePath = Path.Combine(Environment.CurrentDirectory, "fabric_observer_logs", "SFInfraInfo.txt");
-
-            // Output log file was created successfully during test.
-            Assert.IsTrue(File.Exists(outputFilePath)
-                          && File.GetLastWriteTime(outputFilePath) > startDateTime
-                          && File.GetLastWriteTime(outputFilePath) < obs.LastRunDateTime);
-
-            // Output file is not empty.
-            Assert.IsTrue((await File.ReadAllLinesAsync(outputFilePath)).Length > 0);
         }
 
         [TestMethod]
@@ -2837,7 +2694,7 @@ namespace FabricObserverTests
             Assert.IsTrue(telemData.Count > 0);
 
             telemData = telemData.Where(t => t.ApplicationName == "fabric:/Voting").ToList();
-            Assert.IsTrue(telemData.Any());
+            Assert.IsTrue(telemData.Count != 0);
 
             foreach (var data in telemData)
             {
@@ -2897,7 +2754,7 @@ namespace FabricObserverTests
                 t => t.ApplicationName == "fabric:/Voting" && t.HealthState == HealthState.Warning).ToList();
 
             // 2 service code packages + 2 helper code packages (VotingData) * 2 metrics = 8 warnings...
-            Assert.IsTrue(telemData.Any() && telemData.Count == 8);
+            Assert.IsTrue(telemData.Count != 0 && telemData.Count == 8);
         }
 
         // Private Bytes
@@ -3018,7 +2875,7 @@ namespace FabricObserverTests
             Assert.IsTrue(telemData.Count > 0);
 
             telemData = telemData.Where(d => d.HealthState == HealthState.Warning).ToList();
-            Assert.IsTrue(telemData.Any());
+            Assert.IsTrue(telemData.Count != 0);
 
             foreach (var data in telemData)
             {
@@ -3097,7 +2954,7 @@ namespace FabricObserverTests
             Assert.IsTrue(telemData.Count > 0);
 
             telemData = telemData.Where(d => d.HealthState == HealthState.Warning).ToList();
-            Assert.IsTrue(telemData.Any());
+            Assert.IsTrue(telemData.Count != 0);
 
             foreach (var data in telemData)
             {
@@ -3202,7 +3059,7 @@ namespace FabricObserverTests
             Assert.IsTrue(telemData.Count > 0);
 
             telemData = telemData.Where(d => d.HealthState == HealthState.Warning).ToList();
-            Assert.IsTrue(telemData.Any());
+            Assert.IsTrue(telemData.Count != 0);
 
             foreach (var data in telemData)
             {

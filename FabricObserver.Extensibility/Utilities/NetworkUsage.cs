@@ -5,7 +5,6 @@
 
 using System;
 using System.IO;
-using System.Management;
 using System.Xml;
 
 namespace FabricObserver.Observers.Utilities
@@ -59,34 +58,11 @@ namespace FabricObserver.Observers.Utilities
             return (-1, -1);
         }
 
+        // Leave this function here to protect against breaking current consumers. This was changed to prevent cross platform visibility warnings at compile time.
+        // See OperatingSystemProvider.cs.
         public static int GetActiveFirewallRulesCount()
         {
-            int count = -1;
-
-            // This method is not implemented for Linux yet.
-            if (OperatingSystem.IsLinux())
-            {
-                return count;
-            }
-
-            try
-            {
-                var scope = new ManagementScope("\\\\.\\ROOT\\StandardCimv2");
-                var q = new ObjectQuery("SELECT * FROM MSFT_NetFirewallRule WHERE Enabled=1");
-                using (var searcher = new ManagementObjectSearcher(scope, q))
-                {
-                    using (var results = searcher.Get())
-                    {
-                        count = results.Count;
-                    }
-                }
-            }
-            catch (ManagementException)
-            {
-
-            }
-
-            return count;
+            return OSInfoProvider.Instance.GetActiveFirewallRulesCount();
         }
     }
 }

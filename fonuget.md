@@ -1,6 +1,6 @@
-## FabricObserver 3.2.15
+## FabricObserver 3.3.0 (.NET 8)
 
-[**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer) is a production-ready watchdog service with an easy-to-use extensibility model, written as a stateless, singleton Service Fabric **.NET 6** application that by default  
+[**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer) is a production-ready watchdog service with an easy-to-use extensibility model, written as a stateless, singleton Service Fabric **.NET 8** application that by default  
 
 1. Monitors a broad range of physical machine resources that tend to be very important to all Service Fabric services and maps these metrics to the related Service Fabric entities.
 2. Runs on multiple versions of Windows Server and Ubuntu.
@@ -80,7 +80,6 @@ Here are the current observers and what they monitor:
 | Networking - general health and monitoring of availability of user-specified, per-app endpoints | NetworkObserver |
 | CPU/Memory/File Handles(Linux)/Firewalls(Windows)/TCP Ports usage at machine level | NodeObserver |
 | OS/Hardware - OS install date, OS health status, list of hot fixes, hardware configuration, AutoUpdate configuration, Ephemeral TCP port range, TCP ports in use, memory and disk space usage | OSObserver |
-| Service Fabric Configuration information | SFConfigurationObserver |
 | **Another resource you find important** | **Observer [that you implement](https://github.com/microsoft/service-fabric-observer/blob/main/Documentation/Plugins.md)** |
 
 To learn more about the current Observers and their configuration, please see the [Observers readme](https://github.com/microsoft/service-fabric-observer/blob/main/Documentation/Observers.md).  

@@ -33,6 +33,12 @@ namespace FabricObserver.Observers
         private bool disposed;
         private ConcurrentDictionary<string, (int DumpCount, DateTime LastDumpDate)> ServiceDumpCountDictionary;
         private readonly object lockObj = new();
+        private static readonly bool isWindows;
+
+        static ObserverBase()
+        {
+            isWindows = OperatingSystem.IsWindows();
+        }
 
         private bool IsTelemetryProviderEnabled
         {
@@ -53,7 +59,7 @@ namespace FabricObserver.Observers
             get; private set;
         }
 
-        public static bool IsWindows => OperatingSystem.IsWindows();
+        public static bool IsWindows => isWindows;
 
         // Process dump settings. Only AppObserver and Windows is supported. \\
         public string DumpsPath
@@ -89,11 +95,6 @@ namespace FabricObserver.Observers
         }
 
         public Uri ServiceName
-        {
-            get; set;
-        }
-
-        public bool IsObserverWebApiAppDeployed
         {
             get; set;
         }
@@ -390,12 +391,6 @@ namespace FabricObserver.Observers
             InitializeObserverLoggingInfra();
 
             HealthReporter = new ObserverHealthReporter(ObserverLogger);
-
-            IsObserverWebApiAppDeployed =
-                bool.TryParse(
-                    GetSettingParameterValue(
-                        ObserverConstants.ObserverManagerConfigurationSectionName,
-                        ObserverConstants.ObserverWebApiEnabled), out bool obsWeb) && obsWeb && IsObserverWebApiAppInstalled();
         }
 
         public void InitializeObserverLoggingInfra(bool isConfigUpdate = false)
@@ -592,11 +587,11 @@ namespace FabricObserver.Observers
 
             }
 
-            if (!ServiceDumpCountDictionary.ContainsKey(dumpKey))
+            if (!ServiceDumpCountDictionary.TryGetValue(dumpKey, out (int DumpCount, DateTime LastDumpDate) value))
             {
                 _ = ServiceDumpCountDictionary.TryAdd(dumpKey, (0, DateTime.UtcNow));
             }
-            else if (DateTime.UtcNow.Subtract(ServiceDumpCountDictionary[dumpKey].LastDumpDate) >= MaxDumpsTimeWindow)
+            else if (DateTime.UtcNow.Subtract(value.LastDumpDate) >= MaxDumpsTimeWindow)
             {
                 ServiceDumpCountDictionary[dumpKey] = (0, DateTime.UtcNow);
             }
@@ -1282,7 +1277,7 @@ namespace FabricObserver.Observers
                 {
                     AppName = appName,
                     Code = errorWarningCode,
-                    EmitLogEvent = EnableVerboseLogging || IsObserverWebApiAppDeployed,
+                    EmitLogEvent = EnableVerboseLogging,
                     HealthData = telemetryData,
                     HealthMessage = healthMessage.ToString(),
                     HealthReportTimeToLive = healthReportTtl,
@@ -1354,7 +1349,7 @@ namespace FabricObserver.Observers
                         AppName = appName,
                         ServiceName = serviceName,
                         Code = data.ActiveErrorOrWarningCode,
-                        EmitLogEvent = EnableVerboseLogging || IsObserverWebApiAppDeployed,
+                        EmitLogEvent = EnableVerboseLogging,
                         HealthData = telemetryData,
                         HealthMessage = $"{data.Property} is now within normal/expected range.",
                         HealthReportTimeToLive = default,
@@ -1611,23 +1606,6 @@ namespace FabricObserver.Observers
                 ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.DataLogPathParameter);
 
             CsvFileLogger.BaseDataLogFolderPath = !string.IsNullOrWhiteSpace(dataLogPath) ? Path.Combine(dataLogPath, ObserverName) : Path.Combine(Environment.CurrentDirectory, "fabric_observer_csvdata", ObserverName);
-        }
-
-        private static bool IsObserverWebApiAppInstalled()
-        {
-            try
-            {
-                var deployedObsWebApps =
-                    FabricClientInstance.QueryManager.GetApplicationListAsync(new Uri("fabric:/FabricObserverWebApi")).GetAwaiter().GetResult();
-
-                return deployedObsWebApps?.Count > 0;
-            }
-            catch (Exception e) when (e is FabricException or TimeoutException)
-            {
-
-            }
-
-            return false;
         }
     }
 }

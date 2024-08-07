@@ -1,4 +1,4 @@
-## This project is obsolete and no longer supported. Use at your own risk. Leaving it here for those who do use this.
+## This project is obsolete and no longer supported. As of FO Version 3.2.16, any observer that had special code to support this service has been modified to no longer do so. All related configuration settings have been removed.
 
 This is the FabricObserver API App (ASP.NET Core v3.1), used for "communicating" with Observers from within a node (but you can choose to expose this service to the Internet if you want to. By default, if you deploy FOWebApi as is, then only a service running on the same node can call into its REST API.). 
 

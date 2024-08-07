@@ -8,16 +8,11 @@ using System;
 namespace FabricObserver
 {
     [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true)]
-    public sealed class FabricObserverStartupAttribute : Attribute
+    public sealed class FabricObserverStartupAttribute(Type startupType) : Attribute
     {
-        public FabricObserverStartupAttribute(Type startupType)
-        {
-            StartupType = startupType;
-        }
-
         public Type StartupType
         {
             get;
-        }
+        } = startupType;
     }
 }

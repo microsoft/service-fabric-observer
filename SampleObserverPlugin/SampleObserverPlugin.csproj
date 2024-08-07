@@ -1,8 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<!-- You could target netstandard2.0 instead, if you need to. But you probably do not need to. 
-             In the .NET 6+ age, moving away from netstandard2.0 is generally a good idea, in many cases; this being one of them. -->
-		<TargetFramework>net6.0</TargetFramework>
+		<!-- NOTE: .NET 6 reaches EOL in 11/2024. So, this sample is targeting net8.0. Please upgrade your .NET 6 plugins to .NET 8 as soon as you can. -->
+		<TargetFramework>net8.0</TargetFramework>
 		<RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
 		<RootNamespace>FabricObserver.Observers</RootNamespace>
 		<AssemblyName>SampleNewObserver</AssemblyName>
@@ -19,19 +18,19 @@
 		<!-- <Exec Command="copy &quot;$(OutDir)*.dll&quot; &quot;$(OutDir)FabricObserverPkg\Data\Plugins&quot;&#xD;&#xA;copy &quot;$(OutDir)*.pdb&quot; &quot;$(OutDir)FabricObserverPkg\Data\Plugins&quot;" /> -->
 	</Target>
     <ItemGroup>
-		<!-- To build with the full 3.2.14 FO nupkg. The output dir will contain a FabricObserverPkg folder with Code/Config/Data. 
+		<!-- To build with the full 3.3.0 FO nupkg. The output dir will contain a FabricObserverPkg folder with Code/Config/Data. 
              So, you can deploy FO directly from there. -->
 		
-		<!-- <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" Version="3.2.15" />
+		<!-- <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" Version="3.3.0" />
 		FabricObserver employs version 8.0.0 of Microsoft.Extensions.DependencyInjection.Abstractions, so you need to explicitly reference that version here. 
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" /> -->
 
 		<!-- OR -->
 		
-		<!-- Build with *just* the FabricObserver.Extensibility library. There will be no FabricObserverPkg folder in outdir.. -->
+		<!-- Build with *just* the FabricObserver.Extensibility library. There will be no FabricObserverPkg folder in outdir. This is the preferred method. After you build, copy your plugin dll and its dependendencies into FabricObserver/ClusterObserver's PackageRoot\Data\Plugins folder.  -->
 		<PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" Version="3.2.15" />
 		
 		<!-- This is an external nupkg that this plugin sample requires. This is unrelated to the above FO-related reference choices. -->
-		<PackageReference Include="Polly" Version="8.3.0" />
+		<PackageReference Include="Polly" Version="8.4.1" />
     </ItemGroup>
 </Project>

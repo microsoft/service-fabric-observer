@@ -4,9 +4,11 @@
 // ------------------------------------------------------------
 
 using System.Diagnostics;
+using System.Runtime.Versioning;
 
 namespace FabricObserver.Observers.Utilities
 {
+    [SupportedOSPlatform("windows")]
     public class WindowsCpuUtilizationProvider : CpuUtilizationProvider
     {
         private const string ProcessorCategoryName = "Processor";
