@@ -70,7 +70,7 @@ For more information about **the design of FabricObserver**, please see the [Des
 **It is highly recommended that you only deploy code built from the main branch into your production clusters.** 
 
 1. Clone the repo.
-2. Install [.NET 6](https://dotnet.microsoft.com/download/dotnet-core/6.0)
+2. Install [.NET 8](https://dotnet.microsoft.com/download/dotnet-core/8.0)
 3. Build. 
 
 ***Note: By default, FO runs as NetworkUser on Windows and sfappsuser on Linux. If you want to monitor SF service processes that run as elevated (System) on Windows, then you must also run FO as System on Windows. There is no reason to run as root on Linux under any circumstances (see the Capabilities binaries implementations, which allow for FO to run as sfappsuser and successfully execute specific commands that require elevated privilege).*** 
