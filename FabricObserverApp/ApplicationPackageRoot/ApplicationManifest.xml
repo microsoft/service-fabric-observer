@@ -23,6 +23,8 @@
          This is primarily useful for scenarios where you have multiple instances of FO running on a node and you want to ensure that each instance writes 
          ETW event data to different named sinks. This is more of an advanced scenario. In general, just leave this blank. -->
     <Parameter Name="ObserverManagerETWProviderName" DefaultValue="" />
+    <!-- Set this parameter to true if you want FO to emit a health event letting you know if there is a new version of FO available. Otherwise, set this to false. -->
+    <Parameter Name="ObserverManagerCheckGithubVersion" DefaultValue="true" />
     <!-- If you want FO to transmit telemetry data events to ApplicationInsights or LogAnalytics, for example, then enable this setting. Otherwise, set this to false. -->
     <!-- Observer Telemetry -->
     <Parameter Name="ObserverManagerEnableTelemetryProvider" DefaultValue="true" />
@@ -429,6 +431,7 @@
             <Parameter Name="ObserverFailureHealthStateLevel" Value="[ObserverManagerObserverFailureHealthStateLevel]" />
             <Parameter Name="ObserverLogPath" Value="[ObserverLogPath]" />
             <Parameter Name="TelemetryProvider" Value="[TelemetryProvider]" />
+            <Parameter Name="CheckGithubVersion" Value="[ObserverManagerCheckGithubVersion]" />
             <!-- Application Insights -->
             <Parameter Name="AppInsightsConnectionString" Value="[AppInsightsConnectionString]" />
             <!-- LogAnalytics -->
