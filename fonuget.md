@@ -1,4 +1,4 @@
-## FabricObserver 3.3.0 (.NET 8)
+## FabricObserver 3.3.1 (.NET 8)
 
 [**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer) is a production-ready watchdog service with an easy-to-use extensibility model, written as a stateless, singleton Service Fabric **.NET 8** application that by default  
 
