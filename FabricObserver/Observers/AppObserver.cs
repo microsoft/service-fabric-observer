@@ -243,7 +243,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (e is not OutOfMemoryException)
             {
-                ObserverLogger.LogError($"Unhandled exception in ObserveAsync: {e.Message}");
+                ObserverLogger.LogError($"Unhandled exception in ObserveAsync: {e}");
                 throw;
             }
             finally
@@ -2492,7 +2492,7 @@ namespace FabricObserver.Observers
                     }
 
                     // Memory - Private Bytes MB. Windows-only.
-                    if (IsWindows && application.ErrorPrivateBytesMb > 0 || application.WarningPrivateBytesMb > 0)
+                    if (IsWindows && (application.ErrorPrivateBytesMb > 0 || application.WarningPrivateBytesMb > 0))
                     {
                         _ = AllAppPrivateBytesDataMb.TryAdd(id, new FabricResourceUsageData<float>(ErrorWarningProperty.PrivateBytesMb, id, 1, false, EnableConcurrentMonitoring));
                     }
@@ -2504,7 +2504,7 @@ namespace FabricObserver.Observers
                     }
 
                     // Memory - Private Bytes (Percent). Windows-only.
-                    if (IsWindows && application.ErrorPrivateBytesPercent > 0 || application.WarningPrivateBytesPercent > 0)
+                    if (IsWindows && (application.ErrorPrivateBytesPercent > 0 || application.WarningPrivateBytesPercent > 0))
                     {
                         _ = AllAppPrivateBytesDataPercent.TryAdd(id, new FabricResourceUsageData<double>(ErrorWarningProperty.PrivateBytesPercent, id, 1, false, EnableConcurrentMonitoring));
                     }
