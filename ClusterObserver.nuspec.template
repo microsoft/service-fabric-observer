@@ -4,7 +4,8 @@
 		<id>%PACKAGE_ID%</id>
 		<version>2.3.1</version>
 		<releaseNotes>
-- .NET 8 implementation of ClusterObserver. This version is built for .NET 8 and SF Runtime >= 9.1 (Self-Contained FO builds only). If you have deployed SF Runtime version >= 10.1 Cumulative Update 3.0 (CU3), then you can deploy the framework-dependent release build for the target platform (Windows or Linux). If you are not running SF Runtime version >= 10.1 CU3, then you must deploy the Self-Contained release build for the target platform (Windows or Linux). **If you can't upgrade to .NET 8 yet, then do not upgrade to this version.**
+- This version is built for .NET 8 and SF Runtime >= 10.0 (Self-Contained FO builds only for 10.0 - 10.1 CU2). If you have deployed SF Runtime version >= 10.1 Cumulative Update 3.0 (CU3), then you can deploy the framework-dependent release build for the target platform (Windows or Linux). If you are not running SF Runtime version >= 10.1 CU3, then you must deploy the Self-Contained release build for the target platform (Windows or Linux). **If you can't upgrade to .NET 8 yet, then do not upgrade to this version.**
+- Removed Microsoft.ServiceFabric.Services package reference in ClusterObserver.csproj. This is not needed and cause compatibility issues for ClusterObserver plugins.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

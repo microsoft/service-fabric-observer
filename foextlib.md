@@ -1,6 +1,8 @@
-## FabricObserver Extensibility Library 3.3.1 (.NET 8)
+## FabricObserver Extensibility Library 3.3.1 (NET 8, SF Runtime version 10.0 and higher)
 
-FabricObserver.Extensibility is a .NET 8 library for building custom observers that extend FabricObserver's and ClusterObserver's capabilities to match your needs. A custom observer is managed just like a built-in observer.
+FabricObserver.Extensibility is a .NET 8 library for building custom observers that extend FabricObserver's and ClusterObserver's capabilities to match your needs. A custom observer is managed just like a built-in observer. 
+
+Note: Version 3.3.1 supports SF Runtime versions 10.0 and higher. It can not be used for lesser versions.
 
 ### How to implement an observer using FO's extensibility model
 
