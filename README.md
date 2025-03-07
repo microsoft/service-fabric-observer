@@ -1,4 +1,4 @@
-## FabricObserver 3.3.1 (.NET 8)
+## FabricObserver 3.3.1 (.NET 8, SF Runtime version 10.0 and higher)
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-observer%2Fmain%2FDocumentation%2FDeployment%2Fservice-fabric-observer.json)  
 
@@ -10,7 +10,7 @@
 4. Supports [Configuration Setting Application Updates](/Documentation/Using.md#parameterUpdates) for any observer for any supported setting. 
 5. Is actively developed in the open.
 
-> FabricObserver targets SF runtime versions 9.1 and higher. Starting with version 3.3.1, you must deploy the self-contained release package unless you are deploying to a cluster running SF Version 10.1 CU3 or higher, then you can deploy framework-dependent release.
+> FabricObserver 3.3.1 targets SF runtime versions 10.0 and higher. Starting with version 3.3.0, you must deploy the self-contained release package unless you are deploying to a cluster running SF Version 10.1 CU3 or higher, then you can deploy framework-dependent release.
 
 FO is a Stateless Service Fabric Application composed of a single service that runs on every node in your cluster, so it can be deployed and run alongside your applications without any changes to them. Each FO service instance knows nothing about other FO instances in the cluster, by design. 
 
