@@ -11,7 +11,7 @@
     },
     "applicationTypeVersionClusterObserver": {
       "type": "string",
-      "defaultValue": "2.3.0",
+      "defaultValue": "2.3.1",
       "metadata": {
         "description": "Provide the app version number of ClusterObserver. This must be identical to the version specified in the corresponding sfpkg."
       }

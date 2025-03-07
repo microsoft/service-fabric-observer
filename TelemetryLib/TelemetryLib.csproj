@@ -11,8 +11,8 @@
     <Product>TelemetryLib</Product>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.22.0" />
-	<PackageReference Include="Microsoft.ServiceFabric.Services" Version="6.0.1672" />
+    <PackageReference Include="Microsoft.ApplicationInsights" Version="2.23.0" />
+	<PackageReference Include="Microsoft.ServiceFabric.Services" Version="7.0.1816" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 </Project>

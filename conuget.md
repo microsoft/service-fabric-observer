@@ -1,4 +1,4 @@
-### ClusterObserver 2.3.0 (.NET 8)
+### ClusterObserver 2.3.1 (.NET 8)
 #### This version requires SF Runtime >= 9.1 and targets .NET 8.
 
 [ClusterObserver (CO)](https://github.com/microsoft/service-fabric-observer/tree/main/ClusterObserver) is a stateless singleton Service Fabric .NET 8 application that runs on one node in a cluster. CO observes cluster health (aggregated) 
@@ -32,7 +32,7 @@ $appParams = @{ "RunInterval" = "00:10:00"; "MaxTimeNodeStatusNotOk" = "04:00:00
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -ApplicationTypeVersion 2.3.0 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -ApplicationTypeVersion 2.3.1 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```
 
 Example Configuration:  
