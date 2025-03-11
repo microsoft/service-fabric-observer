@@ -4,11 +4,12 @@
 		<id>%PACKAGE_ID%</id>
 		<version>3.3.1</version>
 		<releaseNotes>
-			- This version of FabricObserver is built for NET8 and SF Runtime 10.0 and higher: It will not work on lower versions of Service Fabric.
-			- Bug Fix: Extensibility library targets SF Services versions greater than or equal to 7.0.1816, which is SF 10.x. This is to ensure compatibility with the latest versions of Service Fabric and enable FO plugin authors to reference Microsoft SDK package that target 7.x versions.
-			- Linux Bug Fix: AppObserver conditional logic bug (Linux-only) is now fixed. This bug causes AppObserver to fail in FO version 3.3.0 (not earlier versions) running in Linux SF clusters.
-			- Several nuget package updates.
-		</releaseNotes>
+            - This version of FabricObserver is built for NET8 and SF Runtime 10.0 and higher: It will not work on lower versions of Service Fabric.
+            - Bug Fix: Extensibility library targets SF Services versions greater than or equal to 7.0.1816, which is SF 10.x. This is to ensure compatibility with the latest versions of Service Fabric and enable FO plugin authors to reference Microsoft SDK package that target 7.x versions.
+            - Linux Bug Fix: AppObserver conditional logic bug (Linux-only) is now fixed. This bug causes AppObserver to fail in FO version 3.3.0 (not earlier versions) running in Linux SF clusters.
+            - Several nuget package updates.
+            - Github Version Check is now a configurable setting. Octokit/Github Version Check cannot be used in airgapped clusters.
+        </releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
 		<requireLicenseAcceptance>true</requireLicenseAcceptance>
