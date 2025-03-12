@@ -54,7 +54,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.3.0";
+        private const string InternalVersionNumber = "3.3.1";
 
         private static FabricClient FabricClientInstance => FabricClientUtilities.FabricClientSingleton;
 
@@ -260,11 +260,15 @@ namespace FabricObserver.Observers
                             }
                         }
 
-                        // Check for new version once a day.
-                        if (!(shutdownSignaled || runAsyncToken.IsCancellationRequested) && DateTime.UtcNow.Subtract(LastVersionCheckDateTime) >= NewReleaseCheckInterval)
+                        _ = bool.TryParse(GetConfigSettingValue(ObserverConstants.CheckGithubVersion, null), out bool checkGithubVersion);
+                        if (checkGithubVersion)
                         {
-                            await CheckGithubForNewVersionAsync();
-                            LastVersionCheckDateTime = DateTime.UtcNow;
+                            // Check for new version once a day.
+                            if (!(shutdownSignaled || runAsyncToken.IsCancellationRequested) && DateTime.UtcNow.Subtract(LastVersionCheckDateTime) >= NewReleaseCheckInterval)
+                            {
+                                await CheckGithubForNewVersionAsync();
+                                LastVersionCheckDateTime = DateTime.UtcNow;
+                            }
                         }
 
                         // Time to tale a nap before running observers again. 30 seconds is the minimum sleep time.

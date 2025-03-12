@@ -18,6 +18,7 @@ namespace FabricObserver.Observers.Utilities
         public const string EnableFabricObserverOperationalTelemetry = "EnableFabricObserverOperationalTelemetry";
         public const string AsyncClusterOperationTimeoutSeconds = "ClusterOperationTimeoutSeconds";
         public const string ObserverFailureHealthStateLevelParameter = "ObserverFailureHealthStateLevel";
+        public const string CheckGithubVersion = "CheckGithubVersion";
 
         // The name of the package that contains this Observer's configuration
         public const string ObserverConfigurationPackageName = "Config";
