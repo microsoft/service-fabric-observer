@@ -19,7 +19,7 @@ This is the .NET 8 implementation of FabricObserver's Extensibility library. Use
 		</contentFiles>
 		<dependencies>
 			<group targetFramework="net8.0">
-				<dependency id="Microsoft.ServiceFabric.Services" version="6.0.1017" />
+				<dependency id="Microsoft.ServiceFabric.Services" version="7.0.1816" />
 				<dependency id="Microsoft.ApplicationInsights" version="2.22.0" />
 				<dependency id="Microsoft.ApplicationInsights.NLogTarget" version="2.22.0" />
 				<dependency id="Microsoft.Extensions.DependencyInjection" version="8.0.0" />

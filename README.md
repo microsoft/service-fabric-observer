@@ -94,7 +94,7 @@ see [FOAzurePipeline.yaml](/FOAzurePipeline.yaml) for msazure devops build tasks
 **Note: You must deploy this version (3.3.1) to clusters that are running SF 9.0 and above. This version also requires .NET 6.**
 You can deploy FabricObserver (and ClusterObserver) using Visual Studio (if you build the sources yourself), PowerShell or ARM. Please note that this version of FabricObserver no longer supports the DefaultServices node in ApplicationManifest.xml.
 This means that should you deploy using PowerShell, you must create an instance of the service as the last command in your script. This was done to support ARM deployment, specifically.
-The StartupServices.xml file you see in the FabricHealerApp project now contains the service information once held in ApplicationManifest's DefaultServices node. Note that this information is primarily useful for deploying from Visual Studio.
+The StartupServices.xml file you see in the FabricObserverApp project now contains the service information once held in ApplicationManifest's DefaultServices node. Note that this information is primarily useful for deploying from Visual Studio.
 Your ARM template or PowerShell script will contain all the information necessary for deploying FabricObserver.
 
 #### Deploy FabricObserver using ARM

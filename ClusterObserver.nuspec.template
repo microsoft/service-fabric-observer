@@ -20,7 +20,7 @@
 		</contentFiles>
 		<dependencies>
 			<group targetFramework="net8.0">
-				<dependency id="Microsoft.ServiceFabric.Services" version="6.0.1017" />
+				<dependency id="Microsoft.ServiceFabric.Services" version="7.0.1816" />
 				<dependency id="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" version="3.3.1" />
 			</group>
 		</dependencies>

@@ -45,7 +45,7 @@ namespace FabricObserver.Observers
         /// <param name="context">The StatelessServiceContext instance.</param>
         public OSObserver(StatelessServiceContext context) : base(null, context)
         {
-            IsWindowsDevCluster = IsWindowsDevClusterAsync().GetAwaiter().GetResult();
+            IsWindowsDevCluster = IsWindows && IsWindowsDevClusterAsync().GetAwaiter().GetResult();
         }
 
         public override async Task ObserveAsync(CancellationToken token)
@@ -335,12 +335,15 @@ namespace FabricObserver.Observers
             {
                 OSInfo osInfo = await OSInfoProvider.Instance.GetOSInfoAsync(token);
                 osStatus = osInfo.Status;
+                ObserverLogger.LogInfo($"Sidhant OS Status: {osStatus}");
 
                 // Active, bound ports.
                 int activePorts = OSInfoProvider.Instance.GetActiveTcpPortCount();
+                ObserverLogger.LogInfo($"Sidhant Active TCP Ports: {activePorts}");
 
                 // Active, ephemeral ports.
                 int activeEphemeralPorts = OSInfoProvider.Instance.GetActiveEphemeralPortCount();
+                ObserverLogger.LogInfo($"Sidhant Active Ephemeral TCP Ports: {activeEphemeralPorts}");
                 (int lowPortOS, int highPortOS, int totalDynamicPortsOS) = OSInfoProvider.Instance.TupleGetDynamicPortRange();
                 string osEphemeralPortRange = string.Empty;
                 string fabricAppPortRange = string.Empty;
@@ -484,6 +487,7 @@ namespace FabricObserver.Observers
                 // Dynamic info qualifier (*)
                 _ = sb.AppendLine($"{Environment.NewLine}* Dynamic data.");
                 osReport = sb.ToString();
+                ObserverLogger.LogInfo($"Sidhant : {osReport}");
                 string kbOnlyHotFixes = null;
 
                 if (IsWindows)

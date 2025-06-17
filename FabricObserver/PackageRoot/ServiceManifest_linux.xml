@@ -14,7 +14,10 @@
   <CodePackage Name="Code" Version="3.3.1">
     <SetupEntryPoint>
       <ExeHost>
-        <Program>setcaps.sh</Program>
+        <!-- The setcaps.sh script is used for Ubuntu and setcaps-Mariner.sh is used for Mariner/Azure Linux machines-->
+        <!-- If using Ubuntu, uncomment and use setcaps.sh. If using Mariner/AzureLinux, uncomment and use setcaps-Mariner.sh -->  
+        <Program>setcaps-Mariner.sh</Program>
+        <!--<Program>setcaps.sh</Program> -->  
         <WorkingFolder>CodePackage</WorkingFolder>
       </ExeHost>
     </SetupEntryPoint>

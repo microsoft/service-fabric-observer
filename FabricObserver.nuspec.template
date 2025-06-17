@@ -22,7 +22,7 @@
 		</contentFiles>
 		<dependencies>
 			<group targetFramework="net8.0">
-				<dependency id="Microsoft.ServiceFabric.Services" version="6.0.1017" />
+				<dependency id="Microsoft.ServiceFabric.Services" version="7.0.1816" />
 			</group>
 		</dependencies>
 		<projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>
