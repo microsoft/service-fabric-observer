@@ -24,11 +24,11 @@
 		<PackageReference Include="Microsoft.ApplicationInsights" Version="2.23.0" />
 		<PackageReference Include="Microsoft.ApplicationInsights.NLogTarget" Version="2.23.0" />
 		<PackageReference Include="Microsoft.ServiceFabric.Services" Version="$(Version_SFServices)" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.2" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.2" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.6" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.6" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-		<PackageReference Include="NLog" Version="5.4.0" />
-		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.2" />
-		<PackageReference Include="System.Management" Version="9.0.2" />
+		<PackageReference Include="NLog" Version="5.5.0" />
+		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.6" />
+		<PackageReference Include="System.Management" Version="9.0.6" />
 	</ItemGroup>
 </Project>
