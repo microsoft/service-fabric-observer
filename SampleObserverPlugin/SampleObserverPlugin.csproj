@@ -2,12 +2,11 @@
 	<PropertyGroup>
 		<!-- NOTE: .NET 6 reaches EOL in 11/2024. So, this sample is targeting net8.0. Please upgrade your .NET 6 plugins to .NET 8 as soon as you can. -->
 		<TargetFramework>net8.0</TargetFramework>
-		<RuntimeIdentifiers>linux-x64;win-x64</RuntimeIdentifiers>
 		<RootNamespace>FabricObserver.Observers</RootNamespace>
 		<AssemblyName>SampleNewObserver</AssemblyName>
-		<Platforms>x64</Platforms>
+		<Platforms>AnyCPU</Platforms>
 	</PropertyGroup>
-	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
 		<DefineConstants>DEBUG;TRACE</DefineConstants>
 	</PropertyGroup>
 	<!-- Copy files post-build. -->
@@ -31,7 +30,7 @@
 		<PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" Version="3.3.1" />
 		
 		<!-- This is an external nupkg that this plugin sample requires. This is unrelated to the above FO-related reference choices. -->
-		<PackageReference Include="Polly" Version="8.5.2" />
+		<PackageReference Include="Polly" Version="8.6.1" />
     </ItemGroup>
     <ItemGroup>
       <ProjectReference Include="..\FabricObserver.Extensibility\FabricObserver.Extensibility.csproj" />

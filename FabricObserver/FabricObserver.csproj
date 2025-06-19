@@ -7,7 +7,7 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<Nullable>disable</Nullable>
 		<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
-		<RuntimeIdentifiers>win-x64;linux-x64</RuntimeIdentifiers>
+		<RuntimeIdentifiers>win-x64;linux-x64;win-arm64</RuntimeIdentifiers>
 		<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
 		<Copyright>Copyright © 2024</Copyright>
 		<Product>FabricObserver</Product>
@@ -17,7 +17,7 @@
 		<IsServiceFabricServiceProject>true</IsServiceFabricServiceProject>
 		<StartupObject>FabricObserver.Program</StartupObject>
 		<ResolveComReferenceSilent>true</ResolveComReferenceSilent>
-		<Platforms>x64</Platforms>
+		<Platforms>AnyCPU</Platforms>
 		<!-- In .NET 8, if you want to build self-contained in VS, you must uncomment and set this to true.
 		<SelfContained>True</SelfContained>-->
 	</PropertyGroup>
@@ -30,9 +30,9 @@
 		<None Remove="ApplicationInsights.config" />
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="Azure.Storage.Blobs" Version="12.23.0" />
+		<PackageReference Include="Azure.Storage.Blobs" Version="12.24.1" />
 		<PackageReference Include="Octokit" Version="14.0.0" />
-		<PackageReference Include="System.Diagnostics.EventLog" Version="9.0.2" />
+		<PackageReference Include="System.Diagnostics.EventLog" Version="9.0.6" />
 		<PackageReference Include="McMaster.NETCore.Plugins" Version="2.0.0" />
 		<Reference Include="..\Interop\Interop.WUApiLib.dll" />
 	</ItemGroup>
