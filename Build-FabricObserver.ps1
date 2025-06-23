@@ -18,7 +18,7 @@ try
 {
     Push-Location $scriptPath
 
-    Remove-Item $scriptPath\bin\release\FabricObserver\ -Recurse -Force -EA SilentlyContinue
+    Remove-Item $scriptPath\bin\release\FabricObserver\$RuntimeId\ -Recurse -Force -EA SilentlyContinue
 
     dotnet publish FabricObserver\FabricObserver.csproj $winArmSFPackageRefOverride -o bin\release\FabricObserver\$RuntimeId\self-contained\FabricObserverType\FabricObserverPkg\Code -c $Configuration -r $RuntimeId --self-contained true
     dotnet publish FabricObserver\FabricObserver.csproj $winArmSFPackageRefOverride -o bin\release\FabricObserver\$RuntimeId\framework-dependent\FabricObserverType\FabricObserverPkg\Code -c $Configuration -r $RuntimeId --self-contained false

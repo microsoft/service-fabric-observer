@@ -7,7 +7,7 @@
 	<RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     <Product>FabricObserverTests</Product>
     <AssemblyTitle>FabricObserverTests</AssemblyTitle>
-	<Platforms>AnyCPU</Platforms>
+	<PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />

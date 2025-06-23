@@ -16,7 +16,7 @@ if($RuntimeId -eq "win-arm64") {
 try {
     Push-Location $scriptPath
 
-    Remove-Item $scriptPath\bin\release\ClusterObserver\ -Recurse -Force -EA SilentlyContinue
+    Remove-Item $scriptPath\bin\release\ClusterObserver\$RuntimeId\ -Recurse -Force -EA SilentlyContinue
 
     dotnet publish ClusterObserver\ClusterObserver.csproj $winArmSFPackageRefOverride -o bin\release\ClusterObserver\$RuntimeId\self-contained\ClusterObserverType\ClusterObserverPkg\Code -c $Configuration -r $RuntimeId --self-contained true
     dotnet publish ClusterObserver\ClusterObserver.csproj $winArmSFPackageRefOverride -o bin\release\ClusterObserver\$RuntimeId\framework-dependent\ClusterObserverType\ClusterObserverPkg\Code -c $Configuration -r $RuntimeId --self-contained false

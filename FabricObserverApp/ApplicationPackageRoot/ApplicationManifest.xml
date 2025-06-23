@@ -38,12 +38,12 @@
     <Parameter Name="LogAnalyticsLogType" DefaultValue="FabricObserver" />
     <!-- End Telemetry -->
     <Parameter Name="AppObserverEnabled" DefaultValue="true" />
-    <Parameter Name="AzureStorageUploadObserverEnabled" DefaultValue="false" />
+    <Parameter Name="AzureStorageUploadObserverEnabled" DefaultValue="true" />
     <Parameter Name="CertificateObserverEnabled" DefaultValue="true" />
     <!-- Note: You must run FO as System or Admin user on Windows in order to run ContainerObserver on Windows. -->
     <Parameter Name="ContainerObserverEnabled" DefaultValue="false" />
     <Parameter Name="DiskObserverEnabled" DefaultValue="true" />
-    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="false" />
+    <Parameter Name="FabricSystemObserverEnabled" DefaultValue="true" />
     <Parameter Name="NetworkObserverEnabled" DefaultValue="false" />
     <Parameter Name="NodeObserverEnabled" DefaultValue="true" />
     <Parameter Name="OSObserverEnabled" DefaultValue="true" />
@@ -81,15 +81,15 @@
     <Parameter Name="FabricSystemObserverEnableCSVDataLogging" DefaultValue="false" />
     <Parameter Name="NodeObserverEnableCSVDataLogging" DefaultValue="false" />
     <!-- Observer Verbose Logging -->
-    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="false" />
-    <Parameter Name="AzureStorageUploadObserverEnableVerboseLogging" DefaultValue="false" />
-    <Parameter Name="CertificateObserverEnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="AppObserverEnableVerboseLogging" DefaultValue="true" />
+    <Parameter Name="AzureStorageUploadObserverEnableVerboseLogging" DefaultValue="true" />
+    <Parameter Name="CertificateObserverEnableVerboseLogging" DefaultValue="true" />
     <Parameter Name="ContainerObserverEnableVerboseLogging" DefaultValue="false" />
-    <Parameter Name="DiskObserverEnableVerboseLogging" DefaultValue="false" />
-    <Parameter Name="FabricSystemObserverEnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="DiskObserverEnableVerboseLogging" DefaultValue="true" />
+    <Parameter Name="FabricSystemObserverEnableVerboseLogging" DefaultValue="true" />
     <Parameter Name="NetworkObserverEnableVerboseLogging" DefaultValue="false" />
-    <Parameter Name="NodeObserverEnableVerboseLogging" DefaultValue="false" />
-    <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="false" />
+    <Parameter Name="NodeObserverEnableVerboseLogging" DefaultValue="true" />
+    <Parameter Name="OSObserverEnableVerboseLogging" DefaultValue="true" />
     <!-- Observer CPU Monitor Durations (TimeSpan format, e.g., 00:00:00): How long an observer should monitor CPU usage per target (process or machine).
          NOTE: If AppObserver is configured to monitor service processes concurrently, then any value greater than 5 seconds is ignored as 5 seconds CPU monitor duration will be the maximum executed value. 
          This is to protect against AppObserver causing the FO process to abuse CPU, especially on Windows - where FO employs (indirectly) NtQuerySystemInformation API to collect process CPU usage data.
@@ -206,11 +206,11 @@
     <!-- Required-If UseCircularBuffer = True -->
     <Parameter Name="NodeObserverResourceUsageDataCapacity" DefaultValue="" />
     <Parameter Name="NodeObserverCpuErrorLimitPercent" DefaultValue="" />
-    <Parameter Name="NodeObserverCpuWarningLimitPercent" DefaultValue="95" />
+    <Parameter Name="NodeObserverCpuWarningLimitPercent" DefaultValue="2" />
     <Parameter Name="NodeObserverMemoryErrorLimitMb" DefaultValue="" />
     <Parameter Name="NodeObserverMemoryWarningLimitMb" DefaultValue="" />
     <Parameter Name="NodeObserverMemoryErrorLimitPercent" DefaultValue="" />
-    <Parameter Name="NodeObserverMemoryWarningLimitPercent" DefaultValue="90" />
+    <Parameter Name="NodeObserverMemoryWarningLimitPercent" DefaultValue="2" />
     <Parameter Name="NodeObserverNetworkErrorActivePorts" DefaultValue="" />
     <Parameter Name="NodeObserverNetworkWarningActivePorts" DefaultValue="" />
     <Parameter Name="NodeObserverNetworkErrorFirewallRules" DefaultValue="" />
@@ -448,8 +448,8 @@
       <ResourceGovernancePolicy CodePackageRef="Code" MemoryInMB="[RGMemoryInMB]" /> -->
       <!-- NOTE: FabricObserver runs a setup script during activation on Linux. It must be run as System user (root). 
            Thus the below policy, which only impacts the Setup phase of FO, needs to be uncommented if you are deploying FO to a Linux cluster.
-           Other than the Setup script, FO does not need to (and therefore should not) run as a non-root user on Linux. Leave EntryPointType set to Setup.
-      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" /> -->
+           Other than the Setup script, FO does not need to (and therefore should not) run as a non-root user on Linux. Leave EntryPointType set to Setup. -->
+      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
       <!-- If you have to run FO process as SystemUser on Windows or root user on Linux, uncomment below. This is not recommended, generally.
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" /> -->
     </Policies>

@@ -113,6 +113,7 @@ After you adjust configuration settings to meet to your needs (this means changi
 cd C:\Users\me\source\repos\service-fabric-observer
 
 #Build FO (Release)
+#By default if no RuntimeId is specified, it will build for win-x64. If you want to build for a specific OS, then specify -RuntimeId win-arm64 or linux-x64.
 
 ./Build-FabricObserver
 

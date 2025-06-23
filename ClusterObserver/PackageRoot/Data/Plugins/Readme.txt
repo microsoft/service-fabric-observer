@@ -64,9 +64,11 @@ If you want to build your own nupkg from FO source, then:
 
 Open a PowerShell console, navigate to the top level directory of the FO repo (in this example, C:\Users\me\source\repos\service-fabric-observer):
 
+By default if no RuntimeId is specified, it will build for win-x64. If you want to build for a specific OS, then specify -RuntimeId win-arm64 or linux-x64.
+
 cd C:\Users\me\source\repos\service-fabric-observer
 ./Build-FabricObserver
 ./Build-NugetPackages
 
-The output from the above commands, FabricObserver platform-specific nupkgs and a package you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.2.15.nupkg, would be located in 
+The output from the above commands, FabricObserver platform-specific nupkgs and a package you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.3.1.nupkg, would be located in 
 C:\Users\me\source\repos\service-fabric-observer\bin\release\FabricObserver\Nugets.
