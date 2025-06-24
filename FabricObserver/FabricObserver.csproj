@@ -1,23 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<ProjectGuid>{51AC2A69-B952-4766-8A1E-2C7752BC011A}</ProjectGuid>
 		<RootNamespace>FabricObserver</RootNamespace>
 		<AssemblyName>FabricObserver</AssemblyName>
 		<OutputType>Exe</OutputType>
 		<TargetFramework>net8.0</TargetFramework>
-		<Nullable>disable</Nullable>
+		<PlatformTarget>AnyCPU</PlatformTarget>
 		<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
 		<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
-		<Copyright>Copyright © 2024</Copyright>
 		<Product>FabricObserver</Product>
 		<Version>3.3.1</Version>
 		<FileVersion>3.3.1</FileVersion>
 		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-		<IsServiceFabricServiceProject>true</IsServiceFabricServiceProject>
-		<StartupObject>FabricObserver.Program</StartupObject>
 		<ResolveComReferenceSilent>true</ResolveComReferenceSilent>
-		<PlatformTarget>AnyCPU</PlatformTarget>
-		<RuntimeIdentifiers>win-x64;linux-x64;win-arm64</RuntimeIdentifiers>
 		<!-- In .NET 8, if you want to build self-contained in VS, you must uncomment and set this to true.
 		<SelfContained>True</SelfContained>-->
 	</PropertyGroup>

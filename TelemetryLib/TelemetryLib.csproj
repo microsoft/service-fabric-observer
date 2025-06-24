@@ -1,14 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
 	<TargetFramework>net8.0</TargetFramework>
-    <OutputType>Library</OutputType>
-    <RootNamespace>FabricObserver.TelemetryLib</RootNamespace>
+	<PlatformTarget>AnyCPU</PlatformTarget>
+	<RootNamespace>FabricObserver.TelemetryLib</RootNamespace>
     <AssemblyName>TelemetryLib</AssemblyName>
-	  <PlatformTarget>AnyCPU</PlatformTarget>
     <AssemblyVersion>2.2.0.0</AssemblyVersion>
     <FileVersion>2.2.0.0</FileVersion>
-    <Copyright>Copyright © 2024</Copyright>
-    <Product>TelemetryLib</Product>
 	<IsArmTarget>false</IsArmTarget>
   </PropertyGroup>
 	<PropertyGroup Condition="'$(IsArmTarget)'=='false'">

@@ -6,14 +6,14 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+[string] $winArmSFPackageRefOverride = "/p:Version_SFServices=7.0.1816"
 [string] $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
-[string] $winArmSFPackageRefOverride = "/p:VersionOverride_SFServices=7.0.1816"
 
 # For SF 11/12 arm64 builds, today we need to override the SF package reference version to match the current version of the SDK 
 # to ensure ARM64 x64 emulation works correctly.
 if ($RuntimeId -eq "win-arm64") 
 {
-    $winArmSFPackageRefOverride = "/p:IsArmTarget=true"
+    $winArmSFPackageRefOverride = "/p:Version_SFServices=8.0.2707"
 }
 
 try 
@@ -33,15 +33,15 @@ try
     Copy-Item FabricObserverApp\ApplicationPackageRoot\ApplicationManifest.xml bin\release\FabricObserver\$RuntimeId\framework-dependent\FabricObserverType\ApplicationManifest.xml
    
     # ServiceManifest - Linux
-    Copy-Item FabricObserver\PackageRoot\ServiceManifest_linux.xml bin\release\FabricObserver\$RuntimeId\framework-dependent\FabricObserverType\FabricObserverPkg\ServiceManifest.xml -Force -Confirm:$False
-    Copy-Item FabricObserver\PackageRoot\ServiceManifest_linux.xml bin\release\FabricObserver\$RuntimeId\self-contained\FabricObserverType\FabricObserverPkg\ServiceManifest.xml -Force -Confirm:$False
+    if ($RuntimeId -eq "linux-x64") 
+    {
+        Copy-Item FabricObserver\PackageRoot\ServiceManifest_linux.xml bin\release\FabricObserver\$RuntimeId\framework-dependent\FabricObserverType\FabricObserverPkg\ServiceManifest.xml -Force -Confirm:$False
+        Copy-Item FabricObserver\PackageRoot\ServiceManifest_linux.xml bin\release\FabricObserver\$RuntimeId\self-contained\FabricObserverType\FabricObserverPkg\ServiceManifest.xml -Force -Confirm:$False
+    }
 
     # Get rid of ServiceManifest_linux.xml from build output.
-    if ($RuntimeId -eq "linux-x64")
-    {
-        Remove-Item bin\release\FabricObserver\$RuntimeId\framework-dependent\FabricObserverType\FabricObserverPkg\ServiceManifest_linux.xml -Force -Confirm:$False
-        Remove-Item bin\release\FabricObserver\$RuntimeId\self-contained\FabricObserverType\FabricObserverPkg\ServiceManifest_linux.xml -Force -Confirm:$False
-    }
+    Remove-Item bin\release\FabricObserver\$RuntimeId\framework-dependent\FabricObserverType\FabricObserverPkg\ServiceManifest_linux.xml -Force -Confirm:$False
+    Remove-Item bin\release\FabricObserver\$RuntimeId\self-contained\FabricObserverType\FabricObserverPkg\ServiceManifest_linux.xml -Force -Confirm:$False
 }
 finally 
 {

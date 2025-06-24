@@ -3,12 +3,10 @@
 		<TargetFramework>net8.0</TargetFramework>
 		<PlatformTarget>AnyCPU</PlatformTarget>
 		<RootNamespace>FabricObserver</RootNamespace>
-		<Copyright>Copyright © 2024</Copyright>
 		<Product>FabricObserver</Product>
 		<Version>3.3.1</Version>
 		<FileVersion>3.3.1</FileVersion>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-		<AutoGenerateBindingRedirects>string</AutoGenerateBindingRedirects>
 		<IsArmTarget>false</IsArmTarget>
 	</PropertyGroup>
 	<ItemGroup>

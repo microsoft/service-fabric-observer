@@ -1,22 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<ProjectGuid>{5E990052-7B55-4AF1-BCD9-48DE6EA0E547}</ProjectGuid>
 		<RootNamespace>ClusterObserver</RootNamespace>
 		<AssemblyName>ClusterObserver</AssemblyName>
 		<OutputType>Exe</OutputType>
 		<TargetFramework>net8.0</TargetFramework>
-		<Nullable>disable</Nullable>
+		<PlatformTarget>AnyCPU</PlatformTarget>
 		<IsServiceFabricServiceProject>True</IsServiceFabricServiceProject>
 		<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
 		<Product>ClusterObserver</Product>
 		<Version>2.3.1</Version>
 		<FileVersion>2.3.1</FileVersion>
-		<Copyright>Copyright © 2024</Copyright>
-		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-		<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-		<StartupObject>ClusterObserver.Program</StartupObject>
-		<PlatformTarget>AnyCPU</PlatformTarget>
-		<RuntimeIdentifiers>win-x64;linux-x64;win-arm64</RuntimeIdentifiers>
 		<!-- In .NET 8, if you want to build self-contained in VS, you must uncomment and set this to true.
 		<SelfContained>True</SelfContained>-->
 	</PropertyGroup>
