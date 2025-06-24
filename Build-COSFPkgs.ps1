@@ -28,6 +28,9 @@ try {
 
     Build-SFPkg "Microsoft.ServiceFabricApps.ClusterObserver.Windows.SelfContained.2.3.1" "$scriptPath\bin\release\ClusterObserver\win-x64\self-contained\ClusterObserverType"
     Build-SFPkg "Microsoft.ServiceFabricApps.ClusterObserver.Windows.FrameworkDependent.2.3.1" "$scriptPath\bin\release\ClusterObserver\win-x64\framework-dependent\ClusterObserverType"
+
+    Build-SFPkg "Microsoft.ServiceFabricApps.ClusterObserver.Windows.SelfContained.2.3.1" "$scriptPath\bin\release\ClusterObserver\win-arm64\self-contained\ClusterObserverType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.ClusterObserver.Windows.FrameworkDependent.2.3.1" "$scriptPath\bin\release\ClusterObserver\win-arm64\framework-dependent\ClusterObserverType"
 }
 finally {
     Pop-Location
