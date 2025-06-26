@@ -15,8 +15,6 @@
     <SetupEntryPoint>
       <ExeHost>
         <!-- The setcaps.sh script is used for Ubuntu and setcaps-Mariner.sh is used for Mariner/Azure Linux machines-->
-        <!-- If using Ubuntu, uncomment and use setcaps.sh. If using Mariner/AzureLinux, uncomment and use setcaps-Mariner.sh -->  
-        <!-- <Program>setcaps-Mariner.sh</Program> -->
         <Program>setcaps.sh</Program>  
         <WorkingFolder>CodePackage</WorkingFolder>
       </ExeHost>
@@ -37,3 +35,4 @@
        Observer plugin dlls must live in this folder, in a child folder named Plugins. -->
   <DataPackage Name="Data" Version="3.3.1" />
 </ServiceManifest>
+

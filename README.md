@@ -113,9 +113,17 @@ After you adjust configuration settings to meet to your needs (this means changi
 cd C:\Users\me\source\repos\service-fabric-observer
 
 #Build FO (Release)
-#By default if no RuntimeId is specified, it will build for win-x64. If you want to build for a specific OS, then specify -RuntimeId win-arm64 or linux-x64.
+#By default if no RuntimeId is specified, it will build for win-x64. If you want to build for a specific OS, then specify -RuntimeId win-arm64 or linux-x64. For RuntimeId linux-x64, if you are deploying for Mariner/Azure Linux OS, please add the flag -Azlinux.
+#Also by default if no Configuration is specified, it will build for Release. If you want to build for Debug, then specify -Configuration Debug.
 
+#Default build command (win-x64):
 ./Build-FabricObserver
+
+#Build for win-arm64:
+#./Build-FabricObserver -RuntimeId win-arm64
+
+#For building linux for Azure Linux OS, use the following command (for Ubuntu builds remove the -Azlinux flag):
+# ./Build-FabricObserver -RuntimeId linux-x64 -Azlinux
 
 #create a $path variable that points to the build output:
 #E.g., for Windows deployments:

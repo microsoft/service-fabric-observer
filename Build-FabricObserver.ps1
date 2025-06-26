@@ -1,6 +1,7 @@
 param(
     [string] $RuntimeId = "win-x64",
-    [string] $Configuration = "Release"
+    [string] $Configuration = "Release",
+    [switch] $Azlinux
 )
 
 $ErrorActionPreference = "Stop"
@@ -31,6 +32,17 @@ try
     Copy-Item FabricObserverApp\ApplicationPackageRoot\ApplicationManifest.xml bin\release\FabricObserver\$RuntimeId\framework-dependent\FabricObserverType\ApplicationManifest.xml
 
     if($RuntimeId -eq "linux-x64") {
+        if($Azlinux) {
+            $xmlPath = Join-Path $scriptPath "FabricObserver\PackageRoot\ServiceManifest_linux.xml"
+            $xmlText = Get-Content $xmlPath -Raw
+
+            # Replace setcaps.sh with setcaps-Mariner.sh only when Azlinux is true
+            $xmlText = $xmlText -replace '<Program>setcaps\.sh</Program>', '<Program>setcaps-Mariner.sh</Program>'
+
+            Set-Content -Path $xmlPath -Value $xmlText -Encoding UTF8
+            Write-Host "Updated ServiceManifest_linux.xml to use setcaps-Mariner.sh (Azlinux mode)"
+        }
+
         # ServiceManifest - Linux
         Copy-Item FabricObserver\PackageRoot\ServiceManifest_linux.xml bin\release\FabricObserver\$RuntimeId\framework-dependent\FabricObserverType\FabricObserverPkg\ServiceManifest.xml -Force -Confirm:$False
         Copy-Item FabricObserver\PackageRoot\ServiceManifest_linux.xml bin\release\FabricObserver\$RuntimeId\self-contained\FabricObserverType\FabricObserverPkg\ServiceManifest.xml -Force -Confirm:$False
