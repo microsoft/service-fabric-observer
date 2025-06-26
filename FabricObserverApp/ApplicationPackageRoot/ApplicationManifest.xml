@@ -446,13 +446,9 @@
       <!-- Resource Governance
       <ServicePackageResourceGovernancePolicy CpuCoresLimit="[RGCPUCoresRequest]" />
       <ResourceGovernancePolicy CodePackageRef="Code" MemoryInMB="[RGMemoryInMB]" /> -->
-      <!-- NOTE: FabricObserver runs a setup script during activation on Linux. It must be run as System user (root). 
-           Thus the below policy, which only impacts the Setup phase of FO, needs to be uncommented if you are deploying FO to a Linux cluster.
-           Other than the Setup script, FO does not need to (and therefore should not) run as a non-root user on Linux. Leave EntryPointType set to Setup.
-      <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" /> -->
       <!-- If you have to run FO process as SystemUser on Windows or root user on Linux, uncomment below. This is not recommended, generally.
       <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" /> -->
-    </Policies>
+      </Policies>
   </ServiceManifestImport>
   <Principals>
     <Users>
