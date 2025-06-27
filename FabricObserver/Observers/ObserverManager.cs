@@ -54,7 +54,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.3.1";
+        private const string InternalVersionNumber = "3.3.2";
 
         private static FabricClient FabricClientInstance => FabricClientUtilities.FabricClientSingleton;
 

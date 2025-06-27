@@ -1,4 +1,4 @@
-## FabricObserver 3.3.1 (NET 8, SF Runtime version 10.0 and higher)
+## FabricObserver 3.3.2 (NET 8, SF Runtime version 10.0 and higher)
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-observer%2Fmain%2FDocumentation%2FDeployment%2Fservice-fabric-observer.json)  
 
@@ -10,7 +10,7 @@
 4. Supports [Configuration Setting Application Updates](/Documentation/Using.md#parameterUpdates) for any observer for any supported setting. 
 5. Is actively developed in the open.
 
-> FabricObserver 3.3.1 targets SF runtime versions 10.0 and higher. Starting with version 3.3.0, you must deploy the self-contained release package unless you are deploying to a cluster running SF Version 10.1 CU3 or higher, then you can deploy framework-dependent release.
+> FabricObserver 3.3.2 targets SF runtime versions 10.0 and higher. Starting with version 3.3.0, you must deploy the self-contained release package unless you are deploying to a cluster running SF Version 10.1 CU3 or higher, then you can deploy framework-dependent release.
 
 FO is a Stateless Service Fabric Application composed of a single service that runs on every node in your cluster, so it can be deployed and run alongside your applications without any changes to them. Each FO service instance knows nothing about other FO instances in the cluster, by design. 
 
@@ -91,7 +91,7 @@ see [FOAzurePipeline.yaml](/FOAzurePipeline.yaml) for msazure devops build tasks
 .net6 installed (if you deploy VM images from Azure gallery, then they will not have .net6 installed), then you must deploy the SelfContained package.</strong>
 
 ### Deploy FabricObserver
-**Note: You must deploy this version (3.3.1) to clusters that are running SF 9.0 and above. This version also requires .NET 6.**
+**Note: You must deploy this version (3.3.2) to clusters that are running SF 9.0 and above. This version also requires .NET 6.**
 You can deploy FabricObserver (and ClusterObserver) using Visual Studio (if you build the sources yourself), PowerShell or ARM. Please note that this version of FabricObserver no longer supports the DefaultServices node in ApplicationManifest.xml.
 This means that should you deploy using PowerShell, you must create an instance of the service as the last command in your script. This was done to support ARM deployment, specifically.
 The StartupServices.xml file you see in the FabricObserverApp project now contains the service information once held in ApplicationManifest's DefaultServices node. Note that this information is primarily useful for deploying from Visual Studio.
@@ -144,15 +144,15 @@ Connect-ServiceFabricCluster -ConnectionEndpoint @('sf-win-cluster.westus2.cloud
 
 #Copy $path contents (FO app package) to server:
 
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FO330 -TimeoutSec 1800
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FO332 -TimeoutSec 1800
 
 #Register FO ApplicationType:
 
-Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO330
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO332
 
 #Create FO application (if not already deployed at lesser version):
 
-New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.3.1   
+New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.3.2   
 
 #Create the Service instances (-1 means all nodes, which is what is required for FO):  
 
@@ -160,14 +160,14 @@ New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName f
 
 #OR if updating existing version:  
 
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.3.1 -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.3.2 -Monitored -FailureAction rollback
 ```  
 
 ## Observer Model
 
 FO is composed of Observer objects (instance types) that are designed to observe, record, and report on several machine-level environmental conditions inside a Windows or Linux (Ubuntu) VM hosting a Service Fabric node.
 
-**NOTE:** ```SFConfigurationObserver```, which has been deprecated for several releases has been completely removed in 3.3.1. Further, all related settings have been removed from Settings.xml and ApplicationManifest.xml.
+**NOTE:** ```SFConfigurationObserver```, which has been deprecated for several releases has been completely removed in 3.3.2. Further, all related settings have been removed from Settings.xml and ApplicationManifest.xml.
 
 Here are the current observers and what they monitor:  
 
