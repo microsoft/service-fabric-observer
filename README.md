@@ -82,7 +82,16 @@ If you deploy from VS, then you will need to use FabricObserver/PackageRoot/Serv
  <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
 ```
 
-If you use the FO [build script](https://github.com/microsoft/service-fabric-observer/blob/main/Build-FabricObserver.ps1), then it will take care of any configuration modifications automatically for linux build output, but you will still need to modify ApplicationManifest.xml as described above.
+**Recommended Method for Linux** If you use the FO [build script](https://github.com/microsoft/service-fabric-observer/blob/main/Build-FabricObserver.ps1), then it will take care of any configuration modifications automatically for linux build output.
+
+When building for Ubuntu, please run the following build command to ensure that the correct configurations are set for the build output:
+```PowerShell
+./Build-FabricObserver -RuntimeId linux-x64
+```
+When building for AzLinux/Mariner, please run the following build command to ensure that the correct configurations are set for the build output:
+```PowerShell
+./Build-FabricObserver -RuntimeId linux-x64 -Azlinux
+```
 
 The build scripts include code build, sfpkg generation, and nupkg generation. They are all located in the top level directory of this repo.
 
