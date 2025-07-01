@@ -8,7 +8,7 @@
             - Added support for AzLinux/Mariner OS.
             - Added support for Win-ARM64 builds.
             - Several nuget package updates.
-        </releaseNotes>
+     </releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
 		<requireLicenseAcceptance>true</requireLicenseAcceptance>
