@@ -97,10 +97,10 @@ The build scripts include code build, sfpkg generation, and nupkg generation. Th
 
 FabricObserver can be run and deployed through Visual Studio or Powershell, like any SF app. If you want to add this to your Azure Pipelines CI, 
 see [FOAzurePipeline.yaml](/FOAzurePipeline.yaml) for msazure devops build tasks. <strong>Please keep in mind that if your target servers do not already have
-.net6 installed (if you deploy VM images from Azure gallery, then they will not have .net6 installed), then you must deploy the SelfContained package.</strong>
+.net8 installed (if you deploy VM images from Azure gallery, then they will not have .net8 installed), then you must deploy the SelfContained package.</strong>
 
 ### Deploy FabricObserver
-**Note: You must deploy this version (3.3.2) to clusters that are running SF 9.0 and above. This version also requires .NET 6.**
+**Note: You must deploy this version (3.3.2) to clusters that are running SF 9.0 and above. This version also requires .NET 8.**
 You can deploy FabricObserver (and ClusterObserver) using Visual Studio (if you build the sources yourself), PowerShell or ARM. Please note that this version of FabricObserver no longer supports the DefaultServices node in ApplicationManifest.xml.
 This means that should you deploy using PowerShell, you must create an instance of the service as the last command in your script. This was done to support ARM deployment, specifically.
 The StartupServices.xml file you see in the FabricObserverApp project now contains the service information once held in ApplicationManifest's DefaultServices node. Note that this information is primarily useful for deploying from Visual Studio.
