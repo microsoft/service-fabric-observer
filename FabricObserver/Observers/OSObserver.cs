@@ -45,7 +45,7 @@ namespace FabricObserver.Observers
         /// <param name="context">The StatelessServiceContext instance.</param>
         public OSObserver(StatelessServiceContext context) : base(null, context)
         {
-            IsWindowsDevCluster = IsWindowsDevClusterAsync().GetAwaiter().GetResult();
+            IsWindowsDevCluster = IsWindows && IsWindowsDevClusterAsync().GetAwaiter().GetResult();
         }
 
         public override async Task ObserveAsync(CancellationToken token)

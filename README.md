@@ -1,4 +1,4 @@
-## FabricObserver 3.3.1 (NET 8, SF Runtime version 10.0 and higher)
+## FabricObserver 3.3.2 (NET 8, SF Runtime version 10.0 and higher)
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-observer%2Fmain%2FDocumentation%2FDeployment%2Fservice-fabric-observer.json)  
 
@@ -10,7 +10,7 @@
 4. Supports [Configuration Setting Application Updates](/Documentation/Using.md#parameterUpdates) for any observer for any supported setting. 
 5. Is actively developed in the open.
 
-> FabricObserver 3.3.1 targets SF runtime versions 10.0 and higher. Starting with version 3.3.0, you must deploy the self-contained release package unless you are deploying to a cluster running SF Version 10.1 CU3 or higher, then you can deploy framework-dependent release.
+> FabricObserver 3.3.2 targets SF runtime versions 10.0 and higher. Starting with version 3.3.0, you must deploy the self-contained release package unless you are deploying to a cluster running SF Version 10.1 CU3 or higher, then you can deploy framework-dependent release.
 
 FO is a Stateless Service Fabric Application composed of a single service that runs on every node in your cluster, so it can be deployed and run alongside your applications without any changes to them. Each FO service instance knows nothing about other FO instances in the cluster, by design. 
 
@@ -82,19 +82,28 @@ If you deploy from VS, then you will need to use FabricObserver/PackageRoot/Serv
  <RunAsPolicy CodePackageRef="Code" UserRef="SystemUser" EntryPointType="Setup" />
 ```
 
-If you use the FO [build script](https://github.com/microsoft/service-fabric-observer/blob/main/Build-FabricObserver.ps1), then it will take care of any configuration modifications automatically for linux build output, but you will still need to modify ApplicationManifest.xml as described above.
+**Recommended Method for Linux** If you use the FO [build script](https://github.com/microsoft/service-fabric-observer/blob/main/Build-FabricObserver.ps1), then it will take care of any configuration modifications automatically for linux build output.
+
+When building for Ubuntu, please run the following build command to ensure that the correct configurations are set for the build output:
+```PowerShell
+./Build-FabricObserver -RuntimeId linux-x64
+```
+When building for AzLinux/Mariner, please run the following build command to ensure that the correct configurations are set for the build output:
+```PowerShell
+./Build-FabricObserver -RuntimeId linux-x64 -Azlinux
+```
 
 The build scripts include code build, sfpkg generation, and nupkg generation. They are all located in the top level directory of this repo.
 
 FabricObserver can be run and deployed through Visual Studio or Powershell, like any SF app. If you want to add this to your Azure Pipelines CI, 
 see [FOAzurePipeline.yaml](/FOAzurePipeline.yaml) for msazure devops build tasks. <strong>Please keep in mind that if your target servers do not already have
-.net6 installed (if you deploy VM images from Azure gallery, then they will not have .net6 installed), then you must deploy the SelfContained package.</strong>
+.net8 installed (if you deploy VM images from Azure gallery, then they will not have .net8 installed), then you must deploy the SelfContained package.</strong>
 
 ### Deploy FabricObserver
-**Note: You must deploy this version (3.3.1) to clusters that are running SF 9.0 and above. This version also requires .NET 6.**
+**Note: You must deploy this version (3.3.2) to clusters that are running SF 9.0 and above. This version also requires .NET 8.**
 You can deploy FabricObserver (and ClusterObserver) using Visual Studio (if you build the sources yourself), PowerShell or ARM. Please note that this version of FabricObserver no longer supports the DefaultServices node in ApplicationManifest.xml.
 This means that should you deploy using PowerShell, you must create an instance of the service as the last command in your script. This was done to support ARM deployment, specifically.
-The StartupServices.xml file you see in the FabricHealerApp project now contains the service information once held in ApplicationManifest's DefaultServices node. Note that this information is primarily useful for deploying from Visual Studio.
+The StartupServices.xml file you see in the FabricObserverApp project now contains the service information once held in ApplicationManifest's DefaultServices node. Note that this information is primarily useful for deploying from Visual Studio.
 Your ARM template or PowerShell script will contain all the information necessary for deploying FabricObserver.
 
 #### Deploy FabricObserver using ARM
@@ -113,13 +122,26 @@ After you adjust configuration settings to meet to your needs (this means changi
 cd C:\Users\me\source\repos\service-fabric-observer
 
 #Build FO (Release)
+#By default if no RuntimeId is specified, it will build for win-x64. If you want to build for a specific OS, then specify -RuntimeId win-arm64 or linux-x64. For RuntimeId linux-x64, if you are deploying for Mariner/Azure Linux OS, please add the flag -Azlinux.
+#Also by default if no Configuration is specified, it will build for Release. If you want to build for Debug, then specify -Configuration Debug.
 
+#Default build command (win-x64):
 ./Build-FabricObserver
+
+#Build for win-arm64:
+#./Build-FabricObserver -RuntimeId win-arm64
+
+#For building linux for Azure Linux OS, use the following command (for Ubuntu builds remove the -Azlinux flag):
+# ./Build-FabricObserver -RuntimeId linux-x64 -Azlinux
 
 #create a $path variable that points to the build output:
 #E.g., for Windows deployments:
 
+#win-x64
 $path = "C:\Users\me\source\repos\service-fabric-observer\bin\release\FabricObserver\win-x64\self-contained\FabricObserverType"
+
+#or for win-arm64
+#$path = "C:\Users\me\source\repos\service-fabric-observer\bin\release\FabricObserver\win-arm64\self-contained\FabricObserverType"
 
 #For Linux deployments:
 
@@ -131,15 +153,15 @@ Connect-ServiceFabricCluster -ConnectionEndpoint @('sf-win-cluster.westus2.cloud
 
 #Copy $path contents (FO app package) to server:
 
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FO330 -TimeoutSec 1800
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FO332 -TimeoutSec 1800
 
 #Register FO ApplicationType:
 
-Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO330
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO332
 
 #Create FO application (if not already deployed at lesser version):
 
-New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.3.1   
+New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.3.2   
 
 #Create the Service instances (-1 means all nodes, which is what is required for FO):  
 
@@ -147,14 +169,14 @@ New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName f
 
 #OR if updating existing version:  
 
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.3.1 -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.3.2 -Monitored -FailureAction rollback
 ```  
 
 ## Observer Model
 
 FO is composed of Observer objects (instance types) that are designed to observe, record, and report on several machine-level environmental conditions inside a Windows or Linux (Ubuntu) VM hosting a Service Fabric node.
 
-**NOTE:** ```SFConfigurationObserver```, which has been deprecated for several releases has been completely removed in 3.3.1. Further, all related settings have been removed from Settings.xml and ApplicationManifest.xml.
+**NOTE:** ```SFConfigurationObserver```, which has been deprecated for several releases has been completely removed in 3.3.2. Further, all related settings have been removed from Settings.xml and ApplicationManifest.xml.
 
 Here are the current observers and what they monitor:  
 

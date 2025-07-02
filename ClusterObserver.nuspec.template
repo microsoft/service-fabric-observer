@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
-	<metadata minClientVersion="3.3.1">
+	<metadata minClientVersion="3.3.2">
 		<id>%PACKAGE_ID%</id>
-		<version>2.3.1</version>
+		<version>2.3.2</version>
 		<releaseNotes>
-- This version is built for .NET 8 and SF Runtime >= 10.0 (Self-Contained FO builds only for 10.0 - 10.1 CU2). If you have deployed SF Runtime version >= 10.1 Cumulative Update 3.0 (CU3), then you can deploy the framework-dependent release build for the target platform (Windows or Linux). If you are not running SF Runtime version >= 10.1 CU3, then you must deploy the Self-Contained release build for the target platform (Windows or Linux). **If you can't upgrade to .NET 8 yet, then do not upgrade to this version.**
-- Removed Microsoft.ServiceFabric.Services package reference in ClusterObserver.csproj. This is not needed and cause compatibility issues for ClusterObserver plugins.
+- Added support for AzLinux/Mariner OS.
+- Added support for Win-ARM64 builds.
+- Several nuget package updates.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
@@ -20,8 +21,8 @@
 		</contentFiles>
 		<dependencies>
 			<group targetFramework="net8.0">
-				<dependency id="Microsoft.ServiceFabric.Services" version="6.0.1017" />
-				<dependency id="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" version="3.3.1" />
+				<dependency id="Microsoft.ServiceFabric.Services" version="7.0.1816" />
+				<dependency id="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" version="3.3.2" />
 			</group>
 		</dependencies>
 		<projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>

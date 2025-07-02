@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
-	<metadata minClientVersion="3.3.1">
+	<metadata minClientVersion="3.3.2">
 		<id>%PACKAGE_ID%</id>
-		<version>3.3.1</version>
+		<version>3.3.2</version>
 		<releaseNotes>
 This is the .NET 8 implementation of FabricObserver's Extensibility library. Use this library to build .NET 8 FabricObserver and ClusterObserver plugins.
 		</releaseNotes>
@@ -19,7 +19,7 @@ This is the .NET 8 implementation of FabricObserver's Extensibility library. Use
 		</contentFiles>
 		<dependencies>
 			<group targetFramework="net8.0">
-				<dependency id="Microsoft.ServiceFabric.Services" version="6.0.1017" />
+				<dependency id="Microsoft.ServiceFabric.Services" version="7.0.1816" />
 				<dependency id="Microsoft.ApplicationInsights" version="2.22.0" />
 				<dependency id="Microsoft.ApplicationInsights.NLogTarget" version="2.22.0" />
 				<dependency id="Microsoft.Extensions.DependencyInjection" version="8.0.0" />
