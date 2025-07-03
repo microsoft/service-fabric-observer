@@ -32,7 +32,6 @@ try {
     Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained.3.3.2" "$scriptPath\bin\release\FabricObserver\win-arm64\self-contained\FabricObserverType"
     Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserver.Windows.FrameworkDependent.3.3.2" "$scriptPath\bin\release\FabricObserver\win-arm64\framework-dependent\FabricObserverType"
 }
-}
 finally {
     Pop-Location
 }
