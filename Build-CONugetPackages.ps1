@@ -43,8 +43,8 @@ try {
     Build-Nuget "Microsoft.ServiceFabricApps.ClusterObserver.Windows.SelfContained" "$scriptPath\bin\release\ClusterObserver\win-x64\self-contained\ClusterObserverType"
     Build-Nuget "Microsoft.ServiceFabricApps.ClusterObserver.Windows.FrameworkDependent" "$scriptPath\bin\release\ClusterObserver\win-x64\framework-dependent\ClusterObserverType"
 
-    Build-Nuget "Microsoft.ServiceFabricApps.ClusterObserver.Windows.SelfContained" "$scriptPath\bin\release\ClusterObserver\win-arm64\self-contained\ClusterObserverType"
-    Build-Nuget "Microsoft.ServiceFabricApps.ClusterObserver.Windows.FrameworkDependent" "$scriptPath\bin\release\ClusterObserver\win-arm64\framework-dependent\ClusterObserverType"
+    Build-Nuget "Microsoft.ServiceFabricApps.ClusterObserver.WindowsArm64.SelfContained" "$scriptPath\bin\release\ClusterObserver\win-arm64\self-contained\ClusterObserverType"
+    Build-Nuget "Microsoft.ServiceFabricApps.ClusterObserver.WindowsArm64.FrameworkDependent" "$scriptPath\bin\release\ClusterObserver\win-arm64\framework-dependent\ClusterObserverType"
 }
 finally {
 
