@@ -46,8 +46,8 @@ try {
     Build-Nuget "Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" "$scriptPath\bin\release\FabricObserver\win-x64\self-contained\FabricObserverType" "FabricObserver.nuspec.template"
     Build-Nuget "Microsoft.ServiceFabricApps.FabricObserver.Windows.FrameworkDependent" "$scriptPath\bin\release\FabricObserver\win-x64\framework-dependent\FabricObserverType" "FabricObserver.nuspec.template"
 
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" "$scriptPath\bin\release\FabricObserver\win-arm64\self-contained\FabricObserverType" "FabricObserver.nuspec.template"
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricObserver.Windows.FrameworkDependent" "$scriptPath\bin\release\FabricObserver\win-arm64\framework-dependent\FabricObserverType" "FabricObserver.nuspec.template"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricObserver.WindowsArm64.SelfContained" "$scriptPath\bin\release\FabricObserver\win-arm64\self-contained\FabricObserverType" "FabricObserver.nuspec.template"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricObserver.WindowsArm64.FrameworkDependent" "$scriptPath\bin\release\FabricObserver\win-arm64\framework-dependent\FabricObserverType" "FabricObserver.nuspec.template"
     
     # FabricObserver.Extensibility Library - it is cross-platform (netstandard2.0). Doesn't matter which FO target platform directory you grab it from..
     Build-Nuget "Microsoft.ServiceFabricApps.FabricObserver.Extensibility" "$scriptPath\bin\release\FabricObserver\win-x64\self-contained\FabricObserverType" "FabricObserver.Extensibility.nuspec.template"
