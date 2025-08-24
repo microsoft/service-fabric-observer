@@ -28,7 +28,7 @@ namespace DiffPatchXmlSF
                     "preceding the file extension.\n\n" +
                     "**Note, if you have observer plugins, then you must supply true for [mergeExistingNodes] as the last argument to pull over your plugin settings as part of the merge.**.\n\n" +
                     "Example:\n\n" +
-                    "DiffPatchXml \"C:\\repos\\FO\\3.1.26\\configs\\ApplicationManifest.xml\" \"C:\\repos\\FO\\3.3.2\\configs\\ApplicationManifest.xml\"\n");
+                    "DiffPatchXml \"C:\\repos\\FO\\3.1.26\\configs\\ApplicationManifest.xml\" \"C:\\repos\\FO\\3.3.3\\configs\\ApplicationManifest.xml\"\n");
 
                 return;
             }

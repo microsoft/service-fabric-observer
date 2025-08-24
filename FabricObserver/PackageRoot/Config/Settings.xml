@@ -399,7 +399,7 @@
        If you want to enable versionless application parameter updates, then add MustOverride to the Parameters you want to be 
        able to change without redeploying FO and add them to ApplicationManifest.xml like all the other observers.
 	   
-	   All observers are enabled by default, so even you do not supply any parameters here (like, leave this commented out) your observer plugin will run.
+	   All observers are enabled by default, so even you do not supply any parameters here (like, leave this commented out) your observer plugin will run. -->
   <Section Name="SampleNewObserverConfiguration">
     <Parameter Name="Enabled" Value="true" />
     <Parameter Name="ClusterOperationTimeoutSeconds" Value="120" />
@@ -407,5 +407,5 @@
     <Parameter Name="EnableTelemetry" Value="false" />
     <Parameter Name="EnableVerboseLogging" Value="false" />
     <Parameter Name="RunInterval" Value=""  />
-  </Section> -->
+  </Section>
 </Settings>
