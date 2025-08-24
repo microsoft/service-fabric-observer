@@ -930,6 +930,11 @@ namespace FabricObserver.Observers
 
             // DEBUG - Perf
 #if DEBUG
+            foreach (var app in deployedApps)
+            {
+                ObserverLogger.LogInfo($"Deployed app on node {NodeName}: {app.ApplicationName} - {app.ApplicationTypeName}");
+            }
+
             var stopwatch = Stopwatch.StartNew();
 #endif
             // Set properties with Application Parameter settings (housed in ApplicationManifest.xml) for this run.
@@ -3084,12 +3089,12 @@ namespace FabricObserver.Observers
                 // Limit potential for high CPU usage by throttling max duration when monitoring CPU usage with multiple threads.
                 if (EnableConcurrentMonitoring)
                 {
-                    if (cpuMonitorDuration >= TimeSpan.FromSeconds(5))
+                    if (cpuMonitorDuration > TimeSpan.FromSeconds(10))
                     {
-                        cpuMonitorDuration = TimeSpan.FromSeconds(5);
+                        cpuMonitorDuration = TimeSpan.FromSeconds(10);
 
-                        // Always force 1s sleep time for concurrent monitoring when duration is >= 5s.
-                        cpuMonitorLoopSleepTime = TimeSpan.FromSeconds(1000);
+                        // Always force 1s sleep time for concurrent monitoring when duration is > 10s.
+                        cpuMonitorLoopSleepTime = TimeSpan.FromMilliseconds(1000);
                     }
                 }
 
