@@ -2718,7 +2718,7 @@ namespace FabricObserver.Observers
 
             if (!exceptions.IsEmpty)
             {
-                ObserverLogger.LogInfo("Completed MonitorDeployedAppsAsync with one or more exceptions inside task. Throwing inner exceptions aggregate.");
+                ObserverLogger.LogWarning("Completed MonitorDeployedAppsAsync with one or more exceptions inside task. Throwing inner exceptions aggregate.");
                 throw new AggregateException(exceptions);
             }
 
