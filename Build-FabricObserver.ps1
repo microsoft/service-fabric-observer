@@ -31,8 +31,10 @@ try
     Copy-Item FabricObserverApp\ApplicationPackageRoot\ApplicationManifest.xml bin\$Configuration\FabricObserver\$RuntimeId\self-contained\FabricObserverType\ApplicationManifest.xml
     Copy-Item FabricObserverApp\ApplicationPackageRoot\ApplicationManifest.xml bin\$Configuration\FabricObserver\$RuntimeId\framework-dependent\FabricObserverType\ApplicationManifest.xml
 
-    if($RuntimeId -eq "linux-x64") {
-        if($Azlinux) {
+    if($RuntimeId -eq "linux-x64") 
+    {
+        if($Azlinux) 
+        {
             $xmlPath = Join-Path $scriptPath "FabricObserver\PackageRoot\ServiceManifest_linux.xml"
             $xmlText = Get-Content $xmlPath -Raw
 
