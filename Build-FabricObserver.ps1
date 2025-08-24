@@ -11,7 +11,8 @@ $ErrorActionPreference = "Stop"
 
 # For SF 11/12 arm64 builds, today we need to override the SF package reference version to match the current version of the SDK
 # to ensure arm64 x64 emulation works correctly
-if($RuntimeId -eq "win-arm64") {
+if($RuntimeId -eq "win-arm64") 
+{
     $winArmSFPackageRefOverride = "/p:Version_SFServices=8.0.2707"
 }
 
