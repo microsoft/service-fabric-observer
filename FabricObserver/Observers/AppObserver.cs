@@ -930,12 +930,11 @@ namespace FabricObserver.Observers
             deployedApps = await fabricClientUtilities.GetAllDeployedAppsAsync(Token, NodeName);
 
             // DEBUG - Perf
-#if DEBUG
             foreach (var app in deployedApps)
             {
                 ObserverLogger.LogInfo($"Deployed app on node {NodeName}: {app.ApplicationName} - {app.ApplicationTypeName}");
             }
-
+#if DEBUG
             var stopwatch = Stopwatch.StartNew();
 #endif
             // Set properties with Application Parameter settings (housed in ApplicationManifest.xml) for this run.
