@@ -2,10 +2,6 @@
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-observer%2Fmain%2FDocumentation%2FDeployment%2Fservice-fabric-observer.json)  
 
-**NOTE**:  a bug was introduced in AppObserver for **NET8** impl. This impacts the delay between CPU measurements (which run in a loop for MonitorDuration seconds) by AppObserver running in concurrent monitoring mode that will render the feature most likely useless (CPU monitoring) if you set AppObserver MonitorDuration to 5 seconds or greater and EnableConcurrentMonitoring = true. This will be fixed in 3.3.3. 
- 
-**MITIGATION**: Do not set AppObserver MonitorDuration value to 5 or greater or to disable concurrent monitoring. 
-
 [**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a production-ready watchdog service with an easy-to-use extensibility model, written as a stateless, singleton Service Fabric **NET 8** application that by default 
 
 1. Monitors a broad range of physical machine resources that tend to be very important to all Service Fabric services and maps these metrics to the related Service Fabric entities.
