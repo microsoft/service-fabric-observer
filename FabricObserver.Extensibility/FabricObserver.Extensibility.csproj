@@ -5,8 +5,8 @@
 		<RootNamespace>FabricObserver</RootNamespace>
 		<Copyright>Copyright © 2024</Copyright>
 		<Product>FabricObserver</Product>
-		<Version>3.3.2</Version>
-		<FileVersion>3.3.2</FileVersion>
+		<Version>3.3.3</Version>
+		<FileVersion>3.3.3</FileVersion>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<AutoGenerateBindingRedirects>string</AutoGenerateBindingRedirects>
         <IsArmTarget>false</IsArmTarget>
@@ -21,12 +21,12 @@
 		<PackageReference Include="Microsoft.ApplicationInsights" Version="2.23.0" />
 		<PackageReference Include="Microsoft.ApplicationInsights.NLogTarget" Version="2.23.0" />
 		<PackageReference Include="Microsoft.ServiceFabric.Services" Version="$(Version_SFServices)" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.6" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.6" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.8" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.8" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-		<PackageReference Include="NLog" Version="5.5.0" />
-		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.6" />
-		<PackageReference Include="System.Management" Version="9.0.2" />
+		<PackageReference Include="NLog" Version="6.0.3" />
+		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.8" />
+		<PackageReference Include="System.Management" Version="9.0.8" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />

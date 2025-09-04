@@ -1,14 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
-	<metadata minClientVersion="3.3.2">
+	<metadata minClientVersion="3.3.3">
 		<id>%PACKAGE_ID%</id>
-		<version>3.3.2</version>
+		<version>3.3.3</version>
 		<releaseNotes>
-            - Linux Bug Fix: OSObserver plugin now correctly detects the OS version on Linux machines. This fixes an issue where the OS version was not being detected correctly, leading to potential misconfigurations.
-            - Added support for AzLinux/Mariner OS.
-            - Added support for Win-ARM64 builds.
-            - Several nuget package updates.
-     </releaseNotes>
+			- AppObserver: Fixed bug in monitor duration override logic where seconds value was used instead of milliseconds value for TimeSpan creation (so, TimeSpan.FromSeconds(1000) instead of TimeSpan.FromMilliseconds(1000)..). This leads to very long sleep times between CPU measurements.
+			- AppObserver: Added more logging around process detection and monitoring.
+		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
 		<requireLicenseAcceptance>true</requireLicenseAcceptance>

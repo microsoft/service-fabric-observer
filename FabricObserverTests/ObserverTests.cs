@@ -1028,11 +1028,21 @@ namespace FabricObserverTests
 
             using var obs = new AppObserver(TestServiceContext)
             {
-                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json")
+                JsonConfigPath = Path.Combine(Environment.CurrentDirectory, "PackageRoot", "Config", "AppObserver.config.json"),
+                EnableVerboseLogging = true,
+                CpuMonitorDuration = TimeSpan.FromSeconds(5)
             };
 
+            DateTime now = DateTime.Now;
+            
+            Stopwatch sw = Stopwatch.StartNew();
             await obs.ObserveAsync(Token);
+            sw.Stop();
+            
+            DateTime later = DateTime.Now;
 
+            Assert.IsTrue((later - now).TotalSeconds >= 5 && (later - now).TotalSeconds < 45, "CpuMonitorDuration was not honored.");
+            
             // observer ran to completion with no errors.
             Assert.IsTrue(obs.LastRunDateTime > startDateTime);
 

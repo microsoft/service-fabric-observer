@@ -11,8 +11,8 @@
 		<TargetLatestRuntimePatch>True</TargetLatestRuntimePatch>
 		<Copyright>Copyright © 2024</Copyright>
 		<Product>FabricObserver</Product>
-		<Version>3.3.2</Version>
-		<FileVersion>3.3.2</FileVersion>
+		<Version>3.3.3</Version>
+		<FileVersion>3.3.3</FileVersion>
 		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
 		<IsServiceFabricServiceProject>true</IsServiceFabricServiceProject>
 		<StartupObject>FabricObserver.Program</StartupObject>
@@ -30,9 +30,9 @@
 		<None Remove="ApplicationInsights.config" />
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="Azure.Storage.Blobs" Version="12.24.1" />
+		<PackageReference Include="Azure.Storage.Blobs" Version="12.25.0" />
 		<PackageReference Include="Octokit" Version="14.0.0" />
-		<PackageReference Include="System.Diagnostics.EventLog" Version="9.0.6" />
+		<PackageReference Include="System.Diagnostics.EventLog" Version="9.0.8" />
 		<PackageReference Include="McMaster.NETCore.Plugins" Version="2.0.0" />
 		<Reference Include="..\Interop\Interop.WUApiLib.dll" />
 	</ItemGroup>
