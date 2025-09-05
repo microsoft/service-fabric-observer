@@ -110,7 +110,6 @@ namespace FabricObserver.Observers.Utilities
             FileTarget dataLog = (FileTarget)LogManager.Configuration.FindTargetByName("AvgTargetDataStore");
                        dataLog.FileName = csvPath;
                        dataLog.AutoFlush = true;
-                       dataLog.ConcurrentWrites = true;
                        dataLog.EnableFileDelete = true;
                        dataLog.AutoFlush = true;
                        dataLog.CreateDirs = true;
@@ -119,7 +118,7 @@ namespace FabricObserver.Observers.Utilities
             {
                 dataLog.MaxArchiveDays = MaxArchiveCsvFileLifetimeDays;
                 dataLog.ArchiveEvery = FileArchivePeriod.Day;
-                dataLog.ArchiveNumbering = ArchiveNumberingMode.DateAndSequence;
+                dataLog.ArchiveSuffixFormat = "_{1:yyyyMMdd}_{0:00}";
             }
 
             LogManager.ReconfigExistingLoggers();

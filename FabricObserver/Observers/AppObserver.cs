@@ -217,7 +217,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e)
             {
-                ObserverLogger.LogError($"InitializeAsync failure: {e.Message}. Exiting AppObsever.");
+                ObserverLogger.LogError($"InitializeAsync failure: {e}. Exiting AppObsever.");
                 throw;
             }
 
@@ -243,7 +243,7 @@ namespace FabricObserver.Observers
             }
             catch (Exception e) when (e is not OutOfMemoryException)
             {
-                ObserverLogger.LogError($"Unhandled exception in ObserveAsync: {e.Message}");
+                ObserverLogger.LogError($"Unhandled exception in ObserveAsync: {e}");
                 throw;
             }
             finally
@@ -912,6 +912,7 @@ namespace FabricObserver.Observers
             stopwatch.Stop();
             ObserverLogger.LogInfo($"Completed ReportAsync.");
             ObserverLogger.LogInfo($"ReportAsync run duration: {stopwatch.Elapsed}");
+            
             return Task.CompletedTask;
         }
 
@@ -929,6 +930,10 @@ namespace FabricObserver.Observers
             deployedApps = await fabricClientUtilities.GetAllDeployedAppsAsync(Token, NodeName);
 
             // DEBUG - Perf
+            foreach (var app in deployedApps)
+            {
+                ObserverLogger.LogInfo($"Deployed app on node {NodeName}: {app.ApplicationName} - {app.ApplicationTypeName}");
+            }
 #if DEBUG
             var stopwatch = Stopwatch.StartNew();
 #endif
@@ -1197,6 +1202,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             if (parameters.Contains(ObserverConstants.AppManifestMemoryErrorLimitMb))
             {
                 if (long.TryParse(parameters[ObserverConstants.AppManifestMemoryErrorLimitMb].Value, out long memoryMbErrorThreshold) && memoryMbErrorThreshold > 0)
@@ -1205,6 +1211,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             if (parameters.Contains(ObserverConstants.AppManifestMemoryWarningLimitPercent))
             {
                 if (double.TryParse(parameters[ObserverConstants.AppManifestMemoryWarningLimitPercent].Value, out double memoryPctWarningThreshold) && memoryPctWarningThreshold > 0)
@@ -1213,6 +1220,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             if (parameters.Contains(ObserverConstants.AppManifestMemoryErrorLimitPercent))
             {
                 if (double.TryParse(parameters[ObserverConstants.AppManifestMemoryErrorLimitPercent].Value, out double memoryPctErrorThreshold) && memoryPctErrorThreshold > 0)
@@ -1221,6 +1229,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             // CPU
             if (parameters.Contains(ObserverConstants.AppManifestCpuErrorLimitPercent))
             {
@@ -1230,6 +1239,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             if (parameters.Contains(ObserverConstants.AppManifestCpuWarningLimitPercent))
             {
                 if (double.TryParse(parameters[ObserverConstants.AppManifestCpuWarningLimitPercent].Value, out double cpuPctWarningThreshold) && cpuPctWarningThreshold > 0)
@@ -1238,6 +1248,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             // Active Ports
             if (parameters.Contains(ObserverConstants.AppManifestNetworkErrorActivePorts))
             {
@@ -1247,6 +1258,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             if (parameters.Contains(ObserverConstants.AppManifestNetworkWarningActivePorts))
             {
                 if (int.TryParse(parameters[ObserverConstants.AppManifestNetworkWarningActivePorts].Value, out int activePortsWarningThreshold) && activePortsWarningThreshold > 0)
@@ -1255,6 +1267,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             // Ephemeral Ports
             if (parameters.Contains(ObserverConstants.AppManifestNetworkErrorEphemeralPorts))
             {
@@ -1264,6 +1277,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             if (parameters.Contains(ObserverConstants.AppManifestNetworkWarningEphemeralPorts))
             {
                 if (int.TryParse(parameters[ObserverConstants.AppManifestNetworkWarningEphemeralPorts].Value, out int ephemeralPortsWarningThreshold) && ephemeralPortsWarningThreshold > 0)
@@ -1271,7 +1285,9 @@ namespace FabricObserver.Observers
                     appInfo.NetworkWarningEphemeralPorts = ephemeralPortsWarningThreshold;
                     informationAdded = true;
                 }
+
             }
+
             if (parameters.Contains(ObserverConstants.AppManifestNetworkErrorEphemeralPortsPercent))
             {
                 if (double.TryParse(parameters[ObserverConstants.AppManifestNetworkErrorEphemeralPortsPercent].Value, out double ephemeralPortsPctErrorThreshold) && ephemeralPortsPctErrorThreshold > 0)
@@ -1280,6 +1296,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             if (parameters.Contains(ObserverConstants.AppManifestNetworkWarningEphemeralPortsPercent))
             {
                 if (double.TryParse(parameters[ObserverConstants.AppManifestNetworkWarningEphemeralPortsPercent].Value, out double ephemeralPortsPctWarningThreshold) && ephemeralPortsPctWarningThreshold > 0)
@@ -1288,6 +1305,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             // Dump Process
             if (parameters.Contains(ObserverConstants.AppManifestDumpProcessOnError))
             {
@@ -1297,6 +1315,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             if (parameters.Contains(ObserverConstants.AppManifestDumpProcessOnWarning))
             {
                 if (bool.TryParse(parameters[ObserverConstants.AppManifestDumpProcessOnWarning].Value, out bool dumpProcessOnWarning))
@@ -1305,6 +1324,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             // Handles
             if (parameters.Contains(ObserverConstants.AppManifestErrorOpenFileHandles))
             {
@@ -1314,6 +1334,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             if (parameters.Contains(ObserverConstants.AppManifestWarningOpenFileHandles))
             {
                 if (int.TryParse(parameters[ObserverConstants.AppManifestWarningOpenFileHandles].Value, out int openFileHandlesWarningThreshold) && openFileHandlesWarningThreshold > 0)
@@ -1322,6 +1343,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             if (parameters.Contains(ObserverConstants.AppManifestErrorHandleCount))
             {
                 if (int.TryParse(parameters[ObserverConstants.AppManifestErrorHandleCount].Value, out int handleCountErrorThreshold) && handleCountErrorThreshold > 0)
@@ -1330,6 +1352,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             if (parameters.Contains(ObserverConstants.AppManifestWarningHandleCount))
             {
                 if (int.TryParse(parameters[ObserverConstants.AppManifestWarningHandleCount].Value, out int handleCountWarningThreshold) && handleCountWarningThreshold > 0)
@@ -1338,6 +1361,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             // Threads
             if (parameters.Contains(ObserverConstants.AppManifestErrorThreadCount))
             {
@@ -1347,6 +1371,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             if (parameters.Contains(ObserverConstants.AppManifestWarningThreadCount))
             {
                 if (int.TryParse(parameters[ObserverConstants.AppManifestWarningThreadCount].Value, out int threadCountWarningThreshold) && threadCountWarningThreshold > 0)
@@ -1355,6 +1380,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             // Private Bytes
             if (parameters.Contains(ObserverConstants.AppManifestWarningPrivateBytesMb))
             {
@@ -1364,6 +1390,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             if (parameters.Contains(ObserverConstants.AppManifestErrorPrivateBytesMb))
             {
                 if (long.TryParse(parameters[ObserverConstants.AppManifestErrorPrivateBytesMb].Value, out long privateBytesMbErrorThreshold) && privateBytesMbErrorThreshold > 0)
@@ -1372,6 +1399,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             if (parameters.Contains(ObserverConstants.AppManifestWarningPrivateBytesPercent))
             {
                 if (double.TryParse(parameters[ObserverConstants.AppManifestWarningPrivateBytesPercent].Value, out double privateBytesPctWarningThreshold) && privateBytesPctWarningThreshold > 0)
@@ -1380,6 +1408,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             if (parameters.Contains(ObserverConstants.AppManifestErrorPrivateBytesPercent))
             {
                 if (double.TryParse(parameters[ObserverConstants.AppManifestErrorPrivateBytesPercent].Value, out double privateBytesPctErrorThreshold) && privateBytesPctErrorThreshold > 0)
@@ -1388,6 +1417,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             // RG monitoring
             if (parameters.Contains(ObserverConstants.AppManifestWarningRGMemoryLimitPercent))
             {
@@ -1397,6 +1427,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             if (parameters.Contains(ObserverConstants.AppManifestWarningRGCpuLimitPercent))
             {
                 if (double.TryParse(parameters[ObserverConstants.AppManifestWarningRGCpuLimitPercent].Value, out double rgCpuThreshold) && rgCpuThreshold > 0)
@@ -1405,6 +1436,7 @@ namespace FabricObserver.Observers
                     informationAdded = true;
                 }
             }
+
             return informationAdded;
         }
 
@@ -1445,6 +1477,7 @@ namespace FabricObserver.Observers
                     ObserverLogger.LogWarning($"Handled FabricException from GetDeployedCodePackageListAsync call for app {app.ApplicationName.OriginalString}: {fe.Message}.");
                     continue;
                 }
+
                 // Don't create a brand new entry for an existing (specified in configuration) app target/type. Just update the appConfig instance with data supplied in the application's manifest.
                 // If a threshold is supplied in the application's manifest, it will override all other settings.
                 if (userTargetList.Any(a => a.TargetApp == app.ApplicationName.OriginalString || a.TargetAppType == app.ApplicationTypeName))
@@ -2684,7 +2717,7 @@ namespace FabricObserver.Observers
 
             if (!exceptions.IsEmpty)
             {
-                ObserverLogger.LogInfo("Completed MonitorDeployedAppsAsync with one or more exceptions inside task. Throwing inner exceptions aggregate.");
+                ObserverLogger.LogWarning("Completed MonitorDeployedAppsAsync with one or more exceptions inside task. Throwing inner exceptions aggregate.");
                 throw new AggregateException(exceptions);
             }
 
@@ -3084,12 +3117,13 @@ namespace FabricObserver.Observers
                 // Limit potential for high CPU usage by throttling max duration when monitoring CPU usage with multiple threads.
                 if (EnableConcurrentMonitoring)
                 {
-                    if (cpuMonitorDuration >= TimeSpan.FromSeconds(5))
+                    if (cpuMonitorDuration > TimeSpan.FromSeconds(5))
                     {
+                        ObserverLogger.LogInfo("ComputeResourceUsage: Concurrent CPU monitoring is enabled. Forcing CpuMonitorDuration to 5s maximum to limit CPU overuse.");
                         cpuMonitorDuration = TimeSpan.FromSeconds(5);
 
-                        // Always force 1s sleep time for concurrent monitoring when duration is >= 5s.
-                        cpuMonitorLoopSleepTime = TimeSpan.FromSeconds(1000);
+                        // Always force 1s sleep time for concurrent monitoring when duration is > 5s.
+                        cpuMonitorLoopSleepTime = TimeSpan.FromSeconds(1);
                     }
                 }
 

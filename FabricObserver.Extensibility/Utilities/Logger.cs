@@ -220,13 +220,12 @@ namespace FabricObserver.Observers.Utilities
                 target = new FileTarget
                 {
                     Name = targetName,
-                    ConcurrentWrites = true,
                     EnableFileDelete = true,
                     FileName = file,
                     Layout = "${longdate}--${uppercase:${level}}--${message}",
                     OpenFileCacheTimeout = 5,
                     ArchiveEvery = FileArchivePeriod.Day,
-                    ArchiveNumbering = ArchiveNumberingMode.DateAndSequence,
+                    ArchiveSuffixFormat = "_{1:yyyyMMdd}_{0:00}",
                     MaxArchiveDays = MaxArchiveFileLifetimeDays <= 0 ? 7 : MaxArchiveFileLifetimeDays,
                     AutoFlush = true
                 };
@@ -243,13 +242,12 @@ namespace FabricObserver.Observers.Utilities
                 target = new FileTarget
                 {
                     Name = targetName,
-                    ConcurrentWrites = true,
                     EnableFileDelete = true,
                     FileName = file,
                     Layout = "${longdate}--${uppercase:${level}}--${message}",
                     OpenFileCacheTimeout = 5,
                     ArchiveEvery = FileArchivePeriod.Day,
-                    ArchiveNumbering = ArchiveNumberingMode.DateAndSequence,
+                    ArchiveSuffixFormat = "_{1:yyyyMMdd}_{0:00}",
                     MaxArchiveDays = MaxArchiveFileLifetimeDays <= 0 ? 7 : MaxArchiveFileLifetimeDays,
                     AutoFlush = true
                 };
