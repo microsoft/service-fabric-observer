@@ -77,6 +77,7 @@ jobs:
     - if: matrix.language == 'c-cpp'
       shell: bash
       run: |
+        sudo apt-get update
         sudo apt-get install -y libcap-dev
         cd FabricObserver
         gcc elevated_docker_stats.c -lcap -o elevated_docker_stats
