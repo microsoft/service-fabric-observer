@@ -104,6 +104,14 @@ namespace ClusterObserver
         /// Initializes a new instance of the <see cref="ClusterObserverManager"/> class.
         /// </summary>
         public ClusterObserverManager(ServiceProvider serviceProvider, CancellationToken token)
+            : this(serviceProvider, token, null)
+        {
+        }
+
+        internal ClusterObserverManager(
+            ServiceProvider serviceProvider,
+            CancellationToken token,
+            Action<HealthReport> reportTelemetryConfigurationHealth)
         {
             this.token = token;
             cts = new CancellationTokenSource();

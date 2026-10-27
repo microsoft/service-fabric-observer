@@ -132,6 +132,14 @@ namespace FabricObserver.Observers
         /// <param name="serviceProvider">IServiceProvider for retrieving service instance.</param>
         /// <param name="token">Cancellation token.</param>
         public ObserverManager(IServiceProvider serviceProvider, CancellationToken token)
+            : this(serviceProvider, token, null)
+        {
+        }
+
+        internal ObserverManager(
+            IServiceProvider serviceProvider,
+            CancellationToken token,
+            Action<HealthReport> reportTelemetryConfigurationHealth)
         {
             FabricServiceContext ??= serviceProvider.GetRequiredService<StatelessServiceContext>();
             runAsyncToken = token;
