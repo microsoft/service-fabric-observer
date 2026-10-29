@@ -44,6 +44,16 @@
 		<Parameter Name="LogAnalyticsSharedKey" Value="" MustOverride="true" />
 		<!-- Required-If TelemetryProvider is AzureLogAnalytics. Log scope. Default is Application. -->
 		<Parameter Name="LogAnalyticsLogType" Value="" MustOverride="true" />
+		<!-- Log Analytics API selection: LegacyOnly (default when empty), DualWrite, or LogsIngestionOnly. -->
+		<Parameter Name="LogAnalyticsWriteMode" Value="" MustOverride="true" />
+		<!-- Required-If LogAnalyticsWriteMode is DualWrite or LogsIngestionOnly. Logs ingestion endpoint URL of the DCR or DCE. -->
+		<Parameter Name="LogAnalyticsIngestionEndpoint" Value="" MustOverride="true" />
+		<!-- Required-If LogAnalyticsWriteMode is DualWrite or LogsIngestionOnly. The DCR immutable ID (dcr-...). -->
+		<Parameter Name="LogAnalyticsDcrImmutableId" Value="" MustOverride="true" />
+		<!-- Required-If LogAnalyticsWriteMode is DualWrite or LogsIngestionOnly. The DCR input stream name. -->
+		<Parameter Name="LogAnalyticsStreamName" Value="" MustOverride="true" />
+		<!-- Required-If LogAnalyticsWriteMode is DualWrite or LogsIngestionOnly. Client ID of the user-assigned managed identity. -->
+		<Parameter Name="LogAnalyticsManagedIdentityClientId" Value="" MustOverride="true" />
 		<!-- End Telemetry Config -->
 
 		<!-- Non-overridable. -->

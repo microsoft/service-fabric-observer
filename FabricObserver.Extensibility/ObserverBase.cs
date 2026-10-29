@@ -1532,26 +1532,19 @@ namespace FabricObserver.Observers
             switch (telemetryProvider)
             {
                 case TelemetryProviderType.AzureLogAnalytics:
-                        
-                    string logAnalyticsLogType =
-                        GetSettingParameterValue(
-                            ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.LogAnalyticsLogTypeParameter);
 
-                    string logAnalyticsSharedKey =
-                        GetSettingParameterValue(
-                            ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.LogAnalyticsSharedKeyParameter);
+                    // ObserverManager reports configuration problems; observers only build their sender.
+                    var logAnalyticsConfiguration = LogAnalyticsConfiguration.Read(
+                        parameter => GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, parameter));
+                    ITelemetryProvider logAnalyticsSender = logAnalyticsConfiguration.CreateTelemetryProvider();
 
-                    string logAnalyticsWorkspaceId =
-                        GetSettingParameterValue(
-                            ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.LogAnalyticsWorkspaceIdParameter);
-
-                    if (string.IsNullOrWhiteSpace(logAnalyticsWorkspaceId) || string.IsNullOrWhiteSpace(logAnalyticsSharedKey))
+                    if (logAnalyticsSender == null)
                     {
                         IsTelemetryEnabled = false;
                         return;
                     }
 
-                    TelemetryClient = new LogAnalyticsTelemetry(logAnalyticsWorkspaceId, logAnalyticsSharedKey, logAnalyticsLogType);
+                    TelemetryClient = logAnalyticsSender;
                     break;
 
                 case TelemetryProviderType.AzureApplicationInsights:

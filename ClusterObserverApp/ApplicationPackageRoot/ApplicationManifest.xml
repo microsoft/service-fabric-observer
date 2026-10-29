@@ -22,6 +22,13 @@
     <Parameter Name="LogAnalyticsWorkspaceId" DefaultValue="" />
     <Parameter Name="LogAnalyticsSharedKey" DefaultValue="" />
     <Parameter Name="LogAnalyticsLogType" DefaultValue="ClusterObserver" />
+    <!-- LogAnalyticsWriteMode selects the Log Analytics API(s): LegacyOnly (Data Collector API, the default), DualWrite (both APIs), or LogsIngestionOnly (Logs Ingestion API). -->
+    <Parameter Name="LogAnalyticsWriteMode" DefaultValue="LegacyOnly" />
+    <!-- Logs Ingestion API settings. All four are required when LogAnalyticsWriteMode is DualWrite or LogsIngestionOnly. -->
+    <Parameter Name="LogAnalyticsIngestionEndpoint" DefaultValue="" />
+    <Parameter Name="LogAnalyticsDcrImmutableId" DefaultValue="" />
+    <Parameter Name="LogAnalyticsStreamName" DefaultValue="" />
+    <Parameter Name="LogAnalyticsManagedIdentityClientId" DefaultValue="" />
     <!-- End Telemetry -->
     <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
     <Parameter Name="ClusterObserverLogPath" DefaultValue="cluster_observer_logs" />
@@ -65,6 +72,11 @@
             <Parameter Name="LogAnalyticsWorkspaceId" Value="LogAnalyticsWorkspaceId]" />
             <Parameter Name="LogAnalyticsSharedKey" Value="[LogAnalyticsSharedKey]" />
             <Parameter Name="LogAnalyticsLogType" Value="[LogAnalyticsLogType]" />
+            <Parameter Name="LogAnalyticsWriteMode" Value="[LogAnalyticsWriteMode]" />
+            <Parameter Name="LogAnalyticsIngestionEndpoint" Value="[LogAnalyticsIngestionEndpoint]" />
+            <Parameter Name="LogAnalyticsDcrImmutableId" Value="[LogAnalyticsDcrImmutableId]" />
+            <Parameter Name="LogAnalyticsStreamName" Value="[LogAnalyticsStreamName]" />
+            <Parameter Name="LogAnalyticsManagedIdentityClientId" Value="[LogAnalyticsManagedIdentityClientId]" />
           </Section>
           <Section Name="ClusterObserverConfiguration">
             <Parameter Name="Enabled" Value="[ClusterObserverEnabled]" />

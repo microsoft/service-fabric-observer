@@ -43,9 +43,7 @@ namespace FabricObserverTests
         private const string LegacyProperty = "LogAnalyticsLegacyConfiguration";
         private const string IngestionProperty = "LogAnalyticsIngestionConfiguration";
         private const string LegacySender = nameof(LogAnalyticsTelemetry);
-
-        // Not implemented yet; switch to nameof once the Logs Ingestion sender exists.
-        private const string NewSender = "LogsIngestionTelemetry";
+        private const string NewSender = nameof(LogsIngestionTelemetry);
         private static readonly string[] HealthProperties = [ModeProperty, LegacyProperty, IngestionProperty];
 
         private readonly List<HealthReport> healthReports = [];

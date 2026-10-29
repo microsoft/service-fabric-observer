@@ -47,6 +47,7 @@ namespace FabricObserver.Observers
         private readonly CancellationToken runAsyncToken;
         private readonly string sfVersion;
         private readonly ConfigurationPackage configurationPackage;
+        private readonly Action<HealthReport> reportTelemetryConfigurationHealth;
         private volatile bool shutdownSignaled;
         private DateTime StartDateTime;
         private bool isConfigurationUpdateInProgress;
@@ -136,6 +137,7 @@ namespace FabricObserver.Observers
         {
         }
 
+        /// <param name="reportTelemetryConfigurationHealth">Receives telemetry configuration health reports. Null reports to Service Fabric.</param>
         internal ObserverManager(
             IServiceProvider serviceProvider,
             CancellationToken token,
@@ -181,9 +183,11 @@ namespace FabricObserver.Observers
                 EnableVerboseLogging = enableVerboseLogging
             };
 
+            HealthReporter = new ObserverHealthReporter(Logger);
+            this.reportTelemetryConfigurationHealth = reportTelemetryConfigurationHealth ?? HealthReporter.ReportHealthToServiceFabric;
+
             SetPropertiesFromConfigurationParameters();
             Observers = serviceProvider.GetServices<ObserverBase>().ToList();
-            HealthReporter = new ObserverHealthReporter(Logger);
             FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
         }
 
@@ -1033,9 +1037,28 @@ namespace FabricObserver.Observers
                 TelemetryProviderEnabled = telemProviderEnabled;
             }
 
+            LogAnalyticsConfiguration logAnalyticsConfiguration = SetTelemetryProvider(settings);
+
+            // Runs at startup and on every configuration update so a warning clears once its problem is gone.
+            LogAnalyticsConfiguration.ReportHealth(
+                logAnalyticsConfiguration,
+                reportTelemetryConfigurationHealth,
+                Logger,
+                FabricServiceContext.ServiceName,
+                nodeName,
+                $"{ObserverConstants.ObserverManagerName}({nodeName})");
+        }
+
+        /// <summary>
+        /// Creates the telemetry sender for the configured provider. When no sender can be created, telemetry is disabled and
+        /// any previous sender is left in place, unused.
+        /// </summary>
+        /// <returns>The evaluated Log Analytics configuration, or null when Log Analytics is not the active provider.</returns>
+        private LogAnalyticsConfiguration SetTelemetryProvider(ConfigurationSettings settings)
+        {
             if (!TelemetryProviderEnabled)
             {
-                return;
+                return null;
             }
 
             string telemetryProviderType = GetConfigSettingValue(ObserverConstants.TelemetryProviderType, settings);
@@ -1043,31 +1066,32 @@ namespace FabricObserver.Observers
             if (string.IsNullOrEmpty(telemetryProviderType))
             {
                 TelemetryProviderEnabled = false;
-                return;
+                return null;
             }
 
             if (!Enum.TryParse(telemetryProviderType, out TelemetryProviderType telemetryProvider))
             {
                 TelemetryProviderEnabled = false;
-                return;
+                return null;
             }
 
             switch (telemetryProvider)
             {
                 case TelemetryProviderType.AzureLogAnalytics:
-                    
-                    string logAnalyticsLogType = GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter, settings);
-                    string logAnalyticsSharedKey = GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter, settings);
-                    string logAnalyticsWorkspaceId = GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter, settings);
 
-                    if (string.IsNullOrEmpty(logAnalyticsWorkspaceId) || string.IsNullOrEmpty(logAnalyticsSharedKey))
+                    var logAnalyticsConfiguration = LogAnalyticsConfiguration.Read(parameter => GetConfigSettingValue(parameter, settings));
+                    ITelemetryProvider logAnalyticsSender = logAnalyticsConfiguration.CreateTelemetryProvider();
+
+                    if (logAnalyticsSender == null)
                     {
                         TelemetryProviderEnabled = false;
-                        return;
+                    }
+                    else
+                    {
+                        TelemetryClient = logAnalyticsSender;
                     }
 
-                    TelemetryClient = new LogAnalyticsTelemetry(logAnalyticsWorkspaceId, logAnalyticsSharedKey, logAnalyticsLogType);
-                    break;
+                    return logAnalyticsConfiguration;
                     
                 case TelemetryProviderType.AzureApplicationInsights:
                     
@@ -1076,7 +1100,7 @@ namespace FabricObserver.Observers
                     if (string.IsNullOrEmpty(aiConnString))
                     {
                         TelemetryProviderEnabled = false;
-                        return;
+                        return null;
                     }
 
                     TelemetryClient = new AppInsightsTelemetry(aiConnString);
@@ -1087,6 +1111,8 @@ namespace FabricObserver.Observers
                     TelemetryProviderEnabled = false;
                     break;
             }
+
+            return null;
         }
 
 
