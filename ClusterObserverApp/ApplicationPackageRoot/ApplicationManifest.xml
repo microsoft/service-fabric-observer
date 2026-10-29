@@ -69,7 +69,7 @@
             <!-- Application Insights -->
             <Parameter Name="AppInsightsConnectionString" Value="[AppInsightsConnectionString]" />
             <!-- LogAnalytics -->
-            <Parameter Name="LogAnalyticsWorkspaceId" Value="LogAnalyticsWorkspaceId]" />
+            <Parameter Name="LogAnalyticsWorkspaceId" Value="[LogAnalyticsWorkspaceId]" />
             <Parameter Name="LogAnalyticsSharedKey" Value="[LogAnalyticsSharedKey]" />
             <Parameter Name="LogAnalyticsLogType" Value="[LogAnalyticsLogType]" />
             <Parameter Name="LogAnalyticsWriteMode" Value="[LogAnalyticsWriteMode]" />
