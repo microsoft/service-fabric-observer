@@ -48,6 +48,8 @@ namespace FabricObserver.Observers
         private readonly string sfVersion;
         private readonly ConfigurationPackage configurationPackage;
         private readonly Action<HealthReport> reportTelemetryConfigurationHealth;
+        private readonly object telemetryHealthLock = new();
+        private int telemetryConfigurationVersion;
         private volatile bool shutdownSignaled;
         private DateTime StartDateTime;
         private bool isConfigurationUpdateInProgress;
@@ -188,6 +190,8 @@ namespace FabricObserver.Observers
 
             SetPropertiesFromConfigurationParameters();
             Observers = serviceProvider.GetServices<ObserverBase>().ToList();
+            ShareLogsIngestionSender();
+
             FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
         }
 
@@ -1037,16 +1041,35 @@ namespace FabricObserver.Observers
                 TelemetryProviderEnabled = telemProviderEnabled;
             }
 
-            LogAnalyticsConfiguration logAnalyticsConfiguration = SetTelemetryProvider(settings);
+            lock (telemetryHealthLock)
+            {
+                LogAnalyticsConfiguration logAnalyticsConfiguration = SetTelemetryProvider(settings);
 
-            // Runs at startup and on every configuration update so a warning clears once its problem is gone.
-            LogAnalyticsConfiguration.ReportHealth(
-                logAnalyticsConfiguration,
-                reportTelemetryConfigurationHealth,
-                Logger,
-                FabricServiceContext.ServiceName,
-                nodeName,
-                $"{ObserverConstants.ObserverManagerName}({nodeName})");
+                // Runs at startup and on every configuration update so a warning clears once its problem is gone.
+                LogAnalyticsConfiguration.ReportHealth(
+                    logAnalyticsConfiguration,
+                    reportTelemetryConfigurationHealth,
+                    Logger,
+                    FabricServiceContext.ServiceName,
+                    nodeName,
+                    $"{ObserverConstants.ObserverManagerName}({nodeName})");
+            }
+
+            ShareLogsIngestionSender();
+        }
+
+        private void ShareLogsIngestionSender()
+        {
+            if (Observers == null)
+            {
+                return;
+            }
+
+            LogsIngestionTelemetry sender = TelemetryProviderEnabled ? LogAnalyticsConfiguration.GetIngestionSender(TelemetryClient) : null;
+            foreach (ObserverBase observer in Observers)
+            {
+                observer.UseLogsIngestionSender(sender);
+            }
         }
 
         /// <summary>
@@ -1056,6 +1079,7 @@ namespace FabricObserver.Observers
         /// <returns>The evaluated Log Analytics configuration, or null when Log Analytics is not the active provider.</returns>
         private LogAnalyticsConfiguration SetTelemetryProvider(ConfigurationSettings settings)
         {
+            int version = Interlocked.Increment(ref telemetryConfigurationVersion);
             if (!TelemetryProviderEnabled)
             {
                 return null;
@@ -1080,7 +1104,16 @@ namespace FabricObserver.Observers
                 case TelemetryProviderType.AzureLogAnalytics:
 
                     var logAnalyticsConfiguration = LogAnalyticsConfiguration.Read(parameter => GetConfigSettingValue(parameter, settings));
-                    ITelemetryProvider logAnalyticsSender = logAnalyticsConfiguration.CreateTelemetryProvider();
+                    ITelemetryProvider logAnalyticsSender = logAnalyticsConfiguration.CreateTelemetryProvider(problem =>
+                    {
+                        lock (telemetryHealthLock)
+                        {
+                            if (version == Volatile.Read(ref telemetryConfigurationVersion))
+                            {
+                                ReportLogsIngestionStatus(problem);
+                            }
+                        }
+                    });
 
                     if (logAnalyticsSender == null)
                     {
@@ -1114,6 +1147,16 @@ namespace FabricObserver.Observers
 
             return null;
         }
+
+        private void ReportLogsIngestionStatus(string problem) =>
+            LogAnalyticsConfiguration.ReportApiHealth(
+                LogAnalyticsConfiguration.IngestionHealthProperty,
+                problem,
+                reportTelemetryConfigurationHealth,
+                Logger,
+                FabricServiceContext.ServiceName,
+                nodeName,
+                $"{ObserverConstants.ObserverManagerName}({nodeName})");
 
 
         /// <summary>

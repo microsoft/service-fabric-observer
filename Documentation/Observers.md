@@ -11,6 +11,37 @@ Observers are low-impact, long-lived objects that perform specialied monitoring 
 
 Each Observer instance logs to a directory of the same name. You can configure the base directory of the output and log verbosity level (verbose or not). If you enable telemetry and provide ApplicationInsights/LogAnalytics settings, then you will also see the output in your Azure analytics queries. Each observer has configuration settings in FabricObserverApp\ApplicationPackageRoot\ApplicationManifest.xml. AppObserver and NetworkObserver house their runtime config settings (error/warning thresholds) in json files located in FabricObserver\PackageRoot\Config folder.  
 
+### Log Analytics API selection
+
+For both FabricObserver and ClusterObserver, `LogAnalyticsWriteMode` selects the API:
+
+| Mode | Required settings |
+| :--- | :--- |
+| `LegacyOnly` (default) | `LogAnalyticsWorkspaceId`, `LogAnalyticsSharedKey` |
+| `LogsIngestionOnly` | `LogAnalyticsIngestionEndpoint`, `LogAnalyticsDcrImmutableId`, `LogAnalyticsStreamName`, `LogAnalyticsManagedIdentityClientId` |
+| `DualWrite` | Settings for both APIs |
+
+Mode names are case-insensitive. Missing or empty mode uses `LegacyOnly`; an unknown
+mode stops Log Analytics telemetry and reports a configuration warning. Invalid
+settings stop only the affected API; there is no automatic fallback.
+
+The Logs Ingestion sender uses plain HTTP with a user-assigned managed identity.
+Attach the identity to the cluster nodes' VM scale sets and grant it Monitoring
+Metrics Publisher on the DCR. Tokens come from IMDS and are cached, with one refresh
+at a time starting five minutes before expiry. Managers and their observers share
+the ingestion sender, token cache, and API status.
+
+Each report makes one POST, wrapping each legacy record in `Payload` inside a JSON
+array. Child-process lists retain one item per element. No batching across reports,
+compression, retry, or replay is performed. Payload timestamps remain unchanged;
+the destination DCR must preserve the legacy column types and ingestion-time
+`TimeGenerated` behavior.
+
+IMDS and upload failures produce local warnings and a persistent service health
+warning under `LogAnalyticsIngestionConfiguration`. A successful upload clears the
+warning. Only status changes are reported; tokens and response bodies are never
+logged. Settings reloads clear obsolete warnings and replace the sender when needed.
+
 ### Emiting Errors
 
 Service Fabric Error Health Events can block upgrades and other important Fabric runtime operations. Error thresholds should be set such that putting the cluster in an emergency state incurs less cost than allowing the state to continue. For this reason, Fabric Observer by default ***treats Errors as Warnings***.  However if your cluster health policy is to [ConsiderWarningAsError](https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-health-introduction#cluster-health-policy), FabricObserver has a ***high risk of putting your cluster in an error state***. Proceed with caution.  

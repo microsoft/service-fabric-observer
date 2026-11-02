@@ -108,14 +108,16 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         /// Creates a sender for every selected API whose settings are valid.
         /// </summary>
         /// <returns>The sender, a dual-write sender when both APIs are usable, or null when no selected API is usable.</returns>
-        public ITelemetryProvider CreateTelemetryProvider()
+        public ITelemetryProvider CreateTelemetryProvider(
+            Action<string> ingestionStatusChanged = null,
+            LogsIngestionTelemetry sharedIngestionSender = null)
         {
             ITelemetryProvider legacySender = UsesLegacyApi && LegacyProblem == null
                 ? new LogAnalyticsTelemetry(workspaceId, sharedKey, logType)
                 : null;
 
             ITelemetryProvider ingestionSender = UsesIngestionApi && IngestionProblem == null
-                ? new LogsIngestionTelemetry(ingestionEndpoint, dcrImmutableId, streamName, managedIdentityClientId)
+                ? sharedIngestionSender ?? new LogsIngestionTelemetry(ingestionEndpoint, dcrImmutableId, streamName, managedIdentityClientId, ingestionStatusChanged)
                 : null;
 
             if (legacySender != null && ingestionSender != null)
@@ -125,6 +127,13 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             return legacySender ?? ingestionSender;
         }
+
+        internal static LogsIngestionTelemetry GetIngestionSender(ITelemetryProvider provider) => provider switch
+        {
+            LogsIngestionTelemetry sender => sender,
+            DualWriteTelemetry dual => dual.LogsIngestionSender as LogsIngestionTelemetry,
+            _ => null
+        };
 
         /// <summary>
         /// Reports a Service Fabric health event for each Log Analytics configuration property: Warning (and a local warning log)
@@ -143,30 +152,37 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             foreach (string property in HealthProperties)
             {
-                string problem = configuration?.GetProblem(property);
-
-                if (problem != null)
-                {
-                    logger?.LogWarning("{0}", problem);
-                }
-
-                reportHealth(new HealthReport
-                {
-                    EntityType = EntityType.Service,
-                    ServiceName = serviceName,
-                    NodeName = nodeName,
-                    SourceId = sourceId,
-                    Property = property,
-                    State = problem != null ? HealthState.Warning : HealthState.Ok,
-                    HealthMessage = problem ?? $"{property}: no Log Analytics configuration problem detected.",
-
-                    // A configuration warning stays until the configuration changes; the Ok report uses the default TTL and is then removed.
-                    HealthReportTimeToLive = problem != null ? TimeSpan.MaxValue : default,
-
-                    // Logged above so the local warning does not depend on how the report is delivered.
-                    EmitLogEvent = false
-                });
+                ReportApiHealth(property, configuration?.GetProblem(property), reportHealth, logger, serviceName, nodeName, sourceId);
             }
+        }
+
+        internal static void ReportApiHealth(
+            string property,
+            string problem,
+            Action<HealthReport> reportHealth,
+            Logger logger,
+            Uri serviceName,
+            string nodeName,
+            string sourceId)
+        {
+            ArgumentNullException.ThrowIfNull(reportHealth);
+            if (problem != null)
+            {
+                logger?.LogWarning("{0}", problem);
+            }
+
+            reportHealth(new HealthReport
+            {
+                EntityType = EntityType.Service,
+                ServiceName = serviceName,
+                NodeName = nodeName,
+                SourceId = sourceId,
+                Property = property,
+                State = problem != null ? HealthState.Warning : HealthState.Ok,
+                HealthMessage = problem ?? $"{property}: no Log Analytics problem detected.",
+                HealthReportTimeToLive = problem != null ? TimeSpan.MaxValue : default,
+                EmitLogEvent = false
+            });
         }
 
         private string GetProblem(string property) => property switch

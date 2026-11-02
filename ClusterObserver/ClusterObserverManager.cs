@@ -38,6 +38,8 @@ namespace ClusterObserver
         private bool internalTelemetrySent;
         private bool appParamsUpdating;
         private readonly Action<HealthReport> reportTelemetryConfigurationHealth;
+        private readonly object telemetryHealthLock = new();
+        private int telemetryConfigurationVersion;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
         private const string InternalVersionNumber = "2.3.2";
@@ -269,16 +271,25 @@ namespace ClusterObserver
                 TelemetryEnabled = telemEnabled;
             }
 
-            LogAnalyticsConfiguration logAnalyticsConfiguration = SetTelemetryProvider(settings);
+            lock (telemetryHealthLock)
+            {
+                LogAnalyticsConfiguration logAnalyticsConfiguration = SetTelemetryProvider(settings);
 
-            // Runs at startup and on every configuration update so a warning clears once its problem is gone.
-            LogAnalyticsConfiguration.ReportHealth(
-                logAnalyticsConfiguration,
-                reportTelemetryConfigurationHealth,
-                Logger,
-                FabricServiceContext.ServiceName,
-                nodeName,
-                $"{ClusterObserverConstants.ClusterObserverManagerName}({nodeName})");
+                // Runs at startup and on every configuration update so a warning clears once its problem is gone.
+                LogAnalyticsConfiguration.ReportHealth(
+                    logAnalyticsConfiguration,
+                    reportTelemetryConfigurationHealth,
+                    Logger,
+                    FabricServiceContext.ServiceName,
+                    nodeName,
+                    $"{ClusterObserverConstants.ClusterObserverManagerName}({nodeName})");
+            }
+
+            LogsIngestionTelemetry sender = TelemetryEnabled ? LogAnalyticsConfiguration.GetIngestionSender(TelemetryClient) : null;
+            foreach (ObserverBase observer in Observers)
+            {
+                observer.UseLogsIngestionSender(sender);
+            }
         }
 
         /// <summary>
@@ -286,8 +297,9 @@ namespace ClusterObserver
         /// any previous sender is left in place, unused.
         /// </summary>
         /// <returns>The evaluated Log Analytics configuration, or null when Log Analytics is not the active provider.</returns>
-        private static LogAnalyticsConfiguration SetTelemetryProvider(ConfigurationSettings settings)
+        private LogAnalyticsConfiguration SetTelemetryProvider(ConfigurationSettings settings)
         {
+            int version = Interlocked.Increment(ref telemetryConfigurationVersion);
             if (!TelemetryEnabled)
             {
                 return null;
@@ -313,7 +325,16 @@ namespace ClusterObserver
 
                     var logAnalyticsConfiguration = LogAnalyticsConfiguration.Read(
                         parameter => GetConfigSettingValue(parameter, settings), defaultLogType: "Application");
-                    ITelemetryProvider logAnalyticsSender = logAnalyticsConfiguration.CreateTelemetryProvider();
+                    ITelemetryProvider logAnalyticsSender = logAnalyticsConfiguration.CreateTelemetryProvider(problem =>
+                    {
+                        lock (telemetryHealthLock)
+                        {
+                            if (version == Volatile.Read(ref telemetryConfigurationVersion))
+                            {
+                                ReportLogsIngestionStatus(problem);
+                            }
+                        }
+                    });
 
                     if (logAnalyticsSender == null)
                     {
@@ -342,6 +363,16 @@ namespace ClusterObserver
 
             return null;
         }
+
+        private void ReportLogsIngestionStatus(string problem) =>
+            LogAnalyticsConfiguration.ReportApiHealth(
+                LogAnalyticsConfiguration.IngestionHealthProperty,
+                problem,
+                reportTelemetryConfigurationHealth,
+                Logger,
+                FabricServiceContext.ServiceName,
+                nodeName,
+                $"{ClusterObserverConstants.ClusterObserverManagerName}({nodeName})");
 
         public async Task StartAsync()
         {
