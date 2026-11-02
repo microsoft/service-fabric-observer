@@ -56,8 +56,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         public async Task<bool> ReportMetricAsync<T>(string name, T value, string source, CancellationToken cancellationToken)
         {
             bool[] results = await Task.WhenAll(
-                LegacySender.ReportMetricAsync(name, value, source, cancellationToken),
-                LogsIngestionSender.ReportMetricAsync(name, value, source, cancellationToken));
+                Start(sender => sender.ReportMetricAsync(name, value, source, cancellationToken), LegacySender),
+                Start(sender => sender.ReportMetricAsync(name, value, source, cancellationToken), LogsIngestionSender));
 
             return results[0] && results[1];
         }
@@ -103,6 +103,31 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         public Task ReportNodeSnapshotAsync(NodeSnapshotTelemetryData nodeSnapshotTelem, CancellationToken token) =>
             ForwardAsync(sender => sender.ReportNodeSnapshotAsync(nodeSnapshotTelem, token));
 
-        private Task ForwardAsync(Func<ITelemetryProvider, Task> send) => Task.WhenAll(send(LegacySender), send(LogsIngestionSender));
+        private Task ForwardAsync(Func<ITelemetryProvider, Task> send) => Task.WhenAll(Start(send, LegacySender), Start(send, LogsIngestionSender));
+
+        // A sender that throws before returning a task must not stop the other sender from being called.
+        private static Task Start(Func<ITelemetryProvider, Task> send, ITelemetryProvider sender)
+        {
+            try
+            {
+                return send(sender);
+            }
+            catch (Exception e)
+            {
+                return Task.FromException(e);
+            }
+        }
+
+        private static Task<TResult> Start<TResult>(Func<ITelemetryProvider, Task<TResult>> send, ITelemetryProvider sender)
+        {
+            try
+            {
+                return send(sender);
+            }
+            catch (Exception e)
+            {
+                return Task.FromException<TResult>(e);
+            }
+        }
     }
 }
