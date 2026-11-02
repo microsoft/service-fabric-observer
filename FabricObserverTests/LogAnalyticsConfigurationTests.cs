@@ -44,6 +44,7 @@ namespace FabricObserverTests
         private const string IngestionProperty = "LogAnalyticsIngestionConfiguration";
         private const string LegacySender = nameof(LogAnalyticsTelemetry);
         private const string NewSender = nameof(LogsIngestionTelemetry);
+        private const string UploadProblem = "Log Analytics Logs Ingestion API upload failed: HTTP 403 (Forbidden).";
         private static readonly string[] HealthProperties = [ModeProperty, LegacyProperty, IngestionProperty];
 
         private readonly List<HealthReport> healthReports = [];
@@ -461,6 +462,57 @@ namespace FabricObserverTests
             Assert.AreEqual(provider == "AzureApplicationInsights" && appInsightsConfigured, IsManagerTelemetryEnabled(clusterObserver));
         }
 
+        // ---- Upload status from the Logs Ingestion sender ----
+
+        [TestMethod]
+        [DataRow(false, "LogsIngestionOnly")]
+        [DataRow(true, "LogsIngestionOnly")]
+        [DataRow(false, "DualWrite")]
+        [DataRow(true, "DualWrite")]
+        public void CurrentSenderUploadFailure_ReportsThenClearsIngestionWarning(bool clusterObserver, string writeMode)
+        {
+            var context = CreateContext(clusterObserver, ValidEndpoint, writeMode: writeMode);
+            using var observer = new ConfigurationProbeObserver(context);
+            using var services = CreateServices(context, observer);
+            object manager = CreateManager(clusterObserver, services, context);
+            Action<string> reportStatus = GetIngestionStatusCallback(GetManagerSender(manager));
+
+            reportStatus(UploadProblem);
+
+            AssertWarning(IngestionProperty, context, "403");
+
+            reportStatus(null);
+
+            Assert.AreEqual(HealthState.Ok, Latest(IngestionProperty)?.State, "A successful upload must clear the upload warning.");
+        }
+
+        [TestMethod]
+        [DataRow(false, "DualWrite", "LegacyOnly")]
+        [DataRow(true, "DualWrite", "LegacyOnly")]
+        [DataRow(false, "LogsIngestionOnly", "LegacyOnly")]
+        [DataRow(true, "LogsIngestionOnly", "LegacyOnly")]
+        [DataRow(false, "LogsIngestionOnly", "LogsIngestionOnly")]
+        [DataRow(true, "LogsIngestionOnly", "LogsIngestionOnly")]
+        public void ReplacedSenderLateUploadFailure_IsNotReported(bool clusterObserver, string writeMode, string newWriteMode)
+        {
+            var context = CreateContext(clusterObserver, ValidEndpoint, writeMode: writeMode);
+            using var observer = new ConfigurationProbeObserver(context);
+            using var services = CreateServices(context, observer);
+            object manager = CreateManager(clusterObserver, services, context);
+            Action<string> replacedSenderStatus = GetIngestionStatusCallback(GetManagerSender(manager));
+
+            ApplyConfiguration(manager, observer, CreateContext(clusterObserver, ValidEndpoint, writeMode: newWriteMode));
+            Assert.AreEqual(HealthState.Ok, Latest(IngestionProperty)?.State);
+            int reportCount = healthReports.Count;
+
+            // An upload started before the settings change fails after it.
+            replacedSenderStatus(UploadProblem);
+
+            Assert.AreEqual(reportCount, healthReports.Count, "A replaced sender must not report health.");
+            Assert.AreEqual(HealthState.Ok, Latest(IngestionProperty).State);
+            Assert.IsFalse(WarningLogs().Any(message => message.Contains("403")), "A replaced sender must not log a warning.");
+        }
+
         // ---- Application packaging ----
 
         [TestMethod]
@@ -611,6 +663,21 @@ namespace FabricObserverTests
             return inner.Length == 0
                 ? [sender.GetType().Name]
                 : inner.SelectMany(SenderKinds).OrderBy(name => name, StringComparer.Ordinal).ToArray();
+        }
+
+        /// <summary>
+        /// Returns the status callback the manager gave its Logs Ingestion sender; invoking it simulates the sender reporting
+        /// an upload failure (problem text) or a recovery (null).
+        /// </summary>
+        private static Action<string> GetIngestionStatusCallback(object sender)
+        {
+            LogsIngestionTelemetry ingestionSender = LogAnalyticsConfiguration.GetIngestionSender((ITelemetryProvider)sender);
+            Assert.IsNotNull(ingestionSender, "Expected a Logs Ingestion sender.");
+            var callback = (Action<string>)typeof(LogsIngestionTelemetry)
+                .GetField("statusChanged", BindingFlags.Instance | BindingFlags.NonPublic)
+                .GetValue(ingestionSender);
+            Assert.IsNotNull(callback, "The manager must give its Logs Ingestion sender a status callback.");
+            return callback;
         }
 
         private static void AssertSenders(object sender, params string[] expected)
