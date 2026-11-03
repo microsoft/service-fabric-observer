@@ -42,7 +42,7 @@ namespace ClusterObserver
         private int telemetryConfigurationVersion;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "2.3.2";
+        private const string InternalVersionNumber = "2.3.3";
 
         public bool EnableOperationalTelemetry
         {
