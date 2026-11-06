@@ -28,8 +28,10 @@ settings stop only the affected API; there is no automatic fallback.
 The Logs Ingestion sender uses plain HTTP with a user-assigned managed identity.
 Attach the identity to the cluster nodes' VM scale sets and grant it Monitoring
 Metrics Publisher on the DCR. Tokens come from IMDS and are cached, with one refresh
-at a time starting five minutes before expiry. Managers and their observers share
-the ingestion sender, token cache, and API status.
+at a time starting five minutes before expiry. After a failed token request, IMDS
+is not asked again for 30 seconds; records sent during that time are dropped, like
+any failed upload. Managers and their observers share the ingestion sender, token
+cache, and API status.
 
 Each report makes one POST, wrapping each legacy record in `Payload` inside a JSON
 array. Child-process lists retain one item per element. No batching across reports,

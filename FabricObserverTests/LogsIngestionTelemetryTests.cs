@@ -174,7 +174,7 @@ namespace FabricObserverTests
         }
 
         [TestMethod]
-        public async Task TokenFailure_ReportsProblemSkipsUploadAndRetriesNextTime()
+        public async Task TokenFailure_ReportsProblemSkipsUploadAndRetriesAfterDelay()
         {
             var handler = new FakeHandler(this);
             handler.Imds = (_, number) => Task.FromResult(
@@ -195,10 +195,49 @@ namespace FabricObserverTests
 
             await SendRecordAsync(sender);
 
-            Assert.AreEqual(2, handler.TokenRequests.Length, "A failed token request must be retried on the next upload.");
+            Assert.AreEqual(1, handler.TokenRequests.Length, "IMDS must not be asked again right after a failure.");
+            Assert.AreEqual(0, handler.Uploads.Length);
+            Assert.AreEqual(1, statusChanges.Count, "The unchanged problem must not be reported again.");
+
+            clock.Advance(TimeSpan.FromSeconds(31));
+            await SendRecordAsync(sender);
+
+            Assert.AreEqual(2, handler.TokenRequests.Length, "A failed token request must be retried after the delay.");
             Assert.AreEqual(1, handler.Uploads.Length);
             Assert.AreEqual(2, statusChanges.Count);
             Assert.IsNull(statusChanges[1], "A successful upload must clear the problem.");
+        }
+
+        [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public async Task TokenFailure_QueuedUploadsFailWithoutRequestingAgain(bool timeout)
+        {
+            var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var handler = new FakeHandler(this);
+            handler.Imds = async (_, _) =>
+            {
+                await release.Task;
+
+                // A timeout surfaces as a cancellation the caller did not request.
+                return timeout
+                    ? throw new TaskCanceledException("IMDS did not respond.")
+                    : new HttpResponseMessage(HttpStatusCode.InternalServerError);
+            };
+            ITelemetryProvider sender = CreateSender(handler);
+
+            Task[] uploads = Enumerable.Range(0, 5).Select(_ => SendRecordAsync(sender)).ToArray();
+
+            // Let every upload queue behind the first token request before it fails.
+            await Task.Delay(200);
+            release.SetResult();
+            await Task.WhenAll(uploads).WaitAsync(TimeSpan.FromSeconds(10));
+
+            // Each queued upload asking IMDS again would make a slow IMDS stall every sender one timeout at a time.
+            Assert.AreEqual(1, handler.TokenRequests.Length, "Uploads queued behind a failed token request must not request again.");
+            Assert.AreEqual(0, handler.Uploads.Length);
+            Assert.AreEqual(1, statusChanges.Count);
+            Assert.IsNotNull(statusChanges[0]);
         }
 
         // ---- Upload failures and status reporting ----

@@ -31,6 +31,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             Timeout = TimeSpan.FromSeconds(10)
         };
         private static readonly TimeSpan RefreshMargin = TimeSpan.FromMinutes(5);
+        private static readonly TimeSpan TokenRetryDelay = TimeSpan.FromSeconds(30);
         private readonly HttpMessageInvoker uploadClient;
         private readonly HttpMessageInvoker identityClient;
         private readonly TimeProvider timeProvider;
@@ -41,6 +42,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         private readonly Logger logger = new("TelemetryLogger");
         private string accessToken;
         private DateTimeOffset tokenExpiresOn;
+        private DateTimeOffset tokenRetryAfter;
         private string currentProblem;
 
         public LogsIngestionTelemetry(Uri ingestionEndpoint, string dcrImmutableId, string streamName, string managedIdentityClientId)
@@ -241,13 +243,24 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         private async Task<string> GetAccessTokenAsync(CancellationToken cancellationToken)
         {
             await tokenLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+            bool requested = false;
+            bool succeeded = false;
             try
             {
-                if (accessToken != null && tokenExpiresOn - timeProvider.GetUtcNow() > RefreshMargin)
+                DateTimeOffset now = timeProvider.GetUtcNow();
+                if (accessToken != null && tokenExpiresOn - now > RefreshMargin)
                 {
                     return accessToken;
                 }
 
+                // After a failed request, uploads waiting for this lock fail fast instead of each waiting on IMDS again.
+                // The problem is already reported.
+                if (now < tokenRetryAfter)
+                {
+                    return null;
+                }
+
+                requested = true;
                 using var request = new HttpRequestMessage(HttpMethod.Get, tokenUri);
                 request.Headers.Add("Metadata", "true");
                 using HttpResponseMessage response = await identityClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
@@ -273,11 +286,17 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
                 accessToken = token;
                 tokenExpiresOn = DateTimeOffset.FromUnixTimeSeconds(expiry);
+                succeeded = true;
                 // Even inside the refresh margin, use a freshly fetched token for this upload.
                 return token;
             }
             finally
             {
+                if (requested && !succeeded && !cancellationToken.IsCancellationRequested)
+                {
+                    tokenRetryAfter = timeProvider.GetUtcNow() + TokenRetryDelay;
+                }
+
                 tokenLock.Release();
             }
         }
