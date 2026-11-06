@@ -18,7 +18,9 @@ Reader role) is enough.
 -Check DualWrite
     Compares the old table with the new table over the same period. Rows are matched on the values of all standard
     columns both tables have; TimeGenerated differs between the two APIs and is not compared. Unmatched rows are paired
-    by node, observer and property to show which columns differ.
+    by node, observer and property to show which columns differ. Column names are case-sensitive, as in KQL.
+    Counts inside the requested period are compared first. A count difference that could be covered by an identical
+    record outside the period, within TimeTolerance, is a warning rather than proof of a match or a missing record.
 
 -Check Cutover
     Single write: compares how often each column is filled, per observer, before and after the switch to
@@ -57,7 +59,7 @@ param(
     # if the new table has no rows that early (before dual write began).
     [datetime] $StartTime,
     [datetime] $EndTime,
-    # DualWrite: how far apart the two copies of a record may be in TimeGenerated.
+    # DualWrite: buffer around the comparison period and maximum time difference for diagnostic pairing.
     [timespan] $TimeTolerance = [timespan]::FromMinutes(10),
     # DualWrite: maximum unmatched rows per table to fetch for the column-difference breakdown.
     [ValidateRange(1, 5000)][int] $MaxDetailRows = 500,
@@ -81,7 +83,7 @@ $ErrorActionPreference = 'Stop'
 $bound = $PSBoundParameters
 $schema = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'LogAnalyticsSchema.json') -Raw | ConvertFrom-Json
 $recordColumns = @($schema.applications.$Application)
-$recordTypes = @{}; foreach ($c in $recordColumns) { $recordTypes[$c.name] = $c.type }
+$recordTypes = [hashtable]::new([StringComparer]::Ordinal); foreach ($c in $recordColumns) { $recordTypes[$c.name] = $c.type }
 $findings = [System.Collections.Generic.List[object]]::new()
 
 function Add-Finding([ValidateSet('Fail', 'Warning', 'Info')][string] $Severity, [string] $Item, [string] $Detail) {
@@ -121,7 +123,7 @@ function Get-Table($Workspace, [string] $Name) {
     return [pscustomobject]@{
         Name = $Name
         SubType = $s.tableSubType
-        Columns = @($s.columns | Where-Object { $_.name -notin $builtIn } | ForEach-Object { [pscustomobject]@{ Name = $_.name; Type = $_.type } })
+        Columns = @($s.columns | Where-Object { $_.name -cnotin $builtIn } | ForEach-Object { [pscustomobject]@{ Name = $_.name; Type = $_.type } })
     }
 }
 
@@ -139,9 +141,9 @@ function Invoke-Query([string] $WorkspaceCustomerId, [string] $Kql) {
     } finally { $token = $null }
     $table = $r.tables[0]
     foreach ($row in $table.rows) {
-        $o = [ordered]@{}
+        $o = [System.Collections.Specialized.OrderedDictionary]::new([StringComparer]::Ordinal)
         for ($i = 0; $i -lt $table.columns.Count; $i++) { $o[$table.columns[$i].name] = $row[$i] }
-        [pscustomobject]$o
+        $o
     }
 }
 
@@ -160,14 +162,14 @@ function Test-Table($Workspace) {
         Add-Finding Info $TableName 'Table does not exist. For fresh setup or dual write, deploy the template with createTable=true.'
         return [ordered]@{ Exists = $false; Recommendation = 'CreateTable' }
     }
-    $byName = @{}; foreach ($c in $table.Columns) { $byName[$c.Name] = $c.Type }
+    $byName = [hashtable]::new([StringComparer]::Ordinal); foreach ($c in $table.Columns) { $byName[$c.Name] = $c.Type }
     $missing = @($recordColumns | Where-Object { -not $byName.ContainsKey($_.name) } | ForEach-Object { $_.name })
     $wrongType = @($recordColumns | Where-Object { $byName.ContainsKey($_.name) -and $byName[$_.name] -ne $_.type } |
         ForEach-Object { [pscustomobject]@{ Column = $_.name; Type = $byName[$_.name]; Expected = $_.type } })
     $nonStandard = @($table.Columns | Where-Object { -not $recordTypes.ContainsKey($_.Name) })
 
     $rows = $null
-    $usage = @{}
+    $usage = [hashtable]::new([StringComparer]::Ordinal)
     $counts = @(@('Rows = count()') + @($nonStandard | ForEach-Object { "$(Format-Column $_.Name) = countif(isnotempty(tostring($(Format-Column $_.Name))))" }))
     $result = @(Invoke-Query $Workspace.CustomerId "$TableName | where TimeGenerated > ago($($LookbackDays)d) | summarize $($counts -join ', ')")
     if ($result) {
@@ -228,9 +230,9 @@ function Test-DualWrite($Workspace) {
     if (-not $legacy) { throw "Table '$LegacyTableName' not found in workspace '$($Workspace.Name)'." }
     if (-not $new) { throw "Table '$NewTableName' not found in workspace '$($newWorkspace.Name)'." }
 
-    $newMissing = @($recordColumns.name | Where-Object { $_ -notin $new.Columns.Name })
+    $newMissing = @($recordColumns.name | Where-Object { $_ -cnotin $new.Columns.Name })
     if ($newMissing) { Add-Finding Warning 'New table missing standard columns' "$(Format-List $newMissing). Redeploy the template." }
-    $common = @($recordColumns.name | Where-Object { $_ -in $legacy.Columns.Name -and $_ -in $new.Columns.Name })
+    $common = @($recordColumns.name | Where-Object { $_ -cin $legacy.Columns.Name -and $_ -cin $new.Columns.Name })
     $newRef = if ($newWorkspace.CustomerId -ne $Workspace.CustomerId) { "workspace('$($newWorkspace.CustomerId)').$NewTableName" } else { $NewTableName }
 
     $end = if ($bound.ContainsKey('EndTime')) { $EndTime.ToUniversalTime() } else { [datetime]::UtcNow.AddMinutes(-30) }
@@ -266,31 +268,43 @@ let C = OldT | summarize OldRows = count(), OldIn = countif(TimeGenerated betwee
 "@
     $summary = @(Invoke-Query $Workspace.CustomerId ($lets + @'
 C | summarize Old = sum(OldIn), New = sum(NewIn),
-    OnlyOld = sum(iff(OldRows > NewRows, min_of(OldRows - NewRows, OldIn), 0)),
-    OnlyNew = sum(iff(NewRows > OldRows, min_of(NewRows - OldRows, NewIn), 0))
+    OnlyOld = sum(max_of(OldIn - NewRows, 0)),
+    OnlyNew = sum(max_of(NewIn - OldRows, 0)),
+    BoundaryOld = sum(min_of(max_of(OldIn - NewIn, 0), NewRows - NewIn)),
+    BoundaryNew = sum(min_of(max_of(NewIn - OldIn, 0), OldRows - OldIn))
 '@))[0]
     $result = [ordered]@{
         Start = $start; End = $end; CommonColumns = $common.Count
         LegacyRows = [long]$summary.Old; NewRows = [long]$summary.New
         OnlyInLegacy = [long]$summary.OnlyOld; OnlyInNew = [long]$summary.OnlyNew
+        BoundaryLegacyRows = [long]$summary.BoundaryOld; BoundaryNewRows = [long]$summary.BoundaryNew
     }
     if ($result.LegacyRows -eq 0) { Add-Finding Warning $LegacyTableName 'No rows in the period. Is the old API still enabled (DualWrite)?' }
+    if ($result.BoundaryLegacyRows -gt 0 -or $result.BoundaryNewRows -gt 0) {
+        Add-Finding Warning 'Window boundary' "$($result.BoundaryLegacyRows) legacy and $($result.BoundaryNewRows) new row(s) have an excess count inside the period, but identical records outside it could cover the difference. Boundary matching is ambiguous; these are not confirmed missing rows. Inspect their timestamps or adjust the comparison period."
+    }
     if ($result.OnlyInLegacy -eq 0 -and $result.OnlyInNew -eq 0) { return $result }
 
     $projection = (@('Source', 'TimeGenerated') + @($common | ForEach-Object { Format-Column $_ })) -join ', '
     $detail = @(Invoke-Query $Workspace.CustomerId ($lets + @"
-let BadOld = C | where OldRows > NewRows and OldIn > 0 | project fp;
-let BadNew = C | where NewRows > OldRows and NewIn > 0 | project fp;
-union (OldT | where TimeGenerated between (s .. e) and fp in (BadOld) | take $MaxDetailRows | extend Source = 'Legacy'),
-      (NewT | where TimeGenerated between (s .. e) and fp in (BadNew) | take $MaxDetailRows | extend Source = 'New')
+let BadOld = C | where OldIn > NewRows | project fp, MissingRows = OldIn - NewRows;
+let BadNew = C | where NewIn > OldRows | project fp, MissingRows = NewIn - OldRows;
+union (OldT | where TimeGenerated between (s .. e) | join kind=inner BadOld on fp
+           | sort by fp asc, TimeGenerated asc | serialize
+           | extend MissingIndex = row_number(1, prev(fp) != fp) | where MissingIndex <= MissingRows
+           | take $MaxDetailRows | extend Source = 'Legacy'),
+      (NewT | where TimeGenerated between (s .. e) | join kind=inner BadNew on fp
+           | sort by fp asc, TimeGenerated asc | serialize
+           | extend MissingIndex = row_number(1, prev(fp) != fp) | where MissingIndex <= MissingRows
+           | take $MaxDetailRows | extend Source = 'New')
 | project $projection
 "@))
     # Pair unmatched rows describing the same event, then list the columns whose values differ.
-    $keyColumns = @('NodeName_s', 'ObserverName_s', 'Property_s', 'Metric_s', 'ApplicationName_s', 'ServiceName_s', 'PartitionId_g') | Where-Object { $_ -in $common }
+    $keyColumns = @('NodeName_s', 'ObserverName_s', 'Property_s', 'Metric_s', 'ApplicationName_s', 'ServiceName_s', 'PartitionId_g') | Where-Object { $_ -cin $common }
     $key = { param($r) ($keyColumns | ForEach-Object { "$($r.$_)" }) -join '|' }
-    $newPool = @{}
+    $newPool = [hashtable]::new([StringComparer]::Ordinal)
     foreach ($r in $detail | Where-Object Source -eq 'New') { $k = & $key $r; if (-not $newPool[$k]) { $newPool[$k] = [System.Collections.Generic.List[object]]::new() }; $newPool[$k].Add($r) }
-    $diffs = @{}
+    $diffs = [hashtable]::new([StringComparer]::Ordinal)
     $unpairedLegacy = 0
     foreach ($o in $detail | Where-Object Source -eq 'Legacy') {
         $candidates = $newPool[(& $key $o)]
@@ -341,7 +355,7 @@ function Test-Cutover($Workspace) {
     if ($cut.Add($Window) -lt $afterEnd) { $afterEnd = $cut.Add($Window) }
     if ($afterEnd -le $cut.Add($Margin)) { throw 'No data after CutoverTime + Margin yet. Run the check later or reduce -Margin.' }
     $columns = @($table.Columns.Name)
-    $group = if ('ObserverName_s' -in $columns) { 'ObserverName_s' } else { $null }
+    $group = if ('ObserverName_s' -cin $columns) { 'ObserverName_s' } else { $null }
     $counts = @('Rows = count()') + @($columns | ForEach-Object { "$(Format-Column "n_$_") = countif(isnotempty(tostring($(Format-Column $_))))" })
     $kql = @"
 let c = $(Format-Kql $cut); let w = $(Format-Span $Window); let m = $(Format-Span $Margin); let ae = $(Format-Kql $afterEnd);
