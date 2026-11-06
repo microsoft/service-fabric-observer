@@ -48,6 +48,7 @@ namespace FabricObserverTests
         private static readonly string[] HealthProperties = [ModeProperty, LegacyProperty, IngestionProperty];
 
         private readonly List<HealthReport> healthReports = [];
+        private readonly TestClock clock = new(new DateTimeOffset(2026, 11, 6, 0, 0, 0, TimeSpan.Zero));
         private string testDirectory;
         private MemoryTarget logMessages;
         private LoggingConfiguration previousLogConfiguration;
@@ -513,6 +514,74 @@ namespace FabricObserverTests
             Assert.IsFalse(WarningLogs().Any(message => message.Contains("403")), "A replaced sender must not log a warning.");
         }
 
+        [TestMethod]
+        public void FabricObserver_ActiveWarnings_AreResentEachIntervalUntilCleared()
+        {
+            // The legacy settings are missing (configuration warning); the new API is valid.
+            var context = CreateContext(clusterObserver: false, ValidEndpoint, writeMode: "DualWrite", legacyConfigured: false);
+            using var observer = new ConfigurationProbeObserver(context);
+            using var services = CreateServices(context, observer);
+            var manager = (ObserverManager)CreateManager(clusterObserver: false, services, context);
+            Action<string> reportStatus = GetIngestionStatusCallback(GetManagerSender(manager));
+            AssertWarning(LegacyProperty, context, WorkspaceIdParameter);
+
+            clock.Advance(TimeSpan.FromMinutes(3));
+            reportStatus(UploadProblem);
+            AssertWarning(IngestionProperty, context, "403");
+            int warningLogs = WarningLogs().Count();
+
+            clock.Advance(TimeSpan.FromMinutes(2));
+            int before = healthReports.Count;
+            manager.RefreshLogAnalyticsWarnings();
+            // Each warning is re-sent on its own schedule: the ingestion warning is only 2 minutes old.
+            CollectionAssert.AreEqual(new[] { LegacyProperty }, NewReports(before).Select(report => report.Property).ToArray());
+            Assert.AreEqual(HealthState.Warning, Latest(LegacyProperty).State);
+
+            clock.Advance(TimeSpan.FromMinutes(3));
+            before = healthReports.Count;
+            manager.RefreshLogAnalyticsWarnings();
+            CollectionAssert.AreEqual(new[] { IngestionProperty }, NewReports(before).Select(report => report.Property).ToArray());
+            AssertWarning(IngestionProperty, context, "403");
+            Assert.AreEqual(warningLogs, WarningLogs().Count(), "A re-sent warning must not repeat the local warning log.");
+
+            // A successful upload clears the warning, which must then not be re-sent.
+            reportStatus(null);
+            Assert.AreEqual(HealthState.Ok, Latest(IngestionProperty).State);
+            clock.Advance(LogAnalyticsWarningRefreshIntervalPlusOneSecond);
+            before = healthReports.Count;
+            manager.RefreshLogAnalyticsWarnings();
+            CollectionAssert.AreEqual(new[] { LegacyProperty }, NewReports(before).Select(report => report.Property).ToArray());
+            Assert.AreEqual(HealthState.Ok, Latest(IngestionProperty).State, "A cleared warning must not come back.");
+        }
+
+        [TestMethod]
+        public void FabricObserver_RefreshBeforeInterval_SendsNothing()
+        {
+            var context = CreateContext(clusterObserver: false, ValidEndpoint, writeMode: "Unknown");
+            using var observer = new ConfigurationProbeObserver(context);
+            using var services = CreateServices(context, observer);
+            var manager = (ObserverManager)CreateManager(clusterObserver: false, services, context);
+            AssertWarning(ModeProperty, context, WriteModeParameter);
+            int before = healthReports.Count;
+
+            clock.Advance(ObserverManager.LogAnalyticsWarningRefreshInterval - TimeSpan.FromSeconds(1));
+            manager.RefreshLogAnalyticsWarnings();
+            Assert.AreEqual(before, healthReports.Count, "A warning must not be re-sent before the interval.");
+
+            clock.Advance(TimeSpan.FromSeconds(1));
+            manager.RefreshLogAnalyticsWarnings();
+            Assert.AreEqual(before + 1, healthReports.Count);
+            AssertWarning(ModeProperty, context, WriteModeParameter);
+            Assert.IsTrue(
+                ObserverManager.LogAnalyticsWarningTimeToLive >= 3 * ObserverManager.LogAnalyticsWarningRefreshInterval,
+                "The lifetime must cover missed re-sends, or the warning flickers.");
+        }
+
+        private static readonly TimeSpan LogAnalyticsWarningRefreshIntervalPlusOneSecond =
+            ObserverManager.LogAnalyticsWarningRefreshInterval + TimeSpan.FromSeconds(1);
+
+        private HealthReport[] NewReports(int before) => healthReports.Skip(before).ToArray();
+
         // ---- Application packaging ----
 
         [TestMethod]
@@ -626,7 +695,7 @@ namespace FabricObserverTests
             }
 
             ObserverManager.FabricServiceContext = context;
-            return new ObserverManager(services, CancellationToken.None, healthReports.Add);
+            return new ObserverManager(services, CancellationToken.None, healthReports.Add, clock);
         }
 
         private static bool IsManagerTelemetryEnabled(bool clusterObserver)
@@ -700,7 +769,13 @@ namespace FabricObserverTests
             Assert.AreEqual(context.ServiceName, warning.ServiceName);
             Assert.AreEqual(context.NodeContext.NodeName, warning.NodeName);
             Assert.AreEqual(EntityType.Service, warning.EntityType);
-            Assert.AreEqual(TimeSpan.MaxValue, warning.HealthReportTimeToLive, "An unresolved configuration warning must not expire while it remains unresolved.");
+
+            // FabricObserver re-sends active warnings, so they can expire; ClusterObserver reports only changes, so they must not.
+            bool clusterObserver = context.ServiceName.OriginalString.StartsWith("fabric:/ClusterObserver", StringComparison.Ordinal);
+            Assert.AreEqual(
+                clusterObserver ? TimeSpan.MaxValue : ObserverManager.LogAnalyticsWarningTimeToLive,
+                warning.HealthReportTimeToLive,
+                "Unexpected warning lifetime.");
             StringAssert.Contains(warning.SourceId, context.NodeContext.NodeName);
             StringAssert.Contains(warning.HealthMessage, mentionedParameter);
             Assert.IsTrue(WarningLogs().Any(message => message.Contains(mentionedParameter)), $"Expected a local warning log mentioning {mentionedParameter}.");
@@ -740,6 +815,15 @@ namespace FabricObserverTests
         {
             string method = clusterObserver ? "RunAsync" : "RunObserversAsync";
             return (Task)manager.GetType().GetMethod(method, BindingFlags.Instance | BindingFlags.NonPublic).Invoke(manager, null);
+        }
+
+        private sealed class TestClock(DateTimeOffset start) : TimeProvider
+        {
+            private DateTimeOffset now = start;
+
+            public override DateTimeOffset GetUtcNow() => now;
+
+            public void Advance(TimeSpan by) => now += by;
         }
 
         private sealed class ConfigurationProbeObserver(StatelessServiceContext context) : ObserverBase(null, context)

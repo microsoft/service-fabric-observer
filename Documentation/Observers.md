@@ -39,10 +39,17 @@ compression, retry, or replay is performed. Payload timestamps remain unchanged;
 the destination DCR must preserve the legacy column types and ingestion-time
 `TimeGenerated` behavior.
 
-IMDS and upload failures produce local warnings and a persistent service health
-warning under `LogAnalyticsIngestionConfiguration`. A successful upload clears the
-warning. Only status changes are reported; tokens and response bodies are never
-logged. Settings reloads clear obsolete warnings and replace the sender when needed.
+IMDS and upload failures produce local warnings and a service health warning under
+`LogAnalyticsIngestionConfiguration`. A successful upload clears the warning. Only
+status changes are reported; tokens and response bodies are never logged. Settings
+reloads clear obsolete warnings and replace the sender when needed.
+
+In FabricObserver, an active Log Analytics warning (any of the three properties) is
+re-sent every 5 minutes and expires 15 minutes after it was last sent. A warning that
+another node's shutdown cleared comes back, and a warning from a removed node goes
+away. ClusterObserver runs a single instance and reports only changes, so its
+warnings do not expire; after it moves to another node, a warning from the previous
+node remains until cleared manually.
 
 ### Emiting Errors
 

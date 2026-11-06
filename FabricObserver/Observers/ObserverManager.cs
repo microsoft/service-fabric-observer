@@ -49,6 +49,9 @@ namespace FabricObserver.Observers
         private readonly ConfigurationPackage configurationPackage;
         private readonly Action<HealthReport> reportTelemetryConfigurationHealth;
         private readonly object telemetryHealthLock = new();
+        private readonly TimeProvider timeProvider;
+        private readonly Dictionary<string, (HealthReport Report, DateTimeOffset ReportedAt)> logAnalyticsWarnings = new(StringComparer.Ordinal);
+        private ITimer logAnalyticsWarningTimer;
         private int telemetryConfigurationVersion;
         private volatile bool shutdownSignaled;
         private DateTime StartDateTime;
@@ -58,6 +61,11 @@ namespace FabricObserver.Observers
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
         private const string InternalVersionNumber = "3.3.4";
+
+        // Log Analytics warnings are re-sent while they last, so one cleared by another node's shutdown cleanup comes back,
+        // and they expire, so one left by a removed node goes away.
+        internal static readonly TimeSpan LogAnalyticsWarningRefreshInterval = TimeSpan.FromMinutes(5);
+        internal static readonly TimeSpan LogAnalyticsWarningTimeToLive = TimeSpan.FromMinutes(15);
 
         private static FabricClient FabricClientInstance => FabricClientUtilities.FabricClientSingleton;
 
@@ -140,11 +148,14 @@ namespace FabricObserver.Observers
         }
 
         /// <param name="reportTelemetryConfigurationHealth">Receives telemetry configuration health reports. Null reports to Service Fabric.</param>
+        /// <param name="timeProvider">Clock for re-sending Log Analytics warnings. Null uses the system clock.</param>
         internal ObserverManager(
             IServiceProvider serviceProvider,
             CancellationToken token,
-            Action<HealthReport> reportTelemetryConfigurationHealth)
+            Action<HealthReport> reportTelemetryConfigurationHealth,
+            TimeProvider timeProvider = null)
         {
+            this.timeProvider = timeProvider ?? TimeProvider.System;
             FabricServiceContext ??= serviceProvider.GetRequiredService<StatelessServiceContext>();
             runAsyncToken = token;
 #if DEBUG
@@ -235,6 +246,9 @@ namespace FabricObserver.Observers
                 Logger.LogInfo("StartObserversAsync: Starting Observers loop.");
 
                 // Observers run sequentially. See RunObservers impl.
+                logAnalyticsWarningTimer ??= timeProvider.CreateTimer(
+                    _ => RefreshLogAnalyticsWarningsSafely(), null, LogAnalyticsWarningRefreshInterval, LogAnalyticsWarningRefreshInterval);
+
                 while (true)
                 {
                     try
@@ -737,6 +751,9 @@ namespace FabricObserver.Observers
 
         internal async Task ShutDownAsync()
         {
+            // Stop first, so this node does not re-send a warning after its shutdown cleanup.
+            logAnalyticsWarningTimer?.Dispose();
+            logAnalyticsWarningTimer = null;
             await StopObserversAsync();
             cts?.Dispose();
             linkedSFRuntimeObserverTokenSource?.Dispose();
@@ -1048,7 +1065,7 @@ namespace FabricObserver.Observers
                 // Runs at startup and on every configuration update so a warning clears once its problem is gone.
                 LogAnalyticsConfiguration.ReportHealth(
                     logAnalyticsConfiguration,
-                    reportTelemetryConfigurationHealth,
+                    ReportLogAnalyticsHealth,
                     Logger,
                     FabricServiceContext.ServiceName,
                     nodeName,
@@ -1056,6 +1073,57 @@ namespace FabricObserver.Observers
             }
 
             ShareLogsIngestionSender();
+        }
+
+        /// <summary>
+        /// Sends a Log Analytics health report and remembers an active warning so it can be re-sent. Callers hold telemetryHealthLock.
+        /// </summary>
+        private void ReportLogAnalyticsHealth(HealthReport report)
+        {
+            if (report.State == HealthState.Warning)
+            {
+                report.HealthReportTimeToLive = LogAnalyticsWarningTimeToLive;
+                logAnalyticsWarnings[report.Property] = (report, timeProvider.GetUtcNow());
+            }
+            else
+            {
+                logAnalyticsWarnings.Remove(report.Property);
+            }
+
+            reportTelemetryConfigurationHealth(report);
+        }
+
+        /// <summary>
+        /// Re-sends each active Log Analytics warning not reported in the last refresh interval.
+        /// </summary>
+        internal void RefreshLogAnalyticsWarnings()
+        {
+            lock (telemetryHealthLock)
+            {
+                DateTimeOffset now = timeProvider.GetUtcNow();
+                foreach (string property in logAnalyticsWarnings.Keys.ToList())
+                {
+                    (HealthReport report, DateTimeOffset reportedAt) = logAnalyticsWarnings[property];
+                    if (now - reportedAt >= LogAnalyticsWarningRefreshInterval)
+                    {
+                        logAnalyticsWarnings[property] = (report, now);
+                        reportTelemetryConfigurationHealth(report);
+                    }
+                }
+            }
+        }
+
+        private void RefreshLogAnalyticsWarningsSafely()
+        {
+            try
+            {
+                RefreshLogAnalyticsWarnings();
+            }
+            catch (Exception e) when (e is not OutOfMemoryException)
+            {
+                // Runs on a timer thread, where an unhandled exception would end the process.
+                Logger.LogWarning($"Unable to re-send Log Analytics health warnings: {e.Message}");
+            }
         }
 
         private void ShareLogsIngestionSender()
@@ -1152,7 +1220,7 @@ namespace FabricObserver.Observers
             LogAnalyticsConfiguration.ReportApiHealth(
                 LogAnalyticsConfiguration.IngestionHealthProperty,
                 problem,
-                reportTelemetryConfigurationHealth,
+                ReportLogAnalyticsHealth,
                 Logger,
                 FabricServiceContext.ServiceName,
                 nodeName,
