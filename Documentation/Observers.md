@@ -25,8 +25,9 @@ Mode names are case-insensitive. Missing or empty mode uses `LegacyOnly`; an unk
 mode stops Log Analytics telemetry and reports a configuration warning. Invalid
 settings stop only the affected API; there is no automatic fallback.
 
-The Logs Ingestion sender uses plain HTTP with a user-assigned managed identity.
-Attach the identity to the cluster nodes' VM scale sets and grant it Monitoring
+The Logs Ingestion sender calls the API directly over HTTPS (no Azure SDK) with a
+user-assigned managed identity; `LogAnalyticsIngestionEndpoint` must be an `https`
+URL. Attach the identity to the cluster nodes' VM scale sets and grant it Monitoring
 Metrics Publisher on the DCR. Tokens come from IMDS and are cached, with one refresh
 at a time starting five minutes before expiry. After a failed token request, IMDS
 is not asked again for 30 seconds; records sent during that time are dropped, like

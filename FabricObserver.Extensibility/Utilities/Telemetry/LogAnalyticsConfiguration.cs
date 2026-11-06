@@ -232,9 +232,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             {
                 invalid.Add($"{ObserverConstants.LogAnalyticsIngestionEndpointParameter} (missing)");
             }
-            else if (!Uri.TryCreate(endpoint, UriKind.Absolute, out ingestionEndpoint))
+            else if (!Uri.TryCreate(endpoint, UriKind.Absolute, out ingestionEndpoint) || ingestionEndpoint.Scheme != Uri.UriSchemeHttps)
             {
-                invalid.Add($"{ObserverConstants.LogAnalyticsIngestionEndpointParameter} (not an absolute URL)");
+                // The managed identity token is sent to this endpoint, so it must be encrypted in transit.
+                invalid.Add($"{ObserverConstants.LogAnalyticsIngestionEndpointParameter} (not an absolute https URL)");
             }
 
             if (string.IsNullOrEmpty(dcrImmutableId))

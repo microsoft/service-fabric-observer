@@ -189,14 +189,18 @@ namespace FabricObserverTests
         [DataRow(true, null)]
         [DataRow(false, "  ")]
         [DataRow(true, "  ")]
-        public async Task LogsIngestionOnly_MissingEndpoint_WarnsWithoutSenderOrStoppingMonitoring(bool clusterObserver, string endpoint)
+        [DataRow(false, "not-a-url")]
+        [DataRow(true, "not-a-url")]
+        [DataRow(false, "http://observer-test.westus3-1.ingest.monitor.azure.com")]
+        [DataRow(true, "http://observer-test.westus3-1.ingest.monitor.azure.com")]
+        public async Task LogsIngestionOnly_MissingOrInvalidEndpoint_WarnsWithoutSenderOrStoppingMonitoring(bool clusterObserver, string endpoint)
         {
             var context = CreateContext(clusterObserver, endpoint, writeMode: "LogsIngestionOnly");
             using var observer = new ConfigurationProbeObserver(context);
             using var services = CreateServices(context, observer);
             object manager = CreateManager(clusterObserver, services, context);
 
-            Assert.IsFalse(IsManagerTelemetryEnabled(clusterObserver), "Missing endpoint must disable the sender, even when legacy credentials exist.");
+            Assert.IsFalse(IsManagerTelemetryEnabled(clusterObserver), "A missing or invalid endpoint must disable the sender, even when legacy credentials exist.");
             AssertSenders(GetManagerSender(manager));
             AssertSenders(observer.Sender);
             Assert.IsFalse(observer.IsTelemetryEnabled);
