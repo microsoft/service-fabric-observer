@@ -33,7 +33,8 @@ function Get-ColumnExpression([string] $Name, [string[]] $AllNames) {
     switch ($suffix) {
         'd' { return "iff(gettype($path) in ('long','real','int'), todouble($path), real(null))" }
         'b' { return "iff(gettype($path) == 'bool', tobool($path), bool(null))" }
-        't' { return "todatetime($path)" }
+        # The Data Collector API stores the zero-date sentinel as null, but preserves later dates.
+        't' { return "iff(todatetime($path) == datetime(0001-01-01), datetime(null), todatetime($path))" }
         'g' { return "toguid(tostring($path))" }
         's' {
             # When the Data Collector API stored a value in a typed sibling column, the _s column stays empty.
