@@ -205,6 +205,10 @@
         "type": "datetime"
       },
       {
+        "name": "NodeId_g",
+        "type": "guid"
+      },
+      {
         "name": "NodeId_s",
         "type": "string"
       },
