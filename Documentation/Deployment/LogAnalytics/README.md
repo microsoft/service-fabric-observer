@@ -7,7 +7,7 @@ Set up FabricObserver or ClusterObserver telemetry with the **Logs Ingestion API
 | Path | Use when | Destination |
 |---|---|---|
 | [**First-time setup** (`Fresh`)](#path-1-first-time-setup-fresh) | You have no existing telemetry table. | New table. |
-| [**Single-write migration** (`SingleWrite`)](#path-2-single-write-migration-singlewrite) | The table check finds standard columns only, and you accept non-reversible table conversion. | Existing table; existing table references stay the same. |
+| [**Single-write migration** (`SingleWrite`)](#path-2-single-write-migration-singlewrite) | The table check finds standard columns only, and you accept a one-way migration with no guaranteed legacy rollback after schema changes. | Existing table; existing table references stay the same. |
 | [**Dual-write migration** (`DualWrite`)](#path-3-dual-write-migration-dualwrite) | You have custom fields (add them to the DCR and new table first), or want to validate before switching. | Separate new permanent table; update queries, alerts and workbooks. |
 
 **Using both applications?** Repeat the procedure independently for each. They may share a workspace and managed identity, but use separate DCRs and tables by default.
@@ -79,17 +79,17 @@ Complete [Before you begin](#before-you-begin) and [Set your inputs once](#set-y
 
 **Start:** Working legacy telemetry, standard columns only, and acceptance of irreversible conversion. **Finish:** New-API delivery works in the existing table and dependent consumers still work.
 
-> **Pending validation:** Legacy ingestion after the template adds columns is unresolved. Do not proceed to conversion until this is resolved for your schema and rollback plan. This checklist does not establish that `LegacyOnly` is a safe rollback. Use dual write if you require an unchanged legacy table.
+> **One-way migration:** The single-write template adds missing columns to the converted table. Microsoft [warns](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/custom-logs-migrate#convert-a-table-from-v1-to-v2): "Don't change the schema to create new columns or the Data Collector API stops ingesting for the entire table." Once the template adds columns, do not rely on `LegacyOnly` or an old application package to restore delivery. HTTP 200 or a short successful test does not establish a safe rollback. Choose **DualWrite before conversion** if you need to return to the old API.
 
 1. **Select the route.** Set `$setup.Route = 'SingleWrite'`. Set `$setup.LegacyTableName` if customized; `$setup.TableName`, if supplied, must name that existing table. Retain complete legacy settings securely.
 2. **Check and record the baseline.** [Check the existing table](#check-the-existing-table). Resolve failures; use dual write for non-standard fields. Record representative legacy records and the queries, alerts and workbooks to validate afterward.
 3. **Prepare the application package.** [Upgrade to a supported version](#upgrade-to-a-supported-version), preserving legacy settings. Verify the completed upgrade and continued legacy delivery before making irreversible changes.
-4. **Pass the validation gate, then convert.** Resolve the pending-validation warning above, read [Convert the existing table](#convert-the-existing-table), explicitly accept the one-way operation, and verify conversion completed.
-5. **Preview and deploy resources.** [Deploy the application's template](#deploy-the-applications-template): run `Prepare -WhatIf`, review it, then run `Prepare` against the converted table.
+4. **Accept the one-way route, then convert.** Read the warning above and [Convert the existing table](#convert-the-existing-table). If legacy rollback is required, stop and choose dual write instead. Otherwise, explicitly accept the one-way operation and verify conversion completed.
+5. **Preview and deploy resources.** [Deploy the application's template](#deploy-the-applications-template): run `Prepare -WhatIf`, review the column additions and warning, then run `Prepare` against the converted table. This changes Azure resources before the application switches APIs; legacy delivery can stop during this interval.
 6. **Prepare and check hosts.** [Attach the identity](#attach-the-identity-to-hosts), complete the host rollout, then [check the table and network](#check-the-table-and-network).
 7. **Switch delivery.** [Generate the parameter fragment](#generate-the-parameter-fragment), confirm `LogsIngestionOnly`, then [apply the parameters](#apply-the-parameters) to the existing application. Retain the UTC switch time and wait for upgrade completion.
 8. **Verify the migration.** [Verify single write](#verify-single-write) using the recorded switch time. Inspect stored values, timestamps, health and dependent queries, alerts and workbooks; a retained table name alone does not validate compatibility.
-9. **Finish or roll back.** Follow [Stop, roll back or clean up](#stop-roll-back-or-clean-up), subject to the validation gate. Retain legacy credentials and the previous package until rollback testing is complete; clear credentials only when rollback is no longer needed.
+9. **Finish or recover forward.** Follow [Stop, roll back or clean up](#stop-roll-back-or-clean-up). If new-API delivery fails, correct its configuration, permissions or mappings; switching to the old API is not a guaranteed recovery. Retaining credentials or an old package does not reverse the table changes.
 
 **Skip:** Creating a separate destination, dual-write comparison and the separate cutover block. Step 7 already switches to `LogsIngestionOnly`. Application rollback never undoes table conversion.
 
@@ -125,7 +125,7 @@ Review non-standard columns and type differences. Resolve failures before procee
 
 Single write only. Read the warning below, then use the [documented table conversion operation](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/custom-logs-migrate#convert-a-table-from-v1-to-v2). Skip this step for fresh setup and dual write.
 
-> **One-way step:** Conversion cannot be undone without deleting the table and losing its data. Automatic column creation and legacy custom-field extraction stop. Legacy ingestion after the template adds columns is pending validation; do not assume application rollback restores it. Records with unmapped fields or incompatible types can be dropped in full even when the old API returns HTTP 200. Conversion rollback is not application rollback.
+> **One-way step:** Conversion cannot be undone without deleting the table and losing its data. Automatic column creation and legacy custom-field extraction stop. Legacy ingestion can continue into existing columns, but Microsoft warns that adding columns stops legacy ingestion for the entire table. Our single-write template adds missing columns. Do not treat template deployment as reversible by switching to `LegacyOnly`, redeploying an old package, or deleting the DCR. Failed legacy ingestion can return HTTP 200 with missing rows or empty data fields. Use dual write if legacy rollback is required.
 
 ### Deploy the application's template
 
@@ -133,7 +133,7 @@ Single write only. Read the warning below, then use the [documented table conver
 & $helper @setup -Step Prepare -WhatIf
 $resources = & $helper @setup -Step Prepare
 ```
-`-WhatIf` reads prerequisites but deploys nothing. Fresh/dual write must use a new destination name. Single write requires a converted table; the template adds missing standard columns and keeps existing column names/types, but does not preserve custom column descriptions. The helper stops if it finds non-standard columns on the single-write path. If deployment finishes after a timeout, inspect it and resume with `-Step Parameters`, not another `Prepare`.
+`-WhatIf` reads prerequisites but deploys nothing. Fresh/dual write must use a new destination name. Single write requires a converted table; the template adds missing standard columns and keeps existing column names/types, but does not preserve custom column descriptions or guarantee continued legacy ingestion. A table containing only standard columns is not proof of rollback safety. The helper stops if it finds non-standard columns on the single-write path. If deployment finishes after a timeout, inspect it and resume with `-Step Parameters`, not another `Prepare`.
 
 ### Attach the identity to hosts
 
@@ -313,7 +313,7 @@ Wait for **RollingForwardCompleted**, allow in-flight data to settle, and verify
 
 **Dual-write rollback:** Run the mode-change block in [Cut over](#cut-over-dualwrite-only) with `'LegacyOnly'` instead of `'LogsIngestionOnly'`. Restore complete legacy settings first if they were removed. Wait for upgrade completion and verify stored legacy records. To resume validation, use the same block with `'DualWrite'`, wait for completion, and verify both destinations again.
 
-**Single-write rollback:** Subject to the [pending-validation gate](#path-2-single-write-migration-singlewrite), the same mode-change block can select `LegacyOnly`, but it targets the **converted table**, not a classic table. Do not rely on this restoring legacy delivery after schema changes until validated. Verify stored legacy records rather than HTTP acceptance alone. Keep a known-working previous package if a full application rollback is needed; that also does not undo conversion.
+**Single-write recovery:** There is **no guaranteed legacy rollback after the template adds columns**. `LegacyOnly` changes the sender, not the converted table's ingestion behavior. An old application package or deleting the DCR does not undo conversion or schema changes. Recover by fixing new-API delivery. If a separate classic destination is needed for emergency legacy delivery, it requires explicit reconfiguration and consumer updates; it does not restore the original table. Choose dual write before migration when rollback is a requirement.
 
 **Stop delivery (any route, including Fresh):** Set `ObserverManagerEnableTelemetryProvider=false` in the effective application parameters and deploy the change. Clearing the four new settings while leaving the new API selected is an invalid configuration, not a clean disable. Fresh setup has no legacy path to roll back to.
 

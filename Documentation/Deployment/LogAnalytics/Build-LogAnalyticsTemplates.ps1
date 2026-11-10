@@ -8,6 +8,7 @@ Each generated template deploys a data collection rule (DCR) that maps the JSON 
 same columns and types that the Data Collector API created. It either creates the destination table or adds any missing
 standard columns to an existing (already converted) table while keeping its other columns. It also creates or reuses
 the user-assigned managed identity that sends the data, and grants that identity permission to send through the DCR.
+Adding columns to a converted table can stop legacy ingestion; single write does not guarantee legacy rollback.
 
 Run without parameters to regenerate the templates. Use -Check to verify that the committed templates are current.
 
@@ -77,7 +78,7 @@ function New-Template([string] $Application, [object[]] $Columns) {
         parameters = [ordered]@{
             workspaceName = [ordered]@{ type = 'string'; metadata = [ordered]@{ description = 'Existing Log Analytics workspace in this resource group.' } }
             tableName = [ordered]@{ type = 'string'; metadata = [ordered]@{ description = 'Destination custom table name, ending in _CL.' } }
-            createTable = [ordered]@{ type = 'bool'; metadata = [ordered]@{ description = 'true: create a new table (fresh setup or dual write). The name must not be an existing table. false: send to an existing table (single write). The table must already be converted to a DCR-based table; missing standard columns are added and existing columns are kept.' } }
+            createTable = [ordered]@{ type = 'bool'; metadata = [ordered]@{ description = 'true: create a new table (fresh setup or dual write). The name must not be an existing table. false: send to an existing converted table (single write); missing standard columns are added and existing columns are kept. Adding columns can stop legacy ingestion for the entire table. This is a one-way migration; use dual write if legacy rollback is required.' } }
             dcrName = [ordered]@{ type = 'string'; defaultValue = "dcr-$($Application.ToLowerInvariant())"; metadata = [ordered]@{ description = 'Name of the data collection rule to create or update.' } }
             location = [ordered]@{ type = 'string'; defaultValue = '[resourceGroup().location]'; metadata = [ordered]@{ description = 'Region of the data collection rule. Must be the workspace region.' } }
             dataCollectionEndpointResourceId = [ordered]@{ type = 'string'; defaultValue = ''; metadata = [ordered]@{ description = 'Optional data collection endpoint resource ID (required for Private Link). Empty: the DCR provides its own ingestion endpoint.' } }

@@ -11,9 +11,9 @@ Reader role) is enough.
 -Check Table
     Inspects a table's definition and recent data, using the table resource (queries report GUID columns as strings).
     Before conversion: lists columns that are not standard FabricObserver/ClusterObserver columns (custom or extension
-    fields) and recommends single write or dual write. After conversion, the old API drops an entire row that contains
-    a field without a matching column, so such columns matter.
-    After deploying the template: confirms every standard column exists with the expected type.
+    fields) and recommends single write or dual write. Single write is one-way: adding columns after conversion
+    can stop legacy ingestion for the entire table, including otherwise standard records.
+    After deploying the template: confirms every standard column exists with the expected type, not legacy rollback.
 
 -Check DualWrite
     Compares the old table with the new table over the same period. Rows are matched on the values of all standard
@@ -201,16 +201,18 @@ function Test-Table($Workspace) {
             Add-Finding Warning 'Non-standard columns without recent data' "$(Format-List $unused.Column). They are kept after conversion, but the new API does not write them. Make sure nothing sends these fields anymore before choosing single write."
             $recommendation = 'SingleWrite'
         } else {
-            Add-Finding Info 'Route' 'Only standard columns. Single write is safe: convert the table, then deploy the template with createTable=false.'
+            Add-Finding Info 'Route' 'Only standard columns. Single write preserves the table name but is one-way. Use dual write (new table) if legacy rollback is required.'
             $recommendation = 'SingleWrite'
         }
+        Add-Finding Warning 'Single-write rollback' 'Conversion is irreversible. The template adds missing columns after conversion; Microsoft warns that adding columns stops legacy ingestion for the entire table. Do not rely on LegacyOnly or an old package to restore delivery.'
     } else {
         if ($missing) {
-            Add-Finding Warning 'Standard columns missing' "$($missing.Count) of $($recordColumns.Count) ($(Format-List $missing)). The new API drops these fields until they exist. Deploy the template with createTable=false to add them."
+            Add-Finding Warning 'Standard columns missing' "$($missing.Count) of $($recordColumns.Count) ($(Format-List $missing)). The new API drops these fields until they exist. The template with createTable=false adds them, but adding columns can stop legacy ingestion for the entire table. Treat this as a one-way change."
         }
         if ($nonStandard) {
             Add-Finding Info 'Non-standard columns' "$(Format-List $nonStandard.Name). Kept, but the new API does not write them."
         }
+        Add-Finding Info 'Legacy rollback' 'Schema readiness does not prove legacy delivery. Adding columns after conversion can stop legacy ingestion; switching to LegacyOnly or an old package does not undo these changes.'
         $recommendation = if ($missing -or $wrongType) { 'DeployTemplate' } else { 'Ready' }
     }
     return [ordered]@{

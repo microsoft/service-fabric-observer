@@ -20,7 +20,7 @@
     "createTable": {
       "type": "bool",
       "metadata": {
-        "description": "true: create a new table (fresh setup or dual write). The name must not be an existing table. false: send to an existing table (single write). The table must already be converted to a DCR-based table; missing standard columns are added and existing columns are kept."
+        "description": "true: create a new table (fresh setup or dual write). The name must not be an existing table. false: send to an existing converted table (single write); missing standard columns are added and existing columns are kept. Adding columns can stop legacy ingestion for the entire table. This is a one-way migration; use dual write if legacy rollback is required."
       }
     },
     "dcrName": {

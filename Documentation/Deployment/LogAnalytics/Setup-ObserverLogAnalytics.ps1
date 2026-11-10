@@ -11,7 +11,8 @@ only, in the workspace region. CheckHosts reads the identities on Uniform scale 
 Parameters reads a completed deployment and returns an application parameter map and XML fragment.
 
 The helper never converts a table, changes hosts, upgrades an application, fetches legacy keys, or cuts over.
-SingleWrite requires an already converted table with standard columns only. Fresh and DualWrite require a new
+SingleWrite requires an already converted table with standard columns only. It adds missing columns, which can stop
+legacy ingestion; switching to LegacyOnly or an old package does not undo this. Fresh and DualWrite require a new
 destination table. To resume after deployment, use Parameters rather than repeating Prepare.
 
 .EXAMPLE
@@ -150,6 +151,7 @@ switch ($Step) {
             if ($check.Status -eq 'Fail' -or @($check.Details.NonStandardColumns).Count) {
                 throw 'The default SingleWrite helper requires standard columns and types only. Resolve the table check or use DualWrite; custom mappings require manual setup.'
             }
+            Write-Warning 'SingleWrite is one-way: this template adds missing columns to the converted table, which can stop legacy ingestion. LegacyOnly or an old package does not restore the original table behavior. Choose DualWrite if legacy rollback is required.'
         } else {
             $table = Invoke-Arm "$workspacePath/tables/$TableName`?api-version=2022-10-01" -AllowNotFound
             if ($null -ne $table) {
