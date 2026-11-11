@@ -21,6 +21,8 @@ Reader role) is enough.
     by node, observer and property to show which columns differ. Column names are case-sensitive, as in KQL.
     Counts inside the requested period are compared first. A count difference that could be covered by an identical
     record outside the period, within TimeTolerance, is a warning rather than proof of a match or a missing record.
+    Rows only in the old table, or differing values, fail: the new API lost or changed data. Rows only in the new table
+    are a warning: the old API can drop records without reporting an error.
 
 -Check Cutover
     Single write: compares how often each column is filled, per observer, before and after the switch to
@@ -343,7 +345,8 @@ union (OldT | where TimeGenerated between (s .. e) | join kind=inner BadOld on f
         }
     }
     if ($unpairedLegacy) { Add-Finding Fail 'Missing in new table' "$unpairedLegacy legacy row(s) have no counterpart in $NewTableName." }
-    if ($unpairedNew) { Add-Finding Fail 'Missing in legacy table' "$unpairedNew new row(s) have no counterpart in $LegacyTableName." }
+    # The old API can drop records without reporting an error, so rows only in the new table do not indicate new-API data loss.
+    if ($unpairedNew) { Add-Finding Warning 'Missing in legacy table' "$unpairedNew new row(s) have no counterpart in $LegacyTableName. The old API can drop records without reporting an error; this does not indicate data loss in the new table and does not block cutover." }
     if ($partial) { Add-Finding Warning 'Sample' "Column breakdown is based on the first $MaxDetailRows unmatched rows per table. Increase -MaxDetailRows for more." }
     return $result
 }
