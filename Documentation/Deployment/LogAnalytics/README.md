@@ -277,7 +277,7 @@ In PowerShell 7, compare before/after column fill. Replace `YOUR_SWITCH_START_UT
 & (Join-Path $kit 'Test-ObserverLogAnalytics.ps1') @check -Check Cutover `
     -TableName $settings.TableName -CutoverTime 'YOUR_SWITCH_START_UTC'
 ```
-Inspect stored values as well as column fill. Resolve failures and warnings, and validate dependent queries, alerts and workbooks before considering the migration complete. The application already uses `LogsIngestionOnly`; do not run the dual-write cutover block.
+Inspect stored values as well as column fill. Resolve failures and warnings, and validate dependent queries, alerts and workbooks before considering the migration complete. Some records are event-driven: ClusterObserver sends its cluster upgrade status (rows with no `ObserverName_s`) once per process start, and a parameter-only upgrade does not restart it. If the check warns that such records are too few to judge, confirm them later, for example after the next ClusterObserver restart. The application already uses `LogsIngestionOnly`; do not run the dual-write cutover block.
 
 ### Verify dual write
 

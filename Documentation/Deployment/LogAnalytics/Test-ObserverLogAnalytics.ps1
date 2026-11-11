@@ -27,6 +27,8 @@ Reader role) is enough.
 -Check Cutover
     Single write: compares how often each column is filled, per observer, before and after the switch to
     LogsIngestionOnly in the same table. A column that was filled before and is never filled after indicates data loss.
+    An observer with rows before and none after fails, unless it had fewer than MinRows before: rare, event-driven
+    records are a warning to confirm manually.
 
 .EXAMPLE
 .\Test-ObserverLogAnalytics.ps1 -Check Table -Application FabricObserver -ResourceGroupName my-rg -WorkspaceName my-workspace -TableName FabricObserver_CL
@@ -72,7 +74,8 @@ param(
     [timespan] $Window = [timespan]::FromDays(1),
     # Cutover: period around CutoverTime that is ignored while the upgrade rolls through the cluster.
     [timespan] $Margin = [timespan]::FromMinutes(30),
-    # Cutover: fewest rows an observer needs after the switch before a missing column is reported.
+    # Cutover: fewest rows an observer needs before the switch for its absence after to fail, and after the switch
+    # before a missing column is reported.
     [ValidateRange(1, 100000)][int] $MinRows = 10,
 
     # Writes the full result as JSON.
@@ -376,7 +379,12 @@ $TableName
         $after = $rows | Where-Object { $_.Period -eq 'After' -and ($group ? "$($_.$group)" : '(all)') -eq $obs } | Select-Object -First 1
         $rb = [long]($before.Rows ?? 0); $ra = [long]($after.Rows ?? 0)
         $label = $obs ? $obs : '(no ObserverName)'
-        if ($rb -gt 0 -and $ra -eq 0) { Add-Finding Fail $label "$rb rows before the switch, none after."; continue }
+        if ($rb -gt 0 -and $ra -eq 0) {
+            # Event-driven records (for example ClusterObserver's once-per-process upgrade status) can legitimately be absent after the switch.
+            if ($rb -lt $MinRows) { Add-Finding Warning $label "Only $rb rows before the switch (fewer than -MinRows $MinRows), none after; too few to judge. These records may be event-driven, for example sent once per ClusterObserver process start. Confirm manually." }
+            else { Add-Finding Fail $label "$rb rows before the switch, none after." }
+            continue
+        }
         if ($rb -eq 0) { Add-Finding Info $label "No rows before the switch; $ra after."; continue }
         if ($ra -lt $MinRows) { Add-Finding Info $label "Only $ra rows after the switch (fewer than -MinRows $MinRows); column fill rates not judged." }
         $lost = [System.Collections.Generic.List[string]]::new(); $dropped = [System.Collections.Generic.List[string]]::new(); $customLost = [System.Collections.Generic.List[string]]::new(); $rare = [System.Collections.Generic.List[string]]::new()
