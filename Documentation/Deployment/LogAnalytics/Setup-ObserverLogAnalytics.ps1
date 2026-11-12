@@ -81,7 +81,7 @@ function Get-TableCheck {
     $name = if ($Route -eq 'DualWrite') { $LegacyTableName } else { $TableName }
     & (Join-Path $PSScriptRoot 'Test-ObserverLogAnalytics.ps1') -Check Table -Application $Application `
         -SubscriptionId $SubscriptionId.ToString() -ResourceGroupName $ResourceGroupName `
-        -WorkspaceName $WorkspaceName -TableName $name -PassThru
+        -WorkspaceName $WorkspaceName -TableName $name -Route $Route -PassThru
 }
 
 function Get-SetupResult($Deployment) {

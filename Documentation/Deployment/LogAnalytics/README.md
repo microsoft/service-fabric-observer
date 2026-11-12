@@ -45,11 +45,13 @@ $setup = @{
 Connect-AzAccount -Subscription $setup.SubscriptionId
 $check = @{
     SubscriptionId = $setup.SubscriptionId; ResourceGroupName = $setup.ResourceGroupName
-    WorkspaceName = $setup.WorkspaceName; Application = $setup.Application
+    WorkspaceName = $setup.WorkspaceName; Application = $setup.Application; Route = $setup.Route
 }
 ```
 
 Defaults: `FabricObserver_CL` / `ClusterObserver_CL` for fresh setup and single write; `FabricObserverV2_CL` / `ClusterObserverV2_CL` for dual-write destinations. If your old `LogAnalyticsLogType` is customized, set `$setup.LegacyTableName` to its actual table name. Override `$setup.TableName` for a different destination.
+
+**Resuming later or in a new console:** run this block again with the same values. After `Prepare` has completed, also run `$settings = & $helper @setup -Step Parameters`. It only reads the deployment, and `$settings.TableName` and `$settings.ManagedIdentityResourceId` replace `$resources` in later steps.
 
 The [helper](Setup-ObserverLogAnalytics.ps1) runs **one named step per call**. It never converts a table, changes a host, upgrades an application, fetches keys or cuts over. It uses the existing templates and [read-only checker](Test-ObserverLogAnalytics.ps1); [manual resource setup](#manual-and-advanced-setup) is also available.
 
@@ -97,7 +99,7 @@ Complete [Before you begin](#before-you-begin) and [Set your inputs once](#set-y
 
 **Start:** Working legacy telemetry and an unused, separate destination table. **Finish:** Consumers use the new table, new delivery continues, and legacy delivery stops.
 
-1. **Select the route.** Set `$setup.Route = 'DualWrite'`. Identify the actual legacy table and choose a different, unused permanent destination name. Retain complete legacy settings securely.
+1. **Select the route.** Set `$setup.Route = 'DualWrite'`. Identify the actual legacy table, `<LogAnalyticsLogType>_CL` (default `FabricObserver_CL` or `ClusterObserver_CL`; check the application's `LogAnalyticsLogType` parameter or the workspace's **Tables** page), and choose a different, unused permanent destination name. Retain complete legacy settings securely.
 2. **Check the baseline and mappings.** [Check the existing table](#check-the-existing-table). Record representative legacy telemetry. If you must keep custom fields, list each one with its legacy column name and type (for example `MyField_s`); the default templates map standard fields only, so you add them in step 4.
 3. **Prepare the application package.** [Upgrade to a supported version](#upgrade-to-a-supported-version), preserving legacy settings, and verify continued legacy delivery.
 4. **Preview and deploy resources.** For default mappings, [deploy the application's template](#deploy-the-applications-template): run `Prepare -WhatIf`, review it, then run `Prepare`. For custom fields, copy the application's template and, for each field, add a column with the legacy name and type to `recordColumns` and a matching projection from `Payload` to `transformKql`, following the existing entries. Deploy the copy using [manual and advanced setup](#manual-and-advanced-setup).
@@ -123,9 +125,18 @@ Review non-standard columns and type differences. Resolve failures before procee
 
 ### Convert the existing table
 
-Single write only. Read the warning below, then use the [documented table conversion operation](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/custom-logs-migrate#convert-a-table-from-v1-to-v2). Skip this step for fresh setup and dual write.
+Single write only. Read the warning below, then convert with the block after it, which runs the [documented table conversion operation](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/custom-logs-migrate#convert-a-table-from-v1-to-v2). Skip this step for fresh setup and dual write.
 
 > **One-way step:** Conversion cannot be undone without deleting the table and losing its data. Automatic column creation and legacy custom-field extraction stop. Legacy ingestion can continue into existing columns, but Microsoft warns that adding columns stops legacy ingestion for the entire table. Our single-write template adds missing columns. Do not treat template deployment as reversible by switching to `LegacyOnly`, redeploying an old package, or deleting the DCR. Failed legacy ingestion can return HTTP 200 with missing rows or empty data fields. Use dual write if legacy rollback is required.
+
+In PowerShell 7:
+```powershell
+$table = if ($setup.LegacyTableName) { $setup.LegacyTableName } else { "$($setup.Application)_CL" }
+$tablePath = "/subscriptions/$($setup.SubscriptionId)/resourceGroups/$($setup.ResourceGroupName)/providers/Microsoft.OperationalInsights/workspaces/$($setup.WorkspaceName)/tables/$table"
+(Invoke-AzRestMethod -Method POST -Path "$tablePath/migrate?api-version=2022-10-01").StatusCode
+((Invoke-AzRestMethod -Path "$tablePath`?api-version=2022-10-01").Content | ConvertFrom-Json).properties.schema.tableSubType
+```
+Expect `200` (or `204` if the table was already converted), then `DataCollectionRuleBased`.
 
 ### Deploy the application's template
 
@@ -133,11 +144,11 @@ Single write only. Read the warning below, then use the [documented table conver
 & $helper @setup -Step Prepare -WhatIf
 $resources = & $helper @setup -Step Prepare
 ```
-`-WhatIf` reads prerequisites but deploys nothing. Fresh/dual write must use a new destination name. Single write requires a converted table; the template adds missing standard columns and keeps existing column names/types, but does not preserve custom column descriptions or guarantee continued legacy ingestion. A table containing only standard columns is not proof of rollback safety. The helper stops if it finds non-standard columns on the single-write path. If deployment finishes after a timeout, inspect it and resume with `-Step Parameters`, not another `Prepare`.
+`-WhatIf` reads prerequisites but deploys nothing; confirm the resource group, workspace and table name it shows. Fresh/dual write must use a new destination name. Single write requires a converted table; the template adds missing standard columns and keeps existing column names/types, but does not preserve custom column descriptions or guarantee continued legacy ingestion. A table containing only standard columns is not proof of rollback safety. The helper stops if it finds non-standard columns on the single-write path. If deployment finishes after a timeout, inspect it and resume with `-Step Parameters`, not another `Prepare`.
 
 ### Attach the identity to hosts
 
-In each scale set, open **Identity -> User assigned -> Add**, select `$resources.ManagedIdentityResourceId`, and preserve all existing identities. Apply the updated model to existing nodes using your cluster's supported rollout procedure; ensure future nodes receive it too. Then check:
+In each scale set, open **Identity -> User assigned -> Add**, select `$resources.ManagedIdentityResourceId`, and preserve all existing identities. Alternatively, with the Azure CLI, which adds the identity and keeps existing ones: `az vmss identity assign -g YOUR_CLUSTER_RESOURCE_GROUP -n YOUR_SCALE_SET --identities $resources.ManagedIdentityResourceId`. With an **Automatic** upgrade policy the change rolls to existing nodes by itself; otherwise apply the updated model to existing nodes using your cluster's supported rollout procedure. Ensure future nodes receive it too. If you already attached the identity for the other application, it is shared (the default templates reuse it), so just run the check. Then check:
 ```powershell
 & $helper @setup -Step CheckHosts
 ```
@@ -148,15 +159,27 @@ This checks only the listed Uniform scale sets and existing VMs, not token acqui
 ```powershell
 & (Join-Path $kit 'Test-ObserverLogAnalytics.ps1') @check -Check Table -TableName $resources.TableName
 ```
-Resolve missing/wrong-type columns. Verify HTTPS access from hosting nodes to the ingestion endpoint. Allow time for role propagation; new grants can take approximately 30 minutes, with upload-failure warnings until effective.
+Resolve missing/wrong-type columns. Optionally check HTTPS access from a hosting node. In PowerShell 7, print the endpoint host: `([uri]$resources.ApplicationParameters.LogAnalyticsIngestionEndpoint).Host`. On a node (for example over RDP), run `Test-NetConnection <host> -Port 443` and expect `TcpTestSucceeded : True`. The definitive check comes after you enable the new writer: records arrive from every node and there's no `LogAnalyticsIngestionConfiguration` health warning. Allow time for role propagation; new grants can take approximately 30 minutes, with upload-failure warnings until effective.
 
 ## Shared application steps
 
-Use **Service Fabric application parameters**, not .NET `app.config`. Retain desired per-observer telemetry switches.
+Use **Service Fabric application parameters**, not .NET `app.config`. Retain desired per-observer telemetry switches. FabricObserver's per-observer telemetry switches (`*ObserverEnableTelemetry`, for example `NodeObserverEnableTelemetry`) are **off by default**, and the generated fragment does not set them. Make sure the observers you want to send are enabled. Migration routes keep your current switches. ClusterObserver's `ClusterObserverEnableTelemetry` is on by default.
 
 ### Upgrade to a supported version
 
-Existing applications only; skip the package upgrade if the application already runs FabricObserver 3.3.4+ or ClusterObserver 2.3.3+. Otherwise, before conversion or enabling the new writer, upgrade to one of those versions while preserving current effective application parameters. Use the package's deployment instructions and the repository's [application deployment guidance](../../../README.md#deploy-fabricobserver-using-client-powershell).
+Existing applications only; skip the package upgrade if the application already runs FabricObserver 3.3.4+ or ClusterObserver 2.3.3+. Otherwise, before conversion or enabling the new writer, upgrade to one of those versions while preserving current effective application parameters. Copy and register the new package using its deployment instructions and the repository's [application deployment guidance](../../../README.md#deploy-fabricobserver-using-client-powershell), then run this block in your SF-connected console **instead of** that guide's upgrade command, which does not pass the current parameters:
+```powershell
+$applicationName = Read-Host 'Application name, e.g. fabric:/FabricObserver'
+$targetVersion = Read-Host 'Registered target version, e.g. 3.3.4'
+$app = Get-ServiceFabricApplication -ApplicationName $applicationName
+$parameters = @{}
+foreach ($p in $app.ApplicationParameters) { $parameters[$p.Name] = $p.Value }
+Start-ServiceFabricApplicationUpgrade -ApplicationName $applicationName `
+    -ApplicationTypeVersion $targetVersion -ApplicationParameter $parameters `
+    -Monitored -FailureAction Rollback
+Get-ServiceFabricApplicationUpgrade -ApplicationName $applicationName
+```
+Do not print `$parameters`: it may contain credentials.
 
 - **SingleWrite or DualWrite:** Preserve complete legacy settings and keep `LegacyOnly` selected during the package upgrade. Afterward, verify application health and continued stored legacy telemetry before proceeding.
 - **Fresh, already deployed application:** Preserve the current telemetry provider and enablement settings during the package upgrade; enable the new Log Analytics path only when its parameters are ready. No legacy Log Analytics credentials or baseline are required.
@@ -266,7 +289,7 @@ YOUR_DESTINATION_TABLE
 | order by TimeGenerated desc
 | take 20
 ```
-Inspect fields and timestamps for representative records produced after deployment. An empty result is not proof of success: allow for ingestion delay and confirm the enabled observers actually produced telemetry in that window. For ClusterObserver, arrange representative unhealthy-entity telemetry in your test environment rather than expecting a healthy-cluster heartbeat.
+Inspect fields and timestamps for representative records produced after deployment. An empty result is not proof of success: allow for ingestion delay and confirm the enabled observers actually produced telemetry in that window. FabricObserver sends nothing for observers whose telemetry switch is off, which is the default; see [Shared application steps](#shared-application-steps). For ClusterObserver, arrange representative unhealthy-entity telemetry in your test environment rather than expecting a healthy-cluster heartbeat.
 
 Fresh setup is complete when expected records and application health are verified. No comparison to an old table or additional cutover is required.
 
@@ -317,7 +340,20 @@ Wait for **RollingForwardCompleted**, allow in-flight data to settle, and verify
 
 **Stop delivery (any route, including Fresh):** Set `ObserverManagerEnableTelemetryProvider=false` in the effective application parameters and deploy the change. Clearing the four new settings while leaving the new API selected is an invalid configuration, not a clean disable. Fresh setup has no legacy path to roll back to.
 
-**Credential cleanup (migration routes):** Once rollback is no longer needed, explicitly clear legacy credentials in the effective application parameters and deploy; merely omitting them can retain old values. Verify new-API delivery afterward. Retiring legacy delivery does not require deleting the old table.
+**Credential cleanup (migration routes):** Once rollback is no longer needed, explicitly clear legacy credentials in the effective application parameters and deploy; merely omitting them can retain old values. In the SF console:
+```powershell
+$applicationName = Read-Host 'Application name, e.g. fabric:/FabricObserver'
+$app = Get-ServiceFabricApplication -ApplicationName $applicationName
+$parameters = @{}
+foreach ($p in $app.ApplicationParameters) { $parameters[$p.Name] = $p.Value }
+$parameters['LogAnalyticsWorkspaceId'] = ''
+$parameters['LogAnalyticsSharedKey'] = ''
+Start-ServiceFabricApplicationUpgrade -ApplicationName $applicationName `
+    -ApplicationTypeVersion $app.ApplicationTypeVersion -ApplicationParameter $parameters `
+    -Monitored -FailureAction Rollback
+Get-ServiceFabricApplicationUpgrade -ApplicationName $applicationName
+```
+Wait for **RollingForwardCompleted**, then verify new-API delivery. Retiring legacy delivery does not require deleting the old table.
 
 ## Troubleshooting
 

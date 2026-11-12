@@ -14,6 +14,7 @@ Reader role) is enough.
     fields) and recommends single write or dual write. Single write is one-way: adding columns after conversion
     can stop legacy ingestion for the entire table, including otherwise standard records.
     After deploying the template: confirms every standard column exists with the expected type, not legacy rollback.
+    -Route DualWrite or Fresh omits the single-write rollback caveats, which do not apply to a separate new table.
 
 -Check DualWrite
     Compares the old table with the new table over the same period. Rows are matched on the values of all standard
@@ -50,6 +51,8 @@ param(
 
     # Table and Cutover: the table to inspect.
     [ValidatePattern('^[A-Za-z0-9_]+$')][string] $TableName,
+    # Table: the chosen migration route. DualWrite and Fresh omit single-write rollback caveats; omit to show them.
+    [ValidateSet('Fresh', 'SingleWrite', 'DualWrite')][string] $Route,
     # Table: how far back to count rows that use non-standard columns.
     [ValidateRange(1, 90)][int] $LookbackDays = 7,
 
@@ -209,7 +212,9 @@ function Test-Table($Workspace) {
             Add-Finding Info 'Route' 'Only standard columns. Single write preserves the table name but is one-way. Use dual write (new table) if legacy rollback is required.'
             $recommendation = 'SingleWrite'
         }
-        Add-Finding Warning 'Single-write rollback' 'Conversion is irreversible. The template adds missing columns after conversion; Microsoft warns that adding columns stops legacy ingestion for the entire table. Do not rely on LegacyOnly or an old package to restore delivery.'
+        if ($Route -notin 'DualWrite', 'Fresh') {
+            Add-Finding Warning 'Single-write rollback' 'Conversion is irreversible. The template adds missing columns after conversion; Microsoft warns that adding columns stops legacy ingestion for the entire table. Do not rely on LegacyOnly or an old package to restore delivery.'
+        }
     } else {
         if ($missing) {
             Add-Finding Warning 'Standard columns missing' "$($missing.Count) of $($recordColumns.Count) ($(Format-List $missing)). The new API drops these fields until they exist. The template with createTable=false adds them, but adding columns can stop legacy ingestion for the entire table. Treat this as a one-way change."
@@ -217,7 +222,9 @@ function Test-Table($Workspace) {
         if ($nonStandard) {
             Add-Finding Info 'Non-standard columns' "$(Format-List $nonStandard.Name). Kept, but the new API does not write them."
         }
-        Add-Finding Info 'Legacy rollback' 'Schema readiness does not prove legacy delivery. Adding columns after conversion can stop legacy ingestion; switching to LegacyOnly or an old package does not undo these changes.'
+        if ($Route -notin 'DualWrite', 'Fresh') {
+            Add-Finding Info 'Legacy rollback' 'Schema readiness does not prove legacy delivery. Adding columns after conversion can stop legacy ingestion; switching to LegacyOnly or an old package does not undo these changes.'
+        }
         $recommendation = if ($missing -or $wrongType) { 'DeployTemplate' } else { 'Ready' }
     }
     return [ordered]@{
@@ -247,7 +254,14 @@ function Test-DualWrite($Workspace) {
     if ($start -ge $end) { throw 'StartTime must be before EndTime.' }
     $first = @(Invoke-Query $Workspace.CustomerId "$newRef | where TimeGenerated between ($(Format-Kql $start.AddDays(-30)) .. $(Format-Kql $end)) | summarize First = min(TimeGenerated)")
     if (-not $first -or -not $first[0].First) {
-        Add-Finding Fail $NewTableName 'No rows in the new table before EndTime. Check the application settings and its health warnings.'
+        # The default period ends 30 minutes ago, so a check run right after enabling dual write sees no new rows yet.
+        $later = @(Invoke-Query $Workspace.CustomerId "$newRef | where TimeGenerated > $(Format-Kql $end) | summarize First = min(TimeGenerated)")
+        if ($later -and $later[0].First) {
+            $firstLater = ([datetime]$later[0].First).ToUniversalTime()
+            Add-Finding Warning $NewTableName "No rows in the new table before EndTime ($($end.ToString('u'))): dual write started later, with the first new row at $($firstLater.ToString('u')). Rerun after $($firstLater.AddMinutes(30).ToString('u')), or pass a later -EndTime."
+        } else {
+            Add-Finding Fail $NewTableName 'No rows in the new table. Check the application settings and its health warnings.'
+        }
         return [ordered]@{ Start = $start; End = $end; CommonColumns = $common.Count }
     }
     $firstNew = ([datetime]$first[0].First).ToUniversalTime()
