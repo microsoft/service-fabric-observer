@@ -37,9 +37,12 @@ namespace ClusterObserver
         private bool hasDisposed;
         private bool internalTelemetrySent;
         private bool appParamsUpdating;
+        private readonly Action<HealthReport> reportTelemetryConfigurationHealth;
+        private readonly object telemetryHealthLock = new();
+        private int telemetryConfigurationVersion;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "2.3.2";
+        private const string InternalVersionNumber = "2.3.3";
 
         public bool EnableOperationalTelemetry
         {
@@ -104,6 +107,15 @@ namespace ClusterObserver
         /// Initializes a new instance of the <see cref="ClusterObserverManager"/> class.
         /// </summary>
         public ClusterObserverManager(ServiceProvider serviceProvider, CancellationToken token)
+            : this(serviceProvider, token, null)
+        {
+        }
+
+        /// <param name="reportTelemetryConfigurationHealth">Receives telemetry configuration health reports. Null reports to Service Fabric.</param>
+        internal ClusterObserverManager(
+            ServiceProvider serviceProvider,
+            CancellationToken token,
+            Action<HealthReport> reportTelemetryConfigurationHealth)
         {
             this.token = token;
             cts = new CancellationTokenSource();
@@ -144,6 +156,7 @@ namespace ClusterObserver
                 EnableETWLogging = EtwEnabled,
                 EnableVerboseLogging = enableVerboseLogging
             };
+            this.reportTelemetryConfigurationHealth = reportTelemetryConfigurationHealth ?? new ObserverHealthReporter(Logger).ReportHealthToServiceFabric;
             SetPropertiesFromConfigurationParameters();
         }
 
@@ -258,9 +271,38 @@ namespace ClusterObserver
                 TelemetryEnabled = telemEnabled;
             }
 
+            lock (telemetryHealthLock)
+            {
+                LogAnalyticsConfiguration logAnalyticsConfiguration = SetTelemetryProvider(settings);
+
+                // Runs at startup and on every configuration update so a warning clears once its problem is gone.
+                LogAnalyticsConfiguration.ReportHealth(
+                    logAnalyticsConfiguration,
+                    reportTelemetryConfigurationHealth,
+                    Logger,
+                    FabricServiceContext.ServiceName,
+                    nodeName,
+                    $"{ClusterObserverConstants.ClusterObserverManagerName}({nodeName})");
+            }
+
+            LogsIngestionTelemetry sender = TelemetryEnabled ? LogAnalyticsConfiguration.GetIngestionSender(TelemetryClient) : null;
+            foreach (ObserverBase observer in Observers)
+            {
+                observer.UseLogsIngestionSender(sender);
+            }
+        }
+
+        /// <summary>
+        /// Creates the telemetry sender for the configured provider. When no sender can be created, telemetry is disabled and
+        /// any previous sender is left in place, unused.
+        /// </summary>
+        /// <returns>The evaluated Log Analytics configuration, or null when Log Analytics is not the active provider.</returns>
+        private LogAnalyticsConfiguration SetTelemetryProvider(ConfigurationSettings settings)
+        {
+            int version = Interlocked.Increment(ref telemetryConfigurationVersion);
             if (!TelemetryEnabled)
             {
-                return;
+                return null;
             }
 
             string telemetryProviderType = GetConfigSettingValue(ClusterObserverConstants.TelemetryProviderTypeParameter, settings);
@@ -268,31 +310,42 @@ namespace ClusterObserver
             if (string.IsNullOrWhiteSpace(telemetryProviderType))
             {
                 TelemetryEnabled = false;
-                return;
+                return null;
             }
 
             if (!Enum.TryParse(telemetryProviderType, out TelemetryProviderType telemetryProvider))
             {
                 TelemetryEnabled = false;
-                return;
+                return null;
             }
 
             switch (telemetryProvider)
             {
                 case TelemetryProviderType.AzureLogAnalytics:
 
-                    string logAnalyticsLogType = GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter, settings) ?? "Application";
-                    string logAnalyticsSharedKey = GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter, settings);
-                    string logAnalyticsWorkspaceId = GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter, settings);
+                    var logAnalyticsConfiguration = LogAnalyticsConfiguration.Read(
+                        parameter => GetConfigSettingValue(parameter, settings), defaultLogType: "Application");
+                    ITelemetryProvider logAnalyticsSender = logAnalyticsConfiguration.CreateTelemetryProvider(problem =>
+                    {
+                        lock (telemetryHealthLock)
+                        {
+                            if (version == Volatile.Read(ref telemetryConfigurationVersion))
+                            {
+                                ReportLogsIngestionStatus(problem);
+                            }
+                        }
+                    });
 
-                    if (string.IsNullOrWhiteSpace(logAnalyticsSharedKey) || string.IsNullOrWhiteSpace(logAnalyticsWorkspaceId))
+                    if (logAnalyticsSender == null)
                     {
                         TelemetryEnabled = false;
-                        return;
+                    }
+                    else
+                    {
+                        TelemetryClient = logAnalyticsSender;
                     }
 
-                    TelemetryClient = new LogAnalyticsTelemetry(logAnalyticsWorkspaceId, logAnalyticsSharedKey, logAnalyticsLogType);
-                    break;
+                    return logAnalyticsConfiguration;
 
                 case TelemetryProviderType.AzureApplicationInsights:
 
@@ -301,13 +354,25 @@ namespace ClusterObserver
                     if (string.IsNullOrWhiteSpace(aiConnString))
                     {
                         TelemetryEnabled = false;
-                        return;
+                        return null;
                     }
 
                     TelemetryClient = new AppInsightsTelemetry(aiConnString);
                     break;
             }
+
+            return null;
         }
+
+        private void ReportLogsIngestionStatus(string problem) =>
+            LogAnalyticsConfiguration.ReportApiHealth(
+                LogAnalyticsConfiguration.IngestionHealthProperty,
+                problem,
+                reportTelemetryConfigurationHealth,
+                Logger,
+                FabricServiceContext.ServiceName,
+                nodeName,
+                $"{ClusterObserverConstants.ClusterObserverManagerName}({nodeName})");
 
         public async Task StartAsync()
         {

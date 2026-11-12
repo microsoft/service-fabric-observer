@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
-	<metadata minClientVersion="3.3.3">
+	<metadata minClientVersion="3.3.4">
 		<id>%PACKAGE_ID%</id>
-		<version>2.3.2</version>
+		<version>2.3.3</version>
 		<releaseNotes>
-- Added support for AzLinux/Mariner OS.
-- Added support for Win-ARM64 builds.
-- Several nuget package updates.
+- Log Analytics: Added support for the Azure Monitor Logs Ingestion API with a user-assigned managed identity. New application parameter LogAnalyticsWriteMode selects LegacyOnly (default, unchanged behavior), DualWrite, or LogsIngestionOnly. New parameters: LogAnalyticsIngestionEndpoint, LogAnalyticsDcrImmutableId, LogAnalyticsStreamName, LogAnalyticsManagedIdentityClientId.
+- Log Analytics: Invalid settings or upload failures produce a service health warning per API. There is no automatic fallback between APIs.
+- Requires FabricObserver.Extensibility 3.3.4.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
@@ -22,7 +22,7 @@
 		<dependencies>
 			<group targetFramework="net8.0">
 				<dependency id="Microsoft.ServiceFabric.Services" version="7.0.1816" />
-				<dependency id="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" version="3.3.3" />
+				<dependency id="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" version="3.3.4" />
 			</group>
 		</dependencies>
 		<projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>

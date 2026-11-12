@@ -47,6 +47,12 @@ namespace FabricObserver.Observers
         private readonly CancellationToken runAsyncToken;
         private readonly string sfVersion;
         private readonly ConfigurationPackage configurationPackage;
+        private readonly Action<HealthReport> reportTelemetryConfigurationHealth;
+        private readonly object telemetryHealthLock = new();
+        private readonly TimeProvider timeProvider;
+        private readonly Dictionary<string, (HealthReport Report, DateTimeOffset ReportedAt)> logAnalyticsWarnings = new(StringComparer.Ordinal);
+        private ITimer logAnalyticsWarningTimer;
+        private int telemetryConfigurationVersion;
         private volatile bool shutdownSignaled;
         private DateTime StartDateTime;
         private bool isConfigurationUpdateInProgress;
@@ -54,7 +60,12 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.3.3";
+        private const string InternalVersionNumber = "3.3.4";
+
+        // Log Analytics warnings are re-sent while they last, so one cleared by another node's shutdown cleanup comes back,
+        // and they expire, so one left by a removed node goes away.
+        internal static readonly TimeSpan LogAnalyticsWarningRefreshInterval = TimeSpan.FromMinutes(5);
+        internal static readonly TimeSpan LogAnalyticsWarningTimeToLive = TimeSpan.FromMinutes(15);
 
         private static FabricClient FabricClientInstance => FabricClientUtilities.FabricClientSingleton;
 
@@ -132,7 +143,19 @@ namespace FabricObserver.Observers
         /// <param name="serviceProvider">IServiceProvider for retrieving service instance.</param>
         /// <param name="token">Cancellation token.</param>
         public ObserverManager(IServiceProvider serviceProvider, CancellationToken token)
+            : this(serviceProvider, token, null)
         {
+        }
+
+        /// <param name="reportTelemetryConfigurationHealth">Receives telemetry configuration health reports. Null reports to Service Fabric.</param>
+        /// <param name="timeProvider">Clock for re-sending Log Analytics warnings. Null uses the system clock.</param>
+        internal ObserverManager(
+            IServiceProvider serviceProvider,
+            CancellationToken token,
+            Action<HealthReport> reportTelemetryConfigurationHealth,
+            TimeProvider timeProvider = null)
+        {
+            this.timeProvider = timeProvider ?? TimeProvider.System;
             FabricServiceContext ??= serviceProvider.GetRequiredService<StatelessServiceContext>();
             runAsyncToken = token;
 #if DEBUG
@@ -173,9 +196,13 @@ namespace FabricObserver.Observers
                 EnableVerboseLogging = enableVerboseLogging
             };
 
+            HealthReporter = new ObserverHealthReporter(Logger);
+            this.reportTelemetryConfigurationHealth = reportTelemetryConfigurationHealth ?? HealthReporter.ReportHealthToServiceFabric;
+
             SetPropertiesFromConfigurationParameters();
             Observers = serviceProvider.GetServices<ObserverBase>().ToList();
-            HealthReporter = new ObserverHealthReporter(Logger);
+            ShareLogsIngestionSender();
+
             FabricServiceContext.CodePackageActivationContext.ConfigurationPackageModifiedEvent += CodePackageActivationContext_ConfigurationPackageModifiedEvent;
         }
 
@@ -219,6 +246,9 @@ namespace FabricObserver.Observers
                 Logger.LogInfo("StartObserversAsync: Starting Observers loop.");
 
                 // Observers run sequentially. See RunObservers impl.
+                logAnalyticsWarningTimer ??= timeProvider.CreateTimer(
+                    _ => RefreshLogAnalyticsWarningsSafely(), null, LogAnalyticsWarningRefreshInterval, LogAnalyticsWarningRefreshInterval);
+
                 while (true)
                 {
                     try
@@ -721,6 +751,9 @@ namespace FabricObserver.Observers
 
         internal async Task ShutDownAsync()
         {
+            // Stop first, so this node does not re-send a warning after its shutdown cleanup.
+            logAnalyticsWarningTimer?.Dispose();
+            logAnalyticsWarningTimer = null;
             await StopObserversAsync();
             cts?.Dispose();
             linkedSFRuntimeObserverTokenSource?.Dispose();
@@ -1025,9 +1058,99 @@ namespace FabricObserver.Observers
                 TelemetryProviderEnabled = telemProviderEnabled;
             }
 
-            if (!TelemetryProviderEnabled)
+            lock (telemetryHealthLock)
+            {
+                LogAnalyticsConfiguration logAnalyticsConfiguration = SetTelemetryProvider(settings);
+
+                // Runs at startup and on every configuration update so a warning clears once its problem is gone.
+                LogAnalyticsConfiguration.ReportHealth(
+                    logAnalyticsConfiguration,
+                    ReportLogAnalyticsHealth,
+                    Logger,
+                    FabricServiceContext.ServiceName,
+                    nodeName,
+                    $"{ObserverConstants.ObserverManagerName}({nodeName})");
+            }
+
+            ShareLogsIngestionSender();
+        }
+
+        /// <summary>
+        /// Sends a Log Analytics health report and remembers an active warning so it can be re-sent. Callers hold telemetryHealthLock.
+        /// </summary>
+        private void ReportLogAnalyticsHealth(HealthReport report)
+        {
+            if (report.State == HealthState.Warning)
+            {
+                report.HealthReportTimeToLive = LogAnalyticsWarningTimeToLive;
+                logAnalyticsWarnings[report.Property] = (report, timeProvider.GetUtcNow());
+            }
+            else
+            {
+                logAnalyticsWarnings.Remove(report.Property);
+            }
+
+            reportTelemetryConfigurationHealth(report);
+        }
+
+        /// <summary>
+        /// Re-sends each active Log Analytics warning not reported in the last refresh interval.
+        /// </summary>
+        internal void RefreshLogAnalyticsWarnings()
+        {
+            lock (telemetryHealthLock)
+            {
+                DateTimeOffset now = timeProvider.GetUtcNow();
+                foreach (string property in logAnalyticsWarnings.Keys.ToList())
+                {
+                    (HealthReport report, DateTimeOffset reportedAt) = logAnalyticsWarnings[property];
+                    if (now - reportedAt >= LogAnalyticsWarningRefreshInterval)
+                    {
+                        logAnalyticsWarnings[property] = (report, now);
+                        reportTelemetryConfigurationHealth(report);
+                    }
+                }
+            }
+        }
+
+        private void RefreshLogAnalyticsWarningsSafely()
+        {
+            try
+            {
+                RefreshLogAnalyticsWarnings();
+            }
+            catch (Exception e) when (e is not OutOfMemoryException)
+            {
+                // Runs on a timer thread, where an unhandled exception would end the process.
+                Logger.LogWarning($"Unable to re-send Log Analytics health warnings: {e.Message}");
+            }
+        }
+
+        private void ShareLogsIngestionSender()
+        {
+            if (Observers == null)
             {
                 return;
+            }
+
+            LogsIngestionTelemetry sender = TelemetryProviderEnabled ? LogAnalyticsConfiguration.GetIngestionSender(TelemetryClient) : null;
+            foreach (ObserverBase observer in Observers)
+            {
+                observer.UseLogsIngestionSender(sender);
+            }
+        }
+
+        /// <summary>
+        /// Creates the telemetry sender for the configured provider. When no sender can be created, telemetry is disabled and
+        /// any previous sender is left in place, unused.
+        /// </summary>
+        /// <returns>The evaluated Log Analytics configuration, or null when Log Analytics is not the active provider.</returns>
+        private LogAnalyticsConfiguration SetTelemetryProvider(ConfigurationSettings settings)
+        {
+            int version = Interlocked.Increment(ref telemetryConfigurationVersion);
+            if (!TelemetryProviderEnabled)
+            {
+                return null;
             }
 
             string telemetryProviderType = GetConfigSettingValue(ObserverConstants.TelemetryProviderType, settings);
@@ -1035,31 +1158,41 @@ namespace FabricObserver.Observers
             if (string.IsNullOrEmpty(telemetryProviderType))
             {
                 TelemetryProviderEnabled = false;
-                return;
+                return null;
             }
 
             if (!Enum.TryParse(telemetryProviderType, out TelemetryProviderType telemetryProvider))
             {
                 TelemetryProviderEnabled = false;
-                return;
+                return null;
             }
 
             switch (telemetryProvider)
             {
                 case TelemetryProviderType.AzureLogAnalytics:
-                    
-                    string logAnalyticsLogType = GetConfigSettingValue(ObserverConstants.LogAnalyticsLogTypeParameter, settings);
-                    string logAnalyticsSharedKey = GetConfigSettingValue(ObserverConstants.LogAnalyticsSharedKeyParameter, settings);
-                    string logAnalyticsWorkspaceId = GetConfigSettingValue(ObserverConstants.LogAnalyticsWorkspaceIdParameter, settings);
 
-                    if (string.IsNullOrEmpty(logAnalyticsWorkspaceId) || string.IsNullOrEmpty(logAnalyticsSharedKey))
+                    var logAnalyticsConfiguration = LogAnalyticsConfiguration.Read(parameter => GetConfigSettingValue(parameter, settings));
+                    ITelemetryProvider logAnalyticsSender = logAnalyticsConfiguration.CreateTelemetryProvider(problem =>
+                    {
+                        lock (telemetryHealthLock)
+                        {
+                            if (version == Volatile.Read(ref telemetryConfigurationVersion))
+                            {
+                                ReportLogsIngestionStatus(problem);
+                            }
+                        }
+                    });
+
+                    if (logAnalyticsSender == null)
                     {
                         TelemetryProviderEnabled = false;
-                        return;
+                    }
+                    else
+                    {
+                        TelemetryClient = logAnalyticsSender;
                     }
 
-                    TelemetryClient = new LogAnalyticsTelemetry(logAnalyticsWorkspaceId, logAnalyticsSharedKey, logAnalyticsLogType);
-                    break;
+                    return logAnalyticsConfiguration;
                     
                 case TelemetryProviderType.AzureApplicationInsights:
                     
@@ -1068,7 +1201,7 @@ namespace FabricObserver.Observers
                     if (string.IsNullOrEmpty(aiConnString))
                     {
                         TelemetryProviderEnabled = false;
-                        return;
+                        return null;
                     }
 
                     TelemetryClient = new AppInsightsTelemetry(aiConnString);
@@ -1079,7 +1212,19 @@ namespace FabricObserver.Observers
                     TelemetryProviderEnabled = false;
                     break;
             }
+
+            return null;
         }
+
+        private void ReportLogsIngestionStatus(string problem) =>
+            LogAnalyticsConfiguration.ReportApiHealth(
+                LogAnalyticsConfiguration.IngestionHealthProperty,
+                problem,
+                ReportLogAnalyticsHealth,
+                Logger,
+                FabricServiceContext.ServiceName,
+                nodeName,
+                $"{ObserverConstants.ObserverManagerName}({nodeName})");
 
 
         /// <summary>

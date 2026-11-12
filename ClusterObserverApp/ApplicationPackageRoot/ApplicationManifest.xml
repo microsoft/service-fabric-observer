@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.3.2" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.3.3" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- ClusterObserverManager settings. -->
     <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
@@ -22,6 +22,13 @@
     <Parameter Name="LogAnalyticsWorkspaceId" DefaultValue="" />
     <Parameter Name="LogAnalyticsSharedKey" DefaultValue="" />
     <Parameter Name="LogAnalyticsLogType" DefaultValue="ClusterObserver" />
+    <!-- LogAnalyticsWriteMode selects the Log Analytics API(s): LegacyOnly (Data Collector API, the default), DualWrite (both APIs), or LogsIngestionOnly (Logs Ingestion API). -->
+    <Parameter Name="LogAnalyticsWriteMode" DefaultValue="LegacyOnly" />
+    <!-- Logs Ingestion API settings. All four are required when LogAnalyticsWriteMode is DualWrite or LogsIngestionOnly. -->
+    <Parameter Name="LogAnalyticsIngestionEndpoint" DefaultValue="" />
+    <Parameter Name="LogAnalyticsDcrImmutableId" DefaultValue="" />
+    <Parameter Name="LogAnalyticsStreamName" DefaultValue="" />
+    <Parameter Name="LogAnalyticsManagedIdentityClientId" DefaultValue="" />
     <!-- End Telemetry -->
     <Parameter Name="ObserverManagerObserverFailureHealthStateLevel" DefaultValue="Warning" />
     <Parameter Name="ClusterObserverLogPath" DefaultValue="cluster_observer_logs" />
@@ -43,7 +50,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.3.2" />
+    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.3.3" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -62,9 +69,14 @@
             <!-- Application Insights -->
             <Parameter Name="AppInsightsConnectionString" Value="[AppInsightsConnectionString]" />
             <!-- LogAnalytics -->
-            <Parameter Name="LogAnalyticsWorkspaceId" Value="LogAnalyticsWorkspaceId]" />
+            <Parameter Name="LogAnalyticsWorkspaceId" Value="[LogAnalyticsWorkspaceId]" />
             <Parameter Name="LogAnalyticsSharedKey" Value="[LogAnalyticsSharedKey]" />
             <Parameter Name="LogAnalyticsLogType" Value="[LogAnalyticsLogType]" />
+            <Parameter Name="LogAnalyticsWriteMode" Value="[LogAnalyticsWriteMode]" />
+            <Parameter Name="LogAnalyticsIngestionEndpoint" Value="[LogAnalyticsIngestionEndpoint]" />
+            <Parameter Name="LogAnalyticsDcrImmutableId" Value="[LogAnalyticsDcrImmutableId]" />
+            <Parameter Name="LogAnalyticsStreamName" Value="[LogAnalyticsStreamName]" />
+            <Parameter Name="LogAnalyticsManagedIdentityClientId" Value="[LogAnalyticsManagedIdentityClientId]" />
           </Section>
           <Section Name="ClusterObserverConfiguration">
             <Parameter Name="Enabled" Value="[ClusterObserverEnabled]" />

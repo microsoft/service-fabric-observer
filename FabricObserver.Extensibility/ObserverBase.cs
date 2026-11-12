@@ -31,6 +31,8 @@ namespace FabricObserver.Observers
     {
         private const int TtlAddMinutes = 5;
         private bool disposed;
+        private int telemetryConfigurationVersion;
+        private LogsIngestionTelemetry sharedLogsIngestionSender;
         private ConcurrentDictionary<string, (int DumpCount, DateTime LastDumpDate)> ServiceDumpCountDictionary;
         private readonly object lockObj = new();
         private static readonly bool isWindows;
@@ -48,6 +50,26 @@ namespace FabricObserver.Observers
         protected ITelemetryProvider TelemetryClient
         {
             get; set;
+        }
+
+        internal void UseLogsIngestionSender(LogsIngestionTelemetry sender)
+        {
+            sharedLogsIngestionSender = sender;
+            if (sender == null)
+            {
+                return;
+            }
+
+            if (TelemetryClient is LogsIngestionTelemetry)
+            {
+                Interlocked.Increment(ref telemetryConfigurationVersion);
+                TelemetryClient = sender;
+            }
+            else if (TelemetryClient is DualWriteTelemetry dual)
+            {
+                Interlocked.Increment(ref telemetryConfigurationVersion);
+                TelemetryClient = new DualWriteTelemetry(dual.LegacySender, sender);
+            }
         }
 
         public volatile bool HasActiveFabricErrorOrWarning;
@@ -1500,6 +1522,7 @@ namespace FabricObserver.Observers
 
         public void SetObserverEtwTelemetryConfiguration()
         {
+            int version = Interlocked.Increment(ref telemetryConfigurationVersion);
             // ETW Provider.
             if (bool.TryParse(
                 GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.EnableETWProvider), out bool etwProviderEnabled))
@@ -1532,26 +1555,34 @@ namespace FabricObserver.Observers
             switch (telemetryProvider)
             {
                 case TelemetryProviderType.AzureLogAnalytics:
-                        
-                    string logAnalyticsLogType =
-                        GetSettingParameterValue(
-                            ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.LogAnalyticsLogTypeParameter);
 
-                    string logAnalyticsSharedKey =
-                        GetSettingParameterValue(
-                            ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.LogAnalyticsSharedKeyParameter);
+                    // ObserverManager reports configuration problems; observers only build their sender.
+                    var logAnalyticsConfiguration = LogAnalyticsConfiguration.Read(
+                        parameter => GetSettingParameterValue(ObserverConstants.ObserverManagerConfigurationSectionName, parameter));
+                    ITelemetryProvider logAnalyticsSender = logAnalyticsConfiguration.CreateTelemetryProvider(problem =>
+                    {
+                        if (version != Volatile.Read(ref telemetryConfigurationVersion) || !IsTelemetryProviderEnabled || !IsTelemetryEnabled)
+                        {
+                            return;
+                        }
 
-                    string logAnalyticsWorkspaceId =
-                        GetSettingParameterValue(
-                            ObserverConstants.ObserverManagerConfigurationSectionName, ObserverConstants.LogAnalyticsWorkspaceIdParameter);
+                        LogAnalyticsConfiguration.ReportApiHealth(
+                            LogAnalyticsConfiguration.IngestionHealthProperty,
+                            problem,
+                            HealthReporter.ReportHealthToServiceFabric,
+                            ObserverLogger,
+                            ServiceName,
+                            NodeName,
+                            $"{ObserverConstants.ObserverManagerName}({NodeName})");
+                    }, sharedLogsIngestionSender);
 
-                    if (string.IsNullOrWhiteSpace(logAnalyticsWorkspaceId) || string.IsNullOrWhiteSpace(logAnalyticsSharedKey))
+                    if (logAnalyticsSender == null)
                     {
                         IsTelemetryEnabled = false;
                         return;
                     }
 
-                    TelemetryClient = new LogAnalyticsTelemetry(logAnalyticsWorkspaceId, logAnalyticsSharedKey, logAnalyticsLogType);
+                    TelemetryClient = logAnalyticsSender;
                     break;
 
                 case TelemetryProviderType.AzureApplicationInsights:

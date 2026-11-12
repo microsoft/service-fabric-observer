@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <!-- You can try the XML diff/merge tool XmlDiffPatchSF (located in this repo) to make upgrading your base configurations to the latest version much easier. -->
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.3.3" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="FabricObserverType" ApplicationTypeVersion="3.3.4" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- FO's Observer loop will sleep for at least 30s, regardless of this setting. So, setting to 0 to 29 would mean FO will sleep for 30 seconds between observer loop iterations. -->
     <!-- ObserverManager Configuration -->
@@ -36,6 +36,13 @@
     <Parameter Name="LogAnalyticsWorkspaceId" DefaultValue="" />
     <Parameter Name="LogAnalyticsSharedKey" DefaultValue="" />
     <Parameter Name="LogAnalyticsLogType" DefaultValue="FabricObserver" />
+    <!-- LogAnalyticsWriteMode selects the Log Analytics API(s): LegacyOnly (Data Collector API, the default), DualWrite (both APIs), or LogsIngestionOnly (Logs Ingestion API). -->
+    <Parameter Name="LogAnalyticsWriteMode" DefaultValue="LegacyOnly" />
+    <!-- Logs Ingestion API settings. All four are required when LogAnalyticsWriteMode is DualWrite or LogsIngestionOnly. -->
+    <Parameter Name="LogAnalyticsIngestionEndpoint" DefaultValue="" />
+    <Parameter Name="LogAnalyticsDcrImmutableId" DefaultValue="" />
+    <Parameter Name="LogAnalyticsStreamName" DefaultValue="" />
+    <Parameter Name="LogAnalyticsManagedIdentityClientId" DefaultValue="" />
     <!-- End Telemetry -->
     <Parameter Name="AppObserverEnabled" DefaultValue="true" />
     <Parameter Name="AzureStorageUploadObserverEnabled" DefaultValue="false" />
@@ -251,7 +258,7 @@
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.3.3" />
+    <ServiceManifestRef ServiceManifestName="FabricObserverPkg" ServiceManifestVersion="3.3.4" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -438,6 +445,11 @@
             <Parameter Name="LogAnalyticsWorkspaceId" Value="[LogAnalyticsWorkspaceId]" />
             <Parameter Name="LogAnalyticsSharedKey" Value="[LogAnalyticsSharedKey]" />
             <Parameter Name="LogAnalyticsLogType" Value="[LogAnalyticsLogType]" />
+            <Parameter Name="LogAnalyticsWriteMode" Value="[LogAnalyticsWriteMode]" />
+            <Parameter Name="LogAnalyticsIngestionEndpoint" Value="[LogAnalyticsIngestionEndpoint]" />
+            <Parameter Name="LogAnalyticsDcrImmutableId" Value="[LogAnalyticsDcrImmutableId]" />
+            <Parameter Name="LogAnalyticsStreamName" Value="[LogAnalyticsStreamName]" />
+            <Parameter Name="LogAnalyticsManagedIdentityClientId" Value="[LogAnalyticsManagedIdentityClientId]" />
           </Section>
         </Settings>
       </ConfigOverride>

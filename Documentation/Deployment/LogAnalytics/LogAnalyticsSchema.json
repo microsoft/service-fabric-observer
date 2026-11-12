@@ -1,0 +1,603 @@
+{
+  "description": "Columns that the Data Collector API created for FabricObserver and ClusterObserver records. Used by Build-LogAnalyticsTemplates.ps1. Types follow the Data Collector API suffix rule (_s string, _d real, _b boolean, _t datetime, _g guid), confirmed against classic table definitions.",
+  "standardColumns": [
+    {
+      "name": "TimeGenerated",
+      "type": "datetime"
+    },
+    {
+      "name": "SourceSystem",
+      "type": "string"
+    },
+    {
+      "name": "MG",
+      "type": "guid"
+    },
+    {
+      "name": "ManagementGroupName",
+      "type": "string"
+    },
+    {
+      "name": "Computer",
+      "type": "string"
+    },
+    {
+      "name": "RawData",
+      "type": "string"
+    }
+  ],
+  "applications": {
+    "FabricObserver": [
+      {
+        "name": "ActiveEphemeralTcpPorts_d",
+        "type": "real"
+      },
+      {
+        "name": "ActiveFirewallRules_d",
+        "type": "real"
+      },
+      {
+        "name": "ActiveTcpPorts_d",
+        "type": "real"
+      },
+      {
+        "name": "ApplicationName_s",
+        "type": "string"
+      },
+      {
+        "name": "ApplicationType_s",
+        "type": "string"
+      },
+      {
+        "name": "ApplicationTypeVersion_s",
+        "type": "string"
+      },
+      {
+        "name": "AvailablePhysicalMemoryGB_d",
+        "type": "real"
+      },
+      {
+        "name": "ChildProcessCount_d",
+        "type": "real"
+      },
+      {
+        "name": "ChildProcessInfo_s",
+        "type": "string"
+      },
+      {
+        "name": "ClusterId_g",
+        "type": "guid"
+      },
+      {
+        "name": "ClusterId_s",
+        "type": "string"
+      },
+      {
+        "name": "Code_s",
+        "type": "string"
+      },
+      {
+        "name": "CodeVersion_s",
+        "type": "string"
+      },
+      {
+        "name": "ConfigVersion_s",
+        "type": "string"
+      },
+      {
+        "name": "ContainerId_s",
+        "type": "string"
+      },
+      {
+        "name": "Description_s",
+        "type": "string"
+      },
+      {
+        "name": "DriveInfo_s",
+        "type": "string"
+      },
+      {
+        "name": "DriveName_s",
+        "type": "string"
+      },
+      {
+        "name": "EntityType_d",
+        "type": "real"
+      },
+      {
+        "name": "EphemeralTcpPortRange_s",
+        "type": "string"
+      },
+      {
+        "name": "FabricApplicationTcpPortRange_s",
+        "type": "string"
+      },
+      {
+        "name": "FaultDomain_s",
+        "type": "string"
+      },
+      {
+        "name": "FolderName_s",
+        "type": "string"
+      },
+      {
+        "name": "FreeVirtualMemoryGB_d",
+        "type": "real"
+      },
+      {
+        "name": "healthEvaluation_s",
+        "type": "string"
+      },
+      {
+        "name": "HealthState_d",
+        "type": "real"
+      },
+      {
+        "name": "healthState_s",
+        "type": "string"
+      },
+      {
+        "name": "HealthState_s",
+        "type": "string"
+      },
+      {
+        "name": "HotFixes_s",
+        "type": "string"
+      },
+      {
+        "name": "InfrastructurePlacementID_s",
+        "type": "string"
+      },
+      {
+        "name": "instanceName_s",
+        "type": "string"
+      },
+      {
+        "name": "IpAddressOrFQDN_s",
+        "type": "string"
+      },
+      {
+        "name": "IsNodeByNodeUpgradeInProgress_b",
+        "type": "boolean"
+      },
+      {
+        "name": "IsSeedNode_b",
+        "type": "boolean"
+      },
+      {
+        "name": "LastBootUpTime_s",
+        "type": "string"
+      },
+      {
+        "name": "LastBootUpTime_t",
+        "type": "datetime"
+      },
+      {
+        "name": "LogicalDriveCount_d",
+        "type": "real"
+      },
+      {
+        "name": "LogicalProcessorCount_d",
+        "type": "real"
+      },
+      {
+        "name": "Metric_s",
+        "type": "string"
+      },
+      {
+        "name": "NodeDeactivationInfo_EffectiveIntent_d",
+        "type": "real"
+      },
+      {
+        "name": "NodeDeactivationInfo_PendingSafetyChecks_s",
+        "type": "string"
+      },
+      {
+        "name": "NodeDeactivationInfo_Status_d",
+        "type": "real"
+      },
+      {
+        "name": "NodeDeactivationInfo_Tasks_s",
+        "type": "string"
+      },
+      {
+        "name": "NodeDownAt_t",
+        "type": "datetime"
+      },
+      {
+        "name": "NodeId_g",
+        "type": "guid"
+      },
+      {
+        "name": "NodeId_s",
+        "type": "string"
+      },
+      {
+        "name": "NodeInstanceId_s",
+        "type": "string"
+      },
+      {
+        "name": "NodeName_s",
+        "type": "string"
+      },
+      {
+        "name": "NodeStatus_s",
+        "type": "string"
+      },
+      {
+        "name": "NodeType_s",
+        "type": "string"
+      },
+      {
+        "name": "NodeUpAt_t",
+        "type": "datetime"
+      },
+      {
+        "name": "NumberOfRunningProcesses_d",
+        "type": "real"
+      },
+      {
+        "name": "ObserverName_s",
+        "type": "string"
+      },
+      {
+        "name": "OS_s",
+        "type": "string"
+      },
+      {
+        "name": "OSInstallDate_s",
+        "type": "string"
+      },
+      {
+        "name": "OSInstallDate_t",
+        "type": "datetime"
+      },
+      {
+        "name": "OSName_s",
+        "type": "string"
+      },
+      {
+        "name": "osPlatform_s",
+        "type": "string"
+      },
+      {
+        "name": "OSVersion_s",
+        "type": "string"
+      },
+      {
+        "name": "PartitionId_g",
+        "type": "guid"
+      },
+      {
+        "name": "PartitionId_s",
+        "type": "string"
+      },
+      {
+        "name": "ProcessId_d",
+        "type": "real"
+      },
+      {
+        "name": "ProcessName_s",
+        "type": "string"
+      },
+      {
+        "name": "ProcessStartTime_s",
+        "type": "string"
+      },
+      {
+        "name": "ProcessStartTime_t",
+        "type": "datetime"
+      },
+      {
+        "name": "property_s",
+        "type": "string"
+      },
+      {
+        "name": "Property_s",
+        "type": "string"
+      },
+      {
+        "name": "ReplicaId_d",
+        "type": "real"
+      },
+      {
+        "name": "ReplicaRole_s",
+        "type": "string"
+      },
+      {
+        "name": "ReplicaStatus_s",
+        "type": "string"
+      },
+      {
+        "name": "RGAppliedCpuLimitCores_d",
+        "type": "real"
+      },
+      {
+        "name": "RGAppliedMemoryLimitMb_d",
+        "type": "real"
+      },
+      {
+        "name": "RGCpuEnabled_b",
+        "type": "boolean"
+      },
+      {
+        "name": "RGMemoryEnabled_b",
+        "type": "boolean"
+      },
+      {
+        "name": "ServiceKind_s",
+        "type": "string"
+      },
+      {
+        "name": "serviceName_s",
+        "type": "string"
+      },
+      {
+        "name": "ServiceName_s",
+        "type": "string"
+      },
+      {
+        "name": "ServicePackageActivationMode_s",
+        "type": "string"
+      },
+      {
+        "name": "ServiceTypeName_s",
+        "type": "string"
+      },
+      {
+        "name": "ServiceTypeVersion_s",
+        "type": "string"
+      },
+      {
+        "name": "SnapshotId_g",
+        "type": "guid"
+      },
+      {
+        "name": "SnapshotTimestamp_t",
+        "type": "datetime"
+      },
+      {
+        "name": "source_s",
+        "type": "string"
+      },
+      {
+        "name": "Source_s",
+        "type": "string"
+      },
+      {
+        "name": "TotalMemorySizeGB_d",
+        "type": "real"
+      },
+      {
+        "name": "UpgradeDomain_s",
+        "type": "string"
+      },
+      {
+        "name": "Value_d",
+        "type": "real"
+      },
+      {
+        "name": "WindowsUpdateAutoDownloadEnabled_b",
+        "type": "boolean"
+      }
+    ],
+    "ClusterObserver": [
+      {
+        "name": "ApplicationName_s",
+        "type": "string"
+      },
+      {
+        "name": "ApplicationType_s",
+        "type": "string"
+      },
+      {
+        "name": "ApplicationTypeVersion_s",
+        "type": "string"
+      },
+      {
+        "name": "ClusterId_g",
+        "type": "guid"
+      },
+      {
+        "name": "ClusterId_s",
+        "type": "string"
+      },
+      {
+        "name": "Code_s",
+        "type": "string"
+      },
+      {
+        "name": "ContainerId_s",
+        "type": "string"
+      },
+      {
+        "name": "CurrentUpgradeDomain_s",
+        "type": "string"
+      },
+      {
+        "name": "Description_s",
+        "type": "string"
+      },
+      {
+        "name": "DriveName_s",
+        "type": "string"
+      },
+      {
+        "name": "EntityType_d",
+        "type": "real"
+      },
+      {
+        "name": "FailureReason_s",
+        "type": "string"
+      },
+      {
+        "name": "FolderName_s",
+        "type": "string"
+      },
+      {
+        "name": "healthEvaluation_s",
+        "type": "string"
+      },
+      {
+        "name": "HealthState_d",
+        "type": "real"
+      },
+      {
+        "name": "healthState_s",
+        "type": "string"
+      },
+      {
+        "name": "instanceName_s",
+        "type": "string"
+      },
+      {
+        "name": "Metric_s",
+        "type": "string"
+      },
+      {
+        "name": "NextUpgradeDomain_s",
+        "type": "string"
+      },
+      {
+        "name": "NodeName_s",
+        "type": "string"
+      },
+      {
+        "name": "NodeType_s",
+        "type": "string"
+      },
+      {
+        "name": "ObserverName_s",
+        "type": "string"
+      },
+      {
+        "name": "OS_s",
+        "type": "string"
+      },
+      {
+        "name": "osPlatform_s",
+        "type": "string"
+      },
+      {
+        "name": "PartitionId_g",
+        "type": "guid"
+      },
+      {
+        "name": "PartitionId_s",
+        "type": "string"
+      },
+      {
+        "name": "ProcessId_d",
+        "type": "real"
+      },
+      {
+        "name": "ProcessName_s",
+        "type": "string"
+      },
+      {
+        "name": "ProcessStartTime_s",
+        "type": "string"
+      },
+      {
+        "name": "ProcessStartTime_t",
+        "type": "datetime"
+      },
+      {
+        "name": "property_s",
+        "type": "string"
+      },
+      {
+        "name": "Property_s",
+        "type": "string"
+      },
+      {
+        "name": "ReplicaId_d",
+        "type": "real"
+      },
+      {
+        "name": "ReplicaRole_s",
+        "type": "string"
+      },
+      {
+        "name": "ReplicaStatus_s",
+        "type": "string"
+      },
+      {
+        "name": "RGAppliedCpuLimitCores_d",
+        "type": "real"
+      },
+      {
+        "name": "RGAppliedMemoryLimitMb_d",
+        "type": "real"
+      },
+      {
+        "name": "RGCpuEnabled_b",
+        "type": "boolean"
+      },
+      {
+        "name": "RGMemoryEnabled_b",
+        "type": "boolean"
+      },
+      {
+        "name": "ServiceKind_s",
+        "type": "string"
+      },
+      {
+        "name": "serviceName_s",
+        "type": "string"
+      },
+      {
+        "name": "ServiceName_s",
+        "type": "string"
+      },
+      {
+        "name": "ServicePackageActivationMode_s",
+        "type": "string"
+      },
+      {
+        "name": "ServiceTypeName_s",
+        "type": "string"
+      },
+      {
+        "name": "ServiceTypeVersion_s",
+        "type": "string"
+      },
+      {
+        "name": "source_s",
+        "type": "string"
+      },
+      {
+        "name": "Source_s",
+        "type": "string"
+      },
+      {
+        "name": "Timestamp_t",
+        "type": "datetime"
+      },
+      {
+        "name": "UpgradeDuration_s",
+        "type": "string"
+      },
+      {
+        "name": "UpgradeState_s",
+        "type": "string"
+      },
+      {
+        "name": "UpgradeTargetAppTypeVersion_s",
+        "type": "string"
+      },
+      {
+        "name": "UpgradeTargetCodeVersion_s",
+        "type": "string"
+      },
+      {
+        "name": "UpgradeTargetConfigVersion_s",
+        "type": "string"
+      },
+      {
+        "name": "Value_d",
+        "type": "real"
+      }
+    ]
+  }
+}
