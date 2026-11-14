@@ -1,4 +1,6 @@
 ﻿Sample observer plugin implementation. Please read/experiment with this project to learn how to build an observer plugin.
+The sample targets .NET 10. Extensibility also provides .NET 8 assets for existing plugins. `CopyLocalLockFileAssemblies` copies plugin dependencies using the resolved NuGet package paths, including Polly's dependencies.
+
 In general, there are two key pieces to this project, which will be required for your observer plugin:
 
 Like all observers, yours must implement IObserver, which is already mostly taken care of in the
@@ -49,7 +51,9 @@ namespace FabricObserver.Observers
 When you reference the FabricObserver.Extensibility nuget package, you will have access to all of the public code that native FabricObserver observers consume. That is, you will have the same capabilities 
 that all other observers have. The world is your oyster when it comes to creating your custom observer to do whatever the underlying platform affords. 
 
-### Note: make sure you know if .NET Core 3.1 (for FO 3.2.3.831) or .NET 6 (for FO 3.2.1.960, which only runs on SF version 9 and above) is installed on the target server. If it is not, then you must use the SelfContained package. This is very important.
+### Deployment prerequisites
+
+Windows requires Service Fabric 11.5 or later. Use the self-contained application package when .NET 10 is not installed on every node; framework-dependent application packages require that runtime. A .NET 8 plugin does not require a separate .NET 8 runtime when loaded into the .NET 10 observer host.
 
 As you can see in this project, there are two key files:
 
@@ -96,7 +100,7 @@ healthReporter.ReportHealthToServiceFabric(healthReport);
 
 ```
 
-When you build your plugin as a .NET Standard 2.0, copy the dll file into the Data/Plugins folder inside your build output directory. E.g., YourObserverPlugin\bin\release\netstandard2.0\win-x64. In fact, this directory will contain what is effectively a decompressed sfpkg file:  
+When you build your plugin targeting .NET 8 or .NET 10, copy the dll file and its dependencies into the Data/Plugins folder inside your build output directory. E.g., YourObserverPlugin\bin\release\net10.0\win-x64. When using the full application package, this directory contains what is effectively a decompressed sfpkg file:
 ```
 [sourcedir]\SAMPLEOBSERVERPLUGIN\BIN\RELEASE\NETSTANDARD2.0\WIN-X64  
 │   ApplicationManifest.xml  
@@ -135,7 +139,7 @@ If you consume the full FabricObserver nupkg (versus just the FabricObserver.Ext
 * Create a new instance of the fabric:/FabricObserver application
 * Create a new instance of the fabric:/FabricObserver/FabricObserverService service
 ```Powershell
-$path = "[sourcedir]\MyObserverPlugin\bin\release\netstandard2.0\[target os platform, e.g., win-x64 or linux-x64]"
+$path = "[sourcedir]\MyObserverPlugin\bin\release\net10.0\[target os platform, e.g., win-x64 or linux-x64]"
 Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FabricObserverV323831 -TimeoutSec 1800
 Register-ServiceFabricApplicationType -ApplicationPathInImageStore FabricObserverV323831
 New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.2.3.831

@@ -1,4 +1,8 @@
+$ErrorActionPreference = "Stop"
+
 function Install-Nuget {
+    $installed = Get-Command nuget.exe -ErrorAction SilentlyContinue
+    if ($installed) { return $installed.Source }
     # Path to Latest nuget.exe on nuget.org
     $source = "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe"
 
@@ -9,6 +13,7 @@ function Install-Nuget {
         #Download the file
         Invoke-WebRequest -Uri $source -OutFile $destination
     }
+    return $destination
 }
 
 function Build-Nuget {
@@ -22,11 +27,12 @@ function Build-Nuget {
     
     [string] $nugetSpecTemplate = [System.IO.File]::ReadAllText([System.IO.Path]::Combine($scriptPath, "FabricObserver.Extensibility.nuspec.template"))
 
-    [string] $nugetSpecPath = "$scriptPath\FabricObserver.Extensibility\bin\release\netstandard2.0\$($packageId).nuspec"
+    [string] $nugetSpecPath = "$scriptPath\bin\release\FabricObserver.Extensibility\$($packageId).nuspec"
 
     [System.IO.File]::WriteAllText($nugetSpecPath, $nugetSpecTemplate.Replace("%PACKAGE_ID%", $packageId).Replace("%ROOT_PATH%", $scriptPath))
 
-    .\nuget.exe pack $nugetSpecPath -basepath $basePath -OutputDirectory bin\release\FabricObserver.Extensibility\Nugets -properties NoWarn=NU5100,NU5128
+    & $nugetPath pack $nugetSpecPath -basepath $basePath -OutputDirectory bin\release\FabricObserver.Extensibility\Nugets -properties NoWarn=NU5100,NU5128
+    if ($LASTEXITCODE -ne 0) { throw "NuGet pack failed for $packageId." }
 }
 
 [string] $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
@@ -35,9 +41,10 @@ try {
 
     Push-Location $scriptPath
 
-    Install-Nuget
+    & .\Build-FOExtensibility.ps1
+    $nugetPath = Install-Nuget
 
-    Build-Nuget "Microsoft.ServiceFabricApps.FabricObserver.Extensibility" "$scriptPath\FabricObserver.Extensibility\bin\release\netstandard2.0"
+    Build-Nuget "Microsoft.ServiceFabricApps.FabricObserver.Extensibility" "$scriptPath\bin\release\FabricObserver.Extensibility"
 }
 finally {
 

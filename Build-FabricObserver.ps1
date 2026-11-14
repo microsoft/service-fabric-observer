@@ -7,23 +7,16 @@ param(
 $ErrorActionPreference = "Stop"
 
 [string] $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
-[string] $winArmSFPackageRefOverride = "/p:VersionOverride_SFServices=7.0.1816"
-
-# For SF 11/12 arm64 builds, today we need to override the SF package reference version to match the current version of the SDK
-# to ensure arm64 x64 emulation works correctly
-if($RuntimeId -eq "win-arm64") 
-{
-    $winArmSFPackageRefOverride = "/p:Version_SFServices=8.0.2707"
-}
-
 try 
 {
     Push-Location $scriptPath
 
     Remove-Item $scriptPath\bin\$Configuration\FabricObserver\$RuntimeId\ -Recurse -Force -EA SilentlyContinue
 
-    dotnet publish FabricObserver\FabricObserver.csproj $winArmSFPackageRefOverride -o bin\$Configuration\FabricObserver\$RuntimeId\self-contained\FabricObserverType\FabricObserverPkg\Code -c $Configuration -r $RuntimeId --self-contained true
-    dotnet publish FabricObserver\FabricObserver.csproj $winArmSFPackageRefOverride -o bin\$Configuration\FabricObserver\$RuntimeId\framework-dependent\FabricObserverType\FabricObserverPkg\Code -c $Configuration -r $RuntimeId --self-contained false
+    dotnet publish FabricObserver\FabricObserver.csproj -o bin\$Configuration\FabricObserver\$RuntimeId\self-contained\FabricObserverType\FabricObserverPkg\Code -c $Configuration -r $RuntimeId --self-contained true
+    if ($LASTEXITCODE -ne 0) { throw "FabricObserver self-contained publish failed for $RuntimeId." }
+    dotnet publish FabricObserver\FabricObserver.csproj -o bin\$Configuration\FabricObserver\$RuntimeId\framework-dependent\FabricObserverType\FabricObserverPkg\Code -c $Configuration -r $RuntimeId --self-contained false
+    if ($LASTEXITCODE -ne 0) { throw "FabricObserver framework-dependent publish failed for $RuntimeId." }
 
     Copy-Item FabricObserver\PackageRoot\* bin\$Configuration\FabricObserver\$RuntimeId\self-contained\FabricObserverType\FabricObserverPkg\ -Recurse
     Copy-Item FabricObserver\PackageRoot\* bin\$Configuration\FabricObserver\$RuntimeId\framework-dependent\FabricObserverType\FabricObserverPkg\ -Recurse
@@ -34,21 +27,19 @@ try
 
     if($RuntimeId -eq "linux-x64") 
     {
-        if($Azlinux) 
-        {
-            $xmlPath = Join-Path $scriptPath "FabricObserver\PackageRoot\ServiceManifest_linux.xml"
-            $xmlText = Get-Content $xmlPath -Raw
-
-            # Replace setcaps.sh with setcaps-Mariner.sh only when Azlinux is true
-            $xmlText = $xmlText -replace '<Program>setcaps\.sh</Program>', '<Program>setcaps-Mariner.sh</Program>'
-
-            Set-Content -Path $xmlPath -Value $xmlText -Encoding UTF8
-            Write-Host "Updated ServiceManifest_linux.xml to use setcaps-Mariner.sh (Azlinux mode)"
-        }
-
         # ServiceManifest - Linux
         Copy-Item FabricObserver\PackageRoot\ServiceManifest_linux.xml bin\$Configuration\FabricObserver\$RuntimeId\framework-dependent\FabricObserverType\FabricObserverPkg\ServiceManifest.xml -Force -Confirm:$False
         Copy-Item FabricObserver\PackageRoot\ServiceManifest_linux.xml bin\$Configuration\FabricObserver\$RuntimeId\self-contained\FabricObserverType\FabricObserverPkg\ServiceManifest.xml -Force -Confirm:$False
+
+        if ($Azlinux)
+        {
+            foreach ($mode in @("self-contained", "framework-dependent"))
+            {
+                $manifestPath = Join-Path $scriptPath "bin\$Configuration\FabricObserver\$RuntimeId\$mode\FabricObserverType\FabricObserverPkg\ServiceManifest.xml"
+                $manifestText = (Get-Content -LiteralPath $manifestPath -Raw) -replace '<Program>setcaps\.sh</Program>', '<Program>setcaps-Mariner.sh</Program>'
+                Set-Content -LiteralPath $manifestPath -Value $manifestText -Encoding UTF8
+            }
+        }
 
         # Modify ApplicationManifest.xml for Linux.Add commentMore actions
     

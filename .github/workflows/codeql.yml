@@ -55,6 +55,12 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Set up .NET SDK
+      if: matrix.language == 'csharp'
+      uses: actions/setup-dotnet@v4
+      with:
+        global-json-file: global.json
+
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v3

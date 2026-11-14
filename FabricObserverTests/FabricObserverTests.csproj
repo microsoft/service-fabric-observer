@@ -2,7 +2,7 @@
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <RootNamespace>FabricObserverTests</RootNamespace>
-	<TargetFramework>net8.0</TargetFramework>
+	<TargetFramework>net10.0</TargetFramework>
 	<Nullable>disable</Nullable>
 	<RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     <Product>FabricObserverTests</Product>
@@ -18,8 +18,13 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
 	<PackageReference Include="ServiceFabric.Mocks" Version="7.2.14" />
+    <PackageReference Include="Microsoft.ServiceFabric.Actors" Version="$(Version_SFServices)" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Remove="CompatibilityPlugin\**\*.cs" />
+    <Compile Remove="CurrentCompatibilityPlugin\**\*.cs" />
+    <ProjectReference Include="CompatibilityPlugin\CompatibilityPlugin.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="CurrentCompatibilityPlugin\CurrentCompatibilityPlugin.csproj" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\ClusterObserver\ClusterObserver.csproj" />
     <ProjectReference Include="..\FabricObserver\FabricObserver.csproj" />
   </ItemGroup>
@@ -130,4 +135,14 @@
 	  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
 	</None>
   </ItemGroup>
+  <Target Name="CopyCompatibilityPlugin" AfterTargets="Build">
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)\CompatibilityPlugin\bin\$(Configuration)\net8.0\Net8CompatibilityPlugin.dll')" Text="The .NET 8 compatibility fixture was not built in the requested configuration." />
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)\CurrentCompatibilityPlugin\bin\$(Configuration)\net10.0\Net10CompatibilityPlugin.dll')" Text="The .NET 10 compatibility fixture was not built in the requested configuration." />
+    <ItemGroup>
+      <CompatibilityPluginFile Include="$(MSBuildProjectDirectory)\CompatibilityPlugin\bin\$(Configuration)\net8.0\**\*" />
+      <CurrentCompatibilityPluginFile Include="$(MSBuildProjectDirectory)\CurrentCompatibilityPlugin\bin\$(Configuration)\net10.0\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(CompatibilityPluginFile)" DestinationFiles="@(CompatibilityPluginFile->'$(TargetDir)CompatibilityPlugin\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(CurrentCompatibilityPluginFile)" DestinationFiles="@(CurrentCompatibilityPluginFile->'$(TargetDir)CurrentCompatibilityPlugin\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
 </Project>

@@ -1,12 +1,12 @@
-## FabricObserver Extensibility Library 3.3.4 (NET 8, SF Runtime version 10.0 and higher)
+## FabricObserver Extensibility Library 3.4.0 (.NET 8 and .NET 10)
 
-FabricObserver.Extensibility is a .NET 8 library for building custom observers that extend FabricObserver's and ClusterObserver's capabilities to match your needs. A custom observer is managed just like a built-in observer. 
+FabricObserver.Extensibility provides .NET 8 and .NET 10 assets for building custom observers that extend FabricObserver's and ClusterObserver's capabilities. A custom observer is managed just like a built-in observer.
 
-Note: Version 3.3.4 supports SF Runtime versions 10.0 and higher. It can not be used for lesser versions.
+FabricObserver 3.4.0 and ClusterObserver 2.4.0 run on .NET 10. Windows deployment requires Service Fabric 11.5 or later. Existing .NET 8 plugins using the documented interfaces remain supported; the shared contract assembly identity is preserved.
 
 ### How to implement an observer using FO's extensibility model
 
-1. Create a new .NET core library project. You should target net8.0 in your csproj because that is the target net SDK version that FabricObserver 3.3.4 is built for.
+1. Create a library project targeting net10.0, or net8.0 when preserving a .NET 8 plugin.
 
 2. Install the latest Microsoft.ServiceFabricApps.FabricObserver.Extensibility nupkg from https://www.nuget.org/profiles/ServiceFabricApps into your plugin project.
 
@@ -28,11 +28,11 @@ Note: Version 3.3.4 supports SF Runtime versions 10.0 and higher. It can not be 
 - Implement ObserverBase's two abstract functions: 
 
 ```C#
-    public override Task ObserveAsync()
+    public override Task ObserveAsync(CancellationToken token)
     {
     }
 
-    public override Task ReportAsync()
+    public override Task ReportAsync(CancellationToken token)
     {
     }
 ```
@@ -58,7 +58,7 @@ Note: Version 3.3.4 supports SF Runtime versions 10.0 and higher. It can not be 
     }
 ```
 
-- Build, put the output dll and *ALL* of its dependencies, both managed and native (this is *very* important), into the Config/Data/Plugins folder in FabricObserver/PackageRoot. 
+- Build, put the output dll and *ALL* of its dependencies, both managed and native (this is *very* important), into the Data/Plugins folder in FabricObserver/PackageRoot.
   You can place your plugin dll and all of its dependencies in its own folder under the Plugins directory (useful if you have multiple plugins). 
   Again, ALL plugin dll dependencies (and their dependencies, if any) need to live in the *same* folder as the plugin dll. Note that if FabricObserver already employs the same version of dependency dll,
   then you can omit adding the dependency manually.

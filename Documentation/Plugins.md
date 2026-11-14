@@ -2,7 +2,7 @@
 
 #### Note that starting in version 2.2.0, ClusterObserver supports the FO plugin model. So, you can build cluster-level monitoring plugins should you so desire.
 
-1. Create a .NET 8 Library project.
+1. Create a .NET 10 library project, or target .NET 8 to preserve an existing plugin. Extensibility 3.4.0 provides assets for both frameworks and preserves the shared startup/observer contract assembly identity.
 
 2. Install the latest Microsoft.ServiceFabricApps.FabricObserver.Extensibility nupkg from https://www.nuget.org/profiles/ServiceFabricApps into your plugin project.
 
@@ -22,11 +22,11 @@
 You must implement ObserverBase's two abstract functions: 
 
 ```C#
-    public override Task ObserveAsync()
+    public override Task ObserveAsync(CancellationToken token)
     {
     }
 
-    public override Task ReportAsync()
+    public override Task ReportAsync(CancellationToken token)
     {
     }
 ```
@@ -74,5 +74,5 @@ cd C:\Users\me\source\repos\service-fabric-observer
 ./Build-FabricObserver
 ./Build-NugetPackages
 ```
-The output from the above commands contains FabricObserver platform-specific nupkgs and a nupkg you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.3.4.nupkg. Nuget packages will be located in 
+The output from the above commands contains FabricObserver platform-specific nupkgs and a nupkg you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.4.0.nupkg. Nuget packages will be located in
 C:\Users\me\source\repos\service-fabric-observer\bin\release\FabricObserver\Nugets.

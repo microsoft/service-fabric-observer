@@ -2,11 +2,11 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
 	<metadata minClientVersion="3.3.4">
 		<id>%PACKAGE_ID%</id>
-		<version>3.3.4</version>
+		<version>3.4.0</version>
 		<releaseNotes>
-			- Log Analytics: Added support for the Azure Monitor Logs Ingestion API with a user-assigned managed identity. New application parameter LogAnalyticsWriteMode selects LegacyOnly (default, unchanged behavior), DualWrite, or LogsIngestionOnly. New parameters: LogAnalyticsIngestionEndpoint, LogAnalyticsDcrImmutableId, LogAnalyticsStreamName, LogAnalyticsManagedIdentityClientId.
-			- Log Analytics: Invalid settings or upload failures produce a service health warning per API (LogAnalyticsIngestionConfiguration for the new API). There is no automatic fallback between APIs.
-			- Added ARM templates (table, data collection rule, managed identity, role assignment) and a read-only migration check script under Documentation/Deployment/LogAnalytics.
+			- Migrated the application to .NET 10 and Service Fabric SDK 8.5.122.
+			- Preserved documented .NET 8 plugin contracts and added .NET 10 plugin authoring assets.
+			- Windows deployment requires Service Fabric 11.5 or later; framework-dependent deployment requires .NET 10 on every node.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
@@ -15,13 +15,20 @@
 		<icon>icon.png</icon>
 		<readme>fonuget.md</readme>
 		<language>en-US</language>
-		<description>This package contains the FabricObserver(FO) Application - built for NET8 and SF Runtime 9.x. FO a highly configurable and extensible resource usage watchdog service that is designed to be run in Azure Service Fabric Windows and Linux clusters. This package contains the entire application and can be used to build .NET Standard 2.0 or .NET 8 observer plugins.</description>
+		<description>FabricObserver application targeting .NET 10, with .NET 8 and .NET 10 shared-library assets for plugin authoring. Windows deployment requires Service Fabric 11.5 or later. Framework-dependent deployment requires the .NET 10 runtime on every node; self-contained deployment includes that runtime.</description>
 		<contentFiles>
 			<files include="**" buildAction="None" copyToOutput="true" />
 		</contentFiles>
 		<dependencies>
 			<group targetFramework="net8.0">
-				<dependency id="Microsoft.ServiceFabric.Services" version="7.0.1816" />
+				<dependency id="Microsoft.ServiceFabric.Services" version="8.5.122" />
+				<dependency id="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" version="3.4.0" />
+				<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="9.0.8" />
+			</group>
+			<group targetFramework="net10.0">
+				<dependency id="Microsoft.ServiceFabric.Services" version="8.5.122" />
+				<dependency id="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" version="3.4.0" />
+				<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="9.0.8" />
 			</group>
 		</dependencies>
 		<projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>
@@ -30,9 +37,11 @@
 	</metadata>
 	<files>
 		<file src="**" target="contentFiles\any\any" />
-		<file src="FabricObserverPkg\Code\FabricObserver.dll" target="lib\net8.0" />
-		<file src="FabricObserverPkg\Code\FabricObserver.Extensibility.dll" target="lib\net8.0" />
-		<file src="FabricObserverPkg\Code\TelemetryLib.dll" target="lib\net8.0" />
+		<file src="FabricObserverPkg\Code\FabricObserver.dll" target="lib\net10.0" />
+		<file src="FabricObserverPkg\Code\FabricObserver.Extensibility.dll" target="lib\net10.0" />
+		<file src="FabricObserverPkg\Code\TelemetryLib.dll" target="lib\net10.0" />
+		<file src="%ROOT_PATH%\bin\release\FabricObserver.Extensibility\net8.0\FabricObserver.Extensibility.dll" target="lib\net8.0" />
+		<file src="%ROOT_PATH%\bin\release\FabricObserver.Extensibility\net8.0\TelemetryLib.dll" target="lib\net8.0" />
 		<file src="%ROOT_PATH%\icon.png" target="" />
 		<file src="%ROOT_PATH%\fonuget.md" target="" />
 	</files>

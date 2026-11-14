@@ -290,7 +290,7 @@ namespace FabricObserver.Observers
 
             if (File.Exists(fileName))
             {
-                certificate = new X509Certificate2(fileName);
+                certificate = X509CertificateLoader.LoadCertificateFromFile(fileName);
                 return true;
             }
 

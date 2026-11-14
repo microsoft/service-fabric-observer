@@ -1,7 +1,13 @@
 pool:
-  name: Hosted Windows 2019 with VS2019
+  vmImage: windows-latest
 
 steps:
+- task: UseDotNet@2
+  displayName: 'Use .NET SDK from global.json'
+  inputs:
+    packageType: sdk
+    useGlobalJson: true
+
 - task: NuGetToolInstaller@1
   displayName: 'Use NuGet '
   inputs:
@@ -10,8 +16,19 @@ steps:
 - task: PowerShell@2
   displayName: 'Build FabricObserver'
   inputs:
-    targetType: filePath
-    filePath: './Build-FabricObserver.ps1'
+    targetType: inline
+    script: |
+      foreach ($runtimeId in @("win-x64", "linux-x64", "win-arm64")) {
+        & ./Build-FabricObserver.ps1 -RuntimeId $runtimeId
+      }
+
+- task: PowerShell@2
+  displayName: 'Verify .NET 8 and .NET 10 plugin contracts'
+  inputs:
+    targetType: inline
+    script: |
+      dotnet test FabricObserverTests/FabricObserverTests.csproj -c Release --filter "FullyQualifiedName~PluginCompatibilityTests"
+      if ($LASTEXITCODE -ne 0) { throw "Plugin compatibility tests failed." }
 
 - task: PowerShell@2
   displayName: 'Build Nuget Packages - FO'
