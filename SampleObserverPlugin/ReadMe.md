@@ -102,7 +102,7 @@ healthReporter.ReportHealthToServiceFabric(healthReport);
 
 When you build your plugin targeting .NET 8 or .NET 10, copy the dll file and its dependencies into the Data/Plugins folder inside your build output directory. E.g., YourObserverPlugin\bin\release\net10.0\win-x64. When using the full application package, this directory contains what is effectively a decompressed sfpkg file:
 ```
-[sourcedir]\SAMPLEOBSERVERPLUGIN\BIN\RELEASE\NETSTANDARD2.0\WIN-X64  
+[sourcedir]\SAMPLEOBSERVERPLUGIN\BIN\RELEASE\NET10.0\WIN-X64
 │   ApplicationManifest.xml  
 |   SampleNewObserver.dll  
 |   SampleNewObserver.pdb  
@@ -119,7 +119,7 @@ file.
 
 If you consume the full FabricObserver nupkg (versus just the FabricObserver.Extensibility library nupkg), you can deploy FabricObserver using the contents of your plugin project's build output directory - just remove the pdb, json, dll files from the top level directory, so it looks like this:
 ```
-[sourcedir]\SAMPLEOBSERVERPLUGIN\BIN\RELEASE\NETSTANDARD2.0\WIN-X64
+[sourcedir]\SAMPLEOBSERVERPLUGIN\BIN\RELEASE\NET10.0\WIN-X64
 │   ApplicationManifest.xml  
 │  
 └───FabricObserverPkg  
@@ -140,9 +140,9 @@ If you consume the full FabricObserver nupkg (versus just the FabricObserver.Ext
 * Create a new instance of the fabric:/FabricObserver/FabricObserverService service
 ```Powershell
 $path = "[sourcedir]\MyObserverPlugin\bin\release\net10.0\[target os platform, e.g., win-x64 or linux-x64]"
-Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FabricObserverV323831 -TimeoutSec 1800
-Register-ServiceFabricApplicationType -ApplicationPathInImageStore FabricObserverV323831
-New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.2.3.831
+Copy-ServiceFabricApplicationPackage -ApplicationPackagePath $path -CompressPackage -ApplicationPackagePathInImageStore FabricObserverV340 -TimeoutSec 1800
+Register-ServiceFabricApplicationType -ApplicationPathInImageStore FabricObserverV340
+New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.4.0
 New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName fabric:/FabricObserver -ServiceName fabric:/FabricObserver/FabricObserverService -ServiceTypeName FabricObserverType -InstanceCount -1
 ```  
 
@@ -154,6 +154,6 @@ you installed into your plugin project into FO's Plugins folder along with your 
 referenced dlls from the nuget package into FO's code package (Code folder). 
 
 You can see an example of this in the SampleNewObserver project: there is a nuget package installed in the plugin project that is 
-not also used by FO (Polly). Post-Build events are used to copy Polly.dll (the nuget package compile time assembly) from the base nuget packages location
-to the build output folder along with the plugin dll and its pdb. So, the plugin dll, pdb and referenced nuget package assembly are copied to the Plugins folder
+not also used by FO (Polly). CopyLocalLockFileAssemblies copies Polly.dll and its runtime dependencies from the resolved NuGet package locations
+to the build output folder along with the plugin dll and its pdb. Copy the plugin dll, pdb and all dependency assemblies to the Plugins folder
 directly. Now, when you deploy FO from the output directory, all of the necessary libs are in place and your plugin will not fail with "file not found" exceptions from the loader.

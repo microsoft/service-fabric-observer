@@ -156,7 +156,7 @@ namespace FabricObserverTests
             return nodeList.Count == 1;
         }
 
-        private static ConfigurationPackage BuildConfigurationPackageFromSettingsFile(string configPath)
+        internal static ConfigurationPackage BuildConfigurationPackageFromSettingsFile(string configPath)
         {
             StringReader sreader = null;
             XmlReader xreader = null;
