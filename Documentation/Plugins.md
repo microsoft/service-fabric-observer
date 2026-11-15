@@ -71,7 +71,9 @@ By default if no RuntimeId is specified, it will build for win-x64. If you want 
 
 ```PowerShell
 cd C:\Users\me\source\repos\service-fabric-observer
-./Build-FabricObserver
+./Build-FabricObserver -RuntimeId win-x64
+./Build-FabricObserver -RuntimeId linux-x64
+./Build-FabricObserver -RuntimeId win-arm64
 ./Build-NugetPackages
 ```
 The output from the above commands contains FabricObserver platform-specific nupkgs and a nupkg you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.4.0.nupkg. Nuget packages will be located in
