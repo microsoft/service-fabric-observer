@@ -2,6 +2,8 @@
 
 #### Note that starting in version 2.2.0, ClusterObserver supports the FO plugin model. So, you can build cluster-level monitoring plugins should you so desire.
 
+The Service Fabric SDK's `System.Fabric` assembly references `System.ServiceModel.Primitives`, which the plugin loader resolves while sharing the host's SDK dependencies. Extensibility 3.4.0 therefore includes supported WCF Client 10.1.0 in both framework dependency groups. FO and CO do not use WCF endpoints or a WCF remoting transport; this dependency preserves deterministic SDK type sharing for existing .NET 8 and new .NET 10 plugins running in the .NET 10 hosts.
+
 1. Create a .NET 10 library project, or target .NET 8 to preserve an existing plugin. Extensibility 3.4.0 provides assets for both frameworks and preserves the shared startup/observer contract assembly identity.
 
 2. Install the latest Microsoft.ServiceFabricApps.FabricObserver.Extensibility nupkg from https://www.nuget.org/profiles/ServiceFabricApps into your plugin project.

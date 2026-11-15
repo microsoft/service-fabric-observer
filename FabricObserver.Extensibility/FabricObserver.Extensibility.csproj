@@ -16,8 +16,8 @@
 		<PackageReference Include="Microsoft.ApplicationInsights" Version="2.23.0" />
 		<PackageReference Include="Microsoft.ApplicationInsights.NLogTarget" Version="2.23.0" />
 		<PackageReference Include="Microsoft.ServiceFabric.Services" Version="$(Version_SFServices)" />
-		<!-- Plugin loading traverses the SDK's optional WCF assembly references. -->
-		<PackageReference Include="System.ServiceModel.Primitives" Version="8.1.2" />
+		<!-- Deterministic plugin dependency sharing resolves System.Fabric's WCF assembly reference. -->
+		<PackageReference Include="System.ServiceModel.Primitives" Version="10.1.0" />
 		<PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.15" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.8" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.8" />

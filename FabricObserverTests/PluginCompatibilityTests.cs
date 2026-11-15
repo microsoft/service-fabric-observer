@@ -3,6 +3,7 @@ using System.Fabric;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Loader;
 using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,6 +31,13 @@ namespace FabricObserverTests
             Assembly assembly = loader.LoadDefaultAssembly();
             Assert.AreEqual(framework, assembly.GetCustomAttribute<TargetFrameworkAttribute>().FrameworkName);
             Assert.AreEqual(10, Environment.Version.Major);
+
+            AssemblyName wcfReference = typeof(FabricClient).Assembly.GetReferencedAssemblies()
+                .Single(reference => reference.Name == "System.ServiceModel.Primitives");
+            Assembly hostWcfAssembly = Assembly.Load(wcfReference);
+            Assert.AreEqual(new Version(10, 1, 0, 0), hostWcfAssembly.GetName().Version);
+            Assert.AreSame(hostWcfAssembly,
+                AssemblyLoadContext.GetLoadContext(assembly).LoadFromAssemblyName(wcfReference));
 
             FabricObserverStartupAttribute attribute = assembly.GetCustomAttributes<FabricObserverStartupAttribute>().Single();
             IFabricObserverStartup startup = (IFabricObserverStartup)Activator.CreateInstance(attribute.StartupType);

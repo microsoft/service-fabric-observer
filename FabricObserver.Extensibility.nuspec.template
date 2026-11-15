@@ -6,6 +6,7 @@
 		<releaseNotes>
 			- Targets .NET 8 and .NET 10 for plugin authoring; preserves the existing plugin contract assembly identity.
 			- Updated Service Fabric SDK references and shared plugin loading contracts for .NET 10 hosts.
+			- Uses supported WCF Client 10.1.0 to resolve the Service Fabric SDK's assembly references during plugin loading.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
@@ -21,7 +22,7 @@
 		<dependencies>
 			<group targetFramework="net8.0">
 				<dependency id="Microsoft.ServiceFabric.Services" version="8.5.122" />
-				<dependency id="System.ServiceModel.Primitives" version="8.1.2" />
+				<dependency id="System.ServiceModel.Primitives" version="10.1.0" />
 				<dependency id="System.Security.Cryptography.Xml" version="10.0.15" />
 				<dependency id="Microsoft.ApplicationInsights" version="2.23.0" />
 				<dependency id="Microsoft.ApplicationInsights.NLogTarget" version="2.23.0" />
@@ -34,7 +35,7 @@
 			</group>
 			<group targetFramework="net10.0">
 				<dependency id="Microsoft.ServiceFabric.Services" version="8.5.122" />
-				<dependency id="System.ServiceModel.Primitives" version="8.1.2" />
+				<dependency id="System.ServiceModel.Primitives" version="10.1.0" />
 				<dependency id="System.Security.Cryptography.Xml" version="10.0.15" />
 				<dependency id="Microsoft.ApplicationInsights" version="2.23.0" />
 				<dependency id="Microsoft.ApplicationInsights.NLogTarget" version="2.23.0" />
