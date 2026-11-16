@@ -23,12 +23,12 @@
 			<group targetFramework="net8.0">
 				<dependency id="Microsoft.ServiceFabric.Services" version="8.5.122" />
 				<dependency id="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" version="3.4.0" />
-				<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="9.0.8" />
+				<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="10.0.15" />
 			</group>
 			<group targetFramework="net10.0">
 				<dependency id="Microsoft.ServiceFabric.Services" version="8.5.122" />
 				<dependency id="Microsoft.ServiceFabricApps.FabricObserver.Extensibility" version="3.4.0" />
-				<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="9.0.8" />
+				<dependency id="Microsoft.Extensions.DependencyInjection.Abstractions" version="10.0.15" />
 			</group>
 		</dependencies>
 		<projectUrl>https://aka.ms/sf/FabricObserver</projectUrl>

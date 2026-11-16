@@ -19,12 +19,12 @@
 		<!-- Deterministic plugin dependency sharing resolves System.Fabric's WCF assembly reference. -->
 		<PackageReference Include="System.ServiceModel.Primitives" Version="10.1.0" />
 		<PackageReference Include="System.Security.Cryptography.Xml" Version="10.0.15" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.8" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.8" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.15" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.15" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="NLog" Version="6.0.3" />
-		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="9.0.8" />
-		<PackageReference Include="System.Management" Version="9.0.8" />
+		<PackageReference Include="System.Diagnostics.PerformanceCounter" Version="10.0.15" />
+		<PackageReference Include="System.Management" Version="10.0.15" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\TelemetryLib\TelemetryLib.csproj" />

@@ -4,6 +4,8 @@ FabricObserver.Extensibility provides .NET 8 and .NET 10 assets for building cus
 
 FabricObserver 3.4.0 and ClusterObserver 2.4.0 run on .NET 10. Windows deployment requires Service Fabric 11.5 or later. Existing .NET 8 plugins using the documented interfaces remain supported; the shared contract assembly identity is preserved.
 
+Both framework dependency groups use serviced .NET 10 packages for dependency injection and resource monitoring. New plugins use these dependencies; existing .NET 8 plugins share the host's dependency injection contracts when loaded.
+
 The Service Fabric SDK's `System.Fabric` assembly references `System.ServiceModel.Primitives`. Extensibility includes supported WCF Client 10.1.0 in both framework dependency groups so the plugin loader can resolve that reference while deterministically sharing SDK types with the .NET 10 hosts. FO and CO do not use WCF endpoints or a WCF remoting transport.
 
 ### How to implement an observer using FO's extensibility model

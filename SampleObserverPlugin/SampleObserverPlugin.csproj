@@ -14,8 +14,8 @@
              So, you can deploy FO directly from there. -->
 		
 		<!-- <PackageReference Include="Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained" Version="3.4.0" />
-		FabricObserver employs version 9.0.8 of Microsoft.Extensions.DependencyInjection.Abstractions, so you need to explicitly reference that version here. 
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.8" /> -->
+		FabricObserver employs version 10.0.15 of Microsoft.Extensions.DependencyInjection.Abstractions, so you need to explicitly reference that version here.
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.15" /> -->
 
 		<!-- OR -->
 		

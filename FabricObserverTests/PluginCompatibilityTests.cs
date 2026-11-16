@@ -32,6 +32,13 @@ namespace FabricObserverTests
             Assert.AreEqual(framework, assembly.GetCustomAttribute<TargetFrameworkAttribute>().FrameworkName);
             Assert.AreEqual(10, Environment.Version.Major);
 
+            AssemblyName pluginDiReference = assembly.GetReferencedAssemblies()
+                .Single(reference => reference.Name == "Microsoft.Extensions.DependencyInjection.Abstractions");
+            Assembly hostDiAssembly = typeof(IServiceCollection).Assembly;
+            Assert.AreEqual(10, hostDiAssembly.GetName().Version.Major);
+            Assert.AreSame(hostDiAssembly,
+                AssemblyLoadContext.GetLoadContext(assembly).LoadFromAssemblyName(pluginDiReference));
+
             AssemblyName wcfReference = typeof(FabricClient).Assembly.GetReferencedAssemblies()
                 .Single(reference => reference.Name == "System.ServiceModel.Primitives");
             Assembly hostWcfAssembly = Assembly.Load(wcfReference);
