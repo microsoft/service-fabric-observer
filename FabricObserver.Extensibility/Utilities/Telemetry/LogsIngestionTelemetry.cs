@@ -25,7 +25,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
     internal sealed class LogsIngestionTelemetry : ITelemetryProvider
     {
         // These clients own their handlers for the lifetime of the process, not the configuration.
-        private static readonly HttpClient UploadClient = new(new HttpClientHandler { AllowAutoRedirect = false });
+        private static readonly HttpClient UploadClient = new(new SocketsHttpHandler
+        {
+            AllowAutoRedirect = false,
+            PooledConnectionLifetime = TimeSpan.FromMinutes(2)
+        });
         private static readonly HttpClient IdentityClient = new(new HttpClientHandler { UseProxy = false, AllowAutoRedirect = false })
         {
             Timeout = TimeSpan.FromSeconds(10)

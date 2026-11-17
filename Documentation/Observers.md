@@ -34,6 +34,10 @@ is not asked again for 30 seconds; records sent during that time are dropped, li
 any failed upload. Managers and their observers share the ingestion sender, token
 cache, and API status.
 
+The shared upload client retires connections after two minutes, once active requests
+finish, and creates replacements as needed so DNS is resolved again. The IMDS client
+is separate and unchanged; connection rotation does not add upload retries.
+
 Each report makes one POST, wrapping each legacy record in `Payload` inside a JSON
 array. Child-process lists retain one item per element. No batching across reports,
 compression, retry, or replay is performed. Payload timestamps remain unchanged;
