@@ -52,6 +52,7 @@ namespace FabricObserver.Observers
         private readonly TimeProvider timeProvider;
         private readonly Dictionary<string, (HealthReport Report, DateTimeOffset ReportedAt)> logAnalyticsWarnings = new(StringComparer.Ordinal);
         private ITimer logAnalyticsWarningTimer;
+        private Lazy<Task> logAnalyticsWarningStop;
         private int telemetryConfigurationVersion;
         private volatile bool shutdownSignaled;
         private DateTime StartDateTime;
@@ -246,8 +247,16 @@ namespace FabricObserver.Observers
                 Logger.LogInfo("StartObserversAsync: Starting Observers loop.");
 
                 // Observers run sequentially. See RunObservers impl.
-                logAnalyticsWarningTimer ??= timeProvider.CreateTimer(
-                    _ => RefreshLogAnalyticsWarningsSafely(), null, LogAnalyticsWarningRefreshInterval, LogAnalyticsWarningRefreshInterval);
+                lock (telemetryHealthLock)
+                {
+                    if (logAnalyticsWarningStop != null)
+                    {
+                        return;
+                    }
+
+                    logAnalyticsWarningTimer ??= timeProvider.CreateTimer(
+                        _ => RefreshLogAnalyticsWarningsSafely(), null, LogAnalyticsWarningRefreshInterval, LogAnalyticsWarningRefreshInterval);
+                }
 
                 while (true)
                 {
@@ -415,6 +424,11 @@ namespace FabricObserver.Observers
         // Clear all existing FO health events during shutdown or update event.
         public async Task StopObserversAsync(bool isShutdownSignaled = true, bool isConfigurationUpdateLinux = false)
         {
+            if (isShutdownSignaled)
+            {
+                await StopLogAnalyticsWarningsAsync().ConfigureAwait(false);
+            }
+
             await SignalAbortToRunningObserverAsync(3);
 
             string configUpdateLinux = string.Empty;
@@ -749,11 +763,28 @@ namespace FabricObserver.Observers
             return null;
         }
 
+        internal Task StopLogAnalyticsWarningsAsync()
+        {
+            Lazy<Task> stop;
+            lock (telemetryHealthLock)
+            {
+                if (logAnalyticsWarningStop == null)
+                {
+                    ITimer timer = logAnalyticsWarningTimer;
+                    logAnalyticsWarningTimer = null;
+                    logAnalyticsWarnings.Clear();
+                    logAnalyticsWarningStop = new Lazy<Task>(
+                        () => timer?.DisposeAsync().AsTask() ?? Task.CompletedTask);
+                }
+
+                stop = logAnalyticsWarningStop;
+            }
+
+            return stop.Value;
+        }
+
         internal async Task ShutDownAsync()
         {
-            // Stop first, so this node does not re-send a warning after its shutdown cleanup.
-            logAnalyticsWarningTimer?.Dispose();
-            logAnalyticsWarningTimer = null;
             await StopObserversAsync();
             cts?.Dispose();
             linkedSFRuntimeObserverTokenSource?.Dispose();
@@ -1060,6 +1091,11 @@ namespace FabricObserver.Observers
 
             lock (telemetryHealthLock)
             {
+                if (logAnalyticsWarningStop != null)
+                {
+                    return;
+                }
+
                 LogAnalyticsConfiguration logAnalyticsConfiguration = SetTelemetryProvider(settings);
 
                 // Runs at startup and on every configuration update so a warning clears once its problem is gone.
@@ -1080,6 +1116,11 @@ namespace FabricObserver.Observers
         /// </summary>
         private void ReportLogAnalyticsHealth(HealthReport report)
         {
+            if (logAnalyticsWarningStop != null)
+            {
+                return;
+            }
+
             if (report.State == HealthState.Warning)
             {
                 report.HealthReportTimeToLive = LogAnalyticsWarningTimeToLive;
@@ -1100,6 +1141,11 @@ namespace FabricObserver.Observers
         {
             lock (telemetryHealthLock)
             {
+                if (logAnalyticsWarningStop != null)
+                {
+                    return;
+                }
+
                 DateTimeOffset now = timeProvider.GetUtcNow();
                 foreach (string property in logAnalyticsWarnings.Keys.ToList())
                 {
@@ -1176,7 +1222,7 @@ namespace FabricObserver.Observers
                     {
                         lock (telemetryHealthLock)
                         {
-                            if (version == Volatile.Read(ref telemetryConfigurationVersion))
+                            if (logAnalyticsWarningStop == null && version == Volatile.Read(ref telemetryConfigurationVersion))
                             {
                                 ReportLogsIngestionStatus(problem);
                             }

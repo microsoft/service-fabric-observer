@@ -64,6 +64,12 @@ health-reporting model. After upgrading, clear any old Log Analytics warnings wh
 source is `ClusterObserverManager(<node>)` once; the new source cannot replace those
 older node-specific entries.
 
+On terminal FabricObserver stop, including the Linux configuration-restart path,
+warning refresh is disabled and any running timer callback is awaited before health
+cleanup. Cached warnings are discarded and late sender status callbacks are ignored,
+so they cannot restore a warning after cleanup. Windows in-place settings updates
+keep warning refresh active.
+
 ### Emiting Errors
 
 Service Fabric Error Health Events can block upgrades and other important Fabric runtime operations. Error thresholds should be set such that putting the cluster in an emergency state incurs less cost than allowing the state to continue. For this reason, Fabric Observer by default ***treats Errors as Warnings***.  However if your cluster health policy is to [ConsiderWarningAsError](https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-health-introduction#cluster-health-policy), FabricObserver has a ***high risk of putting your cluster in an error state***. Proceed with caution.  

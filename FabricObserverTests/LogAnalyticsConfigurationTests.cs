@@ -641,6 +641,108 @@ namespace FabricObserverTests
         private static readonly TimeSpan LogAnalyticsWarningRefreshIntervalPlusOneSecond =
             ObserverManager.LogAnalyticsWarningRefreshInterval + TimeSpan.FromSeconds(1);
 
+        [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public async Task FabricObserver_TerminalStop_DrainsRunningRefreshBeforeCleanup(bool linuxConfigurationUpdate)
+        {
+            var context = CreateContext(false, ValidEndpoint, writeMode: "DualWrite", legacyConfigured: false);
+            using var observer = new ConfigurationProbeObserver(context);
+            using var services = CreateServices(context, observer);
+            var manager = (ObserverManager)CreateManager(false, services, context);
+            Action<string> reportStatus = GetIngestionStatusCallback(GetManagerSender(manager));
+            reportStatus(UploadProblem);
+            clock.Advance(LogAnalyticsWarningRefreshIntervalPlusOneSecond);
+
+            // Skip the separate, out-of-process manager-health query; the probe's cleanup still runs.
+            typeof(ObserverManager).GetField("isConfigurationUpdateInProgress", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(manager, true);
+            var observerCancellation = (CancellationTokenSource)typeof(ObserverManager)
+                .GetField("cts", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(manager);
+            observer.HasActiveFabricErrorOrWarning = true;
+            using var releaseCallback = new ManualResetEventSlim();
+            var callbackStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var callbackFinished = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var timer = AttachWarningTimer(manager, _ =>
+            {
+                callbackStarted.SetResult();
+                releaseCallback.Wait();
+                manager.RefreshLogAnalyticsWarnings();
+                callbackFinished.SetResult();
+            });
+            Task stop = null;
+            try
+            {
+                timer.Change(TimeSpan.Zero, Timeout.InfiniteTimeSpan);
+                await callbackStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+                stop = manager.StopObserversAsync(true, linuxConfigurationUpdate);
+
+                Assert.IsFalse(observerCancellation.IsCancellationRequested, "Observer stop/cleanup must not begin until the running refresh has drained.");
+                Assert.IsFalse(stop.IsCompleted);
+                Assert.IsTrue(observer.HasActiveFabricErrorOrWarning);
+                Task drain = manager.StopLogAnalyticsWarningsAsync();
+                Assert.IsFalse(drain.IsCompleted, "Stopping must await already-running callbacks, not just disable future ticks.");
+                Assert.AreSame(drain, manager.StopLogAnalyticsWarningsAsync(), "Concurrent stops must share the same drain.");
+                int before = healthReports.Count;
+                await Task.Run(() => reportStatus(UploadProblem)).WaitAsync(TimeSpan.FromSeconds(10));
+                Assert.AreEqual(before, healthReports.Count, "A late sender callback must be ignored while draining.");
+
+                releaseCallback.Set();
+                await Task.WhenAll(stop, callbackFinished.Task).WaitAsync(TimeSpan.FromSeconds(10));
+
+                Assert.IsFalse(observer.HasActiveFabricErrorOrWarning, "The actual observer cleanup must run after timer draining.");
+                Assert.AreEqual(before, healthReports.Count, "The paused refresh must not restore a warning during shutdown.");
+                healthReports.Clear();
+                clock.Advance(LogAnalyticsWarningRefreshIntervalPlusOneSecond);
+                manager.RefreshLogAnalyticsWarnings();
+                reportStatus(UploadProblem);
+                ApplyConfiguration(manager, observer, CreateContext(false, ValidEndpoint, writeMode: "Unknown"));
+                Assert.AreEqual(0, healthReports.Count, "Neither refresh, late status nor settings reload may publish health after terminal stop.");
+            }
+            finally
+            {
+                releaseCallback.Set();
+                if (stop != null)
+                {
+                    await stop.WaitAsync(TimeSpan.FromSeconds(10));
+                }
+
+                await timer.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
+            }
+        }
+
+        [TestMethod]
+        public async Task FabricObserver_InPlaceConfigurationStop_KeepsWarningRefreshActive()
+        {
+            var context = CreateContext(false, ValidEndpoint, writeMode: "LogsIngestionOnly");
+            using var observer = new ConfigurationProbeObserver(context);
+            using var services = CreateServices(context, observer);
+            var manager = (ObserverManager)CreateManager(false, services, context);
+            using var timer = AttachWarningTimer(manager, _ => manager.RefreshLogAnalyticsWarnings());
+            typeof(ObserverManager).GetField("isConfigurationUpdateInProgress", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(manager, true);
+
+            await manager.StopObserversAsync(false);
+            ApplyConfiguration(manager, observer, CreateContext(false, string.Empty, writeMode: "LogsIngestionOnly"));
+            int before = healthReports.Count;
+            clock.Advance(LogAnalyticsWarningRefreshIntervalPlusOneSecond);
+            manager.RefreshLogAnalyticsWarnings();
+
+            Assert.AreEqual(before + 1, healthReports.Count, "An in-place settings update must not permanently stop warning refresh.");
+            AssertWarning(IngestionProperty, context, EndpointParameter);
+            Assert.IsTrue(timer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan), "A non-terminal settings update must leave the refresh timer alive.");
+            await manager.StopLogAnalyticsWarningsAsync();
+        }
+
+        private static Timer AttachWarningTimer(ObserverManager manager, TimerCallback callback)
+        {
+            var timer = new Timer(callback, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+            typeof(ObserverManager).GetField("logAnalyticsWarningTimer", BindingFlags.Instance | BindingFlags.NonPublic)
+                .SetValue(manager, timer);
+            return timer;
+        }
+
         private HealthReport[] NewReports(int before) => healthReports.Skip(before).ToArray();
 
         // ---- Application packaging ----
