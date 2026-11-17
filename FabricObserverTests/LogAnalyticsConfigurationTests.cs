@@ -470,6 +470,63 @@ namespace FabricObserverTests
         // ---- Upload status from the Logs Ingestion sender ----
 
         [TestMethod]
+        [DataRow("BothApis", ValidEndpoint, true, ModeProperty)]
+        [DataRow("LegacyOnly", ValidEndpoint, false, LegacyProperty)]
+        [DataRow("LogsIngestionOnly", "", true, IngestionProperty)]
+        public void ClusterObserver_NodeMovement_ClearsPreviousConfigurationWarning(
+            string writeMode, string endpoint, bool legacyConfigured, string property)
+        {
+            var context = CreateContext(true, endpoint, writeMode: writeMode, legacyConfigured: legacyConfigured);
+            using var observer = new ConfigurationProbeObserver(context);
+            using var services = CreateServices(context, observer);
+            CreateManager(true, services, context);
+            HealthReport warning = Latest(property);
+            Assert.AreEqual(HealthState.Warning, warning.State);
+
+            var movedContext = CreateContext(true, ValidEndpoint, writeMode: "DualWrite", nodeName: "TestNodeB");
+            using var movedObserver = new ConfigurationProbeObserver(movedContext);
+            using var movedServices = CreateServices(movedContext, movedObserver);
+            CreateManager(true, movedServices, movedContext);
+
+            HealthReport cleared = Latest(property);
+            Assert.AreEqual(HealthState.Ok, cleared.State);
+            Assert.AreEqual(warning.SourceId, cleared.SourceId, "Moving nodes must update the original health entry.");
+            Assert.IsFalse(healthReports
+                .GroupBy(report => (report.ServiceName, report.SourceId, report.Property))
+                .Any(group => group.Last().State == HealthState.Warning));
+            StringAssert.Contains(cleared.HealthMessage, "TestNodeB");
+        }
+
+        [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public void ClusterObserver_NodeMovement_UpdatesPreviousUploadWarning(bool failureContinues)
+        {
+            var context = CreateContext(true, ValidEndpoint, writeMode: "LogsIngestionOnly");
+            using var observer = new ConfigurationProbeObserver(context);
+            using var services = CreateServices(context, observer);
+            object manager = CreateManager(true, services, context);
+            GetIngestionStatusCallback(GetManagerSender(manager))(UploadProblem);
+            HealthReport warning = Latest(IngestionProperty);
+
+            var movedContext = CreateContext(true, ValidEndpoint, writeMode: "LogsIngestionOnly", nodeName: "TestNodeB");
+            using var movedObserver = new ConfigurationProbeObserver(movedContext);
+            using var movedServices = CreateServices(movedContext, movedObserver);
+            object movedManager = CreateManager(true, movedServices, movedContext);
+            GetIngestionStatusCallback(GetManagerSender(movedManager))(failureContinues ? UploadProblem : null);
+
+            HealthReport current = Latest(IngestionProperty);
+            Assert.AreEqual(warning.SourceId, current.SourceId);
+            Assert.AreEqual(failureContinues ? HealthState.Warning : HealthState.Ok, current.State);
+            Assert.AreEqual("TestNodeB", current.NodeName);
+            StringAssert.Contains(current.HealthMessage, "TestNodeB");
+            if (failureContinues)
+            {
+                Assert.AreEqual(TimeSpan.MaxValue, current.HealthReportTimeToLive);
+            }
+        }
+
+        [TestMethod]
         [DataRow(false, "LogsIngestionOnly")]
         [DataRow(true, "LogsIngestionOnly")]
         [DataRow(false, "DualWrite")]
@@ -635,7 +692,8 @@ namespace FabricObserverTests
             string provider = "AzureLogAnalytics",
             string writeMode = null,
             bool legacyConfigured = true,
-            bool appInsightsConfigured = true)
+            bool appInsightsConfigured = true,
+            string nodeName = "TestNode")
         {
             var parameters = new Dictionary<string, string>
             {
@@ -678,7 +736,7 @@ namespace FabricObserverTests
                 ConfigurationPackage = package
             };
             return new StatelessServiceContext(
-                new NodeContext("TestNode", new NodeId(0, 1), 0, "TestNodeType", "localhost"),
+                new NodeContext(nodeName, new NodeId(0, 1), 0, "TestNodeType", "localhost"),
                 activation, "ObserverServiceType", new Uri(applicationName + "/ObserverService"),
                 null, Guid.NewGuid(), 1);
         }
@@ -780,7 +838,15 @@ namespace FabricObserverTests
                 clusterObserver ? TimeSpan.MaxValue : ObserverManager.LogAnalyticsWarningTimeToLive,
                 warning.HealthReportTimeToLive,
                 "Unexpected warning lifetime.");
-            StringAssert.Contains(warning.SourceId, context.NodeContext.NodeName);
+            if (clusterObserver)
+            {
+                Assert.AreEqual(nameof(ClusterObserverManager), warning.SourceId);
+                StringAssert.Contains(warning.HealthMessage, context.NodeContext.NodeName);
+            }
+            else
+            {
+                StringAssert.Contains(warning.SourceId, context.NodeContext.NodeName);
+            }
             StringAssert.Contains(warning.HealthMessage, mentionedParameter);
             Assert.IsTrue(WarningLogs().Any(message => message.Contains(mentionedParameter)), $"Expected a local warning log mentioning {mentionedParameter}.");
             Assert.IsFalse(logMessages.Logs.Any(message => message.Contains(LegacySecret)), "The shared key must never be logged.");

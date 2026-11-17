@@ -156,7 +156,12 @@ namespace ClusterObserver
                 EnableETWLogging = EtwEnabled,
                 EnableVerboseLogging = enableVerboseLogging
             };
-            this.reportTelemetryConfigurationHealth = reportTelemetryConfigurationHealth ?? new ObserverHealthReporter(Logger).ReportHealthToServiceFabric;
+            Action<HealthReport> reportHealth = reportTelemetryConfigurationHealth ?? new ObserverHealthReporter(Logger).ReportHealthToServiceFabric;
+            this.reportTelemetryConfigurationHealth = report =>
+            {
+                report.HealthMessage = $"{report.HealthMessage} Reporting node: {nodeName}.";
+                reportHealth(report);
+            };
             SetPropertiesFromConfigurationParameters();
         }
 
@@ -282,7 +287,7 @@ namespace ClusterObserver
                     Logger,
                     FabricServiceContext.ServiceName,
                     nodeName,
-                    $"{ClusterObserverConstants.ClusterObserverManagerName}({nodeName})");
+                    ClusterObserverConstants.ClusterObserverManagerName);
             }
 
             LogsIngestionTelemetry sender = TelemetryEnabled ? LogAnalyticsConfiguration.GetIngestionSender(TelemetryClient) : null;
@@ -372,7 +377,7 @@ namespace ClusterObserver
                 Logger,
                 FabricServiceContext.ServiceName,
                 nodeName,
-                $"{ClusterObserverConstants.ClusterObserverManagerName}({nodeName})");
+                ClusterObserverConstants.ClusterObserverManagerName);
 
         public async Task StartAsync()
         {

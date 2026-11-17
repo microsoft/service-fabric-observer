@@ -48,9 +48,13 @@ reloads clear obsolete warnings and replace the sender when needed.
 In FabricObserver, an active Log Analytics warning (any of the three properties) is
 re-sent every 5 minutes and expires 15 minutes after it was last sent. A warning that
 another node's shutdown cleared comes back, and a warning from a removed node goes
-away. ClusterObserver runs a single instance and reports only changes, so its
-warnings do not expire; after it moves to another node, a warning from the previous
-node remains until cleared manually.
+away. ClusterObserver's documented deployment model is one instance. Its warnings
+do not expire and use the service-scoped `ClusterObserverManager` source, so a new
+hosting node can update the previous instance's health entry. The reporting node
+is included in the message. Multiple simultaneous CO instances are not part of this
+health-reporting model. After upgrading, clear any old Log Analytics warnings whose
+source is `ClusterObserverManager(<node>)` once; the new source cannot replace those
+older node-specific entries.
 
 ### Emiting Errors
 
