@@ -48,6 +48,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         private DateTimeOffset tokenExpiresOn;
         private DateTimeOffset tokenRetryAfter;
         private string currentProblem;
+        private string tokenProblem;
 
         public LogsIngestionTelemetry(Uri ingestionEndpoint, string dcrImmutableId, string streamName, string managedIdentityClientId)
             : this(ingestionEndpoint, dcrImmutableId, streamName, managedIdentityClientId, null, TimeProvider.System, null)
@@ -257,11 +258,10 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     return accessToken;
                 }
 
-                // After a failed request, uploads waiting for this lock fail fast instead of each waiting on IMDS again.
-                // The problem is already reported.
+                // Pause IMDS requests after a failure; keep using an unexpired token.
                 if (now < tokenRetryAfter)
                 {
-                    return null;
+                    return GetUnexpiredAccessToken(cancellationToken);
                 }
 
                 requested = true;
@@ -270,11 +270,11 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 using HttpResponseMessage response = await identityClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
                 {
-                    ReportStatus(FailureMessage(true, $"IMDS returned HTTP {(int)response.StatusCode}"));
-                    return null;
+                    return ReportTokenFailure($"IMDS returned HTTP {(int)response.StatusCode}", cancellationToken);
                 }
 
                 JObject result = JObject.Parse(await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false));
+                cancellationToken.ThrowIfCancellationRequested();
                 string token = result["access_token"]?.Type == JTokenType.String ? (string)result["access_token"] : null;
                 JToken expiresOn = result["expires_on"];
                 if (string.IsNullOrWhiteSpace(token) ||
@@ -284,15 +284,35 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                     expiry > DateTimeOffset.MaxValue.ToUnixTimeSeconds() ||
                     DateTimeOffset.FromUnixTimeSeconds(expiry) <= timeProvider.GetUtcNow())
                 {
-                    ReportStatus(FailureMessage(true, "IMDS returned an invalid access_token or expires_on"));
-                    return null;
+                    return ReportTokenFailure("IMDS returned an invalid access_token or expires_on", cancellationToken);
                 }
 
                 accessToken = token;
                 tokenExpiresOn = DateTimeOffset.FromUnixTimeSeconds(expiry);
                 succeeded = true;
+                lock (statusLock)
+                {
+                    tokenProblem = null;
+                }
+
                 // Even inside the refresh margin, use a freshly fetched token for this upload.
                 return token;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (OperationCanceledException)
+            {
+                return ReportTokenFailure("request timed out", cancellationToken);
+            }
+            catch (HttpRequestException e)
+            {
+                return ReportTokenFailure($"HTTP request error ({e.HttpRequestError})", cancellationToken);
+            }
+            catch (Exception e) when (e is JsonException or ArgumentException or InvalidOperationException or NotSupportedException or IOException)
+            {
+                return ReportTokenFailure($"invalid request or response ({e.GetType().Name})", cancellationToken);
             }
             finally
             {
@@ -305,6 +325,24 @@ namespace FabricObserver.Observers.Utilities.Telemetry
             }
         }
 
+        private string GetUnexpiredAccessToken(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return tokenExpiresOn > timeProvider.GetUtcNow() ? accessToken : null;
+        }
+
+        private string ReportTokenFailure(string cause, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            lock (statusLock)
+            {
+                tokenProblem = FailureMessage(true, cause);
+                ReportStatus(tokenProblem);
+            }
+
+            return GetUnexpiredAccessToken(cancellationToken);
+        }
+
         private static string FailureMessage(bool requestingToken, string cause) =>
             requestingToken
                 ? $"Log Analytics Logs Ingestion API token request failed for {ObserverConstants.LogAnalyticsManagedIdentityClientIdParameter}: {cause}."
@@ -314,6 +352,8 @@ namespace FabricObserver.Observers.Utilities.Telemetry
         {
             lock (statusLock)
             {
+                // Uploading with the cached token does not mean token refresh has recovered.
+                problem ??= tokenProblem;
                 if (string.Equals(currentProblem, problem, StringComparison.Ordinal))
                 {
                     return;

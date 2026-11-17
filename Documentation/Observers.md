@@ -30,9 +30,11 @@ user-assigned managed identity; `LogAnalyticsIngestionEndpoint` must be an `http
 URL. Attach the identity to the cluster nodes' VM scale sets and grant it Monitoring
 Metrics Publisher on the DCR. Tokens come from IMDS and are cached, with one refresh
 at a time starting five minutes before expiry. After a failed token request, IMDS
-is not asked again for 30 seconds; records sent during that time are dropped, like
-any failed upload. Managers and their observers share the ingestion sender, token
-cache, and API status.
+is not asked again for 30 seconds. Uploads continue with a cached token only while
+it remains unexpired, including during that pause; expiry is checked again after
+the refresh attempt. Without an unexpired token, records are dropped. Caller
+cancellation does not trigger fallback or failure backoff. Managers and their
+observers share the ingestion sender, token cache, and API status.
 
 The shared upload client retires connections after two minutes, once active requests
 finish, and creates replacements as needed so DNS is resolved again. The IMDS client
@@ -45,9 +47,11 @@ the destination DCR must preserve the legacy column types and ingestion-time
 `TimeGenerated` behavior.
 
 IMDS and upload failures produce local warnings and a service health warning under
-`LogAnalyticsIngestionConfiguration`. A successful upload clears the warning. Only
-status changes are reported; tokens and response bodies are never logged. Settings
-reloads clear obsolete warnings and replace the sender when needed.
+`LogAnalyticsIngestionConfiguration`. A successful upload clears an upload warning,
+but a token-refresh warning remains while the sender is using cached-token fallback.
+After token refresh and upload recover, the warning clears. Only status changes are
+reported; tokens and response bodies are never logged. Settings reloads clear obsolete
+warnings and replace the sender when needed.
 
 In FabricObserver, an active Log Analytics warning (any of the three properties) is
 re-sent every 5 minutes and expires 15 minutes after it was last sent. A warning that

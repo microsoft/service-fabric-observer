@@ -240,6 +240,158 @@ namespace FabricObserverTests
             Assert.IsNotNull(statusChanges[0]);
         }
 
+        [TestMethod]
+        [DataRow("HTTP")]
+        [DataRow("Transport")]
+        [DataRow("Timeout")]
+        [DataRow("MalformedJson")]
+        [DataRow("InvalidToken")]
+        public async Task TokenRefreshFailure_UsesUnexpiredCacheThroughBackoffAndRecovery(string failure)
+        {
+            var handler = new FakeHandler(this);
+            ITelemetryProvider sender = CreateSender(handler);
+            await SendRecordAsync(sender);
+            clock.Advance(TimeSpan.FromMinutes(59));
+            var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            handler.Imds = async (_, number) =>
+            {
+                if (number == 2)
+                {
+                    await release.Task;
+                    return RefreshFailure(failure);
+                }
+
+                return TokenResponse($"token-{number}");
+            };
+
+            Task[] uploads = Enumerable.Range(0, 5).Select(_ => SendRecordAsync(sender)).ToArray();
+            release.SetResult();
+            await Task.WhenAll(uploads).WaitAsync(TimeSpan.FromSeconds(10));
+
+            Assert.AreEqual(2, handler.TokenRequests.Length, "Queued uploads must share the failed refresh and its backoff.");
+            Assert.AreEqual(6, handler.Uploads.Length, "All five reports must still use the unexpired token.");
+            Assert.IsTrue(handler.Uploads.All(upload => upload.Headers.GetValueOrDefault("Authorization") == "Bearer token-1"));
+            Assert.AreEqual(1, statusChanges.Count, "Successful cached-token uploads must not clear the refresh warning.");
+            StringAssert.Contains(statusChanges[0], "token request failed");
+            Assert.IsFalse(statusChanges[0].Contains("token-1"));
+
+            clock.Advance(TimeSpan.FromSeconds(31));
+            await SendRecordAsync(sender);
+
+            Assert.AreEqual(3, handler.TokenRequests.Length);
+            Assert.AreEqual("Bearer token-3", handler.Uploads.Last().Headers.GetValueOrDefault("Authorization"));
+            Assert.AreEqual(2, statusChanges.Count);
+            Assert.IsNull(statusChanges[1], "A fresh token and successful upload must clear the warning.");
+        }
+
+        [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public async Task TokenRefreshFailure_DoesNotUseCacheExpiredDuringRefreshOrBackoff(bool expiresDuringRefresh)
+        {
+            var handler = new FakeHandler(this);
+            ITelemetryProvider sender = CreateSender(handler);
+            await SendRecordAsync(sender);
+            clock.Advance(TimeSpan.FromMinutes(59) + TimeSpan.FromSeconds(45));
+            handler.Imds = (_, _) =>
+            {
+                if (expiresDuringRefresh)
+                {
+                    clock.Advance(TimeSpan.FromSeconds(15));
+                }
+
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+            };
+
+            await SendRecordAsync(sender);
+            Assert.AreEqual(expiresDuringRefresh ? 1 : 2, handler.Uploads.Length);
+
+            if (!expiresDuringRefresh)
+            {
+                clock.Advance(TimeSpan.FromSeconds(15));
+            }
+
+            int before = handler.Uploads.Length;
+            await SendRecordAsync(sender);
+
+            Assert.AreEqual(before, handler.Uploads.Length, "A token at its exact expiry must never be used.");
+            Assert.AreEqual(2, handler.TokenRequests.Length, "Expiry must not bypass the IMDS backoff.");
+            Assert.AreEqual(1, statusChanges.Count);
+            Assert.IsNotNull(statusChanges[0]);
+        }
+
+        [TestMethod]
+        [DataRow(false)]
+        [DataRow(true)]
+        public async Task TokenRefreshCancellation_DoesNotUseCacheOrStartFailureBackoff(bool throwsCancellation)
+        {
+            var handler = new FakeHandler(this);
+            ITelemetryProvider sender = CreateSender(handler);
+            await SendRecordAsync(sender);
+            clock.Advance(TimeSpan.FromMinutes(59));
+            using var cancellation = new CancellationTokenSource();
+            handler.Imds = (_, number) =>
+            {
+                if (number == 2)
+                {
+                    cancellation.Cancel();
+                    if (throwsCancellation)
+                    {
+                        throw new TaskCanceledException("Caller cancelled the refresh.");
+                    }
+                }
+
+                return Task.FromResult(TokenResponse($"token-{number}"));
+            };
+
+            await sender.ReportHealthAsync(ServiceRecord(), cancellation.Token);
+
+            Assert.AreEqual(1, handler.Uploads.Length, "Caller cancellation must never trigger cached-token fallback.");
+            Assert.AreEqual(0, statusChanges.Count, "Cancellation is not a token failure.");
+
+            await SendRecordAsync(sender);
+
+            Assert.AreEqual(3, handler.TokenRequests.Length, "Caller cancellation must not start failure backoff or accept a cancelled response.");
+            Assert.AreEqual("Bearer token-3", handler.Uploads.Last().Headers.GetValueOrDefault("Authorization"));
+        }
+
+        [TestMethod]
+        public async Task TokenRefreshFailure_UploadFailureAndRecoveryKeepRefreshWarning()
+        {
+            var handler = new FakeHandler(this);
+            ITelemetryProvider sender = CreateSender(handler);
+            await SendRecordAsync(sender);
+            clock.Advance(TimeSpan.FromMinutes(59));
+            handler.Imds = (_, _) => Task.FromResult(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
+            handler.Ingestion = _ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.Forbidden));
+
+            await SendRecordAsync(sender);
+
+            Assert.AreEqual(2, statusChanges.Count);
+            StringAssert.Contains(statusChanges[0], "token request failed");
+            StringAssert.Contains(statusChanges[1], "upload failed: HTTP 403");
+
+            handler.Ingestion = _ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.NoContent));
+            await SendRecordAsync(sender);
+
+            Assert.AreEqual(3, statusChanges.Count);
+            Assert.AreEqual(statusChanges[0], statusChanges[2], "Upload recovery must restore the outstanding refresh warning, not report Ok.");
+            Assert.AreEqual(2, handler.TokenRequests.Length);
+        }
+
+        private static HttpResponseMessage RefreshFailure(string failure) => failure switch
+        {
+            "HTTP" => new HttpResponseMessage(HttpStatusCode.ServiceUnavailable),
+            "Transport" => throw new HttpRequestException("IMDS connection failed"),
+            "Timeout" => throw new TaskCanceledException("IMDS timed out"),
+            "MalformedJson" => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("{") },
+            "InvalidToken" => new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"access_token\":\"invalid-response-token\",\"expires_on\":\"invalid\"}")
+            },
+            _ => throw new ArgumentOutOfRangeException(nameof(failure))
+        };
+
         // ---- Upload failures and status reporting ----
 
         [TestMethod]

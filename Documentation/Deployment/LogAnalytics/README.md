@@ -365,6 +365,10 @@ Wait for **RollingForwardCompleted**, then verify new-API delivery. Retiring leg
 
 Check local Warning logs as well as Service Fabric health. A selected API with invalid settings does not start; in dual write, the valid API can continue. Upload failures are not replayed. FabricObserver re-sends active warnings every 5 minutes. ClusterObserver's single instance uses the service-scoped `ClusterObserverManager` source across node moves, with the reporting node in the message; its warnings do not expire. After upgrading, clear any pre-existing Log Analytics warnings with a `ClusterObserverManager(<node>)` source once, because the new source cannot replace those entries. Mixed upload successes/failures can alternate Warning and Ok, so inspect stored data too.
 
+If an IMDS token refresh fails, uploads can continue with an unexpired cached token,
+including during the 30-second retry pause. Successful cached-token uploads do not
+clear the refresh warning; fresh-token refresh and upload must recover first.
+
 ## Manual and advanced setup
 
 The helper is optional. Deploy [FabricObserver.LogAnalytics.json](FabricObserver.LogAnalytics.json) or [ClusterObserver.LogAnalytics.json](ClusterObserver.LogAnalytics.json) in the workspace's resource group: set `workspaceName`, `tableName`, `createTable=true` for fresh/dual write or `false` **after conversion** for single write, and `location` to the workspace region. Read the four `LogAnalytics*` outputs and `ManagedIdentityResourceId`; follow the same host, configuration, verification and rollback checkpoints above.
