@@ -23,6 +23,16 @@ $schema = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'LogAnalyticsSchema.
 $typeBySuffix = [ordered]@{ s = 'string'; d = 'real'; b = 'boolean'; t = 'datetime'; g = 'guid' }
 $publisherRoleId = '3913510d-42f4-4e42-8a64-420c390055eb' # Monitoring Metrics Publisher
 
+function Get-GuidExpression([string] $Path) {
+    $d = '[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}'
+    $pattern = "^([0-9a-fA-F]{32}|$d|\{$d\}|\($d\))$"
+    return "iff(tostring($Path) matches regex @'$pattern', toguid(trim(@'[{}()]', tostring($Path))), guid(null))"
+}
+
+function Get-DateExpression([string] $Path) {
+    return "iff(gettype($Path) in ('string','datetime'), todatetime($Path), datetime(null))"
+}
+
 function Get-ColumnExpression([string] $Name, [string[]] $AllNames) {
     if ($Name -cnotmatch '^(.+)_([sdbtg])$') { throw "Column '$Name' has no Data Collector type suffix." }
     $field = $Matches[1]
@@ -32,17 +42,20 @@ function Get-ColumnExpression([string] $Name, [string[]] $AllNames) {
     $siblings = @($AllNames | Where-Object { $_ -cmatch ('^' + [regex]::Escape($field) + '_[sdbtg]$') } |
         ForEach-Object { $_.Substring($_.Length - 1) })
     switch ($suffix) {
-        'd' { return "iff(gettype($path) in ('long','real','int'), todouble($path), real(null))" }
+        'd' { return "iff(gettype($path) in ('long','real','int','double'), todouble($path), real(null))" }
         'b' { return "iff(gettype($path) == 'bool', tobool($path), bool(null))" }
         # The Data Collector API stores the zero-date sentinel as null, but preserves later dates.
-        't' { return "iff(todatetime($path) == datetime(0001-01-01), datetime(null), todatetime($path))" }
-        'g' { return "toguid(tostring($path))" }
+        't' {
+            $date = Get-DateExpression $path
+            return "iff($date == datetime(0001-01-01), datetime(null), $date)"
+        }
+        'g' { return Get-GuidExpression $path }
         's' {
             # When the Data Collector API stored a value in a typed sibling column, the _s column stays empty.
             $guards = @()
-            if ('g' -cin $siblings) { $guards += "isnull(toguid(tostring($path)))" }
-            if ('t' -cin $siblings) { $guards += "isnull(todatetime($path))" }
-            if ('d' -cin $siblings) { $guards += "gettype($path) !in ('long','real','int')" }
+            if ('g' -cin $siblings) { $guards += "isnull($(Get-GuidExpression $path))" }
+            if ('t' -cin $siblings) { $guards += "isnull($(Get-DateExpression $path))" }
+            if ('d' -cin $siblings) { $guards += "gettype($path) !in ('long','real','int','double')" }
             if ('b' -cin $siblings) { $guards += "gettype($path) != 'bool'" }
             if ($AllNames -cmatch ('^' + [regex]::Escape($field) + '_.+_[sdbtg]$')) { $guards += "gettype($path) != 'dictionary'" }
             if ($guards.Count) { return "iff($($guards -join ' and '), tostring($path), '')" }

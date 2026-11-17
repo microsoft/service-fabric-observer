@@ -371,4 +371,26 @@ The helper is optional. Deploy [FabricObserver.LogAnalytics.json](FabricObserver
 
 Optional helper/template overrides: `DcrName`, `DeploymentName` (helper only), `ManagedIdentityName`, `ExistingManagedIdentityResourceId`, `DataCollectionEndpointResourceId`, and `GrantPublisherRole=$false` when permission is granted separately. Choose distinct DCR/deployment names for multiple deployments of the same application in one resource group. Redeploying the default identity resource can reset manually added identity tags.
 
-For custom fields (dual write only), add each one to the table schema (`recordColumns`) and DCR transformation (`transformKql`) with its legacy column name and type, then confirm the stored values before cutover; the default mappings are not a catch-all. Shared streams, cross-subscription hosts and private-link networks require manual setup. Keep the one-way conversion and rollback limits above even when not using the helper.
+Both default templates cover the known concrete records and payload builders accepted by the shared Log Analytics sender, including upgrade events, machine metrics, child-process metrics and node snapshots. Named-metric values use `value_d` (number), `value_b` (boolean), `value_t` (date/time), `value_g` (GUID) or `value_s` (text or a JSON-encoded array), with `id_s` and `datetime_t` metadata. These case-sensitive columns are separate from typed telemetry's `Value_d`; do not combine or rename them. Known GUID/date string fields also retain text fallback columns for non-GUID/non-date values. Redeploy the updated template to apply these mappings to an existing DCR and add missing columns. The one-way single-write warning still applies.
+
+For custom fields (dual write only), including fields inside object-valued generic metrics, custom subclasses or additional value-dependent legacy columns, add each one to the table schema (`recordColumns`) and DCR transformation (`transformKql`) with its legacy column name and type, then confirm the stored values before cutover; the default mappings are not a catch-all. The dual-write checker fails when expected destination columns are missing or legacy columns fall outside its declared mapping contract. It cannot certify custom mappings by comparing only a common-column subset; compare those stored fields independently before cutover. Shared streams, cross-subscription hosts and private-link networks require manual setup. Keep the one-way conversion and rollback limits above even when not using the helper.
+
+## Maintainer mapping checks
+
+From the repository root, build the current serialization models, then check generated files and the independent source/legacy contract:
+
+```powershell
+dotnet build .\FabricObserver\FabricObserver.csproj --configuration Release
+.\Documentation\Deployment\LogAnalytics\Build-LogAnalyticsTemplates.ps1 -Check
+.\Documentation\Deployment\LogAnalytics\Tests\Test-LogAnalyticsMappings.ps1
+```
+
+The coverage check reads the current payload-builder syntax and built model serialization contracts, including inheritance and nested SDK fields. It fails on missing or wrongly typed columns, wrong-case source access, numeric guards that exclude JSON floating-point values and date mappings that admit non-date JSON types. Negative controls verify these failure paths. Customer-checker regression cases intercept Azure calls.
+
+To generate a read-only KQL value-routing regression from the actual template projections:
+
+```powershell
+.\Documentation\Deployment\LogAnalytics\Tests\New-LogAnalyticsMappingRegression.ps1 -OutputPath "$env:TEMP\observer-mapping-values.kql"
+```
+
+Run the generated query in the test workspace's Logs editor. It uses synthetic inputs only and covers scalar types, metadata, GUID formats and text preservation, date boundaries, arrays and nested fields. The GitHub mapping workflow builds current models and runs the offline checks; it does not authenticate to Azure. Neither offline checks nor synthetic KQL prove deployed ingestion or customer-specific schema compatibility; verify stored rows before cutover.

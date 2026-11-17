@@ -1,5 +1,5 @@
 {
-  "description": "Columns that the Data Collector API created for FabricObserver and ClusterObserver records. Used by Build-LogAnalyticsTemplates.ps1. Types follow the Data Collector API suffix rule (_s string, _d real, _b boolean, _t datetime, _g guid), confirmed against classic table definitions.",
+  "description": "Columns required by the known Log Analytics sender payload contracts, including legacy scalar/date/GUID variants. Used by Build-LogAnalyticsTemplates.ps1. Existing names and types are preserved; custom object fields require explicit mappings.",
   "standardColumns": [
     {
       "name": "TimeGenerated",
@@ -93,6 +93,10 @@
         "type": "string"
       },
       {
+        "name": "datetime_t",
+        "type": "datetime"
+      },
+      {
         "name": "DriveInfo_s",
         "type": "string"
       },
@@ -142,6 +146,10 @@
       },
       {
         "name": "HotFixes_s",
+        "type": "string"
+      },
+      {
+        "name": "id_s",
         "type": "string"
       },
       {
@@ -373,12 +381,84 @@
         "type": "string"
       },
       {
+        "name": "value_b",
+        "type": "boolean"
+      },
+      {
+        "name": "value_d",
+        "type": "real"
+      },
+      {
+        "name": "value_s",
+        "type": "string"
+      },
+      {
         "name": "Value_d",
         "type": "real"
       },
       {
         "name": "WindowsUpdateAutoDownloadEnabled_b",
         "type": "boolean"
+      },
+      {
+        "name": "CurrentUpgradeDomain_s",
+        "type": "string"
+      },
+      {
+        "name": "FailureReason_s",
+        "type": "string"
+      },
+      {
+        "name": "NextUpgradeDomain_s",
+        "type": "string"
+      },
+      {
+        "name": "NodeDownAt_s",
+        "type": "string"
+      },
+      {
+        "name": "NodeUpAt_s",
+        "type": "string"
+      },
+      {
+        "name": "SnapshotId_s",
+        "type": "string"
+      },
+      {
+        "name": "SnapshotTimestamp_s",
+        "type": "string"
+      },
+      {
+        "name": "Timestamp_t",
+        "type": "datetime"
+      },
+      {
+        "name": "UpgradeDuration_s",
+        "type": "string"
+      },
+      {
+        "name": "UpgradeState_s",
+        "type": "string"
+      },
+      {
+        "name": "UpgradeTargetAppTypeVersion_s",
+        "type": "string"
+      },
+      {
+        "name": "UpgradeTargetCodeVersion_s",
+        "type": "string"
+      },
+      {
+        "name": "UpgradeTargetConfigVersion_s",
+        "type": "string"
+      },
+      {
+        "name": "value_g",
+        "type": "guid"
+      },
+      {
+        "name": "value_t",
+        "type": "datetime"
       }
     ],
     "ClusterObserver": [
@@ -415,6 +495,10 @@
         "type": "string"
       },
       {
+        "name": "datetime_t",
+        "type": "datetime"
+      },
+      {
         "name": "Description_s",
         "type": "string"
       },
@@ -444,6 +528,10 @@
       },
       {
         "name": "healthState_s",
+        "type": "string"
+      },
+      {
+        "name": "id_s",
         "type": "string"
       },
       {
@@ -595,8 +683,216 @@
         "type": "string"
       },
       {
+        "name": "value_b",
+        "type": "boolean"
+      },
+      {
+        "name": "value_d",
+        "type": "real"
+      },
+      {
+        "name": "value_s",
+        "type": "string"
+      },
+      {
         "name": "Value_d",
         "type": "real"
+      },
+      {
+        "name": "ActiveEphemeralTcpPorts_d",
+        "type": "real"
+      },
+      {
+        "name": "ActiveFirewallRules_d",
+        "type": "real"
+      },
+      {
+        "name": "ActiveTcpPorts_d",
+        "type": "real"
+      },
+      {
+        "name": "AvailablePhysicalMemoryGB_d",
+        "type": "real"
+      },
+      {
+        "name": "ChildProcessCount_d",
+        "type": "real"
+      },
+      {
+        "name": "ChildProcessInfo_s",
+        "type": "string"
+      },
+      {
+        "name": "CodeVersion_s",
+        "type": "string"
+      },
+      {
+        "name": "ConfigVersion_s",
+        "type": "string"
+      },
+      {
+        "name": "DriveInfo_s",
+        "type": "string"
+      },
+      {
+        "name": "EphemeralTcpPortRange_s",
+        "type": "string"
+      },
+      {
+        "name": "FabricApplicationTcpPortRange_s",
+        "type": "string"
+      },
+      {
+        "name": "FaultDomain_s",
+        "type": "string"
+      },
+      {
+        "name": "FreeVirtualMemoryGB_d",
+        "type": "real"
+      },
+      {
+        "name": "HealthState_s",
+        "type": "string"
+      },
+      {
+        "name": "HotFixes_s",
+        "type": "string"
+      },
+      {
+        "name": "InfrastructurePlacementID_s",
+        "type": "string"
+      },
+      {
+        "name": "IpAddressOrFQDN_s",
+        "type": "string"
+      },
+      {
+        "name": "IsNodeByNodeUpgradeInProgress_b",
+        "type": "boolean"
+      },
+      {
+        "name": "IsSeedNode_b",
+        "type": "boolean"
+      },
+      {
+        "name": "LastBootUpTime_s",
+        "type": "string"
+      },
+      {
+        "name": "LastBootUpTime_t",
+        "type": "datetime"
+      },
+      {
+        "name": "LogicalDriveCount_d",
+        "type": "real"
+      },
+      {
+        "name": "LogicalProcessorCount_d",
+        "type": "real"
+      },
+      {
+        "name": "NodeDeactivationInfo_EffectiveIntent_d",
+        "type": "real"
+      },
+      {
+        "name": "NodeDeactivationInfo_PendingSafetyChecks_s",
+        "type": "string"
+      },
+      {
+        "name": "NodeDeactivationInfo_Status_d",
+        "type": "real"
+      },
+      {
+        "name": "NodeDeactivationInfo_Tasks_s",
+        "type": "string"
+      },
+      {
+        "name": "NodeDownAt_s",
+        "type": "string"
+      },
+      {
+        "name": "NodeDownAt_t",
+        "type": "datetime"
+      },
+      {
+        "name": "NodeId_g",
+        "type": "guid"
+      },
+      {
+        "name": "NodeId_s",
+        "type": "string"
+      },
+      {
+        "name": "NodeInstanceId_s",
+        "type": "string"
+      },
+      {
+        "name": "NodeStatus_s",
+        "type": "string"
+      },
+      {
+        "name": "NodeUpAt_s",
+        "type": "string"
+      },
+      {
+        "name": "NodeUpAt_t",
+        "type": "datetime"
+      },
+      {
+        "name": "NumberOfRunningProcesses_d",
+        "type": "real"
+      },
+      {
+        "name": "OSInstallDate_s",
+        "type": "string"
+      },
+      {
+        "name": "OSInstallDate_t",
+        "type": "datetime"
+      },
+      {
+        "name": "OSName_s",
+        "type": "string"
+      },
+      {
+        "name": "OSVersion_s",
+        "type": "string"
+      },
+      {
+        "name": "SnapshotId_g",
+        "type": "guid"
+      },
+      {
+        "name": "SnapshotId_s",
+        "type": "string"
+      },
+      {
+        "name": "SnapshotTimestamp_s",
+        "type": "string"
+      },
+      {
+        "name": "SnapshotTimestamp_t",
+        "type": "datetime"
+      },
+      {
+        "name": "TotalMemorySizeGB_d",
+        "type": "real"
+      },
+      {
+        "name": "UpgradeDomain_s",
+        "type": "string"
+      },
+      {
+        "name": "value_g",
+        "type": "guid"
+      },
+      {
+        "name": "value_t",
+        "type": "datetime"
+      },
+      {
+        "name": "WindowsUpdateAutoDownloadEnabled_b",
+        "type": "boolean"
       }
     ]
   }

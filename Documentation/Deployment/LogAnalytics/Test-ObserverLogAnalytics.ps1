@@ -245,7 +245,11 @@ function Test-DualWrite($Workspace) {
     if (-not $new) { throw "Table '$NewTableName' not found in workspace '$($newWorkspace.Name)'." }
 
     $newMissing = @($recordColumns.name | Where-Object { $_ -cnotin $new.Columns.Name })
-    if ($newMissing) { Add-Finding Warning 'New table missing standard columns' "$(Format-List $newMissing). Redeploy the template." }
+    if ($newMissing) { Add-Finding Fail 'New table missing standard columns' "$(Format-List $newMissing). Redeploy the template." }
+    $unverifiedLegacy = @($legacy.Columns.Name | Where-Object { $_ -cnotin $recordColumns.name })
+    if ($unverifiedLegacy) {
+        Add-Finding Fail 'Legacy columns outside the mapping contract' "$(Format-List $unverifiedLegacy). The default checker cannot certify these custom or value-dependent columns. Add their legacy names/types to the destination and DCR, and compare their stored values independently before cutover."
+    }
     $common = @($recordColumns.name | Where-Object { $_ -cin $legacy.Columns.Name -and $_ -cin $new.Columns.Name })
     $newRef = if ($newWorkspace.CustomerId -ne $Workspace.CustomerId) { "workspace('$($newWorkspace.CustomerId)').$NewTableName" } else { $NewTableName }
 
