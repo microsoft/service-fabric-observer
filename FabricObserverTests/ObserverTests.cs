@@ -156,7 +156,7 @@ namespace FabricObserverTests
             return nodeList.Count == 1;
         }
 
-        private static ConfigurationPackage BuildConfigurationPackageFromSettingsFile(string configPath)
+        internal static ConfigurationPackage BuildConfigurationPackageFromSettingsFile(string configPath)
         {
             StringReader sreader = null;
             XmlReader xreader = null;
@@ -539,8 +539,8 @@ namespace FabricObserverTests
                 return false;
             }
 
-            var validCert = new X509Certificate2("MyValidCert.p12");
-            var expiredCert = new X509Certificate2("MyExpiredCert.p12");
+            using var validCert = X509CertificateLoader.LoadPkcs12FromFile("MyValidCert.p12", null);
+            using var expiredCert = X509CertificateLoader.LoadPkcs12FromFile("MyExpiredCert.p12", null);
 
             using var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
             try
@@ -558,8 +558,8 @@ namespace FabricObserverTests
 
         private static void UnInstallCerts()
         {
-            var validCert = new X509Certificate2("MyValidCert.p12");
-            var expiredCert = new X509Certificate2("MyExpiredCert.p12");
+            using var validCert = X509CertificateLoader.LoadPkcs12FromFile("MyValidCert.p12", null);
+            using var expiredCert = X509CertificateLoader.LoadPkcs12FromFile("MyExpiredCert.p12", null);
 
             using var store = new X509Store(StoreName.My, StoreLocation.LocalMachine);
             store.Open(OpenFlags.ReadWrite);

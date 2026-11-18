@@ -104,7 +104,7 @@ namespace FabricObserver
             }
 
             PluginLoader[] pluginLoaders = new PluginLoader[pluginDlls.Length];
-            Type[] sharedTypes = [typeof(FabricObserverStartupAttribute), typeof(IFabricObserverStartup), typeof(IServiceCollection)];
+            Type[] sharedTypes = PluginContracts.GetSharedTypes();
             string dll = "";
 
             for (int i = 0; i < pluginDlls.Length; ++i)

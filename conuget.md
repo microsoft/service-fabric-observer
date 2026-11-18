@@ -1,7 +1,9 @@
-### ClusterObserver 2.3.3 (NET 8)
-#### This version requires SF Runtime >= 10.0 and higher, and targets NET 8.
+### ClusterObserver 2.4.0 (.NET 10)
+#### Windows deployment requires Service Fabric 11.5 or later.
 
-[ClusterObserver (CO)](https://github.com/microsoft/service-fabric-observer/tree/main/ClusterObserver) is a stateless singleton Service Fabric .NET 8 application that runs on one node in a cluster. CO observes cluster health (aggregated) 
+Framework-dependent deployment requires .NET 10 on every node; self-contained deployment includes the runtime. Existing .NET 8 plugins using the documented contracts remain supported.
+
+[ClusterObserver (CO)](https://github.com/microsoft/service-fabric-observer/tree/main/ClusterObserver) is a stateless singleton Service Fabric .NET 10 application that runs on one node in a cluster. CO observes cluster health (aggregated)
 and sends telemetry when a cluster is in Error or Warning. CO shares a very small subset of FabricObserver's (FO) code. It is designed to be completely independent from FO sources, 
 but lives in this repo (and SLN) because it is very useful to have both services deployed, especially for those who want cluster-level health observation and reporting in addition to 
 the node-level user-defined resource monitoring, health event creation, and health reporting done by FO. FabricObserver is designed to generate Service Fabric health events based on user-defined resource usage Warning and Error thresholds which ClusterObserver sends to your log analytics and alerting service.
@@ -32,7 +34,7 @@ $appParams = @{ "RunInterval" = "00:10:00"; "MaxTimeNodeStatusNotOk" = "04:00:00
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -ApplicationTypeVersion 2.3.3 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/ClusterObserver -ApplicationTypeVersion 2.4.0 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```
 
 Example Configuration:  

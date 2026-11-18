@@ -2,7 +2,9 @@
 
 #### Note that starting in version 2.2.0, ClusterObserver supports the FO plugin model. So, you can build cluster-level monitoring plugins should you so desire.
 
-1. Create a .NET 8 Library project.
+The Service Fabric SDK's `System.Fabric` assembly references `System.ServiceModel.Primitives`, which the plugin loader resolves while sharing the host's SDK dependencies. Extensibility 3.4.0 therefore includes supported WCF Client 10.1.0 in both framework dependency groups. FO and CO do not use WCF endpoints or a WCF remoting transport; this dependency preserves deterministic SDK type sharing for existing .NET 8 and new .NET 10 plugins running in the .NET 10 hosts.
+
+1. Create a .NET 10 library project, or target .NET 8 to preserve an existing plugin. Extensibility 3.4.0 provides assets for both frameworks and preserves the shared startup/observer contract assembly identity.
 
 2. Install the latest Microsoft.ServiceFabricApps.FabricObserver.Extensibility nupkg from https://www.nuget.org/profiles/ServiceFabricApps into your plugin project.
 
@@ -10,7 +12,7 @@
 
     E.g., create a new class file, MyObserver.cs.
 
-    This is the required signature for your plugin's constructor: 
+    This is the required signature for your plugin's constructor:
 
 ```C#
     // FO will provide (and manage) both the FabricClient instance and StatelessServiceContext instance during startup.
@@ -19,20 +21,20 @@
     }
 ```
 
-You must implement ObserverBase's two abstract functions: 
+You must implement ObserverBase's two abstract functions:
 
 ```C#
-    public override Task ObserveAsync()
+    public override Task ObserveAsync(CancellationToken token)
     {
     }
 
-    public override Task ReportAsync()
+    public override Task ReportAsync(CancellationToken token)
     {
     }
 ```
 
 4. Create a [ObserverTypeName]Startup.cs file with this format (e.g., MyObserver is the name of your observer class.):
-    
+
 ```C#
     using System.Fabric;
     using FabricObserver;
@@ -52,8 +54,8 @@ You must implement ObserverBase's two abstract functions:
     }
 ```
 
-5. Build your observer project, drop the output dll and *ALL* of its dependencies, both managed and native (this is *very* important), into the Data/Plugins folder in FabricObserver/PackageRoot. 
-   You can place your plugin dll and all of its dependencies in its own (*same*) folder under the Plugins directory (useful if you have multiple plugins). 
+5. Build your observer project, drop the output dll and *ALL* of its dependencies, both managed and native (this is *very* important), into the Data/Plugins folder in FabricObserver/PackageRoot.
+   You can place your plugin dll and all of its dependencies in its own (*same*) folder under the Plugins directory (useful if you have multiple plugins).
    Again, ALL plugin dll dependencies (and their dependencies, if any) need to live in the *same* folder as the plugin dll.
 
 6. Add a new config section for your observer in FabricObserver/PackageRoot/Config/Settings.xml (see example at bottom of that file)
@@ -71,8 +73,10 @@ By default if no RuntimeId is specified, it will build for win-x64. If you want 
 
 ```PowerShell
 cd C:\Users\me\source\repos\service-fabric-observer
-./Build-FabricObserver
+./Build-FabricObserver -RuntimeId win-x64
+./Build-FabricObserver -RuntimeId linux-x64
+./Build-FabricObserver -RuntimeId win-arm64
 ./Build-NugetPackages
 ```
-The output from the above commands contains FabricObserver platform-specific nupkgs and a nupkg you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.3.4.nupkg. Nuget packages will be located in 
+The output from the above commands contains FabricObserver platform-specific nupkgs and a nupkg you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.4.0.nupkg. Nuget packages will be located in
 C:\Users\me\source\repos\service-fabric-observer\bin\release\FabricObserver\Nugets.

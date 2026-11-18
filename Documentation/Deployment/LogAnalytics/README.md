@@ -14,17 +14,19 @@ Set up FabricObserver or ClusterObserver telemetry with the **Logs Ingestion API
 
 ## Before you begin
 
-You need FabricObserver 3.3.4 or later (or ClusterObserver 2.3.3 or later), an existing Log Analytics workspace, and access to:
+You need FabricObserver 3.4.0 or later (or ClusterObserver 2.4.0 or later), an existing Log Analytics workspace, and access to:
 - Read the workspace and its data, create resources in its resource group, and grant roles on the DCR.
 - Attach a user-assigned managed identity (UAMI) to every hosting VM scale set or VM. The person attaching it needs **Managed Identity Operator** on that identity, plus permission to update the hosts.
 
-**Package version:** FabricObserver 3.3.4 and ClusterObserver 2.3.3 are the first versions with the parameters in this guide; earlier versions do not have them. Use one of these versions or later before deploying resources or converting a table. The repository's [build and deployment guidance](../../../README.md#build-and-run) describes how to build and deploy the application.
+**Package version:** FabricObserver 3.4.0 and ClusterObserver 2.4.0 include the parameters in this guide and run on .NET 10. Use one of these versions or later before deploying resources or converting a table. The repository's [build and deployment guidance](../../../README.md#build-and-run) describes runtime prerequisites and how to build and deploy the application.
 
 The default templates create or reuse `id-observer-loganalytics` UAMI in the **Log Analytics resource group**, deploy the DCR in the workspace region, and grant **Monitoring Metrics Publisher** on the DCR. Sharing this identity across clusters avoids tying fleet telemetry to one cluster's lifetime. Neither application provisions these resources.
 
 Use the DCR's HTTPS ingestion endpoint by default. Private Link requires a **Data Collection Endpoint (DCE)** and the corresponding network setup; see [endpoint requirements](https://learn.microsoft.com/en-us/azure/azure-monitor/logs/logs-ingestion-api-overview#endpoint).
 
 **Tools:** PowerShell 7 and `Az.Accounts` for the migration kit; a separate, working Service Fabric PowerShell console for application upgrades. Sign in explicitly. Keep workspace keys and cluster credentials out of scripts, saved parameter fragments and logs.
+
+Source mapping-contract checks under `Tests` require PowerShell 7.6 or later to load the .NET 10 model assembly. Build FabricObserver in Release with the SDK selected by the repository's `global.json` before running these checks.
 
 ## Set your inputs once
 
@@ -167,10 +169,10 @@ Use **Service Fabric application parameters**, not .NET `app.config`. Retain des
 
 ### Upgrade to a supported version
 
-Existing applications only; skip the package upgrade if the application already runs FabricObserver 3.3.4+ or ClusterObserver 2.3.3+. Otherwise, before conversion or enabling the new writer, upgrade to one of those versions while preserving current effective application parameters. Copy and register the new package using its deployment instructions and the repository's [application deployment guidance](../../../README.md#deploy-fabricobserver-using-client-powershell), then run this block in your SF-connected console **instead of** that guide's upgrade command, which does not pass the current parameters:
+Existing applications only; skip the package upgrade if the application already runs FabricObserver 3.4.0+ or ClusterObserver 2.4.0+. Otherwise, before conversion or enabling the new writer, upgrade to one of those versions while preserving current effective application parameters. Copy and register the new package using its deployment instructions and the repository's [application deployment guidance](../../../README.md#deploy-fabricobserver-using-client-powershell), then run this block in your SF-connected console **instead of** that guide's upgrade command, which does not pass the current parameters:
 ```powershell
 $applicationName = Read-Host 'Application name, e.g. fabric:/FabricObserver'
-$targetVersion = Read-Host 'Registered target version, e.g. 3.3.4'
+$targetVersion = Read-Host 'Registered target version, e.g. 3.4.0'
 $app = Get-ServiceFabricApplication -ApplicationName $applicationName
 $parameters = @{}
 foreach ($p in $app.ApplicationParameters) { $parameters[$p.Name] = $p.Value }
@@ -218,7 +220,7 @@ $applicationName = Read-Host 'Application name, e.g. fabric:/FabricObserver'
 
 #### New application (Fresh)
 
-First copy and register the FabricObserver 3.3.4+ or ClusterObserver 2.3.3+ application package using its deployment instructions and the [application deployment guidance](../../../README.md#deploy-fabricobserver-using-client-powershell). For ClusterObserver, follow the same steps with `Build-ClusterObserver.ps1` and the `ClusterObserverType` package. Use the block below **instead of** the guide's `New-ServiceFabricApplication` command so the generated settings are passed at creation.
+First copy and register the FabricObserver 3.4.0+ or ClusterObserver 2.4.0+ application package using its deployment instructions and the [application deployment guidance](../../../README.md#deploy-fabricobserver-using-client-powershell). For ClusterObserver, follow the same steps with `Build-ClusterObserver.ps1` and the `ClusterObserverType` package. Use the block below **instead of** the guide's `New-ServiceFabricApplication` command so the generated settings are passed at creation.
 
 Choose and review a base Service Fabric application parameter file, such as [FabricObserver Cloud.xml](../../../FabricObserverApp/ApplicationParameters/Cloud.xml) or [ClusterObserver Cloud.xml](../../../ClusterObserverApp/ApplicationParameters/Cloud.xml). These files have an `Application` root; an empty `Parameters` element uses the package's defaults. Add any desired per-observer overrides before proceeding. The generated fragment is separate and has a `Parameters` root.
 
@@ -233,12 +235,12 @@ $parameters = @{}
 foreach ($p in $baseParameters.Application.Parameters.Parameter) { $parameters[$p.Name] = $p.Value }
 foreach ($p in $fragment.Parameters.Parameter) { $parameters[$p.Name] = $p.Value }
 $applicationTypeName = Read-Host 'Registered application type name, e.g. FabricObserverType'
-$applicationTypeVersion = Read-Host 'Registered application type version, e.g. 3.3.4'
+$applicationTypeVersion = Read-Host 'Registered application type version, e.g. 3.4.0'
 New-ServiceFabricApplication -ApplicationName $applicationName `
     -ApplicationTypeName $applicationTypeName -ApplicationTypeVersion $applicationTypeVersion `
     -ApplicationParameter $parameters -ErrorAction Stop
 ```
-Use the type name and version you registered (FabricObserver 3.3.4+ or ClusterObserver 2.3.3+). Then create the service instance, which application creation does not do:
+Use the type name and version you registered (FabricObserver 3.4.0+ or ClusterObserver 2.4.0+). Then create the service instance, which application creation does not do:
 ```powershell
 # FabricObserver: one instance per node.
 New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName $applicationName `
@@ -251,7 +253,7 @@ Return to your Fresh checklist.
 
 #### Existing application (any route)
 
-This branch applies to Fresh, SingleWrite and DualWrite. Confirm that the application runs FabricObserver 3.3.4+ or ClusterObserver 2.3.3+; otherwise first complete [Upgrade to a supported version](#upgrade-to-a-supported-version). Do not use this block to create a new application.
+This branch applies to Fresh, SingleWrite and DualWrite. Confirm that the application runs FabricObserver 3.4.0+ or ClusterObserver 2.4.0+; otherwise first complete [Upgrade to a supported version](#upgrade-to-a-supported-version). Do not use this block to create a new application.
 
 Retrieve current parameters, overlay only the generated fragment, and perform a parameter-only upgrade. Existing per-observer settings remain in the map unless the fragment explicitly overrides them. Fresh does not require legacy Log Analytics credentials.
 ```powershell

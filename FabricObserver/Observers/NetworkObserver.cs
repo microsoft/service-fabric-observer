@@ -338,7 +338,6 @@ namespace FabricObserver.Observers
                         {
                             Token.ThrowIfCancellationRequested();
 
-                            ServicePointManager.SecurityProtocol = SecurityProtocolType.SystemDefault;
                             string prefix = endpoint.Port == 443 ? "https://" : "http://";
 
                             if (endpoint.HostName.Contains("://"))
@@ -388,7 +387,6 @@ namespace FabricObserver.Observers
         private bool TcpEndpointDoConnectionTest(string hostName, int port)
         {
             TcpClient tcpClient = null;
-            ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
 
             // NetworkObserver only cares about remote endpoint/port *availability*, nothing more.
             // This test simply tries to connect to a remote endpoint using TCP sockets. It will attempt to

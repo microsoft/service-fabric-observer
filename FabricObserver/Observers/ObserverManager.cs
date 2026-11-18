@@ -61,7 +61,7 @@ namespace FabricObserver.Observers
         private CancellationTokenSource linkedSFRuntimeObserverTokenSource;
 
         // Folks often use their own version numbers. This is for internal diagnostic telemetry.
-        private const string InternalVersionNumber = "3.3.4";
+        private const string InternalVersionNumber = "3.4.0";
 
         // Log Analytics warnings are re-sent while they last, so one cleared by another node's shutdown cleanup comes back,
         // and they expire, so one left by a removed node goes away.

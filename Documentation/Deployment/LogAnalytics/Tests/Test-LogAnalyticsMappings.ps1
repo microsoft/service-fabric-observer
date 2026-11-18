@@ -1,7 +1,7 @@
-#Requires -Version 7.0
+#Requires -Version 7.6
 [CmdletBinding()]
 param(
-    [string] $AssemblyPath = (Join-Path $PSScriptRoot '..\..\..\..\FabricObserver\bin\Release\net8.0\FabricObserver.Extensibility.dll')
+    [string] $AssemblyPath = (Join-Path $PSScriptRoot '..\..\..\..\FabricObserver\bin\Release\net10.0\FabricObserver.Extensibility.dll')
 )
 $ErrorActionPreference = 'Stop'
 $kit = Split-Path $PSScriptRoot -Parent

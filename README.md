@@ -1,8 +1,8 @@
-## FabricObserver 3.3.4 (NET 8, SF Runtime version 10.0 and higher)
+## FabricObserver 3.4.0 (.NET 10)
 
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fmicrosoft%2Fservice-fabric-observer%2Fmain%2FDocumentation%2FDeployment%2Fservice-fabric-observer.json)  
 
-[**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a production-ready watchdog service with an easy-to-use extensibility model, written as a stateless, singleton Service Fabric **NET 8** application that by default 
+[**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer/releases) is a production-ready watchdog service with an easy-to-use extensibility model, written as a stateless, singleton Service Fabric **.NET 10** application that by default
 
 1. Monitors a broad range of physical machine resources that tend to be very important to all Service Fabric services and maps these metrics to the related Service Fabric entities.
 2. Runs on multiple versions of Windows Server and Ubuntu.
@@ -10,7 +10,9 @@
 4. Supports [Configuration Setting Application Updates](/Documentation/Using.md#parameterUpdates) for any observer for any supported setting. 
 5. Is actively developed in the open.
 
-> FabricObserver 3.3.4 targets SF runtime versions 10.0 and higher. Starting with version 3.3.0, you must deploy the self-contained release package unless you are deploying to a cluster running SF Version 10.1 CU3 or higher, then you can deploy framework-dependent release.
+> Windows deployments require Service Fabric 11.5 or later. Framework-dependent packages require the .NET 10 runtime on every node; self-contained packages include the runtime but still require a supported Service Fabric version. Existing .NET 8 plugins using the documented observer/startup contracts remain supported. The Extensibility library provides genuine .NET 8 and .NET 10 assets for plugin authoring.
+
+Windows x64 is the runtime validation target for this migration. Linux x64 and Windows ARM64 packages remain build targets; verify .NET 10 compatibility with the Service Fabric runtime and OS on those target platforms before deployment.
 
 FO is a Stateless Service Fabric Application composed of a single service that runs on every node in your cluster, so it can be deployed and run alongside your applications without any changes to them. Each FO service instance knows nothing about other FO instances in the cluster, by design. 
 
@@ -70,7 +72,7 @@ For more information about **the design of FabricObserver**, please see the [Des
 **It is highly recommended that you only deploy code built from the main branch into your production clusters.** 
 
 1. Clone the repo.
-2. Install [.NET 8](https://dotnet.microsoft.com/download/dotnet-core/8.0)
+2. Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) version selected by [global.json](global.json).
 3. Build. 
 
 ***Note: By default, FO runs as NetworkUser on Windows and sfappsuser on Linux. If you want to monitor SF service processes that run as elevated (System) on Windows, then you must also run FO as System on Windows. There is no reason to run as root on Linux under any circumstances (see the Capabilities binaries implementations, which allow for FO to run as sfappsuser and successfully execute specific commands that require elevated privilege).*** 
@@ -97,10 +99,10 @@ The build scripts include code build, sfpkg generation, and nupkg generation. Th
 
 FabricObserver can be run and deployed through Visual Studio or Powershell, like any SF app. If you want to add this to your Azure Pipelines CI, 
 see [FOAzurePipeline.yaml](/FOAzurePipeline.yaml) for msazure devops build tasks. <strong>Please keep in mind that if your target servers do not already have
-.net8 installed (if you deploy VM images from Azure gallery, then they will not have .net8 installed), then you must deploy the SelfContained package.</strong>
+.NET 10 installed, then you must deploy the SelfContained package. Service Fabric does not supply the application's .NET runtime.</strong>
 
 ### Deploy FabricObserver
-**Note: You must deploy this version (3.3.4) to clusters that are running SF 9.0 and above. This version also requires .NET 8.**
+**Windows deployment requires Service Fabric 11.5 or later. Framework-dependent deployment also requires .NET 10 on every node.**
 You can deploy FabricObserver (and ClusterObserver) using Visual Studio (if you build the sources yourself), PowerShell or ARM. Please note that this version of FabricObserver no longer supports the DefaultServices node in ApplicationManifest.xml.
 This means that should you deploy using PowerShell, you must create an instance of the service as the last command in your script. This was done to support ARM deployment, specifically.
 The StartupServices.xml file you see in the FabricObserverApp project now contains the service information once held in ApplicationManifest's DefaultServices node. Note that this information is primarily useful for deploying from Visual Studio.
@@ -161,7 +163,7 @@ Register-ServiceFabricApplicationType -ApplicationPathInImageStore FO334
 
 #Create FO application (if not already deployed at lesser version):
 
-New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.3.4   
+New-ServiceFabricApplication -ApplicationName fabric:/FabricObserver -ApplicationTypeName FabricObserverType -ApplicationTypeVersion 3.4.0
 
 #Create the Service instances (-1 means all nodes, which is what is required for FO):  
 
@@ -169,7 +171,7 @@ New-ServiceFabricService -Stateless -PartitionSchemeSingleton -ApplicationName f
 
 #OR if updating existing version:  
 
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.3.4 -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.4.0 -Monitored -FailureAction rollback
 ```  
 
 ## Observer Model
