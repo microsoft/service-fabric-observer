@@ -25,7 +25,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
+          global-json-file: global.json
       - name: Build current serialization models
         run: dotnet build FabricObserver\FabricObserver.csproj --configuration Release
       - name: Check generated templates

@@ -7,6 +7,9 @@
 			- Migrated the application to .NET 10 and Service Fabric SDK 8.5.122.
 			- Preserved documented .NET 8 plugin contracts and added .NET 10 plugin authoring assets.
 			- Windows deployment requires Service Fabric 11.5 or later; framework-dependent deployment requires .NET 10 on every node.
+			- Adds managed-identity Logs Ingestion API support with LegacyOnly, DualWrite, and LogsIngestionOnly modes; LegacyOnly remains the default.
+			- Invalid settings and upload failures produce per-API service health warnings, without automatic fallback between APIs.
+			- Includes Log Analytics deployment templates and migration verification tooling.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

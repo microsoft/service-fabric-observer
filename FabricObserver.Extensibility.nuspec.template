@@ -8,6 +8,7 @@
 			- Updated Service Fabric SDK references and shared plugin loading contracts for .NET 10 hosts.
 			- Uses supported WCF Client 10.1.0 to resolve the Service Fabric SDK's assembly references during plugin loading.
 			- Uses serviced .NET 10 dependencies for dependency injection and resource monitoring in both framework groups.
+			- Includes Logs Ingestion API telemetry, dual-write telemetry, and Log Analytics write-mode configuration shared by both observers.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>
