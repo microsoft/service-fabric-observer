@@ -304,6 +304,8 @@ In PowerShell 7, compare before/after column fill. Replace `YOUR_SWITCH_START_UT
 ```
 Inspect stored values as well as column fill. Resolve failures and warnings, and validate dependent queries, alerts and workbooks before considering the migration complete. Some records are event-driven: ClusterObserver sends its cluster upgrade status (rows with no `ObserverName_s`) once per process start, and a parameter-only upgrade does not restart it. If the check warns that such records are too few to judge, confirm them later, for example after the next ClusterObserver restart. The application already uses `LogsIngestionOnly`; do not run the dual-write cutover block.
 
+Fewer than `-MinRows` post-switch records, or no pre-switch baseline, produces **Warning/inconclusive**, not Pass. Column continuity is not certified until enough representative data exists.
+
 ### Verify dual write
 
 Compare stored counts and field values:
@@ -313,6 +315,14 @@ $oldTable = if ($setup.LegacyTableName) { $setup.LegacyTableName } else { "$($se
     -LegacyTableName $oldTable -NewTableName $settings.TableName
 ```
 For a manual deployment, use its actual destination name in place of `$settings.TableName`. The default comparison ends 30 minutes ago; wait for a settled window with representative traffic. Review **Warning** results, including boundary ambiguity and sparse columns; do not treat them as Pass. Rows only in the old table (`Missing in new table`) or differing values are failures: the new API lost or changed data, so resolve them before cutover. Rows only in the new table (`Missing in legacy table`) are a warning: the old API can drop a small share of records without reporting an error, so the new table may contain records the old one doesn't. This does not block cutover. Repoint queries, alerts and workbooks to the new permanent table before retiring the old path.
+
+Occurrences are matched one-to-one within `-TimeTolerance`. Named metrics and upgrade events use their generated event timestamps; other records use `TimeGenerated`. Generated metric IDs must have the expected format but need not be identical between senders. Actual numeric changes fail even above 2^53; only equivalent representations are normalized.
+
+An explicit `-StartTime` is never moved. If the default start is advanced to the first new-table record, the omitted interval is reported as unverified with **Warning**. Use an explicit start to certify the whole intended interval. `-NewResourceGroupName` and `-NewWorkspaceName` independently override the destination, including same-name workspaces in different resource groups.
+
+The checker reads individual records for the selected window plus its tolerance buffer. `-MaxDetailRows` limits only the diagnostic breakdown, not validation. Partial query errors, truncation, malformed responses, and non-finite numeric values terminate verification without a passing result. Reduce the comparison window if it exceeds Azure query limits.
+
+For automation, inspect the `Status` returned by `-PassThru` or written by `-OutputPath`: completed checks retain the existing Pass/Warning/Fail result shape and do not set a process exit code from that status. Query or input errors terminate with an error instead of returning Pass.
 
 The checker compares standard fields only. For custom fields, confirm yourself before cutover that the new table's custom columns match the old table's names and types, and that their stored values match.
 
@@ -389,9 +399,12 @@ From the repository root, build the current serialization models, then check gen
 dotnet build .\FabricObserver\FabricObserver.csproj --configuration Release
 .\Documentation\Deployment\LogAnalytics\Build-LogAnalyticsTemplates.ps1 -Check
 .\Documentation\Deployment\LogAnalytics\Tests\Test-LogAnalyticsMappings.ps1
+.\Documentation\Deployment\LogAnalytics\Tests\Test-LogAnalyticsVerification.ps1
 ```
 
 The coverage check reads the current payload-builder syntax and built model serialization contracts, including inheritance and nested SDK fields. It fails on missing or wrongly typed columns, wrong-case source access, numeric guards that exclude JSON floating-point values and date mappings that admit non-date JSON types. Negative controls verify these failure paths. Customer-checker regression cases intercept Azure calls.
+
+The verification regression suite checks query endpoints/errors, workspace overrides, full comparison windows, occurrence matching and boundaries, numeric precision, generated metadata, and the `MinRows` threshold. It intercepts all Azure calls and requires neither Azure credentials nor Pester. The workflow runs it alongside the mapping checks.
 
 To generate a read-only KQL value-routing regression from the actual template projections:
 

@@ -34,6 +34,9 @@ jobs:
       - name: Check independent source and legacy mapping contract
         shell: pwsh
         run: .\Documentation\Deployment\LogAnalytics\Tests\Test-LogAnalyticsMappings.ps1
+      - name: Check migration verification behavior
+        shell: pwsh
+        run: .\Documentation\Deployment\LogAnalytics\Tests\Test-LogAnalyticsVerification.ps1
       - name: Build read-only value-routing regression query
         shell: pwsh
         run: .\Documentation\Deployment\LogAnalytics\Tests\New-LogAnalyticsMappingRegression.ps1 -OutputPath "$env:RUNNER_TEMP\log-analytics-mapping-values.kql"
