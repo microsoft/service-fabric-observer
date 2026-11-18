@@ -3,6 +3,6 @@
 
 # These owners will be the default owners for everything in
 # the repo. Unless a later match takes precedence,
-# @samedder, @christina-kang, and @jeffj6123 will be requested for
+# @sridmad, @chensation, and @kaichh will be requested for
 # review when someone opens a pull request.
-*       @gittorre @sidhant012
+*       @sridmad @chensation @kaichh
