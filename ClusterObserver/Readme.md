@@ -1,12 +1,12 @@
-### ClusterObserver 2.3.2 (NET 8)
-#### This version targets NET 8 and SF Runtime >= 10.0.
+### ClusterObserver 2.4.0 (.NET 10)
+#### Windows deployment requires Service Fabric 11.5 or later.
 
-ClusterObserver (CO) is a stateless singleton Service Fabric .NET 8 service that runs on one node in a cluster. CO observes cluster health (aggregated) 
+ClusterObserver (CO) is a stateless singleton Service Fabric .NET 10 service that runs on one node in a cluster. CO observes cluster health (aggregated)
 and sends telemetry when a cluster is in Error or Warning. CO shares a very small subset of FabricObserver's (FO) code. It is designed to be completely independent from FO sources, 
 but lives in this repo (and SLN) because it is very useful to have both services deployed, especially for those who want cluster-level health observation and reporting in addition to 
 the node-level user-defined resource monitoring, health event creation, and health reporting done by FO. FabricObserver is designed to generate Service Fabric health events based on user-defined resource usage Warning and Error thresholds which ClusterObserver sends to your log analytics and alerting service.
 
-Starting with version 2.3.0, you must deploy the self-contained release package unless you are deploying to a cluster running SF Version >= 10.1 CU3 or higher, then you can deploy framework-dependent release. 
+Framework-dependent packages require .NET 10 on every node; self-contained packages include the runtime. Both modes require a supported Service Fabric runtime. Documented .NET 8 plugins remain supported through shared .NET 8/.NET 10 Extensibility assets. Windows x64 is the runtime validation target for this migration; Linux x64 and Windows ARM64 remain build targets.
 
 By design, CO will send an Ok health state report when a cluster goes from Warning or Error state to Ok.
 
@@ -32,7 +32,7 @@ Application Parameter Upgrade Example:
 ```Powershell
 
 $appName = "fabric:/ClusterObserver"
-$appVersion = "2.3.2"
+$appVersion = "2.4.0"
 
 $application = Get-ServiceFabricApplication -ApplicationName $appName
 
@@ -161,7 +161,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName $appName -ApplicationType
 
 ``` XML
 <?xml version="1.0" encoding="utf-8"?>
-<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.3.2" xmlns="http://schemas.microsoft.com/2011/01/fabric">
+<ApplicationManifest xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" ApplicationTypeName="ClusterObserverType" ApplicationTypeVersion="2.4.0" xmlns="http://schemas.microsoft.com/2011/01/fabric">
   <Parameters>
     <!-- ClusterObserverManager settings. -->
     <Parameter Name="ObserverManagerObserverLoopSleepTimeSeconds" DefaultValue="30" />
@@ -190,7 +190,7 @@ Start-ServiceFabricApplicationUpgrade -ApplicationName $appName -ApplicationType
        should match the Name and Version attributes of the ServiceManifest element defined in the 
        ServiceManifest.xml file. -->
   <ServiceManifestImport>
-    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.3.2" />
+    <ServiceManifestRef ServiceManifestName="ClusterObserverPkg" ServiceManifestVersion="2.4.0" />
     <ConfigOverrides>
       <ConfigOverride Name="Config">
         <Settings>
@@ -262,7 +262,7 @@ Here is a full example of exactly what is sent in one of these telemetry events,
     "TaskName": "ClusterObserver",
     "ClusterId": "00000000-1111-1111-0000-00f00d000d",
     "ClusterType": "SFRP",
-    "COVersion": "2.3.2",
+    "COVersion": "2.4.0",
     "Timestamp": "2024-06-06T19:02:04.4287671Z",
     "OS": "Windows"
 }
@@ -280,6 +280,4 @@ Let's take a look at the data and why we think it is useful to share with us. We
 If the ClusterType is not SFRP then a TenantId (Guid) is sent for use in the same way we use ClusterId. 
 
 We would greatly appreciate you sharing this information with us!
-
-
 

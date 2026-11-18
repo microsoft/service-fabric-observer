@@ -1,3 +1,4 @@
+$ErrorActionPreference = "Stop"
 [string] $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
 function Build-SFPkg {
@@ -17,20 +18,20 @@ function Build-SFPkg {
 
     Compress-Archive "$basePath\*"  $zipPath -Force
 
-    Move-Item -Path $zipPath -Destination ($zipPath.Replace(".zip", ".sfpkg"))
+    Move-Item -Path $zipPath -Destination ($zipPath.Replace(".zip", ".sfpkg")) -Force
 }
 
 try {
     Push-Location $scriptPath
 
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserver.Linux.SelfContained.3.3.3" "$scriptPath\bin\release\FabricObserver\linux-x64\self-contained\FabricObserverType"
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserver.Linux.FrameworkDependent.3.3.3" "$scriptPath\bin\release\FabricObserver\linux-x64\framework-dependent\FabricObserverType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserver.Linux.SelfContained.3.4.0" "$scriptPath\bin\release\FabricObserver\linux-x64\self-contained\FabricObserverType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserver.Linux.FrameworkDependent.3.4.0" "$scriptPath\bin\release\FabricObserver\linux-x64\framework-dependent\FabricObserverType"
 
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained.3.3.3" "$scriptPath\bin\release\FabricObserver\win-x64\self-contained\FabricObserverType"
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserver.Windows.FrameworkDependent.3.3.3" "$scriptPath\bin\release\FabricObserver\win-x64\framework-dependent\FabricObserverType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserver.Windows.SelfContained.3.4.0" "$scriptPath\bin\release\FabricObserver\win-x64\self-contained\FabricObserverType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserver.Windows.FrameworkDependent.3.4.0" "$scriptPath\bin\release\FabricObserver\win-x64\framework-dependent\FabricObserverType"
 
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserver.WindowsArm64.SelfContained.3.3.3" "$scriptPath\bin\release\FabricObserver\win-arm64\self-contained\FabricObserverType"
-    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserver.WindowsArm64.FrameworkDependent.3.3.3" "$scriptPath\bin\release\FabricObserver\win-arm64\framework-dependent\FabricObserverType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserver.WindowsArm64.SelfContained.3.4.0" "$scriptPath\bin\release\FabricObserver\win-arm64\self-contained\FabricObserverType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.FabricObserver.WindowsArm64.FrameworkDependent.3.4.0" "$scriptPath\bin\release\FabricObserver\win-arm64\framework-dependent\FabricObserverType"
 }
 finally {
     Pop-Location

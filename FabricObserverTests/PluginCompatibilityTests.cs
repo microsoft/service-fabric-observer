@@ -1,0 +1,78 @@
+using System;
+using System.Fabric;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Runtime.Loader;
+using System.Runtime.Versioning;
+using System.Threading;
+using System.Threading.Tasks;
+using FabricObserver;
+using FabricObserver.Observers;
+using McMaster.NETCore.Plugins;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using ServiceFabric.Mocks;
+
+namespace FabricObserverTests
+{
+    [TestClass]
+    public class PluginCompatibilityTests
+    {
+        [DataTestMethod]
+        [DataRow("CompatibilityPlugin", "Net8CompatibilityPlugin.dll", ".NETCoreApp,Version=v8.0", "Net8CompatibilityObserver")]
+        [DataRow("CurrentCompatibilityPlugin", "Net10CompatibilityPlugin.dll", ".NETCoreApp,Version=v10.0", "Net10CompatibilityObserver")]
+        public async Task PluginSharesHostContractsAndExecutesObserver(string directory, string fileName, string framework, string observerName)
+        {
+            string pluginPath = Path.Combine(AppContext.BaseDirectory, directory, fileName);
+            using PluginLoader loader = PluginLoader.CreateFromAssemblyFile(
+                pluginPath, PluginContracts.GetSharedTypes(), options => options.IsUnloadable = true);
+
+            Assembly assembly = loader.LoadDefaultAssembly();
+            Assert.AreEqual(framework, assembly.GetCustomAttribute<TargetFrameworkAttribute>().FrameworkName);
+            Assert.AreEqual(10, Environment.Version.Major);
+
+            AssemblyName pluginDiReference = assembly.GetReferencedAssemblies()
+                .Single(reference => reference.Name == "Microsoft.Extensions.DependencyInjection.Abstractions");
+            Assembly hostDiAssembly = typeof(IServiceCollection).Assembly;
+            Assert.AreEqual(10, hostDiAssembly.GetName().Version.Major);
+            Assert.AreSame(hostDiAssembly,
+                AssemblyLoadContext.GetLoadContext(assembly).LoadFromAssemblyName(pluginDiReference));
+
+            AssemblyName wcfReference = typeof(FabricClient).Assembly.GetReferencedAssemblies()
+                .Single(reference => reference.Name == "System.ServiceModel.Primitives");
+            Assembly hostWcfAssembly = Assembly.Load(wcfReference);
+            Assert.AreEqual(new Version(10, 1, 0, 0), hostWcfAssembly.GetName().Version);
+            Assert.AreSame(hostWcfAssembly,
+                AssemblyLoadContext.GetLoadContext(assembly).LoadFromAssemblyName(wcfReference));
+
+            FabricObserverStartupAttribute attribute = assembly.GetCustomAttributes<FabricObserverStartupAttribute>().Single();
+            IFabricObserverStartup startup = (IFabricObserverStartup)Activator.CreateInstance(attribute.StartupType);
+            Uri serviceName = new("fabric:/PluginCompatibility/ObserverService");
+            MockCodePackageActivationContext activationContext = new(
+                "fabric:/PluginCompatibility", "PluginCompatibilityType", "Code", "1.0.0.0",
+                Guid.NewGuid().ToString(), Path.GetTempPath(), Path.GetTempPath(), Path.GetTempPath(), "FabricObserverPkg", "1.0.0.0")
+            {
+                ConfigurationPackage = ObserverTests.BuildConfigurationPackageFromSettingsFile(
+                    Path.Combine(AppContext.BaseDirectory, "PackageRoot", "Config", "Settings.xml"))
+            };
+            StatelessServiceContext context = new(
+                new NodeContext("_PluginTestNode", new NodeId(0, 1), 0, "NodeType0", "TEST.MACHINE"),
+                activationContext, "FabricObserverType", serviceName, null, Guid.NewGuid(), 1);
+            ServiceCollection services = new();
+            startup.ConfigureServices(services, null, context);
+
+            Assert.AreEqual(1, services.Count(service => service.ServiceType == typeof(ObserverBase)));
+            Assert.AreEqual(new Version(3, 3, 3, 0), typeof(IFabricObserverStartup).Assembly.GetName().Version);
+
+            using ServiceProvider provider = services.BuildServiceProvider();
+            using IServiceScope scope = provider.CreateScope();
+            ObserverBase observer = scope.ServiceProvider.GetRequiredService<ObserverBase>();
+            Assert.AreEqual(observerName, observer.ObserverName);
+            Assert.AreEqual(context.NodeContext.NodeName, observer.NodeName);
+            Assert.AreEqual(serviceName, observer.ServiceName);
+            await observer.ObserveAsync(CancellationToken.None);
+            await observer.ReportAsync(CancellationToken.None);
+        }
+    }
+}

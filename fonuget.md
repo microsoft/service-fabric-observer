@@ -1,6 +1,6 @@
-## FabricObserver 3.3.3 (NET 8, SF Runtime version 10.0 and higher)
+## FabricObserver 3.4.0 (.NET 10)
 
-[**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer) is a production-ready watchdog service with an easy-to-use extensibility model, written as a stateless, singleton Service Fabric **.NET 8** application that by default  
+[**FabricObserver (FO)**](https://github.com/microsoft/service-fabric-observer) is a production-ready watchdog service with an easy-to-use extensibility model, written as a stateless, singleton Service Fabric **.NET 10** application that by default
 
 1. Monitors a broad range of physical machine resources that tend to be very important to all Service Fabric services and maps these metrics to the related Service Fabric entities.
 2. Runs on multiple versions of Windows Server and Ubuntu.
@@ -8,7 +8,7 @@
 4. Supports [Configuration Setting Application Updates](/Documentation/Using.md#parameterUpdates) for any observer for any supported setting. 
 5. Is actively developed in the open. 
 
-> FabricObserver targets SF runtime versions 9 and higher. 
+> Windows deployment requires Service Fabric 11.5 or later. Framework-dependent deployment requires .NET 10 on every node; self-contained deployment includes the runtime. The package includes .NET 8 and .NET 10 shared-library assets for plugin authoring, and documented .NET 8 plugin contracts remain supported.
 
 FO is a Stateless Service Fabric Application composed of a single service that runs on every node in your cluster, so it can be deployed and run alongside your applications without any changes to them. Each FO service instance knows nothing about other FO instances in the cluster, by design. 
 

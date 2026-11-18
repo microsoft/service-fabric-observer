@@ -10,7 +10,7 @@ Please be sure to follow the usual process for submitting PRs:
 
  - Fork the repo
  - Create an Issue describing your intended contribution.
- - Run - and pass - all FabricObserverTests unit tests on your dev machine with a running SF dev cluster *before* you make a PR.
+ - Run - and pass - all FabricObserverTests on a Windows test host with a running one-node SF dev cluster *before* you make a PR. A dedicated Azure VM can be used instead of your workstation. The isolated PluginCompatibilityTests can run without a cluster.
  - Make sure your PR title is descriptive.
  - Include a link back to an open issue in the PR description.
 

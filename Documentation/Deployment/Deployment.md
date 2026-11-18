@@ -1,5 +1,10 @@
 # Deploy FabricObserver using ARM
 
+FabricObserver 3.4.0 and ClusterObserver 2.4.0 target .NET 10. Windows clusters
+must run Service Fabric 11.5 or later. Framework-dependent packages require
+.NET 10 on every node; self-contained packages include the runtime. Use the
+versioned parameter files matching the application package being deployed.
+
 Like all elementary services such as monitoring, Windows update, scripts, scaling, etc., FabricObserver should be installed with your initial Service Fabric cluster deployment. 
 
 There are two options:

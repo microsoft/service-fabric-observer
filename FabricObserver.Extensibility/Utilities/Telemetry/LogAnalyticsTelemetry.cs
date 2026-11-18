@@ -5,7 +5,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Fabric;
 using System.Fabric.Health;
 using System.Net;
 using System.Net.Http;
@@ -15,8 +14,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FabricObserver.Observers.Interfaces;
-using FabricObserver.TelemetryLib;
-using Newtonsoft.Json;
 
 namespace FabricObserver.Observers.Utilities.Telemetry
 {
@@ -28,6 +25,13 @@ namespace FabricObserver.Observers.Utilities.Telemetry
     {
         private const string ApiVersion = "2016-04-01";
         private readonly Logger logger = new Logger("TelemetryLogger");
+        private readonly HttpMessageHandler messageHandler;
+
+        internal LogAnalyticsTelemetry(string workspaceId, string sharedKey, string logType, HttpMessageHandler messageHandler)
+            : this(workspaceId, sharedKey, logType)
+        {
+            this.messageHandler = messageHandler ?? throw new ArgumentNullException(nameof(messageHandler));
+        }
 
         private string WorkspaceId
         {
@@ -64,7 +68,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                 string date = DateTime.UtcNow.ToString("r");
                 string signature = GetSignature("POST", payload.Length, "application/json", date, "/api/logs");
                 byte[] content = Encoding.UTF8.GetBytes(payload);
-                using HttpClient httpClient = new();
+                using HttpClient httpClient = messageHandler == null ? new() : new(messageHandler, disposeHandler: false);
                 using HttpRequestMessage request = new(HttpMethod.Post, TargetUri);
                 request.Headers.Authorization = AuthenticationHeaderValue.Parse(signature);
                 request.Content = new ByteArrayContent(content);
@@ -123,18 +127,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                             string serviceName = null,
                             string instanceName = null)
         {
-            string jsonPayload = JsonConvert.SerializeObject(
-                    new
-                    {
-                        ClusterInformation.ClusterInfoTuple.ClusterId,
-                        source,
-                        property = propertyName,
-                        healthState = state.ToString(),
-                        healthEvaluation = unhealthyEvaluations,
-                        serviceName = serviceName ?? string.Empty,
-                        instanceName = instanceName ?? string.Empty,
-                        osPlatform = OperatingSystem.IsWindows() ? "Windows" : "Linux"
-                    });
+            string jsonPayload = LogAnalyticsPayload.Health(propertyName, state, unhealthyEvaluations, source, serviceName, instanceName);
 
             await SendTelemetryAsync(jsonPayload, cancellationToken);
         }
@@ -353,16 +346,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
                                     string source,
                                     CancellationToken cancellationToken)
         {
-            string jsonPayload = JsonConvert.SerializeObject(
-                    new
-                    {
-                        id = $"FO_{Guid.NewGuid()}",
-                        datetime = DateTime.UtcNow,
-                        ClusterInformation.ClusterInfoTuple.ClusterId,
-                        source,
-                        property = name,
-                        value
-                    });
+            string jsonPayload = LogAnalyticsPayload.Metric(name, value, source);
 
             await SendTelemetryAsync(jsonPayload, cancellationToken);
 
@@ -378,20 +362,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             try
             {
-                string jsonPayload = JsonConvert.SerializeObject(
-                        new
-                        {
-                            ClusterId = ServiceFabricUpgradeEventData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId,
-                            Timestamp = DateTime.UtcNow,
-                            eventData.OS,
-                            CurrentUpgradeDomain = eventData.FabricUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName,
-                            eventData.FabricUpgradeProgress?.NextUpgradeDomain,
-                            UpgradeTargetCodeVersion = eventData.FabricUpgradeProgress.UpgradeDescription?.TargetCodeVersion,
-                            UpgradeTargetConfigVersion = eventData.FabricUpgradeProgress.UpgradeDescription?.TargetConfigVersion,
-                            UpgradeState = Enum.GetName(typeof(FabricUpgradeState), eventData.FabricUpgradeProgress.UpgradeState),
-                            UpgradeDuration = eventData.FabricUpgradeProgress.CurrentUpgradeDomainDuration,
-                            FailureReason = eventData.FabricUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.FabricUpgradeProgress.FailureReason.Value) : null,
-                        });
+                string jsonPayload = LogAnalyticsPayload.ClusterUpgrade(eventData);
 
                 await SendTelemetryAsync(jsonPayload, token).ConfigureAwait(true);
             }
@@ -411,20 +382,7 @@ namespace FabricObserver.Observers.Utilities.Telemetry
 
             try
             {
-                string jsonPayload = JsonConvert.SerializeObject(
-                        new
-                        {
-                            ClusterId = ServiceFabricUpgradeEventData.ClusterId ?? ClusterInformation.ClusterInfoTuple.ClusterId,
-                            Timestamp = DateTime.UtcNow,
-                            eventData.OS,
-                            ApplicationName = eventData.ApplicationUpgradeProgress.ApplicationName?.OriginalString,
-                            CurrentUpgradeDomain = eventData.ApplicationUpgradeProgress.CurrentUpgradeDomainProgress?.UpgradeDomainName,
-                            eventData.ApplicationUpgradeProgress?.NextUpgradeDomain,
-                            UpgradeTargetAppTypeVersion = eventData.ApplicationUpgradeProgress.UpgradeDescription?.TargetApplicationTypeVersion,
-                            UpgradeState = Enum.GetName(typeof(FabricUpgradeState), eventData.ApplicationUpgradeProgress.UpgradeState),
-                            UpgradeDuration = eventData.ApplicationUpgradeProgress.CurrentUpgradeDomainDuration,
-                            FailureReason = eventData.ApplicationUpgradeProgress.FailureReason.HasValue ? Enum.GetName(typeof(UpgradeFailureReason), eventData.ApplicationUpgradeProgress.FailureReason.Value) : null,
-                        });
+                string jsonPayload = LogAnalyticsPayload.ApplicationUpgrade(eventData);
 
                 await SendTelemetryAsync(jsonPayload, token).ConfigureAwait(true);
             }

@@ -1,3 +1,4 @@
+$ErrorActionPreference = "Stop"
 [string] $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
 function Build-SFPkg {
@@ -17,20 +18,20 @@ function Build-SFPkg {
 
     Compress-Archive "$basePath\*"  $zipPath -Force
 
-    Move-Item -Path $zipPath -Destination ($zipPath.Replace(".zip", ".sfpkg"))
+    Move-Item -Path $zipPath -Destination ($zipPath.Replace(".zip", ".sfpkg")) -Force
 }
 
 try {
     Push-Location $scriptPath
 
-    Build-SFPkg "Microsoft.ServiceFabricApps.ClusterObserver.Linux.SelfContained.2.3.2" "$scriptPath\bin\release\ClusterObserver\linux-x64\self-contained\ClusterObserverType"
-    Build-SFPkg "Microsoft.ServiceFabricApps.ClusterObserver.Linux.FrameworkDependent.2.3.2" "$scriptPath\bin\release\ClusterObserver\linux-x64\framework-dependent\ClusterObserverType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.ClusterObserver.Linux.SelfContained.2.4.0" "$scriptPath\bin\release\ClusterObserver\linux-x64\self-contained\ClusterObserverType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.ClusterObserver.Linux.FrameworkDependent.2.4.0" "$scriptPath\bin\release\ClusterObserver\linux-x64\framework-dependent\ClusterObserverType"
 
-    Build-SFPkg "Microsoft.ServiceFabricApps.ClusterObserver.Windows.SelfContained.2.3.2" "$scriptPath\bin\release\ClusterObserver\win-x64\self-contained\ClusterObserverType"
-    Build-SFPkg "Microsoft.ServiceFabricApps.ClusterObserver.Windows.FrameworkDependent.2.3.2" "$scriptPath\bin\release\ClusterObserver\win-x64\framework-dependent\ClusterObserverType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.ClusterObserver.Windows.SelfContained.2.4.0" "$scriptPath\bin\release\ClusterObserver\win-x64\self-contained\ClusterObserverType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.ClusterObserver.Windows.FrameworkDependent.2.4.0" "$scriptPath\bin\release\ClusterObserver\win-x64\framework-dependent\ClusterObserverType"
 
-    Build-SFPkg "Microsoft.ServiceFabricApps.ClusterObserver.WindowsArm64.SelfContained.2.3.2" "$scriptPath\bin\release\ClusterObserver\win-arm64\self-contained\ClusterObserverType"
-    Build-SFPkg "Microsoft.ServiceFabricApps.ClusterObserver.WindowsArm64.FrameworkDependent.2.3.2" "$scriptPath\bin\release\ClusterObserver\win-arm64\framework-dependent\ClusterObserverType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.ClusterObserver.WindowsArm64.SelfContained.2.4.0" "$scriptPath\bin\release\ClusterObserver\win-arm64\self-contained\ClusterObserverType"
+    Build-SFPkg "Microsoft.ServiceFabricApps.ClusterObserver.WindowsArm64.FrameworkDependent.2.4.0" "$scriptPath\bin\release\ClusterObserver\win-arm64\framework-dependent\ClusterObserverType"
 }
 finally {
     Pop-Location

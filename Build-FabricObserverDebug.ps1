@@ -10,9 +10,13 @@ try
     Remove-Item $scriptPath\bin\debug\FabricObserver\ -Recurse -Force -EA SilentlyContinue
 
     dotnet publish FabricObserver\FabricObserver.csproj -o bin\debug\FabricObserver\linux-x64\self-contained\FabricObserverType\FabricObserverPkg\Code -c $Configuration -r linux-x64 --self-contained true
+    if ($LASTEXITCODE -ne 0) { throw "FabricObserver Linux self-contained debug publish failed." }
     dotnet publish FabricObserver\FabricObserver.csproj -o bin\debug\FabricObserver\linux-x64\framework-dependent\FabricObserverType\FabricObserverPkg\Code -c $Configuration -r linux-x64 --self-contained false
+    if ($LASTEXITCODE -ne 0) { throw "FabricObserver Linux framework-dependent debug publish failed." }
     dotnet publish FabricObserver\FabricObserver.csproj -o bin\debug\FabricObserver\win-x64\self-contained\FabricObserverType\FabricObserverPkg\Code -c $Configuration -r win-x64 --self-contained true
+    if ($LASTEXITCODE -ne 0) { throw "FabricObserver Windows self-contained debug publish failed." }
     dotnet publish FabricObserver\FabricObserver.csproj -o bin\debug\FabricObserver\win-x64\framework-dependent\FabricObserverType\FabricObserverPkg\Code -c $Configuration -r win-x64 --self-contained false
+    if ($LASTEXITCODE -ne 0) { throw "FabricObserver Windows framework-dependent debug publish failed." }
 
     Copy-Item FabricObserver\PackageRoot\* bin\debug\FabricObserver\linux-x64\self-contained\FabricObserverType\FabricObserverPkg\ -Recurse
     Copy-Item FabricObserver\PackageRoot\* bin\debug\FabricObserver\linux-x64\framework-dependent\FabricObserverType\FabricObserverPkg\ -Recurse
