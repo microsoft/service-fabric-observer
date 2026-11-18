@@ -11,6 +11,65 @@ Observers are low-impact, long-lived objects that perform specialied monitoring 
 
 Each Observer instance logs to a directory of the same name. You can configure the base directory of the output and log verbosity level (verbose or not). If you enable telemetry and provide ApplicationInsights/LogAnalytics settings, then you will also see the output in your Azure analytics queries. Each observer has configuration settings in FabricObserverApp\ApplicationPackageRoot\ApplicationManifest.xml. AppObserver and NetworkObserver house their runtime config settings (error/warning thresholds) in json files located in FabricObserver\PackageRoot\Config folder.  
 
+### Log Analytics API selection
+
+For both FabricObserver and ClusterObserver, `LogAnalyticsWriteMode` selects the API:
+
+| Mode | Required settings |
+| :--- | :--- |
+| `LegacyOnly` (default) | `LogAnalyticsWorkspaceId`, `LogAnalyticsSharedKey` |
+| `LogsIngestionOnly` | `LogAnalyticsIngestionEndpoint`, `LogAnalyticsDcrImmutableId`, `LogAnalyticsStreamName`, `LogAnalyticsManagedIdentityClientId` |
+| `DualWrite` | Settings for both APIs |
+
+Mode names are case-insensitive. Missing or empty mode uses `LegacyOnly`; an unknown
+mode stops Log Analytics telemetry and reports a configuration warning. Invalid
+settings stop only the affected API; there is no automatic fallback.
+
+The Logs Ingestion sender calls the API directly over HTTPS (no Azure SDK) with a
+user-assigned managed identity; `LogAnalyticsIngestionEndpoint` must be an `https`
+URL. Attach the identity to the cluster nodes' VM scale sets and grant it Monitoring
+Metrics Publisher on the DCR. Tokens come from IMDS and are cached, with one refresh
+at a time starting five minutes before expiry. After a failed token request, IMDS
+is not asked again for 30 seconds. Uploads continue with a cached token only while
+it remains unexpired, including during that pause; expiry is checked again after
+the refresh attempt. Without an unexpired token, records are dropped. Caller
+cancellation does not trigger fallback or failure backoff. Managers and their
+observers share the ingestion sender, token cache, and API status.
+
+The shared upload client retires connections after two minutes, once active requests
+finish, and creates replacements as needed so DNS is resolved again. The IMDS client
+is separate and unchanged; connection rotation does not add upload retries.
+
+Each report makes one POST, wrapping each legacy record in `Payload` inside a JSON
+array. Child-process lists retain one item per element. No batching across reports,
+compression, retry, or replay is performed. Payload timestamps remain unchanged;
+the destination DCR must preserve the legacy column types and ingestion-time
+`TimeGenerated` behavior.
+
+IMDS and upload failures produce local warnings and a service health warning under
+`LogAnalyticsIngestionConfiguration`. A successful upload clears an upload warning,
+but a token-refresh warning remains while the sender is using cached-token fallback.
+After token refresh and upload recover, the warning clears. Only status changes are
+reported; tokens and response bodies are never logged. Settings reloads clear obsolete
+warnings and replace the sender when needed.
+
+In FabricObserver, an active Log Analytics warning (any of the three properties) is
+re-sent every 5 minutes and expires 15 minutes after it was last sent. A warning that
+another node's shutdown cleared comes back, and a warning from a removed node goes
+away. ClusterObserver's documented deployment model is one instance. Its warnings
+do not expire and use the service-scoped `ClusterObserverManager` source, so a new
+hosting node can update the previous instance's health entry. The reporting node
+is included in the message. Multiple simultaneous CO instances are not part of this
+health-reporting model. After upgrading, clear any old Log Analytics warnings whose
+source is `ClusterObserverManager(<node>)` once; the new source cannot replace those
+older node-specific entries.
+
+On terminal FabricObserver stop, including the Linux configuration-restart path,
+warning refresh is disabled and any running timer callback is awaited before health
+cleanup. Cached warnings are discarded and late sender status callbacks are ignored,
+so they cannot restore a warning after cleanup. Windows in-place settings updates
+keep warning refresh active.
+
 ### Emiting Errors
 
 Service Fabric Error Health Events can block upgrades and other important Fabric runtime operations. Error thresholds should be set such that putting the cluster in an emergency state incurs less cost than allowing the state to continue. For this reason, Fabric Observer by default ***treats Errors as Warnings***.  However if your cluster health policy is to [ConsiderWarningAsError](https://docs.microsoft.com/en-us/azure/service-fabric/service-fabric-health-introduction#cluster-health-policy), FabricObserver has a ***high risk of putting your cluster in an error state***. Proceed with caution.  

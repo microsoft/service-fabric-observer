@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
-	<metadata minClientVersion="3.3.3">
+	<metadata minClientVersion="3.3.4">
 		<id>%PACKAGE_ID%</id>
-		<version>3.3.3</version>
+		<version>3.3.4</version>
 		<releaseNotes>
 			- This is the .NET 8 implementation of FabricObserver's Extensibility library. Use this library to build .NET 8 FabricObserver and ClusterObserver plugins.
-			- Updated dependencies. For NLog, this required code changes in Logger.cs and DataLogger.cs to accommodate breaking changes in NLog 6.0.3 (obsolete properties of FileTarget).
+			- Added Logs Ingestion API telemetry (LogsIngestionTelemetry, DualWriteTelemetry) and Log Analytics write-mode configuration (LogAnalyticsConfiguration), used by FabricObserver and ClusterObserver.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

@@ -605,6 +605,9 @@ All you have to do is provide either your instrumentation key in two files: Sett
 supply your Azure LogAnalytics WorkspaceId and SharedKey in Settings.xml. You can 
 configure CO to emit Warning state signals in addition to the default Error signalling. It's up to you.  
 
+For the managed-identity Logs Ingestion API and explicit write-mode selection, see
+[Log Analytics API selection](Observers.md#log-analytics-api-selection).
+
 ClusterObserver's ObserverManager config (Settings.xml). These are not overridable:
 
 ```XML
@@ -708,7 +711,7 @@ $appParams = @{ "FabricSystemObserverEnabled" = "true"; "FabricSystemObserverMem
 Then execute the application upgrade with
 
 ```Powershell
-Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.3.3 -ApplicationParameter $appParams -Monitored -FailureAction rollback
+Start-ServiceFabricApplicationUpgrade -ApplicationName fabric:/FabricObserver -ApplicationTypeVersion 3.3.4 -ApplicationParameter $appParams -Monitored -FailureAction rollback
 ```  
 
 **Important**: This action will overwrite previous app paramemter changes that were made in an earlier application upgrade, for example. If you want to preserve any earlier changes, then you will need to
@@ -716,7 +719,7 @@ supply those parameter values again along with the new ones. You do this in the 
 
 ```PowerShell
 $appName = "fabric:/FabricObserver"
-$appVersion = "3.3.3"
+$appVersion = "3.3.4"
 $application = Get-ServiceFabricApplication -ApplicationName $appName
 $appParamCollection = $application.ApplicationParameters
 $applicationParameterMap = @{}

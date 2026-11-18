@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
-	<metadata minClientVersion="3.3.3">
+	<metadata minClientVersion="3.3.4">
 		<id>%PACKAGE_ID%</id>
-		<version>3.3.3</version>
+		<version>3.3.4</version>
 		<releaseNotes>
-			- AppObserver: Fixed bug in monitor duration override logic where seconds value was used instead of milliseconds value for TimeSpan creation (so, TimeSpan.FromSeconds(1000) instead of TimeSpan.FromMilliseconds(1000)..). This leads to very long sleep times between CPU measurements.
-			- AppObserver: Added more logging around process detection and monitoring.
+			- Log Analytics: Added support for the Azure Monitor Logs Ingestion API with a user-assigned managed identity. New application parameter LogAnalyticsWriteMode selects LegacyOnly (default, unchanged behavior), DualWrite, or LogsIngestionOnly. New parameters: LogAnalyticsIngestionEndpoint, LogAnalyticsDcrImmutableId, LogAnalyticsStreamName, LogAnalyticsManagedIdentityClientId.
+			- Log Analytics: Invalid settings or upload failures produce a service health warning per API (LogAnalyticsIngestionConfiguration for the new API). There is no automatic fallback between APIs.
+			- Added ARM templates (table, data collection rule, managed identity, role assignment) and a read-only migration check script under Documentation/Deployment/LogAnalytics.
 		</releaseNotes>
 		<authors>Microsoft</authors>
 		<license type="expression">MIT</license>

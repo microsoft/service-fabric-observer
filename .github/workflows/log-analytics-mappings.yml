@@ -1,0 +1,39 @@
+name: Log Analytics mapping compatibility
+
+on:
+  pull_request:
+    paths:
+      - 'Documentation/Deployment/LogAnalytics/**'
+      - 'FabricObserver.Extensibility/**'
+      - 'TelemetryLib/**'
+      - '.github/workflows/log-analytics-mappings.yml'
+  push:
+    paths:
+      - 'Documentation/Deployment/LogAnalytics/**'
+      - 'FabricObserver.Extensibility/**'
+      - 'TelemetryLib/**'
+      - '.github/workflows/log-analytics-mappings.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  mapping-contract:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build current serialization models
+        run: dotnet build FabricObserver\FabricObserver.csproj --configuration Release
+      - name: Check generated templates
+        shell: pwsh
+        run: .\Documentation\Deployment\LogAnalytics\Build-LogAnalyticsTemplates.ps1 -Check
+      - name: Check independent source and legacy mapping contract
+        shell: pwsh
+        run: .\Documentation\Deployment\LogAnalytics\Tests\Test-LogAnalyticsMappings.ps1
+      - name: Build read-only value-routing regression query
+        shell: pwsh
+        run: .\Documentation\Deployment\LogAnalytics\Tests\New-LogAnalyticsMappingRegression.ps1 -OutputPath "$env:RUNNER_TEMP\log-analytics-mapping-values.kql"
