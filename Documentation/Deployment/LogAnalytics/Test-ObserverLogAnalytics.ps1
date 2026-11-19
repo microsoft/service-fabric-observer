@@ -17,11 +17,11 @@ Reader role) is enough.
     -Route DualWrite or Fresh omits the single-write rollback caveats, which do not apply to a separate new table.
 
 -Check DualWrite
-    Compares the old table with the new table over the same period. Rows are matched on the values of all standard
-    columns both tables have; TimeGenerated differs between the two APIs and is not compared. Unmatched rows are paired
-    by node, observer and property to show which columns differ. Column names are case-sensitive, as in KQL.
-    Counts inside the requested period are compared first. A count difference that could be covered by an identical
-    record outside the period, within TimeTolerance, is a warning rather than proof of a match or a missing record.
+    Compares individual occurrences in the old and new tables. Standard payload values must match, with equivalent
+    numeric representations normalized without rounding. Occurrences must be within TimeTolerance, using generated
+    event timestamps for named metrics and upgrade events, or TimeGenerated otherwise. Generated IDs must be valid.
+    Matches inside the requested period take precedence. A counterpart outside the period is a warning, not proof
+    of a match within the period. Query errors and truncated results fail rather than certifying incomplete data.
     Rows only in the old table, or differing values, fail: the new API lost or changed data. Rows only in the new table
     are a warning: the old API can drop records without reporting an error.
 
@@ -62,11 +62,11 @@ param(
     # DualWrite: workspace of the new table when it differs from WorkspaceName.
     [string] $NewWorkspaceName,
     [string] $NewResourceGroupName,
-    # DualWrite: period to compare. Default: the 24 hours ending 30 minutes ago. The start moves forward automatically
-    # if the new table has no rows that early (before dual write began).
+    # DualWrite: period to compare. Default: the 24 hours ending 30 minutes ago. Only a default start can move
+    # to the first new-table row; the omitted interval is then reported as unverified.
     [datetime] $StartTime,
     [datetime] $EndTime,
-    # DualWrite: buffer around the comparison period and maximum time difference for diagnostic pairing.
+    # DualWrite: buffer around the comparison period and maximum difference between matched occurrence timestamps.
     [timespan] $TimeTolerance = [timespan]::FromMinutes(10),
     # DualWrite: maximum unmatched rows per table to fetch for the column-difference breakdown.
     [ValidateRange(1, 5000)][int] $MaxDetailRows = 500,
@@ -138,7 +138,8 @@ function Get-Table($Workspace, [string] $Name) {
 function Invoke-Query([string] $WorkspaceCustomerId, [string] $Kql) {
     $environment = (Get-AzContext).Environment
     $resource = $environment.AzureOperationalInsightsEndpointResourceId ?? 'https://api.loganalytics.io'
-    $endpoint = ($environment.AzureOperationalInsightsEndpoint ?? 'https://api.loganalytics.io/v1').TrimEnd('/')
+    $endpoint = ($environment.AzureOperationalInsightsEndpoint ?? 'https://api.loganalytics.io').TrimEnd('/')
+    if ($endpoint -notmatch '/v1$') { $endpoint += '/v1' }
     $token = Get-Token $resource
     try {
         $r = Invoke-RestMethod -Method Post -Uri "$endpoint/workspaces/$WorkspaceCustomerId/query" -TimeoutSec 660 `
@@ -147,8 +148,15 @@ function Invoke-Query([string] $WorkspaceCustomerId, [string] $Kql) {
     } catch {
         throw "Log Analytics query failed: $($_.ErrorDetails.Message ?? $_.Exception.Message)"
     } finally { $token = $null }
+    if ($null -ne $r.error) {
+        throw "Log Analytics query returned an error; no partial results were accepted: $($r.error | ConvertTo-Json -Compress -Depth 10)"
+    }
+    if (-not $r.tables -or -not $r.tables[0].columns -or $null -eq $r.tables[0].rows) {
+        throw 'Log Analytics query returned an invalid result table.'
+    }
     $table = $r.tables[0]
     foreach ($row in $table.rows) {
+        if ($row.Count -ne $table.columns.Count) { throw 'Log Analytics query returned an incomplete row.' }
         $o = [System.Collections.Specialized.OrderedDictionary]::new([StringComparer]::Ordinal)
         for ($i = 0; $i -lt $table.columns.Count; $i++) { $o[$table.columns[$i].name] = $row[$i] }
         $o
@@ -156,7 +164,7 @@ function Invoke-Query([string] $WorkspaceCustomerId, [string] $Kql) {
 }
 
 function Format-Kql([datetime] $Time) { "datetime($($Time.ToUniversalTime().ToString('o')))" }
-function Format-Span([timespan] $Span) { "$([long]$Span.TotalSeconds)s" }
+function Format-Span([timespan] $Span) { "$($Span.TotalSeconds.ToString('0.#######', [Globalization.CultureInfo]::InvariantCulture))s" }
 function Format-Column([string] $Name) { "['$Name']" }
 function Format-List([string[]] $Items, [int] $Max = 15) {
     if ($Items.Count -le $Max) { return $Items -join ', ' }
@@ -235,9 +243,114 @@ function Test-Table($Workspace) {
 }
 
 # --- DualWrite ---------------------------------------------------------------------------------------------------------
+function Get-NumericKey($Value) {
+    # Normalize digits and exponent without rounding through floating point.
+    $text = if ($Value -is [double] -or $Value -is [single]) {
+        $Value.ToString('R', [Globalization.CultureInfo]::InvariantCulture)
+    } else { [Convert]::ToString($Value, [Globalization.CultureInfo]::InvariantCulture) }
+    $m = [regex]::Match($text, '^(?<sign>[+-]?)(?<whole>\d*)(?:\.(?<fraction>\d*))?(?:[eE](?<exponent>[+-]?\d+))?$')
+    if (-not $m.Success -or -not ($m.Groups['whole'].Value + $m.Groups['fraction'].Value)) {
+        throw "Invalid or non-finite numeric query value '$text'."
+    }
+    $digits = ($m.Groups['whole'].Value + $m.Groups['fraction'].Value).TrimStart('0')
+    if (-not $digits) { return '0' }
+    $exponent = if ($m.Groups['exponent'].Success) {
+        [int]::Parse($m.Groups['exponent'].Value, [Globalization.CultureInfo]::InvariantCulture)
+    } else { 0 }
+    $exponent -= $m.Groups['fraction'].Length
+    $significant = $digits.TrimEnd('0')
+    $exponent += $digits.Length - $significant.Length
+    return "$(if ($m.Groups['sign'].Value -eq '-') { '-' })${significant}e$exponent"
+}
+
+function Get-RecordTime($Value) {
+    if ($Value -is [datetimeoffset]) { return $Value.UtcDateTime }
+    if ($Value -is [datetime]) {
+        if ($Value.Kind -eq [DateTimeKind]::Local) { return $Value.ToUniversalTime() }
+        return [datetime]::SpecifyKind($Value, [DateTimeKind]::Utc)
+    }
+    $time = [datetimeoffset]::MinValue
+    if (-not [datetimeoffset]::TryParse(
+        [Convert]::ToString($Value, [Globalization.CultureInfo]::InvariantCulture),
+        [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::AssumeUniversal, [ref]$time)) {
+        throw "Missing or invalid record timestamp '$Value'."
+    }
+    return $time.UtcDateTime
+}
+
+function Get-ValueKey([string] $Column, $Value) {
+    if ($null -eq $Value -or "$Value" -eq '') { return '' }
+    switch ($recordTypes[$Column]) {
+        'real' { return Get-NumericKey $Value }
+        'datetime' { return (Get-RecordTime $Value).Ticks.ToString([Globalization.CultureInfo]::InvariantCulture) }
+        'guid' { return ([guid]$Value).ToString('D') }
+        default { return [Convert]::ToString($Value, [Globalization.CultureInfo]::InvariantCulture) }
+    }
+}
+
+function Get-RecordKey($Row, [string[]] $Columns) {
+    $values = @($Columns | ForEach-Object { Get-ValueKey $_ $Row[$_] })
+    return ConvertTo-Json -InputObject $values -Compress
+}
+
+function Get-Occurrence($Row, [string[]] $Columns, [datetime] $Start, [datetime] $End) {
+    $time = Get-RecordTime $Row['TimeGenerated']
+    $matchTime = $time
+    $generated = @()
+    $kind = 'Record'
+    if ("$($Row['id_s'])" -or "$($Row['datetime_t'])" -or
+        ("$($Row['property_s'])" -and -not "$($Row['healthState_s'])")) {
+        $id = [guid]::Empty
+        if ($Columns -cnotcontains 'id_s' -or $Columns -cnotcontains 'datetime_t' -or
+            "$($Row['id_s'])" -notmatch '^FO_(.+)$' -or -not [guid]::TryParseExact($Matches[1], 'D', [ref]$id)) {
+            throw 'Named metric metadata is missing or has an invalid generated id; its equivalence cannot be certified.'
+        }
+        $matchTime = Get-RecordTime $Row['datetime_t']
+        $generated = @('id_s', 'datetime_t')
+        $kind = 'NamedMetric'
+    } elseif ("$($Row['UpgradeState_s'])" -or "$($Row['Timestamp_t'])") {
+        if ($Columns -cnotcontains 'Timestamp_t') { throw 'Upgrade event timestamp is missing from the shared columns.' }
+        $matchTime = Get-RecordTime $Row['Timestamp_t']
+        $generated = @('Timestamp_t')
+        $kind = 'Upgrade'
+    }
+    $payloadColumns = @($Columns | Where-Object { $_ -cnotin $generated })
+    return [pscustomobject]@{
+        Row = $Row; Time = $time; MatchTime = $matchTime; Generated = $generated
+        Key = "$kind|$(Get-RecordKey $Row $payloadColumns)"
+        InWindow = $time -ge $Start -and $time -le $End; Matched = $false
+    }
+}
+
+function Match-Occurrences($Old, $New) {
+    $oldGroups = [Collections.Generic.Dictionary[string, object]]::new([StringComparer]::Ordinal)
+    $newGroups = [Collections.Generic.Dictionary[string, object]]::new([StringComparer]::Ordinal)
+    foreach ($pair in @(@($Old, $oldGroups), @($New, $newGroups))) {
+        foreach ($entry in $pair[0]) {
+            if (-not $pair[1].ContainsKey($entry.Key)) { $pair[1][$entry.Key] = [Collections.Generic.List[object]]::new() }
+            $pair[1][$entry.Key].Add($entry)
+        }
+    }
+    foreach ($key in $oldGroups.Keys) {
+        if (-not $newGroups.ContainsKey($key)) { continue }
+        $oldRows = @($oldGroups[$key] | Sort-Object MatchTime)
+        $newRows = @($newGroups[$key] | Sort-Object MatchTime)
+        $i = 0; $j = 0
+        while ($i -lt $oldRows.Count -and $j -lt $newRows.Count) {
+            $delta = $oldRows[$i].MatchTime - $newRows[$j].MatchTime
+            if ($delta -lt -$TimeTolerance) { $i++; continue }
+            if ($delta -gt $TimeTolerance) { $j++; continue }
+            $oldRows[$i].Matched = $true; $newRows[$j].Matched = $true
+            [pscustomobject]@{ Legacy = $oldRows[$i]; New = $newRows[$j] }
+            $i++; $j++
+        }
+    }
+}
+
 function Test-DualWrite($Workspace) {
-    $newWorkspace = if ($NewWorkspaceName -and $NewWorkspaceName -ne $WorkspaceName) {
-        Get-Workspace ($NewResourceGroupName ? $NewResourceGroupName : $ResourceGroupName) $NewWorkspaceName
+    if ($TimeTolerance -lt [timespan]::Zero) { throw 'TimeTolerance must not be negative.' }
+    $newWorkspace = if ($NewWorkspaceName -or $NewResourceGroupName) {
+        Get-Workspace ($NewResourceGroupName ? $NewResourceGroupName : $ResourceGroupName) ($NewWorkspaceName ? $NewWorkspaceName : $WorkspaceName)
     } else { $Workspace }
     $legacy = Get-Table $Workspace $LegacyTableName
     $new = Get-Table $newWorkspace $NewTableName
@@ -250,124 +363,98 @@ function Test-DualWrite($Workspace) {
     if ($unverifiedLegacy) {
         Add-Finding Fail 'Legacy columns outside the mapping contract' "$(Format-List $unverifiedLegacy). The default checker cannot certify these custom or value-dependent columns. Add their legacy names/types to the destination and DCR, and compare their stored values independently before cutover."
     }
+    if ($newMissing -or $unverifiedLegacy) { return [ordered]@{ CommonColumns = 0 } }
+    $wrongTypes = @(@($legacy.Columns) + @($new.Columns) | Where-Object {
+        $recordTypes.ContainsKey($_.Name) -and $_.Type -ne $recordTypes[$_.Name]
+    })
+    if ($wrongTypes) {
+        Add-Finding Fail 'Column type mismatch' "$(Format-List $wrongTypes.Name): source and destination columns must use their declared standard types."
+        return [ordered]@{ CommonColumns = 0 }
+    }
     $common = @($recordColumns.name | Where-Object { $_ -cin $legacy.Columns.Name -and $_ -cin $new.Columns.Name })
     $newRef = if ($newWorkspace.CustomerId -ne $Workspace.CustomerId) { "workspace('$($newWorkspace.CustomerId)').$NewTableName" } else { $NewTableName }
 
     $end = if ($bound.ContainsKey('EndTime')) { $EndTime.ToUniversalTime() } else { [datetime]::UtcNow.AddMinutes(-30) }
     $start = if ($bound.ContainsKey('StartTime')) { $StartTime.ToUniversalTime() } else { $end.AddDays(-1) }
     if ($start -ge $end) { throw 'StartTime must be before EndTime.' }
-    $first = @(Invoke-Query $Workspace.CustomerId "$newRef | where TimeGenerated between ($(Format-Kql $start.AddDays(-30)) .. $(Format-Kql $end)) | summarize First = min(TimeGenerated)")
-    if (-not $first -or -not $first[0].First) {
-        # The default period ends 30 minutes ago, so a check run right after enabling dual write sees no new rows yet.
-        $later = @(Invoke-Query $Workspace.CustomerId "$newRef | where TimeGenerated > $(Format-Kql $end) | summarize First = min(TimeGenerated)")
-        if ($later -and $later[0].First) {
-            $firstLater = ([datetime]$later[0].First).ToUniversalTime()
-            Add-Finding Warning $NewTableName "No rows in the new table before EndTime ($($end.ToString('u'))): dual write started later, with the first new row at $($firstLater.ToString('u')). Rerun after $($firstLater.AddMinutes(30).ToString('u')), or pass a later -EndTime."
-        } else {
-            Add-Finding Fail $NewTableName 'No rows in the new table. Check the application settings and its health warnings.'
-        }
-        return [ordered]@{ Start = $start; End = $end; CommonColumns = $common.Count }
-    }
-    $firstNew = ([datetime]$first[0].First).ToUniversalTime()
-    if ($firstNew -gt $start) {
-        $start = $firstNew
-        Add-Finding Info 'Start time' "Moved to $($start.ToString('u')), the first new-table row, to skip records sent before dual write began."
-        if ($start -ge $end) {
-            Add-Finding Warning 'Period' 'Dual write started too recently to compare. Wait, or set -EndTime later.'
-            return [ordered]@{ Start = $start; End = $end; CommonColumns = $common.Count }
-        }
-    }
-
-    # Functions take at most 64 arguments, so hash the values in chunks.
-    $chunks = for ($i = 0; $i -lt $common.Count; $i += 40) {
-        "tostring(pack_array($(($common[$i..([math]::Min($i + 39, $common.Count - 1))] | ForEach-Object { "tostring($(Format-Column $_))" }) -join ', ')))"
-    }
-    $fp = "hash_sha256(strcat($(@($chunks) -join ', ')))"
-    $lets = @"
+    $projection = (@('ComparisonSource', 'TimeGenerated') + @($common | ForEach-Object { Format-Column $_ })) -join ', '
+    $rows = @(Invoke-Query $Workspace.CustomerId @"
 let s = $(Format-Kql $start); let e = $(Format-Kql $end); let tol = $(Format-Span $TimeTolerance);
-let OldT = materialize($LegacyTableName | where TimeGenerated between ((s - tol) .. (e + tol)) | extend fp = $fp);
-let NewT = materialize($newRef | where TimeGenerated between ((s - tol) .. (e + tol)) | extend fp = $fp);
-let C = OldT | summarize OldRows = count(), OldIn = countif(TimeGenerated between (s .. e)) by fp
-    | join kind=fullouter (NewT | summarize NewRows = count(), NewIn = countif(TimeGenerated between (s .. e)) by fp) on fp
-    | project fp = coalesce(fp, fp1), OldRows = coalesce(OldRows, 0), NewRows = coalesce(NewRows, 0), OldIn = coalesce(OldIn, 0), NewIn = coalesce(NewIn, 0);
-"@
-    $summary = @(Invoke-Query $Workspace.CustomerId ($lets + @'
-C | summarize Old = sum(OldIn), New = sum(NewIn),
-    OnlyOld = sum(max_of(OldIn - NewRows, 0)),
-    OnlyNew = sum(max_of(NewIn - OldRows, 0)),
-    BoundaryOld = sum(min_of(max_of(OldIn - NewIn, 0), NewRows - NewIn)),
-    BoundaryNew = sum(min_of(max_of(NewIn - OldIn, 0), OldRows - OldIn))
-'@))[0]
+union ($LegacyTableName | where TimeGenerated between ((s - tol) .. (e + tol)) | extend ComparisonSource = 'Legacy'),
+      ($newRef | where TimeGenerated between ((s - tol) .. (e + tol)) | extend ComparisonSource = 'New')
+| project $projection
+"@)
+    $firstNew = @($rows | Where-Object { $_['ComparisonSource'] -ceq 'New' } |
+        ForEach-Object { Get-RecordTime $_['TimeGenerated'] } | Where-Object { $_ -ge $start -and $_ -le $end } | Sort-Object | Select-Object -First 1)
+    if (-not $bound.ContainsKey('StartTime') -and $firstNew.Count -and $firstNew[0] -gt $start) {
+        Add-Finding Warning 'Unverified interval' "$($start.ToString('u')) to $($firstNew[0].ToString('u')) was omitted before the first new-table row. This does not certify when dual write began; use an explicit -StartTime to verify the whole period."
+        $start = $firstNew[0]
+    }
+    $oldRows = [Collections.Generic.List[object]]::new()
+    $newRows = [Collections.Generic.List[object]]::new()
+    foreach ($row in $rows) {
+        $entry = Get-Occurrence $row $common $start $end
+        if ($entry.Time -lt $start.Subtract($TimeTolerance) -or $entry.Time -gt $end.Add($TimeTolerance)) { continue }
+        switch -CaseSensitive ($row['ComparisonSource']) {
+            'Legacy' { $oldRows.Add($entry) }
+            'New' { $newRows.Add($entry) }
+            default { throw 'Query returned an unknown comparison source.' }
+        }
+    }
+    $oldIn = @($oldRows | Where-Object InWindow)
+    $newIn = @($newRows | Where-Object InWindow)
+    $null = @(Match-Occurrences $oldIn $newIn)
+    $boundaryOld = @(Match-Occurrences @($oldIn | Where-Object { -not $_.Matched }) @($newRows | Where-Object { -not $_.InWindow }))
+    $boundaryNew = @(Match-Occurrences @($oldRows | Where-Object { -not $_.InWindow }) @($newIn | Where-Object { -not $_.Matched }))
+    $onlyOld = @($oldIn | Where-Object { -not $_.Matched })
+    $onlyNew = @($newIn | Where-Object { -not $_.Matched })
     $result = [ordered]@{
         Start = $start; End = $end; CommonColumns = $common.Count
-        LegacyRows = [long]$summary.Old; NewRows = [long]$summary.New
-        OnlyInLegacy = [long]$summary.OnlyOld; OnlyInNew = [long]$summary.OnlyNew
-        BoundaryLegacyRows = [long]$summary.BoundaryOld; BoundaryNewRows = [long]$summary.BoundaryNew
+        LegacyRows = $oldIn.Count; NewRows = $newIn.Count
+        OnlyInLegacy = $onlyOld.Count; OnlyInNew = $onlyNew.Count
+        BoundaryLegacyRows = $boundaryOld.Count; BoundaryNewRows = $boundaryNew.Count
     }
     if ($result.LegacyRows -eq 0) { Add-Finding Warning $LegacyTableName 'No rows in the period. Is the old API still enabled (DualWrite)?' }
     if ($result.BoundaryLegacyRows -gt 0 -or $result.BoundaryNewRows -gt 0) {
         Add-Finding Warning 'Window boundary' "$($result.BoundaryLegacyRows) legacy and $($result.BoundaryNewRows) new row(s) have an excess count inside the period, but identical records outside it could cover the difference. Boundary matching is ambiguous; these are not confirmed missing rows. Inspect their timestamps or adjust the comparison period."
     }
-    if ($result.OnlyInLegacy -eq 0 -and $result.OnlyInNew -eq 0) { return $result }
-
-    $projection = (@('Source', 'TimeGenerated') + @($common | ForEach-Object { Format-Column $_ })) -join ', '
-    $detail = @(Invoke-Query $Workspace.CustomerId ($lets + @"
-let BadOld = C | where OldIn > NewRows | project fp, MissingRows = OldIn - NewRows;
-let BadNew = C | where NewIn > OldRows | project fp, MissingRows = NewIn - OldRows;
-union (OldT | where TimeGenerated between (s .. e) | join kind=inner BadOld on fp
-           | sort by fp asc, TimeGenerated asc | serialize
-           | extend MissingIndex = row_number(1, prev(fp) != fp) | where MissingIndex <= MissingRows
-           | take $MaxDetailRows | extend Source = 'Legacy'),
-      (NewT | where TimeGenerated between (s .. e) | join kind=inner BadNew on fp
-           | sort by fp asc, TimeGenerated asc | serialize
-           | extend MissingIndex = row_number(1, prev(fp) != fp) | where MissingIndex <= MissingRows
-           | take $MaxDetailRows | extend Source = 'New')
-| project $projection
-"@))
+    if ($onlyOld.Count) { Add-Finding Fail 'Missing in new table' "$($onlyOld.Count) legacy occurrence(s) have no equivalent counterpart within TimeTolerance." }
+    if ($onlyNew.Count) { Add-Finding Warning 'Missing in legacy table' "$($onlyNew.Count) new occurrence(s) have no equivalent counterpart within TimeTolerance. The old API can drop records; inspect before cutover." }
+    $oldDetail = @($onlyOld | Select-Object -First $MaxDetailRows)
+    $newDetail = @($onlyNew | Select-Object -First $MaxDetailRows)
     # Pair unmatched rows describing the same event, then list the columns whose values differ.
-    $keyColumns = @('NodeName_s', 'ObserverName_s', 'Property_s', 'Metric_s', 'ApplicationName_s', 'ServiceName_s', 'PartitionId_g') | Where-Object { $_ -cin $common }
-    $key = { param($r) ($keyColumns | ForEach-Object { "$($r.$_)" }) -join '|' }
+    $keyColumns = @('NodeName_s', 'ObserverName_s', 'Property_s', 'property_s', 'Metric_s', 'ApplicationName_s', 'ServiceName_s', 'PartitionId_g') | Where-Object { $_ -cin $common }
     $newPool = [hashtable]::new([StringComparer]::Ordinal)
-    foreach ($r in $detail | Where-Object Source -eq 'New') { $k = & $key $r; if (-not $newPool[$k]) { $newPool[$k] = [System.Collections.Generic.List[object]]::new() }; $newPool[$k].Add($r) }
+    foreach ($r in $newDetail) { $k = Get-RecordKey $r.Row $keyColumns; if (-not $newPool.ContainsKey($k)) { $newPool[$k] = [Collections.Generic.List[object]]::new() }; $newPool[$k].Add($r) }
     $diffs = [hashtable]::new([StringComparer]::Ordinal)
     $unpairedLegacy = 0
-    foreach ($o in $detail | Where-Object Source -eq 'Legacy') {
-        $candidates = $newPool[(& $key $o)]
+    foreach ($o in $oldDetail) {
+        $candidates = $newPool[(Get-RecordKey $o.Row $keyColumns)]
         $match = $null
         if ($candidates) {
-            $match = $candidates | Where-Object { [math]::Abs(([datetime]$_.TimeGenerated - [datetime]$o.TimeGenerated).TotalSeconds) -le $TimeTolerance.TotalSeconds } |
-                Sort-Object { [math]::Abs(([datetime]$_.TimeGenerated - [datetime]$o.TimeGenerated).TotalSeconds) } | Select-Object -First 1
+            $match = $candidates | Where-Object { [math]::Abs(($_.MatchTime - $o.MatchTime).Ticks) -le $TimeTolerance.Ticks } |
+                Sort-Object MatchTime | Select-Object -First 1
         }
         if (-not $match) { $unpairedLegacy++; continue }
         [void]$candidates.Remove($match)
         foreach ($c in $common) {
-            $a = "$($o.$c)"; $b = "$($match.$c)"
-            if ($a -ceq $b) { continue }
-            if (-not $diffs[$c]) { $diffs[$c] = [ordered]@{ Column = $c; Rows = 0; KnownLargeNumber = $true; ExampleLegacy = $a; ExampleNew = $b } }
+            if ($c -cin $o.Generated -and $c -cin $match.Generated) { continue }
+            $a = "$($o.Row[$c])"; $b = "$($match.Row[$c])"
+            if ((Get-ValueKey $c $o.Row[$c]) -ceq (Get-ValueKey $c $match.Row[$c])) { continue }
+            if (-not $diffs[$c]) { $diffs[$c] = [ordered]@{ Column = $c; Rows = 0; KnownLargeNumber = $false; ExampleLegacy = $a; ExampleNew = $b } }
             $diffs[$c].Rows++
-            $x = 0.0; $y = 0.0
-            $large = $c.EndsWith('_d') -and [double]::TryParse($a, [ref]$x) -and [double]::TryParse($b, [ref]$y) -and
-                [math]::Max([math]::Abs($x), [math]::Abs($y)) -ge 9007199254740992
-            if (-not $large) { $diffs[$c].KnownLargeNumber = $false }
         }
     }
     $unpairedNew = @($newPool.Values | ForEach-Object { $_ }).Count
-    $partial = $detail.Count -ge (2 * $MaxDetailRows) -or @($detail | Where-Object Source -eq 'Legacy').Count -ge $MaxDetailRows -or @($detail | Where-Object Source -eq 'New').Count -ge $MaxDetailRows
+    $partial = $onlyOld.Count -gt $MaxDetailRows -or $onlyNew.Count -gt $MaxDetailRows
     $result.ColumnDifferences = @($diffs.Values | Sort-Object { -$_.Rows } | ForEach-Object { [pscustomobject]$_ })
     $result.UnpairedLegacyRows = $unpairedLegacy
     $result.UnpairedNewRows = $unpairedNew
     $result.DetailRowsSampled = $partial
 
     foreach ($d in $result.ColumnDifferences) {
-        if ($d.KnownLargeNumber) {
-            Add-Finding Info $d.Column "$($d.Rows) row(s) differ only in a number beyond double precision (known limitation). Example: legacy '$($d.ExampleLegacy)', new '$($d.ExampleNew)'."
-        } else {
-            Add-Finding Fail $d.Column "$($d.Rows) row(s) have a different value. Example: legacy '$($d.ExampleLegacy)', new '$($d.ExampleNew)'."
-        }
+        Add-Finding Fail $d.Column "$($d.Rows) sampled row(s) have a different value. Example: legacy '$($d.ExampleLegacy)', new '$($d.ExampleNew)'."
     }
-    if ($unpairedLegacy) { Add-Finding Fail 'Missing in new table' "$unpairedLegacy legacy row(s) have no counterpart in $NewTableName." }
-    # The old API can drop records without reporting an error, so rows only in the new table do not indicate new-API data loss.
-    if ($unpairedNew) { Add-Finding Warning 'Missing in legacy table' "$unpairedNew new row(s) have no counterpart in $LegacyTableName. The old API can drop records without reporting an error; this does not indicate data loss in the new table and does not block cutover." }
     if ($partial) { Add-Finding Warning 'Sample' "Column breakdown is based on the first $MaxDetailRows unmatched rows per table. Increase -MaxDetailRows for more." }
     return $result
 }
@@ -403,8 +490,8 @@ $TableName
             else { Add-Finding Fail $label "$rb rows before the switch, none after." }
             continue
         }
-        if ($rb -eq 0) { Add-Finding Info $label "No rows before the switch; $ra after."; continue }
-        if ($ra -lt $MinRows) { Add-Finding Info $label "Only $ra rows after the switch (fewer than -MinRows $MinRows); column fill rates not judged." }
+        if ($rb -eq 0) { Add-Finding Warning $label "No rows before the switch; $ra after. No baseline is available to validate column continuity."; continue }
+        if ($ra -lt $MinRows) { Add-Finding Warning $label "Only $ra rows after the switch (fewer than -MinRows $MinRows); column fill rates not judged. Validation is inconclusive." }
         $lost = [System.Collections.Generic.List[string]]::new(); $dropped = [System.Collections.Generic.List[string]]::new(); $customLost = [System.Collections.Generic.List[string]]::new(); $rare = [System.Collections.Generic.List[string]]::new()
         foreach ($c in $columns) {
             $fb = [long]($before."n_$c" ?? 0); $fa = [long]($after."n_$c" ?? 0)
@@ -422,7 +509,7 @@ $TableName
         if ($lost) { Add-Finding Fail $label "Standard columns filled before the switch but never after: $(Format-List $lost)." }
         if ($dropped) { Add-Finding Warning $label "Fill rate dropped by more than half: $(Format-List $dropped)." }
         if ($customLost) { Add-Finding Info $label "Non-standard columns no longer filled (the new API writes only standard columns): $(Format-List $customLost)." }
-        if ($rare) { Add-Finding Info $label "Rarely filled columns not seen after the switch; too few rows to judge: $(Format-List $rare)." }
+        if ($rare) { Add-Finding Warning $label "Rarely filled columns not seen after the switch; too few rows to judge: $(Format-List $rare)." }
         [pscustomobject]@{ Observer = $label; RowsBefore = $rb; RowsAfter = $ra; StandardColumnsLost = $lost.Count; FillRateDrops = $dropped.Count }
     }
     if (-not $rows) { Add-Finding Fail $TableName 'No rows in the compared periods.' }

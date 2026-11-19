@@ -248,6 +248,7 @@ foreach ($scenario in 'missing-column', 'unmapped-legacy-column') {
         $LegacyTableName = 'Legacy_CL'; $NewTableName = 'New_CL'
         $WorkspaceName = 'fake'; $NewWorkspaceName = $null
         $StartTime = [datetime]'2026-01-01T00:00:00Z'; $EndTime = $StartTime.AddHours(1)
+        $TimeTolerance = [timespan]::FromMinutes(10)
         $bound = @{ StartTime = $StartTime; EndTime = $EndTime }
         $workspace = [pscustomobject]@{ Name = 'fake'; CustomerId = [Guid]::Empty.ToString() }
         $legacyColumns = @($Columns | ForEach-Object { [pscustomobject]@{ Name = $_.name; Type = $_.type } })
