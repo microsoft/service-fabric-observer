@@ -80,3 +80,5 @@ cd C:\Users\me\source\repos\service-fabric-observer
 ```
 The output from the above commands contains FabricObserver platform-specific nupkgs and a nupkg you have to use for plugin authoring named Microsoft.ServiceFabricApps.FabricObserver.Extensibility.3.4.0.nupkg. Nuget packages will be located in
 C:\Users\me\source\repos\service-fabric-observer\bin\release\FabricObserver\Nugets.
+
+For code-signed builds, publish the shared libraries with `./Build-FOExtensibility.ps1` before signing the DLLs. Then run `./Build-NugetPackages.ps1 -SkipExtensibilityBuild` and `./Build-CONugetPackages.ps1 -SkipExtensibilityBuild` to package those existing outputs without republishing them after signing. Sign the resulting NuGet packages afterward. Without this switch, both packaging scripts continue to build the shared libraries automatically.
