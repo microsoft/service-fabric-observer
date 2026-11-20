@@ -1,3 +1,7 @@
+param(
+    [switch] $SkipExtensibilityBuild
+)
+
 $ErrorActionPreference = "Stop"
 
 function Install-Nuget {
@@ -41,7 +45,9 @@ try {
 
     Push-Location $scriptPath
 
-    & .\Build-FOExtensibility.ps1
+    if (-not $SkipExtensibilityBuild) {
+        & .\Build-FOExtensibility.ps1
+    }
     $nugetPath = Install-Nuget
 
     Build-Nuget "Microsoft.ServiceFabricApps.ClusterObserver.Linux.SelfContained" "$scriptPath\bin\release\ClusterObserver\linux-x64\self-contained\ClusterObserverType"
